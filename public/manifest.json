@@ -1,0 +1,87 @@
+{
+  "name": "RTR MRP Mobile",
+  "short_name": "RTR MRP",
+  "description": "Mobile interface for RTR MRP System - Barcode scanning, inventory management, and shop floor operations",
+  "start_url": "/mobile",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Scan Barcode",
+      "short_name": "Scan",
+      "description": "Open barcode scanner",
+      "url": "/mobile/scan",
+      "icons": [{ "src": "/icons/scan-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Inventory",
+      "short_name": "Inventory",
+      "description": "View and manage inventory",
+      "url": "/mobile/inventory",
+      "icons": [{ "src": "/icons/inventory-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Work Orders",
+      "short_name": "Work Orders",
+      "description": "View work orders",
+      "url": "/mobile/work-orders",
+      "icons": [{ "src": "/icons/work-order-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

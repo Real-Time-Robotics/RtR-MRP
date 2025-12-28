@@ -1,0 +1,140 @@
+// src/lib/security/rate-limiter.ts
+// Rate limiting utility for RTR MRP System
+
+import { redis } from "@/lib/cache/redis";
+import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/monitoring/logger";
+
+interface RateLimitConfig {
+  windowMs: number; // Time window in milliseconds
+  maxRequests: number; // Max requests per window
+  keyPrefix?: string;
+}
+
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetTime: number;
+  limit: number;
+}
+
+export async function rateLimit(
+  identifier: string,
+  config: RateLimitConfig
+): Promise<RateLimitResult> {
+  const {
+    windowMs = 60000, // 1 minute default
+    maxRequests = 100, // 100 requests default
+    keyPrefix = "rl",
+  } = config;
+
+  const key = `${keyPrefix}:${identifier}`;
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  try {
+    // Use Redis sorted set for sliding window
+    const multi = redis.multi();
+
+    // Remove old entries
+    multi.zremrangebyscore(key, 0, windowStart);
+
+    // Add current request
+    multi.zadd(key, now, `${now}-${Math.random()}`);
+
+    // Count requests in window
+    multi.zcard(key);
+
+    // Set expiry
+    multi.expire(key, Math.ceil(windowMs / 1000));
+
+    const results = await multi.exec();
+    const requestCount = (results?.[2]?.[1] as number) || 0;
+
+    const allowed = requestCount <= maxRequests;
+    const remaining = Math.max(0, maxRequests - requestCount);
+    const resetTime = now + windowMs;
+
+    if (!allowed) {
+      logger.security("Rate limit exceeded", {
+        identifier,
+        requestCount,
+        maxRequests,
+      });
+    }
+
+    return { allowed, remaining, resetTime, limit: maxRequests };
+  } catch (error) {
+    // On error, allow request but log
+    logger.error("Rate limit check failed", error as Error);
+    return { allowed: true, remaining: maxRequests, resetTime: now + windowMs, limit: maxRequests };
+  }
+}
+
+// Middleware helper
+export async function rateLimitMiddleware(
+  req: NextRequest,
+  config?: Partial<RateLimitConfig>
+): Promise<NextResponse | null> {
+  // Get identifier (IP or user ID)
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",")[0].trim() : req.headers.get("x-real-ip") || "unknown";
+  const identifier = `ip:${ip}`;
+
+  const defaultConfig: RateLimitConfig = {
+    windowMs: 60000,
+    maxRequests: 100,
+    ...config,
+  };
+
+  const result = await rateLimit(identifier, defaultConfig);
+
+  if (!result.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": result.limit.toString(),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": result.resetTime.toString(),
+          "Retry-After": Math.ceil(
+            (result.resetTime - Date.now()) / 1000
+          ).toString(),
+        },
+      }
+    );
+  }
+
+  return null;
+}
+
+// API route rate limiting configurations
+export const rateLimitConfigs = {
+  // General API endpoints
+  api: { windowMs: 60000, maxRequests: 100 },
+
+  // Auth endpoints (stricter)
+  auth: { windowMs: 60000, maxRequests: 10 },
+
+  // Login specifically (very strict)
+  login: { windowMs: 300000, maxRequests: 5 },
+
+  // Export/heavy operations
+  export: { windowMs: 60000, maxRequests: 5 },
+
+  // AI/ML endpoints
+  ai: { windowMs: 60000, maxRequests: 20 },
+};
+
+// Higher-order function for API routes
+export function withRateLimit(
+  handler: (req: NextRequest) => Promise<NextResponse>,
+  config?: Partial<RateLimitConfig>
+) {
+  return async (req: NextRequest): Promise<NextResponse> => {
+    const rateLimitResponse = await rateLimitMiddleware(req, config);
+    if (rateLimitResponse) return rateLimitResponse;
+    return handler(req);
+  };
+}

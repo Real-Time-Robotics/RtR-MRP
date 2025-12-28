@@ -1,0 +1,102 @@
+// src/app/api/compliance/signatures/route.ts
+
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import {
+  createElectronicSignature,
+  verifySignatureChain,
+  getSignatureHistory,
+  getWorkflowStatus,
+} from "@/lib/compliance";
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { entityType, entityId, action, meaning, verificationMethod, password, totpCode } = body;
+
+    if (!entityType || !entityId || !action) {
+      return NextResponse.json(
+        { error: "entityType, entityId, and action are required" },
+        { status: 400 }
+      );
+    }
+
+    const ipAddress = request.headers.get("x-forwarded-for") || undefined;
+    const userAgent = request.headers.get("user-agent") || undefined;
+
+    const result = await createElectronicSignature(
+      {
+        userId: session.user.id,
+        entityType,
+        entityId,
+        action,
+        meaning,
+        verificationMethod: verificationMethod || "password",
+        ipAddress,
+        userAgent,
+      },
+      { password, totpCode }
+    );
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      signatureId: result.signatureId,
+      signatureHash: result.signatureHash,
+    });
+  } catch (error) {
+    console.error("Signature creation error:", error);
+    return NextResponse.json(
+      { error: "Signature creation failed" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const entityType = searchParams.get("entityType");
+    const entityId = searchParams.get("entityId");
+    const action = searchParams.get("action");
+
+    if (!entityType || !entityId) {
+      return NextResponse.json(
+        { error: "entityType and entityId are required" },
+        { status: 400 }
+      );
+    }
+
+    if (action === "verify") {
+      const result = await verifySignatureChain(entityType, entityId);
+      return NextResponse.json(result);
+    }
+
+    if (action === "workflow") {
+      const result = await getWorkflowStatus(entityType, entityId);
+      return NextResponse.json(result);
+    }
+
+    // Default: get signature history
+    const history = await getSignatureHistory(entityType, entityId);
+    return NextResponse.json({ signatures: history });
+  } catch (error) {
+    console.error("Signature query error:", error);
+    return NextResponse.json(
+      { error: "Query failed" },
+      { status: 500 }
+    );
+  }
+}

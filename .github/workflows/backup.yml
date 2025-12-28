@@ -1,0 +1,74 @@
+# .github/workflows/backup.yml
+# Scheduled Database Backup for RTR MRP System
+
+name: Scheduled Backup
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Database Backup
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run backup on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/rtr-mrp
+            ./scripts/backup/backup-db.sh daily-$(date +%Y%m%d)
+            ./scripts/backup/cleanup-old-backups.sh 30
+
+      - name: Verify backup
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/rtr-mrp
+            ls -la backups/ | head -5
+            # Verify latest backup is readable
+            latest=$(ls -t backups/*.sql.gz 2>/dev/null | head -1)
+            if [ -n "$latest" ]; then
+              gunzip -t "$latest"
+              echo "Backup verification passed"
+            fi
+
+      - name: Upload to S3 (optional)
+        if: secrets.AWS_ACCESS_KEY_ID != ''
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/rtr-mrp
+            ./scripts/backup/backup-to-s3.sh
+
+      - name: Notify on failure
+        if: failure() && vars.SLACK_WEBHOOK != ''
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "Database backup failed!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Database Backup Failed*\nPlease check the backup system immediately!"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

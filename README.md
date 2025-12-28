@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RTR MRP System
 
-## Getting Started
+Hệ thống Hoạch định Nguồn lực Sản xuất (MRP) cho doanh nghiệp sản xuất drone.
 
-First, run the development server:
+## Tính năng chính
+
+- **BOM Management** - Quản lý cấu trúc sản phẩm đa cấp
+- **MRP Planning** - Hoạch định nhu cầu vật tư với ATP/CTP, Pegging, Simulation
+- **Production** - Quản lý Work Orders, Routing, Capacity Planning, OEE
+- **Quality Management** - NCR, CAPA, Inspection Plans, Traceability
+- **Finance** - Costing, GL, Invoicing
+- **AI/ML** - Demand Forecasting, Lead Time Prediction
+- **Mobile PWA** - Barcode scanning, Offline support
+- **Excel Import/Export** - Nhập xuất dữ liệu Excel
+
+## Cài đặt
 
 ```bash
+# Clone repository
+git clone <repository-url>
+cd rtr-mrp
+
+# Cài đặt dependencies
+npm install
+
+# Tạo database
+npx prisma db push
+
+# Seed dữ liệu mẫu
+npx prisma db seed
+
+# Chạy development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Demo Credentials
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+Email:    admin@rtr.com
+Password: admin123456@
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+- **Framework:** Next.js 14 (App Router)
+- **Database:** PostgreSQL + Prisma ORM
+- **UI:** Tailwind CSS + shadcn/ui
+- **Auth:** NextAuth.js v5
+- **Charts:** Recharts
+- **PWA:** next-pwa
 
-To learn more about Next.js, take a look at the following resources:
+## Cấu trúc dự án
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                 # Next.js App Router pages
+│   ├── (auth)/         # Authentication pages
+│   ├── (dashboard)/    # Main application pages
+│   ├── api/            # API routes
+│   └── mobile/         # Mobile PWA pages
+├── components/         # React components
+├── lib/               # Business logic & utilities
+│   ├── mrp/           # MRP engines (ATP, Pegging, Simulation)
+│   ├── ai/            # AI/ML services
+│   ├── compliance/    # Security & compliance
+│   └── mobile/        # Mobile utilities
+└── hooks/             # Custom React hooks
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment Variables
 
-## Deploy on Vercel
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/rtr_mrp"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Proprietary - RTR Technologies
