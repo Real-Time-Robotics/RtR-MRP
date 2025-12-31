@@ -556,7 +556,7 @@ export default function PartDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {part.inventory.length === 0 ? (
+                    {(part.inventory?.length ?? 0) === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={4}
@@ -566,7 +566,7 @@ export default function PartDetailPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      part.inventory.map((inv) => (
+                      part.inventory?.map((inv) => (
                         <TableRow key={inv.id}>
                           <TableCell>{inv.warehouse.name}</TableCell>
                           <TableCell className="text-right">
@@ -672,7 +672,7 @@ export default function PartDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {part.certifications.length === 0 ? (
+                    {(part.certifications?.length ?? 0) === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={5}
@@ -682,7 +682,7 @@ export default function PartDetailPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      part.certifications.map((cert) => (
+                      part.certifications?.map((cert) => (
                         <TableRow key={cert.id}>
                           <TableCell>
                             <Badge variant="outline">
@@ -740,7 +740,7 @@ export default function PartDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {part.documents.length === 0 ? (
+                  {(part.documents?.length ?? 0) === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={4}
@@ -750,7 +750,7 @@ export default function PartDetailPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    part.documents.map((doc) => (
+                    part.documents?.map((doc) => (
                       <TableRow key={doc.id}>
                         <TableCell>
                           <Badge variant="outline">{doc.documentType}</Badge>
@@ -798,7 +798,7 @@ export default function PartDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {part.alternates.length === 0 ? (
+                  {(part.alternates?.length ?? 0) === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={5}
@@ -808,7 +808,7 @@ export default function PartDetailPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    part.alternates.map((alt) => (
+                    part.alternates?.map((alt) => (
                       <TableRow key={alt.id}>
                         <TableCell>
                           <Badge variant="secondary">{alt.priority}</Badge>
@@ -863,7 +863,7 @@ export default function PartDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {part.revisions.length === 0 ? (
+                  {(part.revisions?.length ?? 0) === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={6}
@@ -873,7 +873,7 @@ export default function PartDetailPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    part.revisions.map((rev) => (
+                    part.revisions?.map((rev) => (
                       <TableRow key={rev.id}>
                         <TableCell>
                           <Badge>{rev.revision}</Badge>
@@ -1014,7 +1014,7 @@ export default function PartDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {part.costHistory.length === 0 ? (
+                    {(part.costHistory?.length ?? 0) === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={4}
@@ -1024,7 +1024,7 @@ export default function PartDetailPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      part.costHistory.map((cost) => (
+                      part.costHistory?.map((cost) => (
                         <TableRow key={cost.id}>
                           <TableCell>
                             {formatDate(cost.effectiveDate)}
