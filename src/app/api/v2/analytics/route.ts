@@ -130,7 +130,7 @@ async function getOverviewAnalytics(startDate: Date, endDate: Date) {
       }
     }),
     prisma.inventory.aggregate({
-      _sum: { totalValue: true }
+      _sum: { quantity: true }
     }),
     prisma.salesOrder.findMany({
       take: 5,
@@ -161,7 +161,7 @@ async function getOverviewAnalytics(startDate: Date, endDate: Date) {
       totalRevenue: Number(totalRevenue._sum.totalAmount || 0),
       totalOrders,
       completedWorkOrders,
-      inventoryValue: Number(inventoryValue._sum.totalValue || 0),
+      inventoryValue: Number(inventoryValue._sum.quantity || 0),
       avgOrderValue: totalOrders > 0
         ? Number(totalRevenue._sum.totalAmount || 0) / totalOrders
         : 0,
@@ -192,12 +192,12 @@ async function getOverviewAnalytics(startDate: Date, endDate: Date) {
 
 async function getInventoryAnalytics(startDate: Date, endDate: Date) {
   const [
-    totalValue,
+    inventorySummary,
     totalParts,
     valueByCategory,
   ] = await Promise.all([
     prisma.inventory.aggregate({
-      _sum: { totalValue: true, quantity: true }
+      _sum: { quantity: true, reservedQty: true }
     }),
     prisma.part.count(),
     prisma.part.groupBy({
@@ -232,8 +232,8 @@ async function getInventoryAnalytics(startDate: Date, endDate: Date) {
 
   return {
     summary: {
-      totalValue: Number(totalValue._sum.totalValue || 0),
-      totalQuantity: Number(totalValue._sum.quantity || 0),
+      totalQuantity: Number(inventorySummary._sum.quantity || 0),
+      reservedQuantity: Number(inventorySummary._sum.reservedQty || 0),
       totalParts,
     },
     byCategory: valueByCategory.map(c => ({
