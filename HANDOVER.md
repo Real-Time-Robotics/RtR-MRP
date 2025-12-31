@@ -1,46 +1,141 @@
 # RTR MRP - HANDOVER DOCUMENT
-> Last updated: 2025-12-30
+> Last updated: 2025-12-31
 
 ---
 
-## TRANG THAI HIEN TAI: Phase 3B - Data Binding HOAN THANH
+## TRANG THAI HIEN TAI: Production Build OK - Da Deploy Render
 
-### DA HOAN THANH
+### LENH TIEP TUC NHANH
+Khi quay lai, chi can noi:
+- **"continue"** / **"tiep tuc"** / **"handover"** - de tiep tuc cong viec
+- **"kiem tra deployment"** - de xem trang thai Render
+- **"fix bug [mo ta]"** - de sua loi
+- **"them feature [mo ta]"** - de them tinh nang
 
-#### 1. API Routes V2 (8/8 routes - 100%)
-| API | File | Chuc nang |
-|-----|------|-----------|
-| Dashboard | `src/app/api/v2/dashboard/route.ts` | KPIs, recent orders, work orders |
-| Parts | `src/app/api/v2/parts/route.ts` | Parts CRUD, filtering, pagination |
-| Sales | `src/app/api/v2/sales/route.ts` | Sales orders management |
-| Production | `src/app/api/v2/production/route.ts` | Work orders & production |
-| Quality | `src/app/api/v2/quality/route.ts` | NCRs, inspections, kanban |
-| Inventory | `src/app/api/v2/inventory/route.ts` | Stock levels, receive/issue/transfer |
-| BOM | `src/app/api/v2/bom/route.ts` | Bill of Materials tree & CRUD |
-| Analytics | `src/app/api/v2/analytics/route.ts` | Multi-tab analytics dashboard |
+---
 
-#### 2. Data Hooks (`src/lib/hooks/use-data.ts`)
-- `useDashboard()` - Dashboard data
-- `useParts()`, `usePartActions()` - Parts management
-- `useSalesOrders()`, `useSalesActions()` - Sales management
-- `useWorkOrders()`, `useProductionActions()` - Production management
-- `useQuality()`, `useQualityActions()` - Quality management
-- `useInventory()`, `useInventoryActions()` - Inventory management
-- `useBOM()`, `useBOMActions()` - BOM management
-- `useOverviewAnalytics()`, `useInventoryAnalytics()`, `useSalesAnalytics()`, `useProductionAnalytics()`, `useQualityAnalytics()` - Analytics tabs
+## DA HOAN THANH (2025-12-31)
 
-#### 3. V2 Pages (UI pages da co)
+### 1. Fix Prisma Schema Mismatches (CRITICAL)
+Tat ca field names da duoc align voi `prisma/schema.prisma`:
+
+| Model | Field Cu | Field Dung |
+|-------|----------|------------|
+| **Customer** | email | contactEmail |
+| **Customer** | phone | contactPhone |
+| **Customer** | address | billingAddress |
+| **SalesOrder** | soNumber | orderNumber |
+| **SalesOrder** | requestedDate | requiredDate |
+| **SalesOrderLine** | discountPercent | discount |
+| **WorkOrder** | dueDate | plannedEnd |
+| **WorkOrder** | completionDate | actualEnd |
+| **WorkOrder** | startDate | plannedStart |
+| **WorkOrderOperation** | operationSeq | operationNumber |
+| **WorkOrderOperation** | operationName | name |
+| **Part** | minStock | minStockLevel |
+| **Part** | critical | isCritical |
+| **Part** | primarySupplier | partSuppliers (relation) |
+| **Part** | inventoryItems | inventory |
+| **BomLine** | productId | bomId |
+| **BomLine** | module | moduleName |
+| **BomLine** | critical | isCritical |
+| **NCR** | capas | capa (singular) |
+| **NCR** | costImpact | totalCost |
+| **NCR** | dateCreated | createdAt |
+| **CAPA** | dueDate | targetDate |
+| **PartSupplier** | isPrimary | isPreferred |
+
+### 2. Fix TypeScript Errors
+| File | Van de | Cach fix |
+|------|--------|----------|
+| `card-animated.tsx` | Interface conflict | `Omit<HTMLAttributes, 'title'>` |
+| `error-handler.ts` | ZodError API | `.errors` → `.issues` |
+| `schemas.ts` | ZodError API | `.errors` → `.issues` |
+| `sanitize.ts` | Map iteration | `for...of` → `forEach` |
+
+### 3. API Routes V2 (8/8 routes - 100%)
+| API | File | Status |
+|-----|------|--------|
+| Dashboard | `src/app/api/v2/dashboard/route.ts` | OK |
+| Parts | `src/app/api/v2/parts/route.ts` | OK |
+| Sales | `src/app/api/v2/sales/route.ts` | OK |
+| Production | `src/app/api/v2/production/route.ts` | OK |
+| Quality | `src/app/api/v2/quality/route.ts` | OK |
+| Inventory | `src/app/api/v2/inventory/route.ts` | OK |
+| BOM | `src/app/api/v2/bom/route.ts` | OK |
+| Analytics | `src/app/api/v2/analytics/route.ts` | OK |
+
+---
+
+## DEPLOYMENT INFO
+
+### Render.com
+- **Web Service:** Auto-deploy tu GitHub `main` branch
+- **Database:** PostgreSQL (managed by Render)
+- **Build Command:** `npm run build`
+- **Start Command:** `npm start`
+
+### Environment Variables (Render Dashboard)
 ```
-/v2                 - Landing page
-/v2/dashboard       - Dashboard
-/v2/parts           - Parts management
-/v2/sales           - Sales orders
-/v2/production      - Production/Work orders
-/v2/quality         - Quality management
-/v2/inventory       - Inventory management
-/v2/bom             - Bill of Materials
-/v2/analytics       - Analytics dashboard
-/v2/settings        - Settings
+DATABASE_URL=postgresql://...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=https://your-app.onrender.com
+```
+
+### Git Workflow
+```bash
+# Sua code
+npm run build                 # Test build local
+git add -A && git commit -m "message"
+git push                      # Auto deploy to Render
+```
+
+---
+
+## LOCAL DEVELOPMENT
+
+### Start Dev Server
+```bash
+npm run dev                   # http://localhost:3000 (hoac 3001, 3002)
+```
+
+### V2 Pages
+| Page | URL |
+|------|-----|
+| Dashboard | http://localhost:3000/v2/dashboard |
+| Parts | http://localhost:3000/v2/parts |
+| Sales | http://localhost:3000/v2/sales |
+| Production | http://localhost:3000/v2/production |
+| Quality | http://localhost:3000/v2/quality |
+| Inventory | http://localhost:3000/v2/inventory |
+| BOM | http://localhost:3000/v2/bom |
+| Analytics | http://localhost:3000/v2/analytics |
+
+### Test API
+```bash
+curl --http1.1 -s "http://localhost:3000/api/v2/dashboard"
+curl --http1.1 -s "http://localhost:3000/api/v2/inventory?pageSize=10"
+```
+
+---
+
+## TROUBLESHOOTING
+
+### Build Fail - Prisma Error
+```bash
+npx prisma generate           # Regenerate client
+# Kiem tra field names trong prisma/schema.prisma
+```
+
+### Build Fail - TypeScript
+- ZodError dung `.issues` KHONG phai `.errors`
+- Interface extends HTMLAttributes? Dung `Omit<>`
+- Map iteration? Dung `forEach` thay vi `for...of`
+
+### Database Issues
+```bash
+npx prisma db push            # Push schema to DB
+npx prisma studio             # Open DB GUI
 ```
 
 ---
@@ -48,79 +143,62 @@
 ## CONG VIEC TIEP THEO (GOI Y)
 
 ### Option A: Ket noi UI voi API
-Cac trang V2 hien tai dang dung mock data. Can:
-1. Thay mock data bang hooks tu `use-data.ts`
-2. Ket noi form actions voi API mutations
-3. Test toan bo flow CRUD
+Cac trang V2 hien dang dung mock data. Can:
+1. Import hooks tu `src/lib/hooks/use-data.ts`
+2. Thay mock data bang real API calls
+3. Test CRUD operations
 
-### Option B: Them tinh nang moi
-1. Real-time updates (WebSocket/SSE)
-2. Export/Import data (Excel, CSV)
-3. Reports & charts
-4. User authentication & authorization
+### Option B: Them tinh nang
+1. Real-time updates (WebSocket)
+2. Export PDF/Excel
+3. Email notifications
+4. Advanced reporting
 
-### Option C: Toi uu hoa
-1. Caching strategy
+### Option C: Toi uu
+1. Redis caching
 2. Performance optimization
-3. Error handling improvements
-4. Unit tests
-
----
-
-## THONG TIN KY THUAT
-
-### Database
-- Prisma ORM
-- Schema: `prisma/schema.prisma`
-- Models chinh: Product, Part, SalesOrder, WorkOrder, Inventory, BomHeader, BomLine, NCR, Inspection
-
-### Tech Stack
-- Next.js 14 (App Router)
-- TypeScript
-- Prisma
-- SWR (data fetching)
-- Tailwind CSS
-
-### Commands
-```bash
-npm run dev          # Start dev server (port 3000)
-npm run build        # Build production
-npx prisma studio    # Open Prisma Studio
-npx prisma generate  # Regenerate Prisma client
-```
-
-### Luu y khi test API
-```bash
-# Phai dung --http1.1 flag
-curl --http1.1 -s "http://localhost:3000/api/v2/dashboard"
-curl --http1.1 -s "http://localhost:3000/api/v2/inventory?pageSize=10"
-curl --http1.1 -s "http://localhost:3000/api/v2/bom?productId=xxx&includeTree=true"
-curl --http1.1 -s "http://localhost:3000/api/v2/analytics?tab=overview"
-```
-
----
-
-## LENH TIEP TUC
-
-Khi quay lai, chi can noi:
-- **"continue"** hoac **"tiep tuc"** - de tiep tuc cong viec
-- **"ket noi UI voi API"** - de bat dau Option A
-- **"them tinh nang X"** - de bat dau tinh nang cu the
+3. Unit tests
+4. E2E tests
 
 ---
 
 ## FILES QUAN TRONG
 
 ```
-/src/app/api/v2/          # All API routes
-/src/lib/hooks/use-data.ts # Data fetching hooks
-/src/app/v2/              # V2 UI pages
-/prisma/schema.prisma     # Database schema
-/HANDOVER.md              # This file
+prisma/schema.prisma          # DATABASE SCHEMA (SOURCE OF TRUTH)
+src/app/api/v2/               # API routes
+src/lib/hooks/use-data.ts     # Data fetching hooks
+src/app/v2/                   # V2 UI pages
+src/components/pages-v2/      # V2 components
+.env                          # Local env vars
+render.yaml                   # Render config
+HANDOVER.md                   # This file
 ```
 
 ---
 
-**Build Status:** PASS
-**All APIs:** WORKING (8/8)
-**Ready for:** UI Integration hoac Feature Development
+## RECENT COMMITS
+
+```
+e6897e5 fix: Comprehensive Prisma schema alignment for production build
+f419fc2 Fix Part field names: minStock → minStockLevel
+5aa4bdd Fix SalesOrder field name: soNumber → orderNumber
+f4968a9 Fix Inventory field names
+85dedf5 Fix WorkOrder field names in analytics API
+```
+
+---
+
+## BUILD STATUS
+
+| Check | Status |
+|-------|--------|
+| TypeScript | PASS |
+| Prisma Generate | PASS |
+| Next.js Build | PASS |
+| Git Push | PASS |
+| Render Deploy | Auto-triggered |
+
+---
+
+**San sang cho:** UI Integration, Feature Development, hoac Production Testing
