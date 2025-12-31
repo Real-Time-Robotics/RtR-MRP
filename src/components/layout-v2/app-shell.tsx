@@ -24,6 +24,7 @@ import {
   LogOut,
   HelpCircle,
   Command,
+  Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ const navItems = [
   { id: 'inventory', label: 'Inventory', icon: Package, href: '/v2/inventory' },
   { id: 'parts', label: 'Parts Master', icon: Boxes, href: '/v2/parts' },
   { id: 'sales', label: 'Sales Orders', icon: ShoppingCart, href: '/v2/sales' },
+  { id: 'mrp', label: 'MRP Planning', icon: Calculator, href: '/v2/mrp' },
   { id: 'production', label: 'Production', icon: Factory, href: '/v2/production' },
   { id: 'quality', label: 'Quality', icon: ShieldCheck, href: '/v2/quality' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/v2/analytics' },
