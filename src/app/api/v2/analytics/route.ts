@@ -125,7 +125,7 @@ async function getOverviewAnalytics(startDate: Date, endDate: Date) {
     }),
     prisma.workOrder.count({
       where: {
-        completionDate: { gte: startDate, lte: endDate },
+        actualEnd: { gte: startDate, lte: endDate },
         status: 'COMPLETED'
       }
     }),
@@ -321,16 +321,16 @@ async function getProductionAnalytics(startDate: Date, endDate: Date) {
     prisma.workOrder.findMany({
       where: {
         status: 'COMPLETED',
-        completionDate: { gte: startDate, lte: endDate },
-        dueDate: { not: null }
+        actualEnd: { gte: startDate, lte: endDate },
+        plannedEnd: { not: null }
       },
-      select: { completionDate: true, dueDate: true }
+      select: { actualEnd: true, plannedEnd: true }
     }),
   ]);
 
   // Calculate on-time delivery
   const onTimeCount = completedWOs.filter(wo =>
-    wo.completionDate && wo.dueDate && wo.completionDate <= wo.dueDate
+    wo.actualEnd && wo.plannedEnd && wo.actualEnd <= wo.plannedEnd
   ).length;
 
   return {
