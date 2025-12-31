@@ -148,16 +148,16 @@ export default function ProductionSchedulePage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-7 divide-x">
+            <div className="grid grid-cols-7 divide-x divide-gray-200 dark:divide-neutral-700">
               {days.map((day, index) => {
                 const isToday = isSameDay(day, new Date());
                 const ordersForDay = getOrdersForDay(day);
 
                 return (
-                  <div key={index} className="min-h-[200px]">
+                  <div key={index} className="min-h-[200px] bg-white dark:bg-neutral-800">
                     <div
-                      className={`p-3 text-center border-b ${
-                        isToday ? "bg-primary text-white" : "bg-gray-50"
+                      className={`p-3 text-center border-b border-gray-200 dark:border-neutral-700 ${
+                        isToday ? "bg-primary text-white" : "bg-gray-50 dark:bg-neutral-700"
                       }`}
                     >
                       <p className="text-sm font-medium">{format(day, "EEE")}</p>
@@ -201,7 +201,7 @@ export default function ProductionSchedulePage() {
               {unscheduledOrders.map((wo) => (
                 <div
                   key={wo.id}
-                  className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="p-4 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 cursor-pointer"
                   onClick={() => router.push(`/production/${wo.id}`)}
                 >
                   <div className="flex items-center justify-between mb-2">

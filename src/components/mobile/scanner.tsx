@@ -144,9 +144,9 @@ export function Scanner({
 
   if (hasPermission === false) {
     return (
-      <Card className={cn("bg-gray-900 text-white", className)}>
+      <Card className={cn("bg-neutral-900 text-white", className)}>
         <CardContent className="flex flex-col items-center justify-center p-8 space-y-4">
-          <CameraOff className="h-16 w-16 text-gray-500" />
+          <CameraOff className="h-16 w-16 text-neutral-500" />
           <p className="text-center">
             Camera permission is required to scan barcodes.
           </p>
@@ -270,10 +270,10 @@ export function Scanner({
         <div className="absolute bottom-20 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3">
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <p className="text-xs text-gray-500">{lastScan.entityType}</p>
+              <p className="text-xs text-neutral-500">{lastScan.entityType}</p>
               <p className="font-mono font-medium truncate">{lastScan.raw}</p>
             </div>
-            <span className="text-xs text-gray-400">{lastScan.format}</span>
+            <span className="text-xs text-neutral-400">{lastScan.format}</span>
           </div>
         </div>
       )}

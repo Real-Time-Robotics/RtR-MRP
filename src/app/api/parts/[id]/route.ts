@@ -1,0 +1,263 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+// GET - Get single part with full details
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const part = await prisma.part.findUnique({
+      where: { id },
+      include: {
+        partSuppliers: {
+          include: { supplier: true },
+          orderBy: { isPreferred: "desc" },
+        },
+        partAlternates: {
+          include: { alternatePart: true },
+          orderBy: { priority: "asc" },
+        },
+        alternateFor: {
+          include: { part: true },
+        },
+        partDocuments: {
+          orderBy: { createdAt: "desc" },
+        },
+        partRevisions: {
+          orderBy: { revisionDate: "desc" },
+        },
+        partCostsHistory: {
+          orderBy: { effectiveDate: "desc" },
+          take: 10,
+        },
+        partCertifications: {
+          orderBy: { expiryDate: "asc" },
+        },
+        inventory: {
+          include: { warehouse: true },
+        },
+        bomLines: {
+          include: {
+            bom: {
+              include: { product: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!part) {
+      return NextResponse.json({ error: "Part not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(part);
+  } catch (error) {
+    console.error("Failed to fetch part:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch part" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Update part
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const data = await request.json();
+
+    // Check if part exists
+    const existing = await prisma.part.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Part not found" }, { status: 404 });
+    }
+
+    // Track revision if revision field changed
+    const shouldTrackRevision =
+      data.revision && data.revision !== existing.revision;
+
+    const part = await prisma.part.update({
+      where: { id },
+      data: {
+        partNumber: data.partNumber,
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        unit: data.unit,
+        unitCost: data.unitCost,
+
+        // Physical Specifications
+        weightKg: data.weightKg,
+        lengthMm: data.lengthMm,
+        widthMm: data.widthMm,
+        heightMm: data.heightMm,
+        volumeCm3: data.volumeCm3,
+        color: data.color,
+        material: data.material,
+
+        // Procurement & Sourcing
+        makeOrBuy: data.makeOrBuy,
+        procurementType: data.procurementType,
+        buyerCode: data.buyerCode,
+        moq: data.moq,
+        orderMultiple: data.orderMultiple,
+        standardPack: data.standardPack,
+        leadTimeDays: data.leadTimeDays,
+
+        // Inventory Planning
+        minStockLevel: data.minStockLevel,
+        reorderPoint: data.reorderPoint,
+        maxStock: data.maxStock,
+        safetyStock: data.safetyStock,
+        isCritical: data.isCritical,
+
+        // Compliance & Origin
+        countryOfOrigin: data.countryOfOrigin,
+        hsCode: data.hsCode,
+        eccn: data.eccn,
+        ndaaCompliant: data.ndaaCompliant,
+        itarControlled: data.itarControlled,
+
+        // Quality & Traceability
+        lotControl: data.lotControl,
+        serialControl: data.serialControl,
+        shelfLifeDays: data.shelfLifeDays,
+        inspectionRequired: data.inspectionRequired,
+        inspectionPlan: data.inspectionPlan,
+        aqlLevel: data.aqlLevel,
+        certificateRequired: data.certificateRequired,
+        rohsCompliant: data.rohsCompliant,
+        reachCompliant: data.reachCompliant,
+
+        // Engineering & Documents
+        revision: data.revision,
+        revisionDate: data.revisionDate ? new Date(data.revisionDate) : null,
+        drawingNumber: data.drawingNumber,
+        drawingUrl: data.drawingUrl,
+        datasheetUrl: data.datasheetUrl,
+        specDocument: data.specDocument,
+        manufacturerPn: data.manufacturerPn,
+        manufacturer: data.manufacturer,
+        lifecycleStatus: data.lifecycleStatus,
+        effectivityDate: data.effectivityDate
+          ? new Date(data.effectivityDate)
+          : null,
+        obsoleteDate: data.obsoleteDate ? new Date(data.obsoleteDate) : null,
+
+        // Enhanced Costing
+        standardCost: data.standardCost,
+        averageCost: data.averageCost,
+        landedCost: data.landedCost,
+        freightPercent: data.freightPercent,
+        dutyPercent: data.dutyPercent,
+        overheadPercent: data.overheadPercent,
+
+        // Price Breaks
+        priceBreakQty1: data.priceBreakQty1,
+        priceBreakCost1: data.priceBreakCost1,
+        priceBreakQty2: data.priceBreakQty2,
+        priceBreakCost2: data.priceBreakCost2,
+        priceBreakQty3: data.priceBreakQty3,
+        priceBreakCost3: data.priceBreakCost3,
+
+        // Additional
+        subCategory: data.subCategory,
+        partType: data.partType,
+        tags: data.tags,
+        updatedBy: session.user?.email || "system",
+      },
+      include: {
+        partSuppliers: {
+          include: { supplier: true },
+        },
+      },
+    });
+
+    // Create revision history if revision changed
+    if (shouldTrackRevision) {
+      await prisma.partRevision.create({
+        data: {
+          id: `REV-${Date.now()}`,
+          partId: id,
+          revision: data.revision,
+          previousRevision: existing.revision,
+          revisionDate: new Date(),
+          changeType: data.changeType || "REVISION",
+          changeReason: data.changeReason,
+          changeDescription: data.changeDescription,
+          ecrNumber: data.ecrNumber,
+          ecoNumber: data.ecoNumber,
+          changedBy: session.user?.email || "system",
+        },
+      });
+    }
+
+    return NextResponse.json(part);
+  } catch (error) {
+    console.error("Failed to update part:", error);
+    return NextResponse.json(
+      { error: "Failed to update part" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete part
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Check if part is used in any BOM
+    const usedInBom = await prisma.bomLine.findFirst({
+      where: { partId: id },
+    });
+
+    if (usedInBom) {
+      // Soft delete - mark as obsolete instead
+      await prisma.part.update({
+        where: { id },
+        data: {
+          lifecycleStatus: "OBSOLETE",
+          obsoleteDate: new Date(),
+          updatedBy: session.user?.email || "system",
+        },
+      });
+
+      return NextResponse.json({
+        message: "Part marked as obsolete (used in BOM)",
+        softDeleted: true,
+      });
+    }
+
+    // Hard delete if not used
+    await prisma.part.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Part deleted successfully" });
+  } catch (error) {
+    console.error("Failed to delete part:", error);
+    return NextResponse.json(
+      { error: "Failed to delete part" },
+      { status: 500 }
+    );
+  }
+}

@@ -42,14 +42,14 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
               <p className="text-2xl font-bold">{kpis.pendingOrders}</p>
               <p className="text-xs text-muted-foreground">{kpis.pendingOrdersValue}</p>
             </div>
-            <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Package className="h-6 w-6 text-blue-600" />
+            <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+              <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className={kpis.criticalStock > 0 ? "border-red-200" : ""}>
+      <Card className={kpis.criticalStock > 0 ? "border-red-200 dark:border-red-800" : ""}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -61,9 +61,9 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
             </div>
             <div className={cn(
               "h-12 w-12 rounded-lg flex items-center justify-center",
-              kpis.criticalStock > 0 ? "bg-red-100" : "bg-green-100"
+              kpis.criticalStock > 0 ? "bg-red-100 dark:bg-red-900/50" : "bg-green-100 dark:bg-green-900/50"
             )}>
-              <AlertTriangle className={cn("h-6 w-6", kpis.criticalStock > 0 ? "text-red-600" : "text-green-600")} />
+              <AlertTriangle className={cn("h-6 w-6", kpis.criticalStock > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400")} />
             </div>
           </div>
         </CardContent>
@@ -77,14 +77,14 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
               <p className="text-2xl font-bold">{kpis.activePOs}</p>
               <p className="text-xs text-muted-foreground">{kpis.activePOsValue}</p>
             </div>
-            <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-              <ClipboardList className="h-6 w-6 text-blue-600" />
+            <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+              <ClipboardList className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className={kpis.reorderAlerts > 0 ? "border-amber-200" : ""}>
+      <Card className={kpis.reorderAlerts > 0 ? "border-amber-200 dark:border-amber-800" : ""}>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div>
@@ -96,9 +96,9 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
             </div>
             <div className={cn(
               "h-12 w-12 rounded-lg flex items-center justify-center",
-              kpis.reorderAlerts > 0 ? "bg-amber-100" : "bg-green-100"
+              kpis.reorderAlerts > 0 ? "bg-amber-100 dark:bg-amber-900/50" : "bg-green-100 dark:bg-green-900/50"
             )}>
-              <Bell className={cn("h-6 w-6", kpis.reorderAlerts > 0 ? "text-amber-600" : "text-green-600")} />
+              <Bell className={cn("h-6 w-6", kpis.reorderAlerts > 0 ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400")} />
             </div>
           </div>
         </CardContent>

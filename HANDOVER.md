@@ -1,184 +1,126 @@
-# RTR MRP System - Handover Document
-
-## Project Overview
-**RTR MRP System** - Hệ thống hoạch định nhu cầu nguyên vật liệu (MRP) cho sản xuất drone, xây dựng trên Next.js 14.
-
-## Current Status: ✅ PRODUCTION READY
-
-### Repository
-- **GitHub:** https://github.com/nclamvn/rtr-mrp
-- **Local:** `/Users/mac/AnhQuocLuong/rtr-mrp`
-- **Backup:** `/Users/mac/Downloads/rtr-mrp.zip`
+# RTR MRP - HANDOVER DOCUMENT
+> Last updated: 2025-12-30
 
 ---
 
-## Tech Stack
-| Component | Technology |
-|-----------|------------|
-| Frontend | Next.js 14 (App Router) |
-| UI | Tailwind CSS, shadcn/ui |
-| Database | SQLite + Prisma ORM |
-| Auth | NextAuth.js |
-| i18n | Custom React Context (EN/VI) |
-| Charts | Recharts |
-| ML Service | Python FastAPI |
-| PWA | next-pwa |
+## TRANG THAI HIEN TAI: Phase 3B - Data Binding HOAN THANH
+
+### DA HOAN THANH
+
+#### 1. API Routes V2 (8/8 routes - 100%)
+| API | File | Chuc nang |
+|-----|------|-----------|
+| Dashboard | `src/app/api/v2/dashboard/route.ts` | KPIs, recent orders, work orders |
+| Parts | `src/app/api/v2/parts/route.ts` | Parts CRUD, filtering, pagination |
+| Sales | `src/app/api/v2/sales/route.ts` | Sales orders management |
+| Production | `src/app/api/v2/production/route.ts` | Work orders & production |
+| Quality | `src/app/api/v2/quality/route.ts` | NCRs, inspections, kanban |
+| Inventory | `src/app/api/v2/inventory/route.ts` | Stock levels, receive/issue/transfer |
+| BOM | `src/app/api/v2/bom/route.ts` | Bill of Materials tree & CRUD |
+| Analytics | `src/app/api/v2/analytics/route.ts` | Multi-tab analytics dashboard |
+
+#### 2. Data Hooks (`src/lib/hooks/use-data.ts`)
+- `useDashboard()` - Dashboard data
+- `useParts()`, `usePartActions()` - Parts management
+- `useSalesOrders()`, `useSalesActions()` - Sales management
+- `useWorkOrders()`, `useProductionActions()` - Production management
+- `useQuality()`, `useQualityActions()` - Quality management
+- `useInventory()`, `useInventoryActions()` - Inventory management
+- `useBOM()`, `useBOMActions()` - BOM management
+- `useOverviewAnalytics()`, `useInventoryAnalytics()`, `useSalesAnalytics()`, `useProductionAnalytics()`, `useQualityAnalytics()` - Analytics tabs
+
+#### 3. V2 Pages (UI pages da co)
+```
+/v2                 - Landing page
+/v2/dashboard       - Dashboard
+/v2/parts           - Parts management
+/v2/sales           - Sales orders
+/v2/production      - Production/Work orders
+/v2/quality         - Quality management
+/v2/inventory       - Inventory management
+/v2/bom             - Bill of Materials
+/v2/analytics       - Analytics dashboard
+/v2/settings        - Settings
+```
 
 ---
 
-## Completed Features
+## CONG VIEC TIEP THEO (GOI Y)
 
-### Core Modules
-- [x] **Dashboard** - KPIs, alerts, order status chart
-- [x] **BOM Manager** - Bill of Materials với explosion view
-- [x] **Inventory** - Stock tracking, alerts, status badges
-- [x] **Suppliers** - NDAA compliance, ratings
-- [x] **Sales Orders** - Order management
-- [x] **Purchasing** - Purchase orders
+### Option A: Ket noi UI voi API
+Cac trang V2 hien tai dang dung mock data. Can:
+1. Thay mock data bang hooks tu `use-data.ts`
+2. Ket noi form actions voi API mutations
+3. Test toan bo flow CRUD
 
-### Advanced Modules
-- [x] **MRP Planning** - ATP/CTP, Pegging, Simulation, Exceptions
-- [x] **Production** - Work orders, scheduling, OEE, capacity
-- [x] **Quality** - NCR, CAPA, inspections, traceability, certificates
-- [x] **Finance** - Costing, invoicing, GL, reports
+### Option B: Them tinh nang moi
+1. Real-time updates (WebSocket/SSE)
+2. Export/Import data (Excel, CSV)
+3. Reports & charts
+4. User authentication & authorization
 
-### Additional Features
-- [x] **i18n** - English/Vietnamese với proper dấu
-- [x] **Mobile App** - PWA với barcode scanning
-- [x] **AI Insights** - Forecasting, recommendations
-- [x] **Excel Import/Export**
-- [x] **Global Search**
-- [x] **Notifications**
+### Option C: Toi uu hoa
+1. Caching strategy
+2. Performance optimization
+3. Error handling improvements
+4. Unit tests
 
 ---
 
-## Database
+## THONG TIN KY THUAT
+
+### Database
+- Prisma ORM
+- Schema: `prisma/schema.prisma`
+- Models chinh: Product, Part, SalesOrder, WorkOrder, Inventory, BomHeader, BomLine, NCR, Inspection
+
+### Tech Stack
+- Next.js 14 (App Router)
+- TypeScript
+- Prisma
+- SWR (data fetching)
+- Tailwind CSS
+
+### Commands
 ```bash
-# Seed database với demo data
-npx prisma db seed
-
-# View database
-npx prisma studio
+npm run dev          # Start dev server (port 3000)
+npm run build        # Build production
+npx prisma studio    # Open Prisma Studio
+npx prisma generate  # Regenerate Prisma client
 ```
 
-**Demo Login:**
-- Email: `admin@rtr.com`
-- Password: `admin123`
-
----
-
-## Run Commands
+### Luu y khi test API
 ```bash
-# Development
-npm run dev          # http://localhost:3000
-
-# Build
-npm run build
-
-# Database
-npx prisma generate
-npx prisma db push
-npx prisma db seed
+# Phai dung --http1.1 flag
+curl --http1.1 -s "http://localhost:3000/api/v2/dashboard"
+curl --http1.1 -s "http://localhost:3000/api/v2/inventory?pageSize=10"
+curl --http1.1 -s "http://localhost:3000/api/v2/bom?productId=xxx&includeTree=true"
+curl --http1.1 -s "http://localhost:3000/api/v2/analytics?tab=overview"
 ```
 
 ---
 
-## Recent Changes (Last Session)
+## LENH TIEP TUC
 
-### 1. Fixed i18n Vietnamese Display
-- Fixed hydration issue in `LanguageProvider`
-- Language switcher now works correctly (EN/VI)
-- All major components use `useLanguage()` hook
-
-### 2. Translated Dashboard Components
-- `alerts-panel.tsx` - Cảnh báo
-- `order-status-chart.tsx` - Trạng thái đơn hàng
-- `recent-orders.tsx` - Đơn hàng gần đây
-
-### 3. Translation Keys Added
-```
-dashboard.noAlerts → "Không có cảnh báo"
-dashboard.viewAll → "Xem tất cả"
-dashboard.delayed → "Chậm trễ"
-dashboard.atRisk → "Có rủi ro"
-dashboard.onTrack → "Đúng tiến độ"
-```
-
-### 4. Build Configuration
-- Added `eslint.ignoreDuringBuilds: true` in `next.config.mjs`
-- PWA icons generated (72x72 to 512x512)
+Khi quay lai, chi can noi:
+- **"continue"** hoac **"tiep tuc"** - de tiep tuc cong viec
+- **"ket noi UI voi API"** - de bat dau Option A
+- **"them tinh nang X"** - de bat dau tinh nang cu the
 
 ---
 
-## File Structure
+## FILES QUAN TRONG
+
 ```
-src/
-├── app/
-│   ├── (auth)/          # Login pages
-│   ├── (dashboard)/     # Main app pages
-│   ├── api/             # API routes
-│   └── mobile/          # Mobile PWA
-├── components/
-│   ├── ui/              # shadcn components
-│   ├── dashboard/       # Dashboard widgets
-│   ├── inventory/       # Inventory components
-│   ├── production/      # Production components
-│   └── quality/         # Quality components
-├── lib/
-│   ├── i18n/            # Language context
-│   ├── mrp/             # MRP engine
-│   ├── production/      # Production logic
-│   └── quality/         # Quality workflows
-└── types/               # TypeScript types
+/src/app/api/v2/          # All API routes
+/src/lib/hooks/use-data.ts # Data fetching hooks
+/src/app/v2/              # V2 UI pages
+/prisma/schema.prisma     # Database schema
+/HANDOVER.md              # This file
 ```
 
 ---
 
-## Known Issues / TODO
-
-### Minor Issues
-- [ ] Some ESLint warnings (useEffect dependencies) - không ảnh hưởng build
-- [ ] Một số trang chưa có đầy đủ translations
-
-### Future Enhancements
-- [ ] Real-time notifications (WebSocket)
-- [ ] More comprehensive reports
-- [ ] Multi-tenant support
-- [ ] Advanced scheduling algorithms
-
----
-
-## Quick Resume Commands
-
-```bash
-# Navigate to project
-cd /Users/mac/AnhQuocLuong/rtr-mrp
-
-# Start dev server
-npm run dev
-
-# Check git status
-git status
-
-# Push changes
-git push nclamvn main
-```
-
----
-
-## Contact Points
-
-### Key Files for Common Tasks
-
-| Task | File |
-|------|------|
-| Add translation | `src/lib/i18n/language-context.tsx` |
-| Add new page | `src/app/(dashboard)/[page]/page.tsx` |
-| Add API route | `src/app/api/[route]/route.ts` |
-| Modify sidebar | `src/components/layout/sidebar.tsx` |
-| Database schema | `prisma/schema.prisma` |
-
----
-
-**Last Updated:** 2024-12-28
-**Session Status:** Clean commit, pushed to GitHub, ready for deployment
+**Build Status:** PASS
+**All APIs:** WORKING (8/8)
+**Ready for:** UI Integration hoac Feature Development

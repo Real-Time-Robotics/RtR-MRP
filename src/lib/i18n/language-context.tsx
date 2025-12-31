@@ -15,6 +15,7 @@ const translations: Record<Language, Record<string, string>> = {
   en: {
     // Navigation
     "nav.dashboard": "Dashboard",
+    "nav.parts": "Parts Master",
     "nav.bom": "BOM Manager",
     "nav.inventory": "Inventory",
     "nav.suppliers": "Suppliers",
@@ -54,6 +55,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.finance.reports": "Reports",
     "nav.ai": "AI Insights",
     "nav.excel": "Excel",
+    "nav.dataMigration": "Data Migration",
+    "nav.analytics": "Analytics",
     "nav.reports": "Reports",
     "nav.activity": "Activity",
     "nav.mobile": "Mobile App",
@@ -272,6 +275,7 @@ const translations: Record<Language, Record<string, string>> = {
   vi: {
     // Navigation
     "nav.dashboard": "Tổng quan",
+    "nav.parts": "Quản lý Linh kiện",
     "nav.bom": "Quản lý BOM",
     "nav.inventory": "Tồn kho",
     "nav.suppliers": "Nhà cung cấp",
@@ -311,6 +315,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.finance.reports": "Báo cáo",
     "nav.ai": "Phân tích AI",
     "nav.excel": "Excel",
+    "nav.dataMigration": "Di chuyển dữ liệu",
+    "nav.analytics": "Phân tích",
     "nav.reports": "Báo cáo",
     "nav.activity": "Hoạt động",
     "nav.mobile": "Ứng dụng di động",

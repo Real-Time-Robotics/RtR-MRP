@@ -173,7 +173,15 @@ async function processImportData(
   };
 }
 
-// Process a single part row
+// Helper function to parse boolean values from Excel
+function parseBoolean(value: unknown, defaultValue: boolean): boolean {
+  if (value === undefined || value === null || value === "") return defaultValue;
+  if (typeof value === "boolean") return value;
+  const strValue = String(value).toLowerCase().trim();
+  return strValue === "true" || strValue === "yes" || strValue === "1" || strValue === "y";
+}
+
+// Process a single part row - Enhanced for Parts v2.0 with 55+ fields
 async function processPartRow(
   row: Record<string, unknown>,
   updateMode: string
@@ -181,19 +189,106 @@ async function processPartRow(
   const partNumber = String(row.partNumber || "").trim();
   if (!partNumber) throw new Error("Part Number is required");
 
+  // Handle supplier lookup if supplier code/name provided
+  let supplierId = null;
+  if (row.supplierCode || row.supplier) {
+    const supplierCode = String(row.supplierCode || row.supplier).trim();
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        OR: [
+          { code: supplierCode },
+          { name: { contains: supplierCode, mode: "insensitive" } },
+        ],
+      },
+    });
+    if (supplier) supplierId = supplier.id;
+  }
+
   const data = {
     partNumber,
     name: String(row.name || "").trim(),
     category: row.category ? String(row.category).trim() : "General",
+    subCategory: row.subCategory ? String(row.subCategory).trim() : null,
+    partType: row.partType ? String(row.partType).trim() : null,
     description: row.description ? String(row.description).trim() : null,
     unit: row.unit ? String(row.unit).trim() : "pcs",
     unitCost: row.unitCost ? Number(row.unitCost) : 0,
-    weightKg: row.weightKg ? Number(row.weightKg) : null,
-    isCritical: row.isCritical === true || row.isCritical === "true" || row.isCritical === "yes",
-    minStockLevel: row.minStockLevel ? Number(row.minStockLevel) : 0,
+    supplierId,
+
+    // Physical Specifications
+    weightKg: row.weightKg || row.weight ? Number(row.weightKg || row.weight) : null,
+    lengthMm: row.lengthMm || row.length ? Number(row.lengthMm || row.length) : null,
+    widthMm: row.widthMm || row.width ? Number(row.widthMm || row.width) : null,
+    heightMm: row.heightMm || row.height ? Number(row.heightMm || row.height) : null,
+    volumeCm3: row.volumeCm3 || row.volume ? Number(row.volumeCm3 || row.volume) : null,
+    color: row.color ? String(row.color).trim() : null,
+    material: row.material ? String(row.material).trim() : null,
+
+    // Procurement & Sourcing
+    makeOrBuy: row.makeOrBuy ? String(row.makeOrBuy).toUpperCase() as "MAKE" | "BUY" | "BOTH" : "BUY",
+    procurementType: row.procurementType ? String(row.procurementType).toUpperCase() as "STOCK" | "ORDER" | "CONSIGNMENT" : "STOCK",
+    buyerCode: row.buyerCode ? String(row.buyerCode).trim() : null,
+    moq: row.moq ? Number(row.moq) : 1,
+    orderMultiple: row.orderMultiple ? Number(row.orderMultiple) : 1,
+    standardPack: row.standardPack ? Number(row.standardPack) : 1,
+    leadTimeDays: row.leadTimeDays || row.leadTime ? Number(row.leadTimeDays || row.leadTime) : 0,
+
+    // Inventory Planning
+    minStockLevel: row.minStockLevel || row.minStock ? Number(row.minStockLevel || row.minStock) : 0,
     reorderPoint: row.reorderPoint ? Number(row.reorderPoint) : 0,
+    maxStock: row.maxStock ? Number(row.maxStock) : null,
     safetyStock: row.safetyStock ? Number(row.safetyStock) : 0,
-    shelfLifeDays: row.shelfLifeDays ? Number(row.shelfLifeDays) : null,
+    isCritical: parseBoolean(row.isCritical || row.critical, false),
+
+    // Compliance & Origin
+    countryOfOrigin: row.countryOfOrigin || row.origin ? String(row.countryOfOrigin || row.origin).trim() : null,
+    hsCode: row.hsCode ? String(row.hsCode).trim() : null,
+    eccn: row.eccn ? String(row.eccn).trim() : null,
+    ndaaCompliant: parseBoolean(row.ndaaCompliant || row.ndaa, true),
+    itarControlled: parseBoolean(row.itarControlled || row.itar, false),
+
+    // Quality & Traceability
+    lotControl: parseBoolean(row.lotControl, false),
+    serialControl: parseBoolean(row.serialControl, false),
+    shelfLifeDays: row.shelfLifeDays || row.shelfLife ? Number(row.shelfLifeDays || row.shelfLife) : null,
+    inspectionRequired: parseBoolean(row.inspectionRequired, true),
+    inspectionPlan: row.inspectionPlan ? String(row.inspectionPlan).trim() : null,
+    aqlLevel: row.aqlLevel ? String(row.aqlLevel).trim() : null,
+    certificateRequired: parseBoolean(row.certificateRequired, false),
+    rohsCompliant: parseBoolean(row.rohsCompliant || row.rohs, true),
+    reachCompliant: parseBoolean(row.reachCompliant || row.reach, true),
+
+    // Engineering & Documents
+    revision: row.revision ? String(row.revision).trim() : "A",
+    revisionDate: row.revisionDate ? new Date(String(row.revisionDate)) : null,
+    drawingNumber: row.drawingNumber || row.drawing ? String(row.drawingNumber || row.drawing).trim() : null,
+    drawingUrl: row.drawingUrl ? String(row.drawingUrl).trim() : null,
+    datasheetUrl: row.datasheetUrl ? String(row.datasheetUrl).trim() : null,
+    specDocument: row.specDocument ? String(row.specDocument).trim() : null,
+    manufacturerPn: row.manufacturerPn || row.mfrPn ? String(row.manufacturerPn || row.mfrPn).trim() : null,
+    manufacturer: row.manufacturer || row.mfr ? String(row.manufacturer || row.mfr).trim() : null,
+    lifecycleStatus: row.lifecycleStatus ? String(row.lifecycleStatus).toUpperCase() as "DEVELOPMENT" | "PROTOTYPE" | "ACTIVE" | "PHASE_OUT" | "OBSOLETE" | "EOL" : "ACTIVE",
+    effectivityDate: row.effectivityDate ? new Date(String(row.effectivityDate)) : null,
+    obsoleteDate: row.obsoleteDate ? new Date(String(row.obsoleteDate)) : null,
+
+    // Enhanced Costing
+    standardCost: row.standardCost ? Number(row.standardCost) : null,
+    averageCost: row.averageCost ? Number(row.averageCost) : null,
+    landedCost: row.landedCost ? Number(row.landedCost) : null,
+    freightPercent: row.freightPercent ? Number(row.freightPercent) : null,
+    dutyPercent: row.dutyPercent ? Number(row.dutyPercent) : null,
+    overheadPercent: row.overheadPercent ? Number(row.overheadPercent) : null,
+
+    // Price Breaks
+    priceBreakQty1: row.priceBreakQty1 ? Number(row.priceBreakQty1) : null,
+    priceBreakCost1: row.priceBreakCost1 ? Number(row.priceBreakCost1) : null,
+    priceBreakQty2: row.priceBreakQty2 ? Number(row.priceBreakQty2) : null,
+    priceBreakCost2: row.priceBreakCost2 ? Number(row.priceBreakCost2) : null,
+    priceBreakQty3: row.priceBreakQty3 ? Number(row.priceBreakQty3) : null,
+    priceBreakCost3: row.priceBreakCost3 ? Number(row.priceBreakCost3) : null,
+
+    // Additional
+    tags: row.tags ? (Array.isArray(row.tags) ? row.tags : String(row.tags).split(",").map(t => t.trim())) : [],
     status: row.status ? String(row.status).toLowerCase() : "active",
   };
 
@@ -214,7 +309,7 @@ async function processPartRow(
   }
 }
 
-// Process a single supplier row
+// Process a single supplier row - Enhanced with new compliance fields
 async function processSupplierRow(
   row: Record<string, unknown>,
   updateMode: string
@@ -230,11 +325,17 @@ async function processSupplierRow(
     contactEmail: row.contactEmail ? String(row.contactEmail).trim() : null,
     contactPhone: row.contactPhone ? String(row.contactPhone).trim() : null,
     address: row.address ? String(row.address).trim() : null,
+    website: row.website ? String(row.website).trim() : null,
     paymentTerms: row.paymentTerms ? String(row.paymentTerms).trim() : null,
     leadTimeDays: row.leadTimeDays ? Number(row.leadTimeDays) : 14,
     rating: row.rating ? Number(row.rating) : null,
     category: row.category ? String(row.category).trim() : null,
-    ndaaCompliant: row.ndaaCompliant !== false && row.ndaaCompliant !== "false" && row.ndaaCompliant !== "no",
+    minOrderValue: row.minOrderValue ? Number(row.minOrderValue) : null,
+    // Compliance fields
+    ndaaCompliant: parseBoolean(row.ndaaCompliant || row.ndaa, true),
+    itarRegistered: parseBoolean(row.itarRegistered || row.itar, false),
+    as9100Certified: parseBoolean(row.as9100Certified || row.as9100, false),
+    iso9001Certified: parseBoolean(row.iso9001Certified || row.iso9001, false),
     status: row.status ? String(row.status).toLowerCase() : "active",
   };
 

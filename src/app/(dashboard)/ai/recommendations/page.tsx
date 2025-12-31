@@ -121,11 +121,11 @@ export default function RecommendationsPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg">
-            <DollarSign className="h-5 w-5 text-green-600" />
+          <div className="ml-auto flex items-center gap-2 bg-green-50 dark:bg-green-900/30 px-4 py-2 rounded-lg">
+            <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
             <div>
-              <p className="text-sm text-green-600">Potential Savings</p>
-              <p className="text-lg font-bold text-green-700">
+              <p className="text-sm text-green-600 dark:text-green-400">Potential Savings</p>
+              <p className="text-lg font-bold text-green-700 dark:text-green-300">
                 ${totalSavings.toLocaleString()}
               </p>
             </div>

@@ -109,7 +109,7 @@ async function getDashboardData() {
   });
 
   const orderStatusData = [
-    { name: "Draft", value: 0, color: "#9CA3AF" },
+    { name: "Draft", value: 0, color: "#64748B" },
     { name: "Confirmed", value: 0, color: "#22C55E" },
     { name: "In Production", value: 0, color: "#3B82F6" },
     { name: "Ready", value: 0, color: "#8B5CF6" },

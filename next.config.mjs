@@ -135,12 +135,45 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Security headers
+  // Security headers - HARDENED
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
+          // Content Security Policy - STRENGTHENED
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              // Scripts: Allow self, inline only in dev
+              process.env.NODE_ENV === "production"
+                ? "script-src 'self'"
+                : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              // Styles: Allow self, inline only in dev
+              process.env.NODE_ENV === "production"
+                ? "style-src 'self'"
+                : "style-src 'self' 'unsafe-inline'",
+              // Images: self, data URIs, HTTPS
+              "img-src 'self' data: blob: https:",
+              // Fonts
+              "font-src 'self' https://fonts.gstatic.com",
+              // Connect: API endpoints
+              "connect-src 'self' https://api.anthropic.com wss:",
+              // Frame ancestors: prevent clickjacking
+              "frame-ancestors 'none'",
+              // Form action
+              "form-action 'self'",
+              // Base URI
+              "base-uri 'self'",
+              // Object source: none (disable plugins)
+              "object-src 'none'",
+              // Media
+              "media-src 'self'",
+              // Upgrade insecure requests in production
+              process.env.NODE_ENV === "production" ? "upgrade-insecure-requests" : "",
+            ].filter(Boolean).join("; "),
+          },
           {
             key: "X-Frame-Options",
             value: "DENY",
@@ -159,16 +192,53 @@ const nextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(self), microphone=(), geolocation=()",
+            value: [
+              "camera=(self)",
+              "microphone=()",
+              "geolocation=()",
+              "interest-cohort=()", // Disable FLoC
+              "accelerometer=()",
+              "gyroscope=()",
+              "magnetometer=()",
+              "payment=()",
+              "usb=()",
+            ].join(", "),
+          },
+          // Cross-Origin Policies
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Resource-Policy",
+            value: "same-origin",
           },
           ...(process.env.NODE_ENV === "production"
             ? [
                 {
                   key: "Strict-Transport-Security",
-                  value: "max-age=31536000; includeSubDomains",
+                  value: "max-age=31536000; includeSubDomains; preload",
                 },
               ]
             : []),
+        ],
+      },
+      // API routes - additional security
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+          },
+          {
+            key: "Pragma",
+            value: "no-cache",
+          },
+          {
+            key: "Expires",
+            value: "0",
+          },
         ],
       },
     ];

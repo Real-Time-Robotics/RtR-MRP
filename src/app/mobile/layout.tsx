@@ -62,7 +62,7 @@ export default function MobileLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
       {/* Update banner */}
       {updateAvailable && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between">

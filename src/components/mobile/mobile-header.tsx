@@ -85,7 +85,7 @@ export function MobileHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-gray-900 text-white safe-area-top",
+        "sticky top-0 z-50 bg-neutral-900 text-white safe-area-top",
         className
       )}
     >
@@ -106,7 +106,7 @@ export function MobileHeader({
         <div className="flex-1 min-w-0">
           <h1 className="font-semibold text-lg truncate">{title}</h1>
           {subtitle && (
-            <p className="text-xs text-gray-400 truncate">{subtitle}</p>
+            <p className="text-xs text-neutral-400 truncate">{subtitle}</p>
           )}
         </div>
 

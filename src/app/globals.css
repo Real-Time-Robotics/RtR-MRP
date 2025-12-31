@@ -2,15 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark Mode + Animations */
+@import '../styles/theme.css';
+@import '../styles/animations.css';
+
+/* =============================================================================
+   RTR MRP - DESIGN SYSTEM V2
+   Modern, Minimal, Premium, Data-First UI
+   ============================================================================= */
+
 @layer base {
   :root {
+    /* Shadcn UI Variables (preserved) */
     --background: 0 0% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 222 79% 40%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 14% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -22,7 +32,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 222 79% 40%;
+    --ring: 217 91% 60%;
     --radius: 0.5rem;
 
     /* Custom colors */
@@ -32,33 +42,113 @@
     --warning-foreground: 0 0% 100%;
 
     /* Chart colors */
-    --chart-1: 222 79% 40%;
-    --chart-2: 142 71% 45%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 84% 39%;
     --chart-3: 38 92% 50%;
     --chart-4: 0 84% 60%;
     --chart-5: 262 83% 58%;
+    --chart-6: 189 94% 43%;
+
+    /* =========================================================================
+       RTR Design System V2 - Extended Variables
+       ========================================================================= */
+
+    /* Primary Brand (Blue) */
+    --color-primary-50: #EFF6FF;
+    --color-primary-100: #DBEAFE;
+    --color-primary-200: #BFDBFE;
+    --color-primary-300: #93C5FD;
+    --color-primary-400: #60A5FA;
+    --color-primary-500: #3B82F6;
+    --color-primary-600: #2563EB;
+    --color-primary-700: #1D4ED8;
+    --color-primary-800: #1E40AF;
+    --color-primary-900: #1E3A8A;
+
+    /* Navy (Sidebar/Headers) */
+    --color-navy-50: #F8FAFC;
+    --color-navy-100: #F1F5F9;
+    --color-navy-200: #E2E8F0;
+    --color-navy-300: #CBD5E1;
+    --color-navy-400: #94A3B8;
+    --color-navy-500: #64748B;
+    --color-navy-600: #475569;
+    --color-navy-700: #334155;
+    --color-navy-800: #1E293B;
+    --color-navy-900: #0F172A;
+
+    /* Semantic Colors */
+    --color-success: #10B981;
+    --color-success-light: #ECFDF5;
+    --color-success-dark: #059669;
+
+    --color-warning: #F59E0B;
+    --color-warning-light: #FFFBEB;
+    --color-warning-dark: #D97706;
+
+    --color-danger: #EF4444;
+    --color-danger-light: #FEF2F2;
+    --color-danger-dark: #DC2626;
+
+    --color-info: #3B82F6;
+    --color-info-light: #EFF6FF;
+    --color-info-dark: #2563EB;
+
+    /* Typography */
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+
+    /* Layout */
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 64px;
+    --topbar-height: 64px;
+    --content-max-width: 1440px;
+
+    /* Z-Index Scale */
+    --z-dropdown: 1000;
+    --z-sticky: 1100;
+    --z-overlay: 1300;
+    --z-modal: 1400;
+    --z-popover: 1500;
+    --z-toast: 1700;
+    --z-tooltip: 1800;
+    --z-command: 1900;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Transitions */
+    --transition-fast: 100ms;
+    --transition-normal: 200ms;
+    --transition-slow: 300ms;
+    --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 0 0% 98%;
-    --card: 222 47% 11%;
+    /* Neutral Dark Theme - Pure Gray (no blue tint) */
+    --background: 0 0% 4%;           /* neutral-950 #0a0a0a */
+    --foreground: 0 0% 98%;          /* neutral-50 */
+    --card: 0 0% 9%;                 /* neutral-900 #171717 */
     --card-foreground: 0 0% 98%;
-    --popover: 222 47% 11%;
+    --popover: 0 0% 7%;              /* between 950 and 900 */
     --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
+    --primary: 217 91% 60%;          /* keep blue accent */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 15%;           /* neutral-800 #262626 */
     --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --muted: 0 0% 15%;               /* neutral-800 */
+    --muted-foreground: 0 0% 64%;    /* neutral-400 */
+    --accent: 0 0% 15%;              /* neutral-800 */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 224 76% 48%;
+    --border: 0 0% 18%;              /* slightly lighter than card */
+    --input: 0 0% 15%;               /* neutral-800 */
+    --ring: 217 91% 60%;             /* keep blue ring */
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
@@ -70,6 +160,15 @@
     --chart-3: 38 92% 50%;
     --chart-4: 0 84% 60%;
     --chart-5: 262 83% 58%;
+
+    /* Tooltip colors for dark mode - neutral */
+    --tooltip-bg: #171717;           /* neutral-900 */
+    --tooltip-border: #262626;       /* neutral-800 */
+    --tooltip-text: #fafafa;         /* neutral-50 */
+
+    /* Chart colors for dark mode - neutral */
+    --chart-grid: #404040;           /* neutral-700 */
+    --chart-text: #d4d4d4;           /* neutral-300 */
   }
 }
 
@@ -87,4 +186,154 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* =============================================================================
+   DARK MODE AUTO-FIX FOR COLORED BACKGROUNDS
+   These utilities automatically apply dark mode variants
+   ============================================================================= */
+
+/* Green backgrounds */
+.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15) !important; }
+.dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.25) !important; }
+
+/* Blue backgrounds */
+.dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
+.dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.25) !important; }
+
+/* Red backgrounds */
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.25) !important; }
+
+/* Amber/Yellow backgrounds */
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.25) !important; }
+.dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15) !important; }
+.dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.25) !important; }
+
+/* Purple backgrounds */
+.dark .bg-purple-50 { background-color: rgba(168, 85, 247, 0.15) !important; }
+.dark .bg-purple-100 { background-color: rgba(168, 85, 247, 0.25) !important; }
+
+/* Gray backgrounds */
+.dark .bg-gray-50 { background-color: rgba(107, 114, 128, 0.15) !important; }
+.dark .bg-gray-100 { background-color: rgba(107, 114, 128, 0.25) !important; }
+
+/* Orange backgrounds */
+.dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.15) !important; }
+.dark .bg-orange-100 { background-color: rgba(249, 115, 22, 0.25) !important; }
+
+/* Cyan/Teal backgrounds */
+.dark .bg-cyan-50 { background-color: rgba(6, 182, 212, 0.15) !important; }
+.dark .bg-teal-50 { background-color: rgba(20, 184, 166, 0.15) !important; }
+
+/* White backgrounds - convert to neutral dark card color */
+.dark .bg-white {
+  background-color: #171717 !important; /* neutral-900 */
+}
+
+/* =============================================================================
+   RECHARTS DARK MODE STYLES
+   ============================================================================= */
+/* Remove any default backgrounds that may appear */
+.dark .recharts-cartesian-grid-bg {
+  fill: none !important;
+}
+
+/* Target the SVG surface element */
+.dark .recharts-surface {
+  background: transparent !important;
+}
+
+/* Target the wrapper div */
+.dark .recharts-wrapper {
+  background: transparent !important;
+}
+
+/* Target any rect elements that might be used as background */
+.dark .recharts-cartesian-grid rect,
+.dark .recharts-surface > rect:first-child {
+  fill: transparent !important;
+}
+
+/* Target responsive container */
+.dark .recharts-responsive-container {
+  background: transparent !important;
+}
+
+/* Remove background from chart clip paths */
+.dark [class*="recharts"] rect[fill="#fff"],
+.dark [class*="recharts"] rect[fill="white"],
+.dark [class*="recharts"] rect[fill="#ffffff"] {
+  fill: transparent !important;
+}
+
+/* More aggressive targeting - remove ALL background rects in recharts except bars */
+.dark .recharts-surface > g > rect:not([class*="recharts-bar"]),
+.dark .recharts-layer rect.recharts-cartesian-grid-bg,
+.dark .recharts-cartesian-grid rect {
+  fill: transparent !important;
+}
+
+/* Target SVG directly - remove inline background */
+.dark svg.recharts-surface {
+  background-color: transparent !important;
+}
+
+/* Very specific targeting for gray backgrounds */
+.dark [class*="recharts"] rect[fill="#f5f5f5"],
+.dark [class*="recharts"] rect[fill="#e5e5e5"],
+.dark [class*="recharts"] rect[fill="#eee"],
+.dark [class*="recharts"] rect[fill="#eeeeee"],
+.dark [class*="recharts"] rect[fill="#f0f0f0"],
+.dark [class*="recharts"] rect[fill="rgb(245, 245, 245)"],
+.dark [class*="recharts"] rect[fill="rgb(238, 238, 238)"],
+.dark [class*="recharts"] rect[fill="rgb(240, 240, 240)"] {
+  fill: transparent !important;
+}
+
+/* Ultimate fallback - force all chart containers to be transparent */
+.dark .recharts-wrapper svg,
+.dark .recharts-responsive-container svg {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Force fill on any rect that's not a data bar to be transparent */
+.dark .recharts-surface rect:not(.recharts-bar-rectangle):not([class*="bar"]) {
+  fill: transparent !important;
+}
+
+/* Override any inline styles on the wrapper */
+.dark [style*="background"] .recharts-wrapper,
+.dark .recharts-wrapper[style*="background"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* =============================================================================
+   RECHARTS GENERAL DARK MODE FIX (for other charts)
+   ============================================================================= */
+.dark .recharts-wrapper,
+.dark .recharts-surface {
+  background: transparent !important;
+}
+
+.dark .recharts-cartesian-grid-bg {
+  fill: transparent !important;
+}
+
+/* Landing Page Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-light {
+  background: linear-gradient(135deg, #09090b 0%, #52525b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

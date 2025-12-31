@@ -381,36 +381,22 @@ export async function printLabel(
     imagesHtml += `<img src="${dataUrl}" style="margin: 2mm; page-break-after: always;" />`;
   }
 
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Print Label</title>
-        <style>
-          @page {
-            size: ${template.size.width}mm ${template.size.height}mm;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-          }
-          img {
-            display: block;
-          }
-        </style>
-      </head>
-      <body>
-        ${imagesHtml}
-        <script>
-          window.onload = function() {
-            window.print();
-            window.close();
-          };
-        </script>
-      </body>
-    </html>
-  `);
+  // Sanitize template dimensions to prevent XSS
+  const sanitizedWidth = Math.max(0, Math.min(Number(template.size.width) || 0, 500));
+  const sanitizedHeight = Math.max(0, Math.min(Number(template.size.height) || 0, 500));
+
+  // Use safe HTML construction instead of direct template interpolation
+  const doc = printWindow.document;
+  doc.open();
+  doc.write("<!DOCTYPE html><html><head><title>Print Label</title>");
+  doc.write("<style>");
+  doc.write(`@page { size: ${sanitizedWidth}mm ${sanitizedHeight}mm; margin: 0; }`);
+  doc.write("body { margin: 0; padding: 0; }");
+  doc.write("img { display: block; }");
+  doc.write("</style></head><body>");
+  doc.write(imagesHtml);
+  doc.write("<script>window.onload = function() { window.print(); window.close(); };</script>");
+  doc.write("</body></html>");
   printWindow.document.close();
 }
 

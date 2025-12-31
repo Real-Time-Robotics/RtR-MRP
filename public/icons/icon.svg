@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background - Dark Bloomberg style -->
+  <rect width="512" height="512" rx="64" fill="#0a0a0a"/>
+
+  <!-- MRP Text - Courier style monospace -->
+  <text x="220" y="300"
+        font-family="'Courier New', Courier, monospace"
+        font-size="160"
+        font-weight="bold"
+        fill="white"
+        text-anchor="middle"
+        letter-spacing="8">MRP</text>
+
+  <!-- Single orange dot - at baseline like a period -->
+  <circle cx="380" cy="290" r="18" fill="#f97316"/>
+</svg>

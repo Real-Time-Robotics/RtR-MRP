@@ -35,7 +35,7 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-800 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-neutral-900 border-t border-neutral-800 safe-area-bottom">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive =
@@ -52,7 +52,7 @@ export function BottomNav() {
                 "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors",
                 isActive
                   ? "text-primary"
-                  : "text-gray-500 hover:text-gray-300"
+                  : "text-neutral-500 hover:text-neutral-300"
               )}
             >
               <item.icon className={cn("h-6 w-6", isActive && "fill-primary/20")} />

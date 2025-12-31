@@ -142,7 +142,7 @@ export function ScanResultCard({
         </div>
 
         {/* Details */}
-        <div className="p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
+        <div className="p-4 space-y-2 bg-gray-50 dark:bg-neutral-900">
           {result.partNumber && (
             <DetailRow label="Part Number" value={result.partNumber} />
           )}
@@ -175,7 +175,7 @@ export function ScanResultCard({
 
         {/* Actions */}
         {showActions && (
-          <div className="p-2 border-t bg-white dark:bg-gray-800">
+          <div className="p-2 border-t bg-white dark:bg-neutral-800">
             <div className="grid grid-cols-2 gap-2">
               {actions.slice(0, 4).map((action) => (
                 <Button

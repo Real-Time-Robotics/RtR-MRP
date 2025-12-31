@@ -7,6 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ ENUMS (Parts Enhancement v2.0) ============
+enum MakeOrBuy {
+  MAKE
+  BUY
+  BOTH
+}
+
+enum ProcurementType {
+  STOCK
+  ORDER
+  CONSIGNMENT
+}
+
+enum LifecycleStatus {
+  DEVELOPMENT
+  PROTOTYPE
+  ACTIVE
+  PHASE_OUT
+  OBSOLETE
+  EOL
+}
+
+enum BomType {
+  ENGINEERING
+  MANUFACTURING
+  CONFIGURABLE
+  PLANNING
+  SERVICE
+}
+
+enum AlternateType {
+  FORM_FIT_FUNCTION
+  FUNCTIONAL
+  EMERGENCY
+  APPROVED_VENDOR
+}
+
+enum DocumentType {
+  DRAWING
+  DATASHEET
+  SPECIFICATION
+  CERTIFICATE
+  TEST_REPORT
+  MSDS
+  MANUAL
+  OTHER
+}
+
+enum CertificationType {
+  ROHS
+  REACH
+  CE
+  UL
+  ISO
+  AS9100
+  ITAR
+  NDAA
+  COC
+  COA
+  OTHER
+}
+
 // ============ SUPPLIERS ============
 model Supplier {
   id            String   @id @default(cuid())
@@ -39,7 +101,7 @@ model Supplier {
   @@map("suppliers")
 }
 
-// ============ PARTS ============
+// ============ PARTS (Enhanced v2.0) ============
 model Part {
   id            String   @id @default(cuid())
   partNumber    String   @unique
@@ -58,6 +120,83 @@ model Part {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // === NEW: Physical Specifications ===
+  lengthMm      Float?
+  widthMm       Float?
+  heightMm      Float?
+  volumeCm3     Float?
+  color         String?
+  material      String?
+
+  // === NEW: Classification ===
+  subCategory   String?
+  partType      String?   // Component, Assembly, Raw Material
+
+  // === NEW: Procurement & Sourcing ===
+  makeOrBuy        MakeOrBuy       @default(BUY)
+  procurementType  ProcurementType @default(STOCK)
+  buyerCode        String?
+  moq              Int             @default(1)
+  orderMultiple    Int             @default(1)
+  standardPack     Int             @default(1)
+  leadTimeDays     Int             @default(14)
+
+  // === NEW: Compliance & Origin (CRITICAL for NDAA) ===
+  countryOfOrigin  String?
+  hsCode           String?
+  eccn             String?
+  ndaaCompliant    Boolean  @default(true)
+  itarControlled   Boolean  @default(false)
+
+  // === NEW: Quality & Traceability ===
+  lotControl          Boolean  @default(false)
+  serialControl       Boolean  @default(false)
+  inspectionRequired  Boolean  @default(true)
+  inspectionPlan      String?
+  aqlLevel            String?
+  certificateRequired Boolean  @default(false)
+  rohsCompliant       Boolean  @default(true)
+  reachCompliant      Boolean  @default(true)
+
+  // === NEW: Engineering & Documents ===
+  revision         String    @default("A")
+  revisionDate     DateTime?
+  drawingNumber    String?
+  drawingUrl       String?
+  datasheetUrl     String?
+  specDocument     String?
+  manufacturerPn   String?
+  manufacturer     String?
+  lifecycleStatus  LifecycleStatus @default(ACTIVE)
+  effectivityDate  DateTime?
+  obsoleteDate     DateTime?
+
+  // === NEW: Enhanced Costing ===
+  standardCost     Float?
+  averageCost      Float?
+  landedCost       Float?
+  freightPercent   Float?
+  dutyPercent      Float?
+  overheadPercent  Float?
+
+  // === NEW: Price Breaks ===
+  priceBreakQty1   Int?
+  priceBreakCost1  Float?
+  priceBreakQty2   Int?
+  priceBreakCost2  Float?
+  priceBreakQty3   Int?
+  priceBreakCost3  Float?
+
+  // === NEW: Inventory Planning ===
+  maxStock         Int?
+
+  // === NEW: Audit ===
+  createdBy        String?
+  updatedBy        String?
+  tags             String[]  @default([])
+  notes            String?
+
+  // Existing relations
   partSuppliers       PartSupplier[]
   bomLines            BomLine[]
   inventory           Inventory[]
@@ -87,6 +226,19 @@ model Part {
   primarySubstitutes  PartSubstitute[]  @relation("PrimaryPart")
   substituteFor       PartSubstitute[]  @relation("SubstitutePart")
 
+  // === NEW: Enhanced Relations (v2.0) ===
+  partAlternates      PartAlternate[]   @relation("PartAlternates")
+  alternateFor        PartAlternate[]   @relation("AlternateFor")
+  partDocuments       PartDocument[]
+  partRevisions       PartRevision[]
+  partCostsHistory    PartCostHistory[]
+  partCertifications  PartCertification[]
+
+  @@index([category])
+  @@index([lifecycleStatus])
+  @@index([ndaaCompliant])
+  @@index([makeOrBuy])
+  @@index([countryOfOrigin])
   @@map("parts")
 }
 
@@ -101,11 +253,156 @@ model PartSupplier {
   isPreferred    Boolean  @default(false)
   createdAt      DateTime @default(now())
 
+  // === NEW: Enhanced fields (v2.0) ===
+  currency            String    @default("USD")
+  orderMultiple       Int       @default(1)
+  qualified           Boolean   @default(true)
+  qualificationDate   DateTime?
+  qualificationExpiry DateTime?
+  status              String    @default("active")
+  notes               String?
+  updatedAt           DateTime  @updatedAt
+
   part     Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@unique([partId, supplierId])
+  @@index([partId])
+  @@index([supplierId])
   @@map("part_suppliers")
+}
+
+// ============ PART ALTERNATES (NEW v2.0) ============
+model PartAlternate {
+  id                  String    @id @default(cuid())
+  partId              String
+  alternatePartId     String
+
+  alternateType       AlternateType @default(FORM_FIT_FUNCTION)
+  priority            Int           @default(1)
+  conversionFactor    Float         @default(1)  // Qty conversion
+
+  approved            Boolean   @default(true)
+  approvedBy          String?
+  approvalDate        DateTime?
+  effectiveDate       DateTime?
+  expiryDate          DateTime?
+
+  notes               String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  part                Part      @relation("PartAlternates", fields: [partId], references: [id], onDelete: Cascade)
+  alternatePart       Part      @relation("AlternateFor", fields: [alternatePartId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, alternatePartId])
+  @@index([partId])
+  @@map("part_alternates")
+}
+
+// ============ PART DOCUMENTS (NEW v2.0) ============
+model PartDocument {
+  id                  String       @id @default(cuid())
+  partId              String
+
+  documentType        DocumentType
+  documentNumber      String?
+  title               String
+  revision            String       @default("A")
+  url                 String
+
+  effectiveDate       DateTime?
+  expiryDate          DateTime?
+
+  uploadedBy          String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  part                Part         @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@map("part_documents")
+}
+
+// ============ PART REVISIONS (NEW v2.0) ============
+model PartRevision {
+  id                  String    @id @default(cuid())
+  partId              String
+
+  revision            String    // A, B, C or 01, 02, 03
+  previousRevision    String?
+  revisionDate        DateTime
+
+  changeType          String?   // Engineering, Document, etc.
+  changeReason        String?
+  changeDescription   String?
+
+  ecrNumber           String?   // Engineering Change Request
+  ecoNumber           String?   // Engineering Change Order
+
+  changedBy           String
+  approvedBy          String?
+  approvalDate        DateTime?
+
+  createdAt           DateTime  @default(now())
+
+  part                Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@map("part_revisions")
+}
+
+// ============ PART COST HISTORY (NEW v2.0) ============
+model PartCostHistory {
+  id                  String    @id @default(cuid())
+  partId              String
+
+  effectiveDate       DateTime
+  costType            String    // STANDARD, ACTUAL, LANDED
+
+  unitCost            Float
+  currency            String    @default("USD")
+  supplierId          String?
+  poNumber            String?
+
+  notes               String?
+  createdBy           String?
+  createdAt           DateTime  @default(now())
+
+  part                Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([effectiveDate])
+  @@map("part_costs_history")
+}
+
+// ============ PART CERTIFICATIONS (NEW v2.0) ============
+model PartCertification {
+  id                  String            @id @default(cuid())
+  partId              String
+
+  certificationType   CertificationType
+  certificateNumber   String?
+  issuingBody         String?
+
+  issueDate           DateTime?
+  expiryDate          DateTime?
+
+  documentUrl         String?
+  verified            Boolean   @default(false)
+  verifiedBy          String?
+  verifiedDate        DateTime?
+
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  part                Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@index([partId])
+  @@index([certificationType])
+  @@map("part_certifications")
 }
 
 // ============ PRODUCTS & BOM ============
@@ -155,6 +452,7 @@ model BomHeader {
   @@map("bom_headers")
 }
 
+// ============ BOM LINE (Enhanced v2.0) ============
 model BomLine {
   id         String  @id @default(cuid())
   bomId      String
@@ -170,10 +468,49 @@ model BomLine {
   scrapRate  Float   @default(0)
   notes      String?
 
+  // === NEW: Find Number & Reference ===
+  findNumber          Int?      // Item # on drawing (10, 20, 30)
+  referenceDesignator String?   // M1, M2 for Motor 1, 2
+
+  // === NEW: Position (for assembly instructions) ===
+  positionX           Float?
+  positionY           Float?
+  positionZ           Float?
+
+  // === NEW: Manufacturing ===
+  scrapPercent        Float     @default(0)
+  operationSeq        Int?      // Which operation uses this
+
+  // === NEW: Effectivity & Revision ===
+  revision            String    @default("A")
+  effectivityDate     DateTime?
+  obsoleteDate        DateTime?
+
+  // === NEW: Alternates ===
+  alternateGroup      String?
+  isPrimary           Boolean   @default(true)
+
+  // === NEW: BOM Type & Structure ===
+  bomType             BomType   @default(MANUFACTURING)
+  subAssembly         Boolean   @default(false)
+  phantom             Boolean   @default(false)  // Phantom BOM - no inventory
+
+  // === NEW: Costing ===
+  extendedCost        Float?    // Qty * Part Cost
+
+  // === NEW: Sequence for display ===
+  sequence            Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
   bom  BomHeader @relation(fields: [bomId], references: [id], onDelete: Cascade)
   part Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   @@unique([bomId, lineNumber])
+  @@index([moduleCode])
+  @@index([bomType])
+  @@index([alternateGroup])
   @@map("bom_lines")
 }
 

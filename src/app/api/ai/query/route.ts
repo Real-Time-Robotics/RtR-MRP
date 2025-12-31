@@ -1,0 +1,152 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { processNaturalLanguageQuery, getSupportedQueryTypes } from '@/lib/nl-query-engine';
+
+// =============================================================================
+// RTR AI COPILOT - NATURAL LANGUAGE QUERY API
+// Processes natural language queries and returns structured data
+// =============================================================================
+
+// Rate limiting store
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+// Check rate limit
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitStore.get(userId);
+  
+  if (!userLimit || userLimit.resetAt < now) {
+    rateLimitStore.set(userId, { count: 1, resetAt: now + 60000 });
+    return true;
+  }
+  
+  if (userLimit.count >= 30) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
+}
+
+// Audit log function
+async function logQuery(
+  userId: string,
+  query: string,
+  result: any,
+  latencyMs: number
+) {
+  // In production, save to database or logging service
+  console.log('[NL Query Audit]', {
+    timestamp: new Date().toISOString(),
+    userId,
+    query: query.substring(0, 100),
+    success: result.success,
+    confidence: result.metadata?.confidence,
+    rowCount: result.metadata?.rowCount,
+    latencyMs,
+  });
+}
+
+// POST: Process natural language query
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
+  try {
+    const body = await request.json();
+    const { query, language = 'en', userId = 'anonymous' } = body;
+    
+    // Validate request
+    if (!query || typeof query !== 'string') {
+      return NextResponse.json(
+        { error: 'Query is required and must be a string' },
+        { status: 400 }
+      );
+    }
+    
+    // Check query length
+    if (query.length > 500) {
+      return NextResponse.json(
+        { error: 'Query too long (max 500 characters)' },
+        { status: 400 }
+      );
+    }
+    
+    // Rate limiting
+    if (!checkRateLimit(userId)) {
+      return NextResponse.json(
+        { 
+          error: language === 'vi' 
+            ? 'Quá nhiều yêu cầu. Vui lòng đợi một chút.'
+            : 'Too many requests. Please wait a moment.',
+        },
+        { status: 429 }
+      );
+    }
+    
+    // Process query
+    const result = await processNaturalLanguageQuery(query, language);
+    
+    // Audit logging
+    const latencyMs = Date.now() - startTime;
+    await logQuery(userId, query, result, latencyMs);
+    
+    return NextResponse.json({
+      ...result,
+      metadata: {
+        ...result.metadata,
+        executionTime: latencyMs,
+      },
+    });
+    
+  } catch (error) {
+    console.error('NL Query API error:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Internal server error',
+        data: [],
+        metadata: {
+          rowCount: 0,
+          executionTime: Date.now() - startTime,
+          confidence: 0,
+          explanation: 'An error occurred while processing your query',
+          explanationVi: 'Đã xảy ra lỗi khi xử lý truy vấn của bạn',
+        },
+        suggestedFollowups: [],
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET: Get supported query types and examples
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const language = searchParams.get('language') || 'en';
+  
+  const queryTypes = getSupportedQueryTypes();
+  
+  return NextResponse.json({
+    version: '1.0.0',
+    supportedQueryTypes: queryTypes,
+    examples: queryTypes.flatMap(qt => 
+      qt.examples.map(ex => ({
+        category: qt.intent,
+        query: language === 'vi' ? ex.vi : ex.en,
+      }))
+    ),
+    capabilities: [
+      'inventory_queries',
+      'sales_analysis',
+      'supplier_performance',
+      'production_status',
+      'quality_metrics',
+      'natural_language_processing',
+      'vietnamese_support',
+      'english_support',
+    ],
+    limits: {
+      maxQueryLength: 500,
+      rateLimit: '30 requests/minute',
+    },
+  });
+}

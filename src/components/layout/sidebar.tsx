@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Package,
+  Boxes,
   Warehouse,
   Truck,
   ShoppingCart,
@@ -37,12 +38,14 @@ import {
   FlaskConical,
   Lock,
   MapPin,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface NavItem {
   nameKey: string;
@@ -52,7 +55,8 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { nameKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
+  { nameKey: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.parts", href: "/parts", icon: Boxes },
   { nameKey: "nav.bom", href: "/bom", icon: Package },
   { nameKey: "nav.inventory", href: "/inventory", icon: Warehouse },
   { nameKey: "nav.suppliers", href: "/suppliers", icon: Truck },
@@ -116,6 +120,8 @@ const navigation: NavItem[] = [
   },
   { nameKey: "nav.ai", href: "/ai", icon: Sparkles },
   { nameKey: "nav.excel", href: "/excel", icon: FileSpreadsheet },
+  { nameKey: "nav.dataMigration", href: "/data-migration", icon: Upload },
+  { nameKey: "nav.analytics", href: "/analytics", icon: BarChart3 },
   { nameKey: "nav.reports", href: "/reports", icon: FileText },
   { nameKey: "nav.activity", href: "/activity", icon: Activity },
   { nameKey: "nav.mobile", href: "/mobile", icon: Smartphone },
@@ -128,8 +134,17 @@ const bottomNavigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  const userInitials = session?.user?.name
+    ? session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : session?.user?.email?.[0]?.toUpperCase() || "U";
 
   // Auto-expand menus based on current path (only on initial load)
   useEffect(() => {
@@ -156,8 +171,8 @@ export function Sidebar() {
   };
 
   const isItemActive = (item: NavItem): boolean => {
-    if (item.href === "/") {
-      return pathname === "/";
+    if (item.href === "/dashboard") {
+      return pathname === "/dashboard";
     }
     if (item.children) {
       return item.children.some((child) =>
@@ -190,8 +205,8 @@ export function Sidebar() {
             className={cn(
               "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-gray-800 text-white"
-                : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                ? "bg-gray-200 text-gray-900 dark:bg-neutral-800 dark:text-white"
+                : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
             )}
             title={collapsed ? itemName : undefined}
           >
@@ -209,7 +224,7 @@ export function Sidebar() {
             )}
           </button>
           {!collapsed && isExpanded && (
-            <div className="mt-1 ml-4 space-y-1 border-l border-gray-700 pl-3">
+            <div className="mt-1 ml-4 space-y-1 border-l border-gray-300 dark:border-neutral-700 pl-3">
               {item.children!.map((child) => {
                 const childActive = isChildActive(child.href, item.href);
                 const childName = t(child.nameKey);
@@ -221,7 +236,7 @@ export function Sidebar() {
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       childActive
                         ? "bg-primary text-white"
-                        : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                        : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
                     )}
                   >
                     <child.icon className="h-4 w-4 shrink-0" />
@@ -243,7 +258,7 @@ export function Sidebar() {
           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
           isActive
             ? "bg-primary text-white"
-            : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
         )}
         title={collapsed ? itemName : undefined}
       >
@@ -256,24 +271,28 @@ export function Sidebar() {
   return (
     <div
       className={cn(
-        "flex flex-col bg-gray-900 text-white transition-all duration-300",
+        "flex h-full flex-col transition-all duration-300",
+        "bg-gray-100 text-gray-900 dark:bg-neutral-900 dark:text-white",
         collapsed ? "w-16" : "w-64"
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-800">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-neutral-800">
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-white font-bold text-sm">RTR</span>
+          <Link href="/" className="flex items-center gap-3">
+            {/* Bloomberg-style Logo */}
+            <div className="h-8 w-8 rounded bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center">
+              <span className="text-white font-bold text-xs font-mono">MRP</span>
             </div>
-            <span className="font-semibold text-lg">MRP System</span>
+            <span className="font-bold text-lg font-mono text-gray-900 dark:text-white tracking-tight flex items-end">
+              MRP<span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-1" />
+            </span>
           </Link>
         )}
         <Button
           variant="ghost"
           size="icon"
-          className="text-gray-400 hover:text-white hover:bg-gray-800"
+          className="text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-neutral-800"
           onClick={() => setCollapsed(!collapsed)}
         >
           <ChevronLeft
@@ -293,7 +312,7 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-gray-800 p-2 space-y-1">
+      <div className="border-t border-gray-200 dark:border-neutral-800 p-2 space-y-1">
         {bottomNavigation.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const itemName = t(item.nameKey);
@@ -305,7 +324,7 @@ export function Sidebar() {
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-white"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                  : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
               )}
               title={collapsed ? itemName : undefined}
             >
@@ -314,14 +333,50 @@ export function Sidebar() {
             </Link>
           );
         })}
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
-          title={collapsed ? t("auth.logout") : undefined}
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{t("auth.logout")}</span>}
-        </button>
+        {/* User Profile with Logout */}
+        <div className={cn(
+          "rounded-lg mt-2 bg-gray-200/70 dark:bg-neutral-800/50 overflow-hidden",
+          collapsed && "flex flex-col items-center"
+        )}>
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2",
+            collapsed && "justify-center"
+          )}>
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {session?.user?.name || session?.user?.email || "User"}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-neutral-400 capitalize">
+                  {session?.user?.role || "User"}
+                </span>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="p-1.5 rounded-md text-gray-500 hover:text-red-500 hover:bg-gray-300 dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-neutral-700 transition-colors"
+                title={t("auth.logout")}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {collapsed && (
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full p-2 text-gray-500 hover:text-red-500 hover:bg-gray-300 dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-neutral-700 transition-colors border-t border-gray-300 dark:border-neutral-700"
+              title={t("auth.logout")}
+            >
+              <LogOut className="h-4 w-4 mx-auto" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

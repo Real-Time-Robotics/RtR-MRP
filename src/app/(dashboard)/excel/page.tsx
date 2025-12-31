@@ -109,8 +109,8 @@ export default function ExcelHubPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Excel Integration</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Excel Integration</h1>
+        <p className="text-gray-500 dark:text-neutral-400 mt-1">
           Import, export, and manage your data with Excel files
         </p>
       </div>
@@ -163,9 +163,9 @@ export default function ExcelHubPage() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Imports */}
-        <div className="bg-white rounded-xl border shadow-sm">
-          <div className="px-6 py-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Recent Imports</h2>
+        <div className="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-neutral-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Recent Imports</h2>
             <Link
               href="/excel/import"
               className="text-sm text-blue-600 hover:underline"
@@ -173,16 +173,16 @@ export default function ExcelHubPage() {
               View All
             </Link>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-200 dark:divide-neutral-700">
             {loading ? (
-              <div className="p-6 text-center text-gray-500">Loading...</div>
+              <div className="p-6 text-center text-gray-500 dark:text-neutral-400">Loading...</div>
             ) : importJobs.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-500 dark:text-neutral-400">
                 <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                 <p>No imports yet</p>
                 <Link
                   href="/excel/import"
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
                 >
                   Start your first import
                 </Link>
@@ -191,24 +191,24 @@ export default function ExcelHubPage() {
               importJobs.slice(0, 5).map((job) => (
                 <div
                   key={job.id}
-                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50"
+                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-neutral-700"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                       {getEntityIcon(job.type)}
                     </div>
                     <div>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm dark:text-white">
                         {job.fileName || `${job.type} import`}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-neutral-400">
                         {formatDate(job.createdAt)}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {job.status === "completed" && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 dark:text-neutral-400">
                         {job.successRows}/{job.totalRows}
                       </span>
                     )}
@@ -221,9 +221,9 @@ export default function ExcelHubPage() {
         </div>
 
         {/* Recent Exports */}
-        <div className="bg-white rounded-xl border shadow-sm">
-          <div className="px-6 py-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Recent Exports</h2>
+        <div className="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-neutral-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Recent Exports</h2>
             <Link
               href="/excel/export"
               className="text-sm text-blue-600 hover:underline"
@@ -231,16 +231,16 @@ export default function ExcelHubPage() {
               View All
             </Link>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-gray-200 dark:divide-neutral-700">
             {loading ? (
-              <div className="p-6 text-center text-gray-500">Loading...</div>
+              <div className="p-6 text-center text-gray-500 dark:text-neutral-400">Loading...</div>
             ) : exportJobs.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
+              <div className="p-6 text-center text-gray-500 dark:text-neutral-400">
                 <Download className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                 <p>No exports yet</p>
                 <Link
                   href="/excel/export"
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
                 >
                   Export your data
                 </Link>
@@ -249,17 +249,17 @@ export default function ExcelHubPage() {
               exportJobs.slice(0, 5).map((job) => (
                 <div
                   key={job.id}
-                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50"
+                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-neutral-700"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
+                    <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
                       {getEntityIcon(job.type)}
                     </div>
                     <div>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm dark:text-white">
                         {job.fileName || `${job.type} export`}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-neutral-400">
                         {formatDate(job.createdAt)}
                       </p>
                     </div>
@@ -273,8 +273,8 @@ export default function ExcelHubPage() {
       </div>
 
       {/* Data Types Grid */}
-      <div className="bg-white rounded-xl border shadow-sm p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">
+      <div className="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm p-6">
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-4">
           Supported Data Types
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -290,12 +290,12 @@ export default function ExcelHubPage() {
             return (
               <div
                 key={item.type}
-                className="p-4 border rounded-lg text-center hover:bg-gray-50 transition-colors"
+                className="p-4 border border-gray-200 dark:border-neutral-700 rounded-lg text-center hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
               >
-                <div className="w-10 h-10 mx-auto rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 mb-2">
+                <div className="w-10 h-10 mx-auto rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-600 dark:text-neutral-300 mb-2">
                   <Icon className="w-5 h-5" />
                 </div>
-                <p className="font-medium text-sm">{item.label}</p>
+                <p className="font-medium text-sm dark:text-white">{item.label}</p>
               </div>
             );
           })}

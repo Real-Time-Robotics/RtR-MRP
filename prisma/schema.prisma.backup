@@ -1,0 +1,3358 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ SUPPLIERS ============
+model Supplier {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  name          String
+  country       String
+  ndaaCompliant Boolean  @default(true)
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+  address       String?
+  paymentTerms  String?
+  leadTimeDays  Int
+  rating        Float?
+  category      String?
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  partSuppliers       PartSupplier[]
+  purchaseOrders      PurchaseOrder[]
+  mrpSuggestions      MrpSuggestion[]
+  riskScore           SupplierRiskScore?
+  leadTimePredictions LeadTimePrediction[]
+  inspectionPlans     InspectionPlan[]
+
+  // Financial relations
+  purchaseInvoices    PurchaseInvoice[]
+
+  @@map("suppliers")
+}
+
+// ============ PARTS ============
+model Part {
+  id            String   @id @default(cuid())
+  partNumber    String   @unique
+  name          String
+  category      String
+  description   String?
+  unit          String   @default("pcs")
+  unitCost      Float
+  weightKg      Float?
+  isCritical    Boolean  @default(false)
+  minStockLevel Int      @default(0)
+  reorderPoint  Int      @default(0)
+  safetyStock   Int      @default(0)
+  shelfLifeDays Int?
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  partSuppliers       PartSupplier[]
+  bomLines            BomLine[]
+  inventory           Inventory[]
+  poLines             PurchaseOrderLine[]
+  mrpSuggestions      MrpSuggestion[]
+  allocations         MaterialAllocation[]
+  leadTimePredictions LeadTimePrediction[]
+  inspectionPlans     InspectionPlan[]
+  inspections         Inspection[]
+  ncrs                NCR[]
+  lotTransactions     LotTransaction[]
+
+  // Financial relations
+  partCosts           PartCost[]
+  costRollup          PartCostRollup?
+  purchaseInvoiceLines PurchaseInvoiceLine[]
+  salesInvoiceLines   SalesInvoiceLine[]
+  costVariances       CostVariance[]
+  pickListLines       PickListLine[]
+
+  // Advanced MRP relations (Phase 13)
+  inventorySites      InventorySite[]
+  transferOrderLines  TransferOrderLine[]
+  plannedOrders       PlannedOrder[]
+  mrpExceptions       MRPException[]
+  atpRecords          ATPRecord[]
+  primarySubstitutes  PartSubstitute[]  @relation("PrimaryPart")
+  substituteFor       PartSubstitute[]  @relation("SubstitutePart")
+
+  @@map("parts")
+}
+
+model PartSupplier {
+  id             String   @id @default(cuid())
+  partId         String
+  supplierId     String
+  supplierPartNo String?
+  unitPrice      Float
+  minOrderQty    Int      @default(1)
+  leadTimeDays   Int
+  isPreferred    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  part     Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, supplierId])
+  @@map("part_suppliers")
+}
+
+// ============ PRODUCTS & BOM ============
+model Product {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  description   String?
+  basePrice     Float?
+  assemblyHours Float?
+  testingHours  Float?
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  bomHeaders      BomHeader[]
+  salesOrderLines SalesOrderLine[]
+  workOrders      WorkOrder[]
+  forecasts       DemandForecast[]
+  inspectionPlans InspectionPlan[]
+  inspections     Inspection[]
+  ncrs            NCR[]
+  lotTransactions LotTransaction[]
+  certificates    CertificateOfConformance[]
+  routings        Routing[]
+
+  // Financial relations
+  salesInvoiceLines SalesInvoiceLine[]
+
+  @@map("products")
+}
+
+model BomHeader {
+  id            String    @id @default(cuid())
+  productId     String
+  version       String
+  effectiveDate DateTime
+  expiryDate    DateTime?
+  status        String    @default("active")
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  bomLines BomLine[]
+
+  @@unique([productId, version])
+  @@map("bom_headers")
+}
+
+model BomLine {
+  id         String  @id @default(cuid())
+  bomId      String
+  lineNumber Int
+  partId     String
+  quantity   Float
+  unit       String  @default("pcs")
+  level      Int     @default(1)
+  moduleCode String?
+  moduleName String?
+  position   String?
+  isCritical Boolean @default(false)
+  scrapRate  Float   @default(0)
+  notes      String?
+
+  bom  BomHeader @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  part Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([bomId, lineNumber])
+  @@map("bom_lines")
+}
+
+// ============ INVENTORY ============
+model Warehouse {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  location  String?
+  type      String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  // Site relation
+  siteId    String?
+  site      Site?    @relation(fields: [siteId], references: [id])
+
+  inventory     Inventory[]
+  pickListLines PickListLine[]
+
+  @@index([siteId])
+  @@map("warehouses")
+}
+
+model Inventory {
+  id            String    @id @default(cuid())
+  partId        String
+  warehouseId   String
+  quantity      Int       @default(0)
+  reservedQty   Int       @default(0)
+  lotNumber     String?
+  locationCode  String?
+  expiryDate    DateTime?
+  lastCountDate DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, warehouseId, lotNumber])
+  @@map("inventory")
+}
+
+// ============ CUSTOMERS & SALES ============
+model Customer {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  name           String
+  type           String?
+  country        String?
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  billingAddress String?
+  paymentTerms   String?
+  creditLimit    Float?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+
+  salesOrders SalesOrder[]
+
+  // Financial relations
+  salesInvoices SalesInvoice[]
+
+  @@map("customers")
+}
+
+model SalesOrder {
+  id           String    @id @default(cuid())
+  orderNumber  String    @unique
+  customerId   String
+  orderDate    DateTime
+  requiredDate DateTime
+  promisedDate DateTime?
+  priority     String    @default("normal")
+  status       String    @default("draft")
+  totalAmount  Float?
+  currency     String    @default("USD")
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customer     Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  lines        SalesOrderLine[]
+  workOrders   WorkOrder[]
+  certificates CertificateOfConformance[]
+
+  // Financial relations
+  salesInvoices SalesInvoice[]
+
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id         String   @id @default(cuid())
+  orderId    String
+  lineNumber Int
+  productId  String
+  quantity   Int
+  unitPrice  Float
+  discount   Float    @default(0)
+  lineTotal  Float?
+  options    String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, lineNumber])
+  @@map("sales_order_lines")
+}
+
+// ============ PURCHASING ============
+model PurchaseOrder {
+  id           String   @id @default(cuid())
+  poNumber     String   @unique
+  supplierId   String
+  orderDate    DateTime
+  expectedDate DateTime
+  status       String   @default("draft")
+  totalAmount  Float?
+  currency     String   @default("USD")
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lines    PurchaseOrderLine[]
+
+  // Financial relations
+  purchaseInvoices PurchaseInvoice[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id          String   @id @default(cuid())
+  poId        String
+  lineNumber  Int
+  partId      String
+  quantity    Int
+  receivedQty Int      @default(0)
+  unitPrice   Float
+  lineTotal   Float?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  po   PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  part Part          @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([poId, lineNumber])
+  @@map("purchase_order_lines")
+}
+
+// ============ USERS ============
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("user")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // MFA fields
+  mfaEnabled        Boolean   @default(false)
+  mfaMethod         String?   // totp, sms, email
+  mfaBackupCodes    Json?     // Encrypted backup codes
+
+  // Security fields
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+  passwordChangedAt DateTime?
+  mustChangePassword Boolean  @default(false)
+
+  // ITAR fields
+  itarCertified     Boolean   @default(false)
+  itarCertifiedAt   DateTime?
+  itarCertifiedBy   String?
+  usPersonStatus    String?   // US_CITIZEN, PERMANENT_RESIDENT, NOT_US_PERSON
+
+  laborEntries        LaborEntry[]
+  mfaDevices          MFADevice[]
+  mfaChallenges       MFAChallenge[]
+  sessions            UserSession[]
+  passwordHistory     PasswordHistory[]
+  electronicSignatures ElectronicSignature[]
+  itarAccessLogs      ITARAccessLog[]
+  mobileDevices       MobileDevice[]
+
+  @@map("users")
+}
+
+// ============ MRP ============
+model MrpRun {
+  id                  String    @id @default(cuid())
+  runNumber           String    @unique
+  runDate             DateTime  @default(now())
+  planningHorizon     Int       @default(90)
+  status              String    @default("running")
+  totalParts          Int?
+  purchaseSuggestions Int?
+  expediteAlerts      Int?
+  shortageWarnings    Int?
+  parameters          Json?
+  completedAt         DateTime?
+  createdBy           String?
+  createdAt           DateTime  @default(now())
+
+  suggestions MrpSuggestion[]
+
+  @@map("mrp_runs")
+}
+
+model MrpSuggestion {
+  id              String    @id @default(cuid())
+  mrpRunId        String
+  partId          String
+  actionType      String
+  priority        String
+  suggestedQty    Int?
+  suggestedDate   DateTime?
+  currentStock    Int?
+  requiredQty     Int?
+  shortageQty     Int?
+  reason          String?
+  sourceOrderId   String?
+  sourceOrderType String?
+  supplierId      String?
+  estimatedCost   Float?
+  status          String    @default("pending")
+  approvedBy      String?
+  approvedAt      DateTime?
+  convertedPoId   String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  mrpRun   MrpRun    @relation(fields: [mrpRunId], references: [id], onDelete: Cascade)
+  part     Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([mrpRunId])
+  @@index([partId])
+  @@index([status])
+  @@map("mrp_suggestions")
+}
+
+// ============ PRODUCTION ============
+model WorkOrder {
+  id             String    @id @default(cuid())
+  woNumber       String    @unique
+  productId      String
+  salesOrderId   String?
+  salesOrderLine Int?
+  quantity       Int
+  priority       String    @default("normal")
+  status         String    @default("draft")
+  plannedStart   DateTime?
+  plannedEnd     DateTime?
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  assignedTo     String?
+  workCenter     String?
+  notes          String?
+  completedQty   Int       @default(0)
+  scrapQty       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  product     Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  salesOrder  SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  allocations MaterialAllocation[]
+  inspections Inspection[]
+  ncrs        NCR[]
+  operations  WorkOrderOperation[]
+
+  // Financial relations
+  workOrderCosts WorkOrderCost[]
+  costVariances  CostVariance[]
+
+  @@map("work_orders")
+}
+
+model MaterialAllocation {
+  id           String   @id @default(cuid())
+  workOrderId  String
+  partId       String
+  requiredQty  Int
+  allocatedQty Int      @default(0)
+  issuedQty    Int      @default(0)
+  returnedQty  Int      @default(0)
+  status       String   @default("pending")
+  warehouseId  String?
+  lotNumber    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  @@unique([workOrderId, partId])
+  @@map("material_allocations")
+}
+
+// ============ AI FORECASTS ============
+model DemandForecast {
+  id          String   @id @default(cuid())
+  productId   String
+  period      String   // "2024-Q1", "2024-02", etc.
+  periodType  String   // "monthly", "quarterly", "yearly"
+  forecastQty Int
+  lowerBound  Int      // Confidence interval lower
+  upperBound  Int      // Confidence interval upper
+  confidence  Float    // 0-1 confidence score
+  actualQty   Int?     // Filled when period ends
+  accuracy    Float?   // Calculated after actual
+  model       String   @default("moving_average") // Algorithm used
+  factors     Json?    // Contributing factors
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, period, periodType])
+  @@index([productId])
+  @@map("demand_forecasts")
+}
+
+model LeadTimePrediction {
+  id            String   @id @default(cuid())
+  supplierId    String
+  partId        String?
+  predictedDays Int
+  confidence    Float
+  minDays       Int
+  maxDays       Int
+  factors       Json?    // { season, quantity, supplier_load }
+  historicalAvg Float?
+  lastUpdated   DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  part     Part?    @relation(fields: [partId], references: [id])
+
+  @@unique([supplierId, partId])
+  @@map("lead_time_predictions")
+}
+
+model SupplierRiskScore {
+  id                 String   @id @default(cuid())
+  supplierId         String   @unique
+  overallScore       Int      // 0-100
+  riskLevel          String   // LOW, MEDIUM, HIGH, CRITICAL
+
+  // Factor scores (0-100 each)
+  deliveryScore      Int
+  qualityScore       Int
+  financialScore     Int
+  geographicScore    Int
+  communicationScore Int
+
+  // Trends
+  trend              String   // IMPROVING, STABLE, DECLINING
+  previousScore      Int?
+
+  // Details
+  strengths          Json?    // Array of strength points
+  risks              Json?    // Array of risk points
+  recommendations    Json?    // Array of recommendations
+
+  lastCalculated     DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_risk_scores")
+}
+
+model AiRecommendation {
+  id              String    @id @default(cuid())
+  type            String    // REORDER, SUPPLIER_CHANGE, SAFETY_STOCK, EXPEDITE
+  priority        String    // HIGH, MEDIUM, LOW
+  category        String    // inventory, purchasing, production, supplier
+  title           String
+  description     String
+  impact          String?   // Potential impact description
+  savingsEstimate Float?    // Estimated cost savings
+  confidence      Float
+
+  // Related entities
+  partId          String?
+  supplierId      String?
+  productId       String?
+  orderId         String?
+
+  // Status
+  status          String    @default("active") // active, dismissed, implemented
+  dismissedAt     DateTime?
+  implementedAt   DateTime?
+
+  // Metadata
+  modelVersion    String?
+  factors         Json?
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime?
+
+  @@index([status, priority])
+  @@index([category])
+  @@map("ai_recommendations")
+}
+
+model AiModelLog {
+  id        String   @id @default(cuid())
+  modelName String
+  version   String
+  runType   String   // forecast, risk_score, recommendation
+  inputData Json?
+  outputData Json?
+  accuracy  Float?
+  duration  Int?     // milliseconds
+  status    String   // success, failed
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([modelName, createdAt])
+  @@map("ai_model_logs")
+}
+
+// ============ PHASE 4: AUDIT & ACTIVITY ============
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String   // CREATE, UPDATE, DELETE, VIEW, EXPORT, IMPORT
+  entityType String   // Part, Supplier, SalesOrder, etc.
+  entityId   String
+  entityName String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // order_created, stock_alert, po_received
+  title       String
+  description String?
+  icon        String?
+  color       String?
+  link        String?
+  isRead      Boolean  @default(false)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ============ NOTIFICATIONS ============
+model NotificationSetting {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  emailEnabled   Boolean  @default(true)
+  emailOnOrder   Boolean  @default(true)
+  emailOnStock   Boolean  @default(true)
+  emailOnPO      Boolean  @default(true)
+  emailOnMRP     Boolean  @default(false)
+  emailDigest    String   @default("daily")
+  inAppEnabled   Boolean  @default(true)
+  inAppOnOrder   Boolean  @default(true)
+  inAppOnStock   Boolean  @default(true)
+  inAppOnPO      Boolean  @default(true)
+  inAppOnMRP     Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("notification_settings")
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // stock_alert, order_update, po_received
+  title       String
+  message     String
+  priority    String    @default("normal")
+  link        String?
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  emailSent   Boolean   @default(false)
+  emailSentAt DateTime?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============ SAVED REPORTS ============
+model SavedReport {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  type       String    // inventory, orders, purchasing, supplier
+  filters    Json
+  columns    Json?
+  schedule   String?
+  recipients Json?
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("saved_reports")
+}
+
+// ============ IMPORT/EXPORT JOBS (Phase 10 Enhanced) ============
+model ImportJob {
+  id            String    @id @default(cuid())
+  userId        String
+  type          String    // parts, suppliers, inventory, products, customers, bom
+  fileName      String
+  fileSize      Int
+  status        String    @default("pending") // pending, validating, mapping, processing, completed, failed, cancelled
+  totalRows     Int?
+  processedRows Int       @default(0)
+  successRows   Int       @default(0)
+  errorRows     Int       @default(0)
+  skippedRows   Int       @default(0)
+  errors        Json?     // Array of error details
+  warnings      Json?     // Array of warning details
+  mapping       Json?     // Column mapping configuration
+  options       Json?     // Import options (update mode, skip duplicates, etc.)
+  validationResults Json? // Pre-import validation results
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  rows          ImportRow[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("import_jobs")
+}
+
+model ImportRow {
+  id            String    @id @default(cuid())
+  importJobId   String
+  rowNumber     Int
+  status        String    @default("pending") // pending, valid, invalid, imported, skipped, error
+  rawData       Json      // Original row data
+  mappedData    Json?     // Data after mapping
+  errors        Json?     // Row-level errors
+  warnings      Json?     // Row-level warnings
+  entityId      String?   // ID of created/updated entity
+  processedAt   DateTime?
+
+  importJob     ImportJob @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+
+  @@index([importJobId, status])
+  @@index([importJobId, rowNumber])
+  @@map("import_rows")
+}
+
+model ExportJob {
+  id            String    @id @default(cuid())
+  userId        String
+  type          String    // parts, suppliers, inventory, products, customers, orders, bom, full_backup
+  format        String    // xlsx, csv
+  filters       Json?     // Export filters
+  columns       Json?     // Selected columns to export
+  options       Json?     // Export options (include headers, date format, etc.)
+  status        String    @default("pending") // pending, processing, completed, failed
+  fileUrl       String?
+  fileName      String?
+  fileSize      Int?
+  totalRecords  Int?
+  exportedAt    DateTime?
+  expiresAt     DateTime?
+  downloadCount Int       @default(0)
+  lastDownloadAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("export_jobs")
+}
+
+model ExcelTemplate {
+  id            String    @id @default(cuid())
+  name          String
+  type          String    // parts, suppliers, inventory, products, customers, bom
+  description   String?
+  version       String    @default("1.0")
+
+  // Template structure
+  columns       Json      // Column definitions with headers, types, validation
+  sampleData    Json?     // Sample data rows
+  instructions  String?   // Usage instructions
+
+  // Validation rules
+  validationRules Json?   // Custom validation rules
+
+  // File info
+  fileName      String
+  fileUrl       String?
+  fileSize      Int?
+
+  // Status
+  isActive      Boolean   @default(true)
+  isDefault     Boolean   @default(false)
+
+  // Usage tracking
+  downloadCount Int       @default(0)
+  lastDownloadAt DateTime?
+
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([type, version])
+  @@index([type, isActive])
+  @@map("excel_templates")
+}
+
+model SyncSchedule {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+
+  // Sync configuration
+  type          String    // import, export, bidirectional
+  entityType    String    // parts, suppliers, inventory, etc.
+  direction     String    // inbound, outbound, both
+
+  // Source/Target
+  sourceType    String    // file_watch, api, manual
+  sourcePath    String?   // File path or API endpoint
+  targetType    String?
+  targetPath    String?
+
+  // Schedule
+  frequency     String    // manual, hourly, daily, weekly, monthly
+  cronExpression String?  // For custom schedules
+  timezone      String    @default("UTC")
+
+  // Options
+  mapping       Json?     // Field mapping configuration
+  options       Json?     // Sync options
+
+  // Status
+  status        String    @default("active") // active, paused, disabled
+
+  // Execution tracking
+  lastRunAt     DateTime?
+  lastRunStatus String?
+  lastRunError  String?
+  nextRunAt     DateTime?
+  runCount      Int       @default(0)
+  successCount  Int       @default(0)
+  failureCount  Int       @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([nextRunAt])
+  @@map("sync_schedules")
+}
+
+model MigrationBatch {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+
+  // Migration type
+  type          String    // legacy_import, system_migration, data_cleanup
+  sourceSystem  String?   // Name of source system
+
+  // Status
+  status        String    @default("pending") // pending, in_progress, completed, failed, rolled_back
+
+  // Progress
+  totalEntities Int       @default(0)
+  processedEntities Int   @default(0)
+  successEntities Int     @default(0)
+  errorEntities Int       @default(0)
+
+  // Details
+  entityTypes   Json?     // Array of entity types being migrated
+  mapping       Json?     // Migration mapping configuration
+  transformations Json?   // Data transformation rules
+
+  // Results
+  results       Json?     // Detailed migration results
+  errors        Json?     // Migration errors
+
+  // Timestamps
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  // Rollback
+  canRollback   Boolean   @default(true)
+  rollbackData  Json?     // Data needed for rollback
+  rolledBackAt  DateTime?
+  rolledBackBy  String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("migration_batches")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    QUALITY MANAGEMENT MODELS (Phase 5)
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ INSPECTION PLANS ============
+model InspectionPlan {
+  id              String    @id @default(cuid())
+  planNumber      String    @unique
+  name            String
+  description     String?
+  type            String    // RECEIVING, IN_PROCESS, FINAL
+  status          String    @default("draft") // draft, active, obsolete
+  version         Int       @default(1)
+  effectiveDate   DateTime?
+  obsoleteDate    DateTime?
+
+  partId          String?
+  productId       String?
+  supplierId      String?
+
+  sampleSize      String?   // "100%", "AQL 1.0", "First 5", etc.
+  sampleMethod    String?   // RANDOM, FIRST_ARTICLE, SKIP_LOT
+
+  createdBy       String
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  part            Part?     @relation(fields: [partId], references: [id])
+  product         Product?  @relation(fields: [productId], references: [id])
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  characteristics InspectionCharacteristic[]
+  inspections     Inspection[]
+
+  @@index([type, status])
+  @@index([partId])
+  @@map("inspection_plans")
+}
+
+model InspectionCharacteristic {
+  id                String   @id @default(cuid())
+  planId            String
+  sequence          Int
+  name              String
+  description       String?
+  type              String   // VISUAL, DIMENSIONAL, FUNCTIONAL, DOCUMENTATION
+
+  specification     String?  // "10.00 ± 0.05 mm"
+  nominalValue      Float?
+  upperLimit        Float?
+  lowerLimit        Float?
+  unitOfMeasure     String?
+
+  acceptanceCriteria String?
+  referenceDocs     String?
+
+  isCritical        Boolean  @default(false)
+  isMajor           Boolean  @default(false)
+  gageRequired      String?
+
+  createdAt         DateTime @default(now())
+
+  plan              InspectionPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  results           InspectionResult[]
+
+  @@index([planId])
+  @@map("inspection_characteristics")
+}
+
+// ============ INSPECTIONS ============
+model Inspection {
+  id                String    @id @default(cuid())
+  inspectionNumber  String    @unique
+  type              String    // RECEIVING, IN_PROCESS, FINAL
+  status            String    @default("pending") // pending, in_progress, completed, on_hold
+  result            String?   // PASS, FAIL, CONDITIONAL
+
+  planId            String?
+  partId            String?
+  productId         String?
+
+  poLineId          String?
+  workOrderId       String?
+  salesOrderId      String?
+
+  lotNumber         String?
+  serialNumbers     Json?
+  quantityReceived  Int?
+  quantityInspected Int?
+  quantityAccepted  Int?
+  quantityRejected  Int?
+
+  inspectedBy       String
+  inspectedAt       DateTime?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+
+  warehouseId       String?
+  workCenter        String?
+
+  notes             String?
+  attachments       Json?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  plan              InspectionPlan? @relation(fields: [planId], references: [id])
+  part              Part?           @relation(fields: [partId], references: [id])
+  product           Product?        @relation(fields: [productId], references: [id])
+  workOrder         WorkOrder?      @relation(fields: [workOrderId], references: [id])
+
+  results           InspectionResult[]
+  ncrs              NCR[]
+  certificates      CertificateOfConformance[]
+
+  @@index([type, status])
+  @@index([lotNumber])
+  @@index([partId])
+  @@index([workOrderId])
+  @@map("inspections")
+}
+
+model InspectionResult {
+  id                  String   @id @default(cuid())
+  inspectionId        String
+  characteristicId    String
+
+  result              String   // PASS, FAIL, N/A
+  measuredValue       Float?
+  measuredValues      Json?
+  findings            String?
+  imageUrl            String?
+  defectCode          String?
+  defectDescription   String?
+
+  inspectedBy         String
+  inspectedAt         DateTime @default(now())
+
+  inspection          Inspection               @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  characteristic      InspectionCharacteristic @relation(fields: [characteristicId], references: [id])
+
+  @@unique([inspectionId, characteristicId])
+  @@map("inspection_results")
+}
+
+// ============ NON-CONFORMANCE REPORTS ============
+model NCR {
+  id                String    @id @default(cuid())
+  ncrNumber         String    @unique
+  status            String    @default("open")
+  // open, under_review, pending_disposition, disposition_approved,
+  // in_rework, pending_verification, completed, closed, voided
+
+  priority          String    @default("medium") // low, medium, high, critical
+
+  source            String    // RECEIVING, IN_PROCESS, FINAL, CUSTOMER, AUDIT
+  inspectionId      String?
+
+  partId            String?
+  productId         String?
+  workOrderId       String?
+  salesOrderId      String?
+  poId              String?
+
+  lotNumber         String?
+  serialNumbers     Json?
+  quantityAffected  Int
+
+  title             String
+  description       String
+  defectCode        String?
+  defectCategory    String?   // DIMENSIONAL, VISUAL, FUNCTIONAL, DOCUMENTATION, CONTAMINATION
+
+  preliminaryCause  String?
+
+  containmentAction String?
+  containedBy       String?
+  containedAt       DateTime?
+
+  disposition       String?   // USE_AS_IS, REWORK, REPAIR, SCRAP, RETURN_TO_VENDOR, SORT
+  dispositionReason String?
+  dispositionBy     String?
+  dispositionAt     DateTime?
+  dispositionApprovedBy String?
+  dispositionApprovedAt DateTime?
+
+  reworkInstructions String?
+  reworkWorkOrderId  String?
+
+  laborCost         Float?
+  materialCost      Float?
+  totalCost         Float?
+
+  customerNotified  Boolean   @default(false)
+  customerNotifiedAt DateTime?
+
+  closedBy          String?
+  closedAt          DateTime?
+  closureNotes      String?
+
+  capaId            String?
+  attachments       Json?
+
+  createdBy         String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  inspection        Inspection? @relation(fields: [inspectionId], references: [id])
+  part              Part?       @relation(fields: [partId], references: [id])
+  product           Product?    @relation(fields: [productId], references: [id])
+  workOrder         WorkOrder?  @relation(fields: [workOrderId], references: [id])
+  capa              CAPA?       @relation(fields: [capaId], references: [id])
+
+  history           NCRHistory[]
+
+  @@index([status])
+  @@index([lotNumber])
+  @@index([partId])
+  @@map("ncrs")
+}
+
+model NCRHistory {
+  id          String   @id @default(cuid())
+  ncrId       String
+  action      String   // STATUS_CHANGE, DISPOSITION_SET, COMMENT, ATTACHMENT
+  fromStatus  String?
+  toStatus    String?
+  comment     String?
+  userId      String
+  createdAt   DateTime @default(now())
+
+  ncr         NCR @relation(fields: [ncrId], references: [id], onDelete: Cascade)
+
+  @@index([ncrId])
+  @@map("ncr_history")
+}
+
+// ============ CAPA (Corrective & Preventive Action) ============
+model CAPA {
+  id                String    @id @default(cuid())
+  capaNumber        String    @unique
+  type              String    // CORRECTIVE, PREVENTIVE
+  status            String    @default("open")
+  // open, root_cause_analysis, action_planning, implementation,
+  // verification, completed, closed
+
+  priority          String    @default("medium") // low, medium, high, critical
+
+  source            String    // NCR, AUDIT, CUSTOMER_COMPLAINT, INTERNAL, SUPPLIER
+  sourceReference   String?
+
+  title             String
+  description       String
+
+  affectedParts     Json?
+  affectedProducts  Json?
+  affectedProcesses Json?
+
+  ownerId           String
+  teamMembers       Json?
+
+  rcaMethod         String?   // 5_WHY, FISHBONE, 8D, FAULT_TREE
+  rcaFindings       String?
+  rcaCompletedBy    String?
+  rcaCompletedAt    DateTime?
+  rootCause         String?
+
+  immediateAction   String?
+  immediateActionBy String?
+  immediateActionAt DateTime?
+
+  targetDate        DateTime?
+  originalTargetDate DateTime?
+
+  verificationMethod String?
+  verificationResults String?
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  effectivenessScore Int?
+
+  closedBy          String?
+  closedAt          DateTime?
+  closureNotes      String?
+
+  estimatedCost     Float?
+  actualCost        Float?
+  attachments       Json?
+
+  createdBy         String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  ncrs              NCR[]
+  actions           CAPAAction[]
+  history           CAPAHistory[]
+
+  @@index([status])
+  @@index([type])
+  @@index([ownerId])
+  @@map("capas")
+}
+
+model CAPAAction {
+  id              String    @id @default(cuid())
+  capaId          String
+  sequence        Int
+  type            String    // CORRECTIVE, PREVENTIVE, CONTAINMENT
+  description     String
+  assigneeId      String
+  dueDate         DateTime?
+  status          String    @default("pending") // pending, in_progress, completed, overdue
+  completedAt     DateTime?
+  completionNotes String?
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  capa            CAPA @relation(fields: [capaId], references: [id], onDelete: Cascade)
+
+  @@index([capaId])
+  @@index([assigneeId, status])
+  @@map("capa_actions")
+}
+
+model CAPAHistory {
+  id          String   @id @default(cuid())
+  capaId      String
+  action      String
+  fromStatus  String?
+  toStatus    String?
+  comment     String?
+  userId      String
+  createdAt   DateTime @default(now())
+
+  capa        CAPA @relation(fields: [capaId], references: [id], onDelete: Cascade)
+
+  @@index([capaId])
+  @@map("capa_history")
+}
+
+// ============ LOT TRACEABILITY ============
+model LotTransaction {
+  id              String   @id @default(cuid())
+  lotNumber       String
+  transactionType String
+  // RECEIVED, INSPECTED, ISSUED, CONSUMED, PRODUCED, SHIPPED, ADJUSTED, SCRAPPED
+
+  partId          String?
+  productId       String?
+
+  quantity        Int
+  previousQty     Int?
+  newQty          Int?
+
+  poId            String?
+  poLineNumber    Int?
+  workOrderId     String?
+  salesOrderId    String?
+  soLineNumber    Int?
+  inspectionId    String?
+  ncrId           String?
+
+  fromWarehouseId String?
+  toWarehouseId   String?
+  fromLocation    String?
+  toLocation      String?
+
+  parentLots      Json?
+
+  notes           String?
+  userId          String
+  createdAt       DateTime @default(now())
+
+  part            Part?    @relation(fields: [partId], references: [id])
+  product         Product? @relation(fields: [productId], references: [id])
+
+  @@index([lotNumber])
+  @@index([partId, lotNumber])
+  @@index([transactionType])
+  @@index([createdAt])
+  @@map("lot_transactions")
+}
+
+// ============ CERTIFICATES ============
+model CertificateOfConformance {
+  id              String    @id @default(cuid())
+  certificateNumber String  @unique
+
+  salesOrderId    String
+  salesOrderLineId String?
+  productId       String
+
+  lotNumbers      Json
+  serialNumbers   Json?
+  quantity        Int
+
+  inspectionId    String?
+
+  specifications  Json?
+  testResults     Json?
+
+  preparedBy      String
+  preparedAt      DateTime
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  pdfUrl          String?
+
+  status          String    @default("draft") // draft, approved, issued, voided
+  issuedAt        DateTime?
+  voidedAt        DateTime?
+  voidReason      String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  salesOrder      SalesOrder  @relation(fields: [salesOrderId], references: [id])
+  product         Product     @relation(fields: [productId], references: [id])
+  inspection      Inspection? @relation(fields: [inspectionId], references: [id])
+
+  @@index([salesOrderId])
+  @@map("certificates_of_conformance")
+}
+
+// ============ DEFECT CODES ============
+model DefectCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  category    String   // DIMENSIONAL, VISUAL, FUNCTIONAL, DOCUMENTATION, CONTAMINATION
+  description String?
+  severity    String   @default("minor") // minor, major, critical
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@map("defect_codes")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    PRODUCTION ENHANCEMENT MODELS (Phase 6)
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ WORK CENTERS ============
+model WorkCenter {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  description       String?
+  type              String   // MACHINE, ASSEMBLY, TESTING, PACKAGING, LABOR_ONLY
+
+  // Location
+  department        String?
+  location          String?
+
+  // Capacity
+  capacityType      String   @default("hours") // hours, units, weight
+  capacityPerDay    Float    // Standard capacity per day
+  capacityPerHour   Float?   // Capacity per hour (if applicable)
+  efficiency        Float    @default(100) // Efficiency percentage
+  utilizationTarget Float    @default(85)  // Target utilization %
+
+  // Scheduling
+  workingHoursStart String   @default("08:00")
+  workingHoursEnd   String   @default("17:00")
+  breakMinutes      Int      @default(60)  // Break time per day
+  workingDays       Json     @default("[1,2,3,4,5]") // Mon-Fri
+
+  // Costs
+  hourlyRate        Float?   // Cost per hour
+  setupCostPerHour  Float?   // Setup cost per hour
+  overheadRate      Float?   // Overhead percentage
+
+  // Constraints
+  maxConcurrentJobs Int      @default(1)   // How many jobs can run simultaneously
+  requiresOperator  Boolean  @default(true)
+  operatorSkillLevel String? // Required skill level
+
+  // Status
+  status            String   @default("active") // active, maintenance, inactive
+  currentJob        String?  // Current operation ID
+
+  // Maintenance
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDate DateTime?
+  maintenanceInterval Int?    // Days between maintenance
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  operations        RoutingOperation[]
+  scheduledOps      ScheduledOperation[]
+  laborEntries      LaborEntry[]
+  downtimeRecords   DowntimeRecord[]
+  capacityRecords   CapacityRecord[]
+  woOperations      WorkOrderOperation[]
+
+  @@index([status])
+  @@index([type])
+  @@map("work_centers")
+}
+
+// ============ ROUTING ============
+model Routing {
+  id              String   @id @default(cuid())
+  routingNumber   String   @unique
+  name            String
+  description     String?
+
+  // Link to product
+  productId       String
+
+  // Version control
+  version         Int      @default(1)
+  status          String   @default("draft") // draft, active, obsolete
+  effectiveDate   DateTime?
+  obsoleteDate    DateTime?
+
+  // Totals (calculated)
+  totalSetupTime    Float?  // Total setup time in minutes
+  totalRunTime      Float?  // Total run time per unit in minutes
+  totalLaborTime    Float?  // Total labor time per unit
+  totalCost         Float?  // Total cost per unit
+
+  createdBy       String
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product         Product  @relation(fields: [productId], references: [id])
+  operations      RoutingOperation[]
+
+  @@unique([productId, version])
+  @@index([productId, status])
+  @@map("routings")
+}
+
+model RoutingOperation {
+  id              String   @id @default(cuid())
+  routingId       String
+
+  // Sequence
+  operationNumber Int      // 10, 20, 30... (allows inserting)
+  name            String
+  description     String?
+
+  // Work Center
+  workCenterId    String
+  alternateWorkCenters Json? // Array of alternate work center IDs
+
+  // Times (in minutes)
+  setupTime       Float    @default(0)   // Setup time per batch
+  runTimePerUnit  Float    // Run time per unit
+  waitTime        Float    @default(0)   // Queue/wait time
+  moveTime        Float    @default(0)   // Move to next operation
+
+  // Labor
+  laborTimePerUnit Float?  // Labor time (may differ from machine time)
+  operatorsRequired Int    @default(1)
+  skillRequired    String?
+
+  // Overlap/Parallel
+  overlapPercent  Float    @default(0)   // Can start next op when this % complete
+  canRunParallel  Boolean  @default(false) // Can run parallel with previous
+
+  // Quality
+  inspectionRequired Boolean @default(false)
+  inspectionPlanId   String?
+
+  // Instructions
+  workInstructions String?
+  toolsRequired    Json?    // Array of tool IDs/names
+
+  // Subcontracting
+  isSubcontracted  Boolean @default(false)
+  supplierId       String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  routing         Routing    @relation(fields: [routingId], references: [id], onDelete: Cascade)
+  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+  woOperations    WorkOrderOperation[]
+
+  @@unique([routingId, operationNumber])
+  @@index([routingId])
+  @@index([workCenterId])
+  @@map("routing_operations")
+}
+
+// ============ WORK ORDER OPERATIONS ============
+model WorkOrderOperation {
+  id                  String   @id @default(cuid())
+  workOrderId         String
+  routingOperationId  String?  // Link to routing template
+
+  // Sequence
+  operationNumber     Int
+  name                String
+
+  // Work Center
+  workCenterId        String
+
+  // Planned times
+  plannedSetupTime    Float
+  plannedRunTime      Float    // Total run time for WO quantity
+  plannedStartDate    DateTime?
+  plannedEndDate      DateTime?
+
+  // Actual times
+  actualSetupTime     Float?
+  actualRunTime       Float?
+  actualStartDate     DateTime?
+  actualEndDate       DateTime?
+
+  // Quantities
+  quantityPlanned     Int
+  quantityCompleted   Int      @default(0)
+  quantityScrapped    Int      @default(0)
+
+  // Status
+  status              String   @default("pending")
+  // pending, scheduled, ready, in_progress, paused, completed, cancelled
+
+  // Scheduling
+  scheduledStart      DateTime?
+  scheduledEnd        DateTime?
+  schedulePriority    Int      @default(50) // 1-100, higher = more urgent
+
+  // Execution
+  startedBy           String?
+  completedBy         String?
+  notes               String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  workOrder           WorkOrder @relation(fields: [workOrderId], references: [id])
+  routingOperation    RoutingOperation? @relation(fields: [routingOperationId], references: [id])
+  workCenter          WorkCenter @relation(fields: [workCenterId], references: [id])
+  scheduledOp         ScheduledOperation?
+  laborEntries        LaborEntry[]
+
+  @@unique([workOrderId, operationNumber])
+  @@index([workOrderId])
+  @@index([status])
+  @@index([workCenterId, status])
+  @@map("work_order_operations")
+}
+
+// ============ SCHEDULING ============
+model ScheduledOperation {
+  id                  String   @id @default(cuid())
+  workOrderOperationId String  @unique
+  workCenterId        String
+
+  // Scheduled times
+  scheduledStart      DateTime
+  scheduledEnd        DateTime
+
+  // Sequence on work center
+  sequence            Int      // Order on the work center for that day
+
+  // Status
+  status              String   @default("scheduled") // scheduled, in_progress, completed
+
+  // Locked (manual override)
+  isLocked            Boolean  @default(false)
+  lockedBy            String?
+  lockedAt            DateTime?
+
+  // Conflicts
+  hasConflict         Boolean  @default(false)
+  conflictReason      String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  workOrderOperation  WorkOrderOperation @relation(fields: [workOrderOperationId], references: [id])
+  workCenter          WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@index([workCenterId, scheduledStart])
+  @@index([scheduledStart])
+  @@map("scheduled_operations")
+}
+
+// ============ CAPACITY ============
+model CapacityRecord {
+  id              String   @id @default(cuid())
+  workCenterId    String
+  date            DateTime @db.Date
+
+  // Available capacity
+  availableHours  Float
+  availableUnits  Float?
+
+  // Planned/Scheduled
+  plannedHours    Float    @default(0)
+  scheduledHours  Float    @default(0)
+
+  // Actual
+  actualHours     Float    @default(0)
+
+  // Utilization
+  utilization     Float?   // Calculated: scheduled/available * 100
+
+  // Adjustments
+  overtimeHours   Float    @default(0)
+  downtimeHours   Float    @default(0)
+
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@unique([workCenterId, date])
+  @@index([workCenterId, date])
+  @@map("capacity_records")
+}
+
+// ============ LABOR TRACKING ============
+model LaborEntry {
+  id                  String   @id @default(cuid())
+  userId              String
+  workOrderOperationId String?
+  workCenterId        String?
+
+  // Type
+  type                String   // DIRECT, INDIRECT, SETUP, REWORK, IDLE
+
+  // Time
+  startTime           DateTime
+  endTime             DateTime?
+  durationMinutes     Float?   // Calculated or manual entry
+
+  // Quantities (for direct labor)
+  quantityProduced    Int?
+  quantityScrapped    Int?
+
+  // Cost
+  hourlyRate          Float?
+  totalCost           Float?   // Calculated
+
+  // Notes
+  notes               String?
+
+  // Approval
+  approvedBy          String?
+  approvedAt          DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user                User @relation(fields: [userId], references: [id])
+  workOrderOperation  WorkOrderOperation? @relation(fields: [workOrderOperationId], references: [id])
+  workCenter          WorkCenter? @relation(fields: [workCenterId], references: [id])
+
+  @@index([userId, startTime])
+  @@index([workOrderOperationId])
+  @@index([workCenterId, startTime])
+  @@map("labor_entries")
+}
+
+// ============ DOWNTIME TRACKING ============
+model DowntimeRecord {
+  id              String   @id @default(cuid())
+  workCenterId    String
+
+  // Time
+  startTime       DateTime
+  endTime         DateTime?
+  durationMinutes Float?
+
+  // Categorization
+  type            String   // PLANNED, UNPLANNED, MAINTENANCE, BREAKDOWN, CHANGEOVER
+  reason          String
+  category        String?  // Equipment, Material, Labor, Quality, etc.
+
+  // Impact
+  scheduledOpsAffected Json? // Array of affected operation IDs
+
+  // Resolution
+  resolvedBy      String?
+  resolution      String?
+
+  // Cost
+  estimatedCost   Float?
+
+  reportedBy      String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+
+  @@index([workCenterId, startTime])
+  @@index([type])
+  @@map("downtime_records")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    COMPLIANCE & SECURITY MODELS (Phase 9)
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ ELECTRONIC SIGNATURES (21 CFR Part 11) ============
+model ElectronicSignature {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // What was signed
+  entityType      String   // WorkOrder, NCR, CAPA, Inspection, etc.
+  entityId        String
+  action          String   // APPROVE, REJECT, REVIEW, RELEASE, VERIFY
+
+  // Signature details
+  signatureHash   String   // SHA-256 hash of (userId + timestamp + meaning + entityHash)
+  meaning         String   // "I approve this document", "I have reviewed", etc.
+
+  // Verification
+  verificationMethod String // password, mfa_totp, biometric
+  ipAddress       String?
+  userAgent       String?
+
+  // Audit chain
+  previousSignatureId String?
+  chainHash       String?  // Hash linking to previous signature
+
+  // Timestamps
+  signedAt        DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([signedAt])
+  @@map("electronic_signatures")
+}
+
+// ============ ENHANCED AUDIT TRAIL (Tamper-Proof) ============
+model AuditTrailEntry {
+  id              String   @id @default(cuid())
+
+  // Event details
+  userId          String?
+  userName        String?  // Denormalized for history
+  action          String   // CREATE, READ, UPDATE, DELETE, EXPORT, LOGIN, etc.
+  entityType      String
+  entityId        String?
+
+  // What changed
+  fieldName       String?
+  oldValue        String?
+  newValue        String?
+  changeSummary   String?  // Human-readable description
+
+  // Request context
+  ipAddress       String?
+  userAgent       String?
+  sessionId       String?
+  requestId       String?  // Correlation ID
+
+  // Tamper-proof chain
+  previousEntryId String?
+  entryHash       String   // SHA-256 hash of entry data
+  chainHash       String   // Hash including previous entry hash
+
+  // Timestamps
+  timestamp       DateTime @default(now())
+  serverTime      DateTime @default(now())
+
+  // Compliance flags
+  isSecurityEvent Boolean  @default(false)
+  isComplianceEvent Boolean @default(false)
+  retentionCategory String @default("standard") // standard, extended, permanent
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+  @@index([isSecurityEvent])
+  @@map("audit_trail_entries")
+}
+
+// ============ MFA DEVICES ============
+model MFADevice {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Device info
+  name            String   // "iPhone", "Authenticator App", etc.
+  type            String   // totp, sms, email, hardware_key
+
+  // TOTP specific
+  totpSecret      String?  // Encrypted TOTP secret
+
+  // SMS/Email specific
+  phoneNumber     String?  // Encrypted phone number
+  emailAddress    String?
+
+  // Hardware key specific
+  credentialId    String?  // WebAuthn credential ID
+  publicKey       String?  // WebAuthn public key
+
+  // Status
+  isVerified      Boolean  @default(false)
+  isPrimary       Boolean  @default(false)
+  lastUsedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenges      MFAChallenge[]
+
+  @@index([userId])
+  @@map("mfa_devices")
+}
+
+// ============ MFA CHALLENGES ============
+model MFAChallenge {
+  id              String   @id @default(cuid())
+  userId          String
+  deviceId        String?
+
+  // Challenge details
+  type            String   // totp, sms, email
+  code            String?  // Encrypted challenge code (for SMS/email)
+
+  // Status
+  status          String   @default("pending") // pending, verified, expired, failed
+  attempts        Int      @default(0)
+  maxAttempts     Int      @default(3)
+
+  // Context
+  purpose         String   // login, signature, sensitive_action
+  ipAddress       String?
+
+  // Timestamps
+  expiresAt       DateTime
+  verifiedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device          MFADevice? @relation(fields: [deviceId], references: [id])
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("mfa_challenges")
+}
+
+// ============ USER SESSIONS ============
+model UserSession {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Session info
+  sessionToken    String   @unique
+
+  // Device/Location
+  ipAddress       String?
+  userAgent       String?
+  deviceFingerprint String?
+  location        String?  // Geolocation if available
+
+  // Status
+  isActive        Boolean  @default(true)
+  lastActivityAt  DateTime @default(now())
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  revokedReason   String?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([sessionToken])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+// ============ PASSWORD HISTORY ============
+model PasswordHistory {
+  id              String   @id @default(cuid())
+  userId          String
+
+  passwordHash    String   // Hashed password
+  changedAt       DateTime @default(now())
+  changedBy       String?  // User who changed it (for admin resets)
+  changeReason    String?  // user_initiated, admin_reset, expired, compromised
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, changedAt])
+  @@map("password_history")
+}
+
+// ============ PASSWORD POLICY ============
+model PasswordPolicy {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  isDefault       Boolean  @default(false)
+
+  // Length requirements
+  minLength       Int      @default(12)
+  maxLength       Int      @default(128)
+
+  // Character requirements
+  requireUppercase Boolean @default(true)
+  requireLowercase Boolean @default(true)
+  requireNumbers   Boolean @default(true)
+  requireSpecial   Boolean @default(true)
+
+  // History requirements
+  preventReuse    Int      @default(12) // Number of previous passwords to check
+
+  // Expiration
+  maxAgeDays      Int      @default(90) // 0 = never expires
+  warnDaysBeforeExpiry Int @default(14)
+
+  // Lockout
+  maxFailedAttempts Int    @default(5)
+  lockoutDurationMinutes Int @default(30)
+
+  // Additional rules
+  preventUsername Boolean  @default(true)
+  preventCommonPasswords Boolean @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("password_policies")
+}
+
+// ============ DATA RETENTION POLICY ============
+model DataRetentionPolicy {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?
+
+  // What to retain
+  entityType      String   // AuditLog, NCR, Inspection, etc.
+
+  // Retention period
+  retentionDays   Int      // 0 = forever
+  archiveAfterDays Int?    // Days before archiving (null = don't archive)
+
+  // Actions
+  actionOnExpiry  String   @default("archive") // archive, delete, anonymize
+
+  // Compliance
+  regulatoryBasis String?  // "21 CFR Part 11", "ITAR", etc.
+
+  // Status
+  isActive        Boolean  @default(true)
+
+  // Execution tracking
+  lastExecutedAt  DateTime?
+  nextExecutionAt DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([entityType])
+  @@map("data_retention_policies")
+}
+
+// ============ ITAR CONTROLLED ITEMS ============
+model ITARControlledItem {
+  id              String   @id @default(cuid())
+
+  // What is controlled
+  entityType      String   // Part, Product, Document, etc.
+  entityId        String
+
+  // ITAR classification
+  usmlCategory    String?  // USML category (e.g., "Category XI")
+  eccn            String?  // Export Control Classification Number
+  controlReason   String?  // Reason for control
+
+  // Marking
+  markingRequired Boolean  @default(true)
+  markingText     String?  // Required marking text
+
+  // Access control
+  requiresUsPersonVerification Boolean @default(true)
+  additionalRestrictions Json? // Array of additional restrictions
+
+  // Status
+  status          String   @default("active") // active, declassified, superseded
+
+  // Audit
+  classifiedBy    String
+  classifiedAt    DateTime @default(now())
+  reviewDate      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  accessLogs      ITARAccessLog[]
+
+  @@unique([entityType, entityId])
+  @@index([usmlCategory])
+  @@index([status])
+  @@map("itar_controlled_items")
+}
+
+// ============ ITAR ACCESS LOG ============
+model ITARAccessLog {
+  id              String   @id @default(cuid())
+  userId          String
+  controlledItemId String
+
+  // Access details
+  accessType      String   // VIEW, DOWNLOAD, EXPORT, MODIFY
+  accessGranted   Boolean
+  denialReason    String?
+
+  // Verification at time of access
+  usPersonVerified Boolean
+  verificationMethod String? // certification, documentation, etc.
+
+  // Context
+  ipAddress       String?
+  userAgent       String?
+  purpose         String?  // Why access was needed
+
+  // Timestamps
+  accessedAt      DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+  controlledItem  ITARControlledItem @relation(fields: [controlledItemId], references: [id])
+
+  @@index([userId])
+  @@index([controlledItemId])
+  @@index([accessedAt])
+  @@map("itar_access_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    FINANCIAL MODULE MODELS (Phase 11)
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ CHART OF ACCOUNTS ============
+model GLAccount {
+  id              String      @id @default(cuid())
+  accountNumber   String      @unique
+  name            String
+  description     String?
+
+  // Classification
+  accountType     AccountType // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  accountCategory String      // Cash, AR, AP, Inventory, COGS, etc.
+
+  // Hierarchy
+  parentId        String?
+  parent          GLAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children        GLAccount[] @relation("AccountHierarchy")
+
+  // Settings
+  isActive        Boolean     @default(true)
+  isSystemAccount Boolean     @default(false)
+  normalBalance   String      @default("DEBIT") // DEBIT or CREDIT
+
+  // Currency
+  currencyCode    String      @default("USD")
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  journalLines    JournalLine[]
+  costTypes       CostType[]
+
+  @@index([accountType])
+  @@index([accountCategory])
+  @@map("gl_accounts")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+// ============ COST STRUCTURE ============
+model CostType {
+  id              String       @id @default(cuid())
+  code            String       @unique
+  name            String
+  description     String?
+
+  category        CostCategory // MATERIAL, LABOR, OVERHEAD, SUBCONTRACT
+
+  // GL Mapping
+  glAccountId     String?
+  glAccount       GLAccount?   @relation(fields: [glAccountId], references: [id])
+
+  isActive        Boolean      @default(true)
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  partCosts       PartCost[]
+  workOrderCosts  WorkOrderCost[]
+
+  @@map("cost_types")
+}
+
+enum CostCategory {
+  MATERIAL
+  LABOR
+  OVERHEAD
+  SUBCONTRACT
+  OTHER
+}
+
+// Standard costs for parts
+model PartCost {
+  id               String    @id @default(cuid())
+  partId           String
+  part             Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  costTypeId       String
+  costType         CostType  @relation(fields: [costTypeId], references: [id])
+
+  // Cost values
+  standardCost     Float
+  currentCost      Float     // Latest actual
+  lastPurchaseCost Float?
+  averageCost      Float?
+
+  // Effective dates for standard cost changes
+  effectiveDate    DateTime  @default(now())
+  expiryDate       DateTime?
+
+  // Audit
+  createdBy        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([partId, costTypeId, effectiveDate])
+  @@index([partId])
+  @@map("part_costs")
+}
+
+// Rolled-up costs for assemblies
+model PartCostRollup {
+  id                String    @id @default(cuid())
+  partId            String    @unique
+  part              Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  // Cost breakdown
+  materialCost      Float     @default(0)
+  laborCost         Float     @default(0)
+  overheadCost      Float     @default(0)
+  subcontractCost   Float     @default(0)
+  otherCost         Float     @default(0)
+
+  // Totals
+  totalStandardCost Float     @default(0)
+  totalCurrentCost  Float     @default(0)
+
+  // BOM level (0 = purchased, 1+ = manufactured)
+  bomLevel          Int       @default(0)
+
+  // Last rollup
+  lastRollupAt      DateTime?
+  rollupStatus      String    @default("PENDING") // PENDING, CURRENT, STALE
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([rollupStatus])
+  @@map("part_cost_rollups")
+}
+
+// Actual costs on Work Orders
+model WorkOrderCost {
+  id              String    @id @default(cuid())
+  workOrderId     String
+  workOrder       WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  costTypeId      String
+  costType        CostType  @relation(fields: [costTypeId], references: [id])
+
+  // Cost details
+  description     String?
+  quantity        Float     @default(1)
+  unitCost        Float
+  totalCost       Float
+
+  // Source reference
+  sourceType      String?   // MATERIAL_ISSUE, LABOR_ENTRY, PO_RECEIPT, MANUAL
+  sourceId        String?
+
+  // Timing
+  transactionDate DateTime  @default(now())
+
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([workOrderId])
+  @@index([transactionDate])
+  @@map("work_order_costs")
+}
+
+// ============ ACCOUNTS PAYABLE ============
+model PurchaseInvoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+
+  // Supplier
+  supplierId      String
+  supplier        Supplier      @relation(fields: [supplierId], references: [id])
+
+  // Reference
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  vendorInvoiceNo String?       // Supplier's invoice number
+
+  // Dates
+  invoiceDate     DateTime
+  dueDate         DateTime
+  receivedDate    DateTime      @default(now())
+
+  // Amounts
+  subtotal        Float
+  taxAmount       Float         @default(0)
+  shippingAmount  Float         @default(0)
+  discountAmount  Float         @default(0)
+  totalAmount     Float
+
+  // Currency
+  currencyCode    String        @default("USD")
+  exchangeRate    Float         @default(1)
+
+  // Payment
+  paymentTerms    String?
+  paidAmount      Float         @default(0)
+  balanceDue      Float
+
+  // Status
+  status          InvoiceStatus @default(DRAFT)
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  // GL
+  glPosted        Boolean       @default(false)
+  glPostedAt      DateTime?
+
+  notes           String?
+
+  createdBy       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  lines           PurchaseInvoiceLine[]
+  payments        PurchasePayment[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("purchase_invoices")
+}
+
+model PurchaseInvoiceLine {
+  id              String          @id @default(cuid())
+  invoiceId       String
+  invoice         PurchaseInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  lineNumber      Int
+
+  // Item
+  partId          String?
+  part            Part?           @relation(fields: [partId], references: [id])
+  description     String
+
+  // Quantities
+  quantity        Float
+  uom             String          @default("EA")
+  unitPrice       Float
+
+  // Amounts
+  lineAmount      Float
+  taxAmount       Float           @default(0)
+  totalAmount     Float
+
+  // GL Account
+  glAccountId     String?
+
+  // Reference
+  poLineId        String?         // Link to PO line
+
+  createdAt       DateTime        @default(now())
+
+  @@index([invoiceId])
+  @@map("purchase_invoice_lines")
+}
+
+model PurchasePayment {
+  id              String          @id @default(cuid())
+  invoiceId       String
+  invoice         PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+
+  paymentNumber   String          @unique
+  paymentDate     DateTime
+
+  amount          Float
+  paymentMethod   String          // CHECK, WIRE, ACH, CREDIT_CARD
+  referenceNumber String?         // Check number, transaction ID
+
+  // GL
+  bankAccountId   String?
+  glPosted        Boolean         @default(false)
+
+  notes           String?
+
+  createdBy       String?
+  createdAt       DateTime        @default(now())
+
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("purchase_payments")
+}
+
+// ============ ACCOUNTS RECEIVABLE ============
+model SalesInvoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+
+  // Customer
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+
+  // Reference
+  salesOrderId    String?
+  salesOrder      SalesOrder?   @relation(fields: [salesOrderId], references: [id])
+
+  // Dates
+  invoiceDate     DateTime
+  dueDate         DateTime
+  shipDate        DateTime?
+
+  // Addresses
+  billToAddress   Json?
+  shipToAddress   Json?
+
+  // Amounts
+  subtotal        Float
+  taxAmount       Float         @default(0)
+  shippingAmount  Float         @default(0)
+  discountAmount  Float         @default(0)
+  totalAmount     Float
+
+  // Currency
+  currencyCode    String        @default("USD")
+  exchangeRate    Float         @default(1)
+
+  // Payment
+  paymentTerms    String?
+  receivedAmount  Float         @default(0)
+  balanceDue      Float
+
+  // Status
+  status          InvoiceStatus @default(DRAFT)
+  sentAt          DateTime?
+
+  // GL
+  glPosted        Boolean       @default(false)
+  glPostedAt      DateTime?
+
+  // Cost tracking
+  totalCost       Float?        // COGS
+  grossMargin     Float?
+  marginPercent   Float?
+
+  notes           String?
+  termsAndConditions String?
+
+  createdBy       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  lines           SalesInvoiceLine[]
+  payments        SalesPayment[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceLine {
+  id              String       @id @default(cuid())
+  invoiceId       String
+  invoice         SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  lineNumber      Int
+
+  // Item
+  partId          String?
+  part            Part?        @relation(fields: [partId], references: [id])
+  productId       String?
+  product         Product?     @relation(fields: [productId], references: [id])
+  description     String
+
+  // Quantities
+  quantity        Float
+  uom             String       @default("EA")
+  unitPrice       Float
+
+  // Amounts
+  lineAmount      Float
+  discountPercent Float        @default(0)
+  discountAmount  Float        @default(0)
+  taxAmount       Float        @default(0)
+  totalAmount     Float
+
+  // Cost (for margin calculation)
+  unitCost        Float?
+  totalCost       Float?
+
+  // GL Account
+  revenueAccountId String?
+
+  // Reference
+  soLineId        String?      // Link to SO line
+
+  createdAt       DateTime     @default(now())
+
+  @@index([invoiceId])
+  @@map("sales_invoice_lines")
+}
+
+model SalesPayment {
+  id               String       @id @default(cuid())
+  invoiceId        String
+  invoice          SalesInvoice @relation(fields: [invoiceId], references: [id])
+
+  paymentNumber    String       @unique
+  paymentDate      DateTime
+
+  amount           Float
+  paymentMethod    String       // CHECK, WIRE, ACH, CREDIT_CARD
+  referenceNumber  String?
+
+  // GL
+  depositAccountId String?
+  glPosted         Boolean      @default(false)
+
+  notes            String?
+
+  createdBy        String?
+  createdAt        DateTime     @default(now())
+
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@map("sales_payments")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  VOID
+}
+
+// ============ GENERAL LEDGER ============
+model JournalEntry {
+  id              String        @id @default(cuid())
+  entryNumber     String        @unique
+
+  // Dates
+  entryDate       DateTime
+  postingDate     DateTime
+
+  // Classification
+  entryType       String        // STANDARD, ADJUSTING, CLOSING, REVERSING
+  source          String        // MANUAL, AP_INVOICE, AR_INVOICE, INVENTORY, PAYROLL
+  sourceId        String?       // Reference to source document
+
+  // Description
+  description     String
+  reference       String?
+
+  // Status
+  status          JournalStatus @default(DRAFT)
+  postedBy        String?
+  postedAt        DateTime?
+
+  // Totals
+  totalDebit      Float
+  totalCredit     Float
+
+  // Reversal
+  reversalOf      String?       // ID of entry being reversed
+  reversedBy      String?       // ID of reversing entry
+
+  createdBy       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  lines           JournalLine[]
+
+  @@index([entryDate])
+  @@index([source, sourceId])
+  @@index([status])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id              String       @id @default(cuid())
+  journalEntryId  String
+  journalEntry    JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+
+  lineNumber      Int
+
+  // Account
+  accountId       String
+  account         GLAccount    @relation(fields: [accountId], references: [id])
+
+  // Description
+  description     String?
+
+  // Amounts (one should be 0)
+  debitAmount     Float        @default(0)
+  creditAmount    Float        @default(0)
+
+  // Dimensions (for reporting)
+  departmentId    String?
+  projectId       String?
+  costCenterId    String?
+
+  createdAt       DateTime     @default(now())
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_lines")
+}
+
+enum JournalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  POSTED
+  VOID
+}
+
+// ============ VARIANCE TRACKING ============
+model CostVariance {
+  id              String     @id @default(cuid())
+
+  // Reference
+  workOrderId     String?
+  workOrder       WorkOrder? @relation(fields: [workOrderId], references: [id])
+  partId          String?
+  part            Part?      @relation(fields: [partId], references: [id])
+
+  // Period
+  periodYear      Int
+  periodMonth     Int
+
+  // Variance type
+  varianceType    String     // MATERIAL_PRICE, MATERIAL_USAGE, LABOR_RATE, LABOR_EFFICIENCY, OVERHEAD
+
+  // Amounts
+  standardAmount  Float
+  actualAmount    Float
+  varianceAmount  Float
+  variancePercent Float
+
+  // Analysis
+  favorableFlag   Boolean    // True if variance is favorable
+  explanation     String?
+
+  // GL posting
+  glPosted        Boolean    @default(false)
+  journalEntryId  String?
+
+  calculatedAt    DateTime   @default(now())
+
+  @@index([workOrderId])
+  @@index([partId])
+  @@index([periodYear, periodMonth])
+  @@index([varianceType])
+  @@map("cost_variances")
+}
+
+// ============ CURRENCY ============
+model Currency {
+  id              String   @id @default(cuid())
+  code            String   @unique // USD, EUR, VND
+  name            String
+  symbol          String   // $, €, ₫
+
+  decimalPlaces   Int      @default(2)
+  isBaseCurrency  Boolean  @default(false)
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  exchangeRates   ExchangeRate[]
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id              String   @id @default(cuid())
+  fromCurrencyId  String
+  fromCurrency    Currency @relation(fields: [fromCurrencyId], references: [id])
+  toCurrencyCode  String   // Usually base currency
+
+  rate            Float
+  effectiveDate   DateTime
+  expiryDate      DateTime?
+
+  source          String?  // MANUAL, API, BANK
+
+  createdAt       DateTime @default(now())
+
+  @@unique([fromCurrencyId, toCurrencyCode, effectiveDate])
+  @@index([effectiveDate])
+  @@map("exchange_rates")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    MOBILE & BARCODE MODELS
+// ═══════════════════════════════════════════════════════════════════
+
+// Barcode/QR Code definitions
+model BarcodeDefinition {
+  id              String   @id @default(cuid())
+
+  // What this barcode represents
+  entityType      String   // PART, LOCATION, WORK_ORDER, PO, LOT, SERIAL
+  entityId        String
+
+  // Barcode data
+  barcodeType     String   // CODE128, CODE39, QR, DATAMATRIX, EAN13
+  barcodeValue    String   @unique
+
+  // For serialized items
+  serialNumber    String?
+  lotNumber       String?
+
+  // Status
+  isActive        Boolean  @default(true)
+  printedAt       DateTime?
+  printCount      Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([barcodeValue])
+  @@map("barcode_definitions")
+}
+
+// Scan history for audit trail
+model ScanLog {
+  id              String   @id @default(cuid())
+
+  // What was scanned
+  barcodeValue    String
+  barcodeType     String?
+
+  // Resolution
+  resolvedType    String?  // PART, LOCATION, etc. or NULL if not found
+  resolvedId      String?
+
+  // Context
+  scanContext     String   // INVENTORY, RECEIVING, PICKING, WORKORDER, LOOKUP
+  actionTaken     String?  // What happened after scan
+
+  // Device info
+  deviceId        String?
+  deviceType      String?  // MOBILE, TABLET, SCANNER
+
+  // User
+  scannedBy       String
+  scannedAt       DateTime @default(now())
+
+  // Location (GPS if available)
+  latitude        Float?
+  longitude       Float?
+
+  @@index([scannedBy])
+  @@index([scannedAt])
+  @@index([barcodeValue])
+  @@map("scan_logs")
+}
+
+// Offline operation queue
+model OfflineOperation {
+  id              String   @id @default(cuid())
+
+  // Operation details
+  operationType   String   // INVENTORY_ADJUST, TRANSFER, RECEIVE, PICK, TIME_ENTRY
+  operationData   Json     // Full operation payload
+
+  // Status
+  status          String   @default("PENDING")  // PENDING, SYNCING, COMPLETED, FAILED
+  errorMessage    String?
+  retryCount      Int      @default(0)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  queuedAt        DateTime @default(now())
+  syncedAt        DateTime?
+
+  // Device
+  deviceId        String
+  userId          String
+
+  @@index([status])
+  @@index([userId, status])
+  @@map("offline_operations")
+}
+
+// Mobile device registration
+model MobileDevice {
+  id              String   @id @default(cuid())
+
+  deviceId        String   @unique
+  deviceName      String?
+  deviceType      String   // IOS, ANDROID, WEB
+
+  // Push notifications
+  pushToken       String?
+  pushEnabled     Boolean  @default(false)
+
+  // User
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  // Status
+  lastActiveAt    DateTime?
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("mobile_devices")
+}
+
+// Label templates
+model LabelTemplate {
+  id              String   @id @default(cuid())
+
+  name            String
+  description     String?
+
+  // Template type
+  labelType       String   // PART, LOCATION, LOT, SERIAL, SHELF, BIN
+
+  // Dimensions (mm)
+  width           Int      @default(50)
+  height          Int      @default(25)
+
+  // Template definition
+  template        Json     // ZPL, HTML, or structured template
+  templateFormat  String   @default("HTML")  // ZPL, HTML, PDF
+
+  // Barcode settings
+  barcodeType     String   @default("CODE128")
+  includeQR       Boolean  @default(true)
+
+  isDefault       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("label_templates")
+}
+
+// Pick List for mobile picking
+model PickList {
+  id              String   @id @default(cuid())
+
+  pickListNumber  String   @unique
+
+  // Source
+  sourceType      String   // SALES_ORDER, WORK_ORDER, TRANSFER
+  sourceId        String
+
+  // Assignment
+  assignedTo      String?
+  assignedAt      DateTime?
+
+  // Status
+  status          String   @default("PENDING")  // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+
+  // Priority
+  priority        Int      @default(5)  // 1-10, 1 = highest
+  dueDate         DateTime?
+
+  // Progress
+  totalLines      Int      @default(0)
+  completedLines  Int      @default(0)
+
+  // Timing
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines           PickListLine[]
+
+  @@index([status])
+  @@index([assignedTo])
+  @@map("pick_lists")
+}
+
+model PickListLine {
+  id              String   @id @default(cuid())
+  pickListId      String
+  pickList        PickList @relation(fields: [pickListId], references: [id], onDelete: Cascade)
+
+  lineNumber      Int
+
+  // Item to pick
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  // Location
+  warehouseId     String?
+  warehouse       Warehouse? @relation(fields: [warehouseId], references: [id])
+  locationCode    String?
+
+  // Quantities
+  requestedQty    Decimal  @db.Decimal(15, 4)
+  pickedQty       Decimal  @db.Decimal(15, 4) @default(0)
+
+  // Lot/Serial tracking
+  lotNumber       String?
+  serialNumbers   Json?    // Array of serial numbers
+
+  // Status
+  status          String   @default("PENDING")  // PENDING, PICKED, SHORT, SKIPPED
+
+  // Timing
+  pickedAt        DateTime?
+  pickedBy        String?
+
+  notes           String?
+
+  @@index([pickListId])
+  @@index([partId])
+  @@map("pick_list_lines")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    ADVANCED MRP MODELS - PHASE 13
+// ═══════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────
+// MULTI-SITE
+// ─────────────────────────────────────────────────────────────────────
+
+model Site {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+
+  // Location
+  address         String?
+  city            String?
+  country         String?
+  timezone        String   @default("UTC")
+
+  // Type
+  siteType        String   @default("MANUFACTURING")
+  // MANUFACTURING, WAREHOUSE, DISTRIBUTION, HEADQUARTERS
+
+  // Planning settings
+  isPlanningSite  Boolean  @default(true)
+  defaultLeadTime Int      @default(0)  // Inter-site lead time
+
+  // Status
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  warehouses      Warehouse[]
+  inventorySites  InventorySite[]
+  supplyOrders    PlannedOrder[]   @relation("SupplySite")
+  demandOrders    PlannedOrder[]   @relation("DemandSite")
+  transfersFrom   TransferOrder[]  @relation("FromSite")
+  transfersTo     TransferOrder[]  @relation("ToSite")
+
+  @@index([siteType])
+  @@map("sites")
+}
+
+// Site-specific inventory settings
+model InventorySite {
+  id              String   @id @default(cuid())
+
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  siteId          String
+  site            Site     @relation(fields: [siteId], references: [id])
+
+  // Site-specific settings
+  reorderPoint    Decimal? @db.Decimal(15, 4)
+  safetyStock     Decimal? @db.Decimal(15, 4)
+  minOrderQty     Decimal? @db.Decimal(15, 4)
+  maxOrderQty     Decimal? @db.Decimal(15, 4)
+  leadTime        Int?     // Override part lead time
+
+  // Planning flags
+  isPlanned       Boolean  @default(true)
+  planningMethod  String   @default("MRP")  // MRP, REORDER_POINT, KANBAN
+
+  // Sourcing
+  preferredSource String?  // MAKE, BUY, TRANSFER
+  sourceSupplier  String?  // Supplier ID if BUY
+  sourceSite      String?  // Site ID if TRANSFER
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([partId, siteId])
+  @@index([siteId])
+  @@map("inventory_sites")
+}
+
+// Inter-site transfer orders
+model TransferOrder {
+  id              String   @id @default(cuid())
+  transferNumber  String   @unique
+
+  // Sites
+  fromSiteId      String
+  fromSite        Site     @relation("FromSite", fields: [fromSiteId], references: [id])
+  toSiteId        String
+  toSite          Site     @relation("ToSite", fields: [toSiteId], references: [id])
+
+  // Dates
+  requestDate     DateTime
+  shipDate        DateTime?
+  expectedDate    DateTime
+  receivedDate    DateTime?
+
+  // Status
+  status          String   @default("DRAFT")
+  // DRAFT, APPROVED, IN_TRANSIT, RECEIVED, CANCELLED
+
+  // Reference
+  sourceType      String?  // MRP, MANUAL
+  sourceId        String?  // Planned order ID if from MRP
+
+  notes           String?
+
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines           TransferOrderLine[]
+
+  @@index([status])
+  @@index([fromSiteId])
+  @@index([toSiteId])
+  @@map("transfer_orders")
+}
+
+model TransferOrderLine {
+  id              String   @id @default(cuid())
+  transferOrderId String
+  transferOrder   TransferOrder @relation(fields: [transferOrderId], references: [id], onDelete: Cascade)
+
+  lineNumber      Int
+
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  quantity        Decimal  @db.Decimal(15, 4)
+  shippedQty      Decimal  @db.Decimal(15, 4) @default(0)
+  receivedQty     Decimal  @db.Decimal(15, 4) @default(0)
+
+  // From location
+  fromLocationId  String?
+
+  // To location
+  toLocationId    String?
+
+  notes           String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([transferOrderId])
+  @@map("transfer_order_lines")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PEGGING
+// ─────────────────────────────────────────────────────────────────────
+
+model PeggingRecord {
+  id              String   @id @default(cuid())
+
+  // Demand side
+  demandType      String   // SALES_ORDER, WORK_ORDER, FORECAST, SAFETY_STOCK, TRANSFER
+  demandId        String
+  demandLineId    String?
+  demandPartId    String
+  demandQty       Decimal  @db.Decimal(15, 4)
+  demandDate      DateTime
+
+  // Supply side
+  supplyType      String   // PURCHASE_ORDER, WORK_ORDER, INVENTORY, PLANNED_ORDER, TRANSFER
+  supplyId        String
+  supplyLineId    String?
+  supplyPartId    String
+  supplyQty       Decimal  @db.Decimal(15, 4)
+  supplyDate      DateTime
+
+  // Pegged quantity (may be partial)
+  peggedQty       Decimal  @db.Decimal(15, 4)
+
+  // Site
+  siteId          String?
+
+  // Status
+  status          String   @default("ACTIVE")  // ACTIVE, CONSUMED, CANCELLED
+
+  // MRP run that created this
+  mrpRunId        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([demandType, demandId])
+  @@index([supplyType, supplyId])
+  @@index([demandPartId])
+  @@index([supplyPartId])
+  @@map("pegging_records")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// FIRM PLANNED ORDERS
+// ─────────────────────────────────────────────────────────────────────
+
+model PlannedOrder {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+
+  // Part
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  // Site
+  siteId          String?
+  supplySite      Site?    @relation("SupplySite", fields: [siteId], references: [id])
+  demandSiteId    String?
+  demandSite      Site?    @relation("DemandSite", fields: [demandSiteId], references: [id])
+
+  // Order details
+  orderType       String   // PURCHASE, PRODUCTION, TRANSFER
+  quantity        Decimal  @db.Decimal(15, 4)
+
+  // Dates
+  startDate       DateTime
+  dueDate         DateTime
+
+  // Firm status
+  isFirm          Boolean  @default(false)
+  firmedAt        DateTime?
+  firmedBy        String?
+  firmReason      String?
+
+  // Time fence
+  insideTimeFence Boolean  @default(false)
+
+  // Status
+  status          String   @default("PLANNED")
+  // PLANNED, FIRM, RELEASED, CANCELLED
+
+  // Reference to actual order (when released)
+  releasedOrderType String?
+  releasedOrderId   String?
+
+  // MRP info
+  mrpRunId        String?
+  exceptionType   String?  // If has exception
+  exceptionMsg    String?
+
+  // Priority
+  priority        Int      @default(500)  // 1-999, lower = higher priority
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([partId])
+  @@index([siteId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([isFirm])
+  @@map("planned_orders")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// MRP EXCEPTIONS
+// ─────────────────────────────────────────────────────────────────────
+
+model MRPException {
+  id              String   @id @default(cuid())
+
+  // Exception type
+  exceptionType   String
+  // RESCHEDULE_IN, RESCHEDULE_OUT, EXPEDITE, DEFER, CANCEL
+  // PAST_DUE, SHORTAGE, EXCESS, LEAD_TIME_VIOLATION
+
+  severity        String   @default("WARNING")  // INFO, WARNING, CRITICAL
+
+  // Affected entity
+  entityType      String   // PLANNED_ORDER, PURCHASE_ORDER, WORK_ORDER
+  entityId        String
+
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  siteId          String?
+
+  // Details
+  message         String
+  currentDate     DateTime?
+  suggestedDate   DateTime?
+  quantity        Decimal? @db.Decimal(15, 4)
+
+  // Resolution
+  status          String   @default("OPEN")  // OPEN, ACKNOWLEDGED, RESOLVED, IGNORED
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolution      String?  // What action was taken
+
+  // MRP run
+  mrpRunId        String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([exceptionType])
+  @@index([status])
+  @@index([partId])
+  @@index([severity])
+  @@map("mrp_exceptions")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// WHAT-IF SIMULATION
+// ─────────────────────────────────────────────────────────────────────
+
+model Simulation {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+
+  // Type
+  simulationType  String   @default("MRP")
+  // MRP, CAPACITY, DEMAND, SUPPLY, COMBINED
+
+  // Status
+  status          String   @default("DRAFT")
+  // DRAFT, RUNNING, COMPLETED, FAILED
+
+  // Parameters (JSON)
+  parameters      Json
+
+  // Baseline comparison
+  baselineRunId   String?  // Compare against this MRP run
+
+  // Results summary (JSON)
+  resultsSummary  Json?
+
+  // Timing
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  results         SimulationResult[]
+
+  @@index([status])
+  @@index([createdBy])
+  @@map("simulations")
+}
+
+model SimulationResult {
+  id              String   @id @default(cuid())
+  simulationId    String
+  simulation      Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  // Result type
+  resultType      String   // PLANNED_ORDER, SHORTAGE, EXCESS, CAPACITY_ISSUE
+
+  partId          String?
+  workCenterId    String?
+  siteId          String?
+
+  // Dates
+  periodStart     DateTime
+  periodEnd       DateTime
+
+  // Values
+  quantity        Decimal? @db.Decimal(15, 4)
+  baselineQty     Decimal? @db.Decimal(15, 4)  // For comparison
+  variance        Decimal? @db.Decimal(15, 4)
+
+  // Details (JSON)
+  details         Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([simulationId])
+  @@index([partId])
+  @@map("simulation_results")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// ATP/CTP
+// ─────────────────────────────────────────────────────────────────────
+
+model ATPRecord {
+  id              String   @id @default(cuid())
+
+  partId          String
+  part            Part     @relation(fields: [partId], references: [id])
+
+  siteId          String?
+
+  // Time bucket
+  bucketDate      DateTime  // Start of bucket
+  bucketType      String    @default("DAILY")  // DAILY, WEEKLY, MONTHLY
+
+  // Quantities
+  beginningQty    Decimal  @db.Decimal(15, 4) @default(0)
+  supplyQty       Decimal  @db.Decimal(15, 4) @default(0)
+  demandQty       Decimal  @db.Decimal(15, 4) @default(0)
+  atpQty          Decimal  @db.Decimal(15, 4) @default(0)
+  cumulativeATP   Decimal  @db.Decimal(15, 4) @default(0)
+
+  // Last calculated
+  calculatedAt    DateTime @default(now())
+
+  @@unique([partId, siteId, bucketDate, bucketType])
+  @@index([partId])
+  @@index([bucketDate])
+  @@map("atp_records")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// PLANNING SETTINGS
+// ─────────────────────────────────────────────────────────────────────
+
+model PlanningSettings {
+  id              String   @id @default(cuid())
+
+  siteId          String?  @unique  // null = global settings
+
+  // Time fences (in days)
+  demandTimeFence    Int   @default(7)   // No changes inside this
+  planningTimeFence  Int   @default(30)  // MRP planning horizon
+  frozenZone         Int   @default(3)   // Absolutely no changes
+
+  // Planning buckets
+  bucketType         String @default("DAILY")  // DAILY, WEEKLY
+
+  // Safety stock calculation
+  safetyStockMethod  String @default("FIXED")  // FIXED, DAYS_OF_SUPPLY, STATISTICAL
+  safetyStockDays    Int    @default(7)
+
+  // Order sizing
+  orderSizingRule    String @default("LOT_FOR_LOT")
+  // LOT_FOR_LOT, FIXED_ORDER_QTY, PERIODS_OF_SUPPLY, EOQ
+  periodsOfSupply    Int    @default(1)
+
+  // Rescheduling
+  rescheduleInDays   Int    @default(3)   // Reschedule in if early by this many days
+  rescheduleOutDays  Int    @default(5)   // Reschedule out if late by this many days
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("planning_settings")
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// SUBSTITUTE PARTS
+// ─────────────────────────────────────────────────────────────────────
+
+model PartSubstitute {
+  id              String   @id @default(cuid())
+
+  primaryPartId   String
+  primaryPart     Part     @relation("PrimaryPart", fields: [primaryPartId], references: [id])
+
+  substitutePartId String
+  substitutePart  Part     @relation("SubstitutePart", fields: [substitutePartId], references: [id])
+
+  // Priority (1 = first choice)
+  priority        Int      @default(1)
+
+  // Conversion
+  conversionFactor Decimal @db.Decimal(10, 4) @default(1)  // How many substitutes per primary
+
+  // Validity
+  effectiveDate   DateTime @default(now())
+  expiryDate      DateTime?
+
+  // Flags
+  isAutoSubstitute Boolean @default(false)  // Auto-substitute if primary unavailable
+  requiresApproval Boolean @default(true)   // Requires approval to use
+
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([primaryPartId, substitutePartId])
+  @@index([primaryPartId])
+  @@map("part_substitutes")
+}
