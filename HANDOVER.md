@@ -1,9 +1,9 @@
 # RTR MRP - HANDOVER DOCUMENT
-> Last updated: 2025-12-31
+> Last updated: 2025-12-31 (UI-API Integration Complete)
 
 ---
 
-## TRANG THAI HIEN TAI: Production Build OK - Da Deploy Render
+## TRANG THAI HIEN TAI: UI-API Integration Complete - Build OK
 
 ### LENH TIEP TUC NHANH
 Khi quay lai, chi can noi:
@@ -15,6 +15,28 @@ Khi quay lai, chi can noi:
 ---
 
 ## DA HOAN THANH (2025-12-31)
+
+### 0. UI-API Integration (NEW - 8/8 pages)
+Tao 8 Connected Pages su dung hooks tu `use-data.ts`:
+
+| Page | File | Hook | Status |
+|------|------|------|--------|
+| Dashboard | `dashboard-connected.tsx` | `useDashboard()` | OK |
+| Parts | `parts-master-connected.tsx` | `useParts()` | OK |
+| Sales | `sales-orders-connected.tsx` | `useSalesOrders()` | OK |
+| Production | `production-connected.tsx` | `useWorkOrders()` | OK |
+| Quality | `quality-connected.tsx` | `useNCRs()` | OK |
+| Inventory | `inventory-connected.tsx` | `useInventory()` | OK |
+| BOM | `bom-connected.tsx` | `useBOMs()`, `useBOM()` | OK |
+| Analytics | `analytics-connected.tsx` | `useAnalytics*()` | OK |
+
+**Features:**
+- Loading skeletons cho tung page
+- Error states voi retry buttons
+- Dark mode support (Tailwind dark:)
+- Pagination, filtering, search
+- Detail panels cho selected items
+- Kanban/List view modes (Sales, Production, Quality)
 
 ### 1. Fix Prisma Schema Mismatches (CRITICAL)
 Tat ca field names da duoc align voi `prisma/schema.prisma`:
@@ -142,11 +164,11 @@ npx prisma studio             # Open DB GUI
 
 ## CONG VIEC TIEP THEO (GOI Y)
 
-### Option A: Ket noi UI voi API
-Cac trang V2 hien dang dung mock data. Can:
-1. Import hooks tu `src/lib/hooks/use-data.ts`
-2. Thay mock data bang real API calls
-3. Test CRUD operations
+### Option A: Tich hop Connected Pages vao App (RECOMMENDED)
+Connected pages da tao xong, can:
+1. Cap nhat routes trong `/src/app/v2/` de su dung `*-connected.tsx`
+2. Test CRUD operations (Create, Read, Update, Delete)
+3. Test edge cases (empty data, errors, slow network)
 
 ### Option B: Them tinh nang
 1. Real-time updates (WebSocket)
@@ -170,6 +192,8 @@ src/app/api/v2/               # API routes
 src/lib/hooks/use-data.ts     # Data fetching hooks
 src/app/v2/                   # V2 UI pages
 src/components/pages-v2/      # V2 components
+  ├── *-connected.tsx         # NEW: Connected pages (8 files)
+  └── *.tsx                   # Original mock pages
 .env                          # Local env vars
 render.yaml                   # Render config
 HANDOVER.md                   # This file
@@ -201,4 +225,22 @@ f4968a9 Fix Inventory field names
 
 ---
 
-**San sang cho:** UI Integration, Feature Development, hoac Production Testing
+**San sang cho:** Route Integration, Feature Development, hoac Production Testing
+
+---
+
+## LUU Y KHI TICH HOP ROUTES
+
+De su dung connected pages, cap nhat file page trong `/src/app/v2/[page]/page.tsx`:
+
+```tsx
+// Thay doi import tu:
+import { PartsMaster } from '@/components/pages-v2/parts-master';
+// Thanh:
+import { PartsMasterConnected } from '@/components/pages-v2/parts-master-connected';
+
+// Thay doi component:
+export default function PartsPage() {
+  return <PartsMasterConnected />;
+}
+```

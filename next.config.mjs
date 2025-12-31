@@ -151,14 +151,10 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Scripts: Allow self, inline only in dev
-              process.env.NODE_ENV === "production"
-                ? "script-src 'self'"
-                : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-              // Styles: Allow self, inline only in dev
-              process.env.NODE_ENV === "production"
-                ? "style-src 'self'"
-                : "style-src 'self' 'unsafe-inline'",
+              // Scripts: Next.js requires unsafe-inline for hydration
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              // Styles: Next.js/Tailwind requires unsafe-inline
+              "style-src 'self' 'unsafe-inline'",
               // Images: self, data URIs, HTTPS
               "img-src 'self' data: blob: https:",
               // Fonts
