@@ -168,7 +168,7 @@ async function getOverviewAnalytics(startDate: Date, endDate: Date) {
     },
     recentOrders: recentOrders.map(o => ({
       id: o.id,
-      soNumber: o.soNumber,
+      orderNumber: o.orderNumber,
       customer: o.customer.name,
       amount: Number(o.totalAmount),
       status: o.status,
