@@ -301,30 +301,42 @@ const TopBar: React.FC<{
 export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Check for saved preference or system preference on mount
+  React.useEffect(() => {
+    setMounted(true);
+    try {
+      const savedMode = localStorage.getItem('darkMode');
+      if (savedMode !== null) {
+        setDarkMode(savedMode === 'true');
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setDarkMode(true);
+      }
+    } catch (e) {
+      console.warn('localStorage not available:', e);
+    }
+  }, []);
 
   // Apply dark mode class to html element
   React.useEffect(() => {
+    if (!mounted) return;
+
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
-
-  // Check for saved preference or system preference on mount
-  React.useEffect(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    if (savedMode !== null) {
-      setDarkMode(savedMode === 'true');
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDarkMode(true);
-    }
-  }, []);
+  }, [darkMode, mounted]);
 
   const toggleDarkMode = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    localStorage.setItem('darkMode', String(newMode));
+    try {
+      localStorage.setItem('darkMode', String(newMode));
+    } catch (e) {
+      console.warn('Cannot save to localStorage:', e);
+    }
   };
 
   return (
