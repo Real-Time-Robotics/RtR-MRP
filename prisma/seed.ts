@@ -36,13 +36,9 @@ async function main() {
   console.log("Cleared existing data");
 
   // Create admin user
-  // WARNING: Generate a secure random password for production!
-  // Use: openssl rand -base64 32
-  const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "CHANGE_ME_IN_PRODUCTION_" + Date.now();
-  if (!process.env.SEED_ADMIN_PASSWORD) {
-    console.warn("⚠️  WARNING: Using auto-generated password. Set SEED_ADMIN_PASSWORD env var for production!");
-    console.warn(`⚠️  Generated password: ${defaultPassword}`);
-  }
+  // Default demo password - override with SEED_ADMIN_PASSWORD env var in production
+  const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "admin123456@";
+  console.log(`Creating admin user with email: admin@rtr.com`);
   const hashedPassword = await bcrypt.hash(defaultPassword, 12);
   await prisma.user.create({
     data: {
