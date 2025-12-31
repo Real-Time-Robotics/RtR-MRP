@@ -3,11 +3,6 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -43,30 +38,28 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1 text-center">
+    <div className="w-full max-w-md rounded-lg border bg-white dark:bg-slate-900 shadow-sm">
+      <div className="flex flex-col space-y-1.5 p-6 text-center">
         <div className="flex justify-center mb-4">
-          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-white font-bold text-lg">RTR</span>
+          <div className="h-12 w-12 rounded-xl bg-blue-600 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">MRP</span>
           </div>
         </div>
-        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-        <CardDescription>
-          Sign in to RTR MRP System
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        <h3 className="text-2xl font-bold">Welcome back</h3>
+        <p className="text-sm text-slate-500">Sign in to RTR MRP System</p>
+      </div>
+      <div className="p-6 pt-0">
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <Alert variant="destructive">
+            <div className="flex items-center gap-2 p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+              <span className="text-sm">{error}</span>
+            </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
+            <label htmlFor="email" className="text-sm font-medium">Email</label>
+            <input
               id="email"
               type="email"
               placeholder="admin@rtr.com"
@@ -74,12 +67,13 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
+            <label htmlFor="password" className="text-sm font-medium">Password</label>
+            <input
               id="password"
               type="password"
               placeholder="Enter your password"
@@ -87,10 +81,15 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-10 px-4 py-2 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center justify-center"
+          >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -99,14 +98,14 @@ export default function LoginPage() {
             ) : (
               "Sign in"
             )}
-          </Button>
+          </button>
 
-          <div className="text-center text-sm text-muted-foreground mt-4">
+          <div className="text-center text-sm text-slate-500 mt-4">
             <p>Demo credentials:</p>
             <p className="font-mono">admin@rtr.com / admin123456@</p>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
