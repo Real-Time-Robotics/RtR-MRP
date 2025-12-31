@@ -209,7 +209,7 @@ async function getInventoryAnalytics(startDate: Date, endDate: Date) {
   // Stock status distribution
   const allInventory = await prisma.inventory.findMany({
     include: {
-      part: { select: { minStock: true, reorderPoint: true, maxStock: true } }
+      part: { select: { minStockLevel: true, reorderPoint: true, safetyStock: true } }
     }
   });
 
@@ -218,15 +218,13 @@ async function getInventoryAnalytics(startDate: Date, endDate: Date) {
     lowStock: 0,
     critical: 0,
     outOfStock: 0,
-    overstock: 0,
   };
 
   allInventory.forEach(inv => {
     const qty = Number(inv.quantity);
     if (qty <= 0) stockDistribution.outOfStock++;
-    else if (qty <= inv.part.minStock) stockDistribution.critical++;
+    else if (qty <= inv.part.minStockLevel) stockDistribution.critical++;
     else if (qty <= inv.part.reorderPoint) stockDistribution.lowStock++;
-    else if (inv.part.maxStock && qty >= inv.part.maxStock) stockDistribution.overstock++;
     else stockDistribution.inStock++;
   });
 
