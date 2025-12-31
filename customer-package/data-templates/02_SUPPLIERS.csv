@@ -1,0 +1,18 @@
+supplier_code,name,contact_person,phone,email,address,city,country,payment_terms,lead_time_days,rating,status
+# Mã NCC (unique),Tên công ty,Người liên hệ,Điện thoại,Email,Địa chỉ,Thành phố,Quốc gia,Điều khoản thanh toán (ngày),Thời gian giao hàng (ngày),Đánh giá (1-5),Trạng thái
+#
+SUP-001,Thép Việt Nam Steel,Nguyễn Văn An,0901234567,an.nguyen@vietsteel.com,123 Đường Công Nghiệp,Biên Hòa,Vietnam,30,7,5,Active
+SUP-002,Nhôm Đông Á Aluminum,Trần Thị Bình,0912345678,binh.tran@dongaalum.com,456 KCN Tân Bình,TP.HCM,Vietnam,30,10,4,Active
+SUP-003,Nhựa Minh Phát Plastic,Lê Văn Cường,0923456789,cuong.le@minhphat.com,789 Quốc lộ 1A,Bình Dương,Vietnam,45,14,4,Active
+SUP-004,Cao su Đại Nam Rubber,Phạm Thị Dung,0934567890,dung.pham@dainamrubber.com,321 KCN VSIP,Bình Dương,Vietnam,30,21,3,Active
+SUP-005,Ốc vít Tân Tiến Fasteners,Hoàng Văn Em,0945678901,em.hoang@tantien.com,654 Đường Nguyễn Văn Linh,TP.HCM,Vietnam,15,3,5,Active
+SUP-006,Bạc đạn SKF Vietnam,John Smith,0956789012,john.smith@skf.com,987 KCN Amata,Đồng Nai,Vietnam,30,7,5,Active
+SUP-007,Động cơ Oriental Motor VN,Yamada Ken,0967890123,ken.yamada@orientalmotor.vn,147 KCN Long Thành,Đồng Nai,Vietnam,45,14,5,Active
+SUP-008,Cảm biến Omron Vietnam,Tanaka Yuki,0978901234,yuki.tanaka@omron.vn,258 KCN Nhơn Trạch,Đồng Nai,Vietnam,30,10,4,Active
+SUP-009,Bao bì Thành Công Packaging,Ngô Thị Phương,0989012345,phuong.ngo@thanhcong.com,369 Quốc lộ 13,Bình Dương,Vietnam,15,5,4,Active
+SUP-010,Điện tử Việt Hàn Electronics,Kim Dong Woo,0990123456,dongwoo.kim@viethanel.com,741 KCN Mỹ Phước,Bình Dương,Vietnam,30,7,4,Active
+#
+# === INTERNATIONAL SUPPLIERS ===
+SUP-INT-001,Taiwan Precision Parts,Chen Wei Lin,+886912345678,weilin@taiwanpp.com,123 Industrial Rd,Taichung,Taiwan,60,21,4,Active
+SUP-INT-002,China Steel Manufacturer,Li Ming,+8613912345678,liming@chinasteel.cn,456 Manufacturing Zone,Shenzhen,China,45,14,3,Active
+SUP-INT-003,Japan Motor Corp,Suzuki Taro,+81312345678,taro@japanmotor.jp,789 Tech Park,Osaka,Japan,60,30,5,Active

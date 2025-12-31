@@ -1,0 +1,93 @@
+version: '3.8'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RTR MRP - DOCKER COMPOSE CONFIGURATION
+# Cấu hình triển khai trên Windows 10 với Docker Desktop
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════════════════
+  db:
+    image: postgres:15-alpine
+    container_name: rtr-mrp-db
+    restart: always
+    environment:
+      POSTGRES_USER: rtr_admin
+      POSTGRES_PASSWORD: rtr_secure_2024
+      POSTGRES_DB: rtr_mrp
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rtr_admin -d rtr_mrp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rtr-network
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # RTR MRP Application
+  # ═══════════════════════════════════════════════════════════════════════════
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rtr-mrp-app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://rtr_admin:rtr_secure_2024@db:5432/rtr_mrp
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-this-in-production-use-openssl-rand-base64-32}
+      NEXTAUTH_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - rtr-network
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Prisma Studio (Database GUI) - Optional
+  # ═══════════════════════════════════════════════════════════════════════════
+  prisma-studio:
+    image: node:18-alpine
+    container_name: rtr-mrp-studio
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://rtr_admin:rtr_secure_2024@db:5432/rtr_mrp
+    volumes:
+      - ./prisma:/app/prisma
+      - ./node_modules:/app/node_modules
+    ports:
+      - "5555:5555"
+    command: npx prisma studio --port 5555 --browser none
+    networks:
+      - rtr-network
+    profiles:
+      - tools
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════════════════════════
+networks:
+  rtr-network:
+    driver: bridge
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    driver: local

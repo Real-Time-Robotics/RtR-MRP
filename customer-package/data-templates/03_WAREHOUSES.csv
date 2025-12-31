@@ -1,0 +1,24 @@
+warehouse_code,name,type,address,city,manager,phone,capacity,status
+# Mã kho (unique),Tên kho,Loại kho,Địa chỉ,Thành phố,Quản lý kho,Điện thoại,Sức chứa (m2),Trạng thái
+#
+# === MAIN WAREHOUSES ===
+WH-MAIN-01,Kho Nguyên vật liệu chính,Raw Materials,Lô A1 KCN Tân Bình,TP.HCM,Nguyễn Văn Kho,0901111111,2000,Active
+WH-MAIN-02,Kho Linh kiện,Components,Lô A2 KCN Tân Bình,TP.HCM,Trần Thị Linh,0902222222,1500,Active
+WH-MAIN-03,Kho Thành phẩm,Finished Goods,Lô A3 KCN Tân Bình,TP.HCM,Lê Văn Phẩm,0903333333,3000,Active
+WH-MAIN-04,Kho Bán thành phẩm,WIP,Lô B1 KCN Tân Bình,TP.HCM,Phạm Thị WIP,0904444444,1000,Active
+#
+# === BRANCH WAREHOUSES ===
+WH-HN-01,Kho Hà Nội,Distribution,45 Phố Huế,Hà Nội,Hoàng Văn Bắc,0915555555,500,Active
+WH-DN-01,Kho Đà Nẵng,Distribution,123 Nguyễn Văn Linh,Đà Nẵng,Ngô Thị Trung,0916666666,400,Active
+#
+# === PRODUCTION AREAS ===
+WH-PROD-01,Khu vực Cắt,Production,Xưởng A - Tầng 1,TP.HCM,Đỗ Văn Cắt,0917777777,500,Active
+WH-PROD-02,Khu vực Hàn,Production,Xưởng A - Tầng 2,TP.HCM,Vũ Thị Hàn,0918888888,600,Active
+WH-PROD-03,Khu vực Lắp ráp,Production,Xưởng B - Tầng 1,TP.HCM,Bùi Văn Ráp,0919999999,800,Active
+WH-PROD-04,Khu vực Kiểm tra,QC,Xưởng B - Tầng 2,TP.HCM,Đinh Thị QC,0920000000,300,Active
+WH-PROD-05,Khu vực Đóng gói,Packaging,Xưởng C,TP.HCM,Trịnh Văn Gói,0921111111,400,Active
+#
+# === SPECIAL WAREHOUSES ===
+WH-QUA-01,Kho cách ly (Quarantine),Quarantine,Lô C1 KCN Tân Bình,TP.HCM,Lý Thị Cách,0922222222,200,Active
+WH-DEF-01,Kho hàng lỗi,Defective,Lô C2 KCN Tân Bình,TP.HCM,Mạc Văn Lỗi,0923333333,150,Active
+WH-RET-01,Kho hàng trả về,Returns,Lô C3 KCN Tân Bình,TP.HCM,Tô Thị Trả,0924444444,100,Active

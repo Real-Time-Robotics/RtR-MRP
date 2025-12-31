@@ -1,0 +1,71 @@
+parent_part,child_part,quantity,unit,bom_level,sequence,scrap_rate,notes
+# Mã cha,Mã con,Số lượng,Đơn vị,Cấp BOM (1-5),Thứ tự,Tỷ lệ hao hụt (%),Ghi chú
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOM CHO SẢN PHẨM MODEL A1 (FG-PRD-A1)
+# Multi-level BOM structure
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# === LEVEL 1: Thành phẩm → Bán thành phẩm ===
+FG-PRD-A1,SF-FRM-001,1,pcs,1,10,0,Khung chính
+FG-PRD-A1,SF-FRM-002,2,pcs,1,20,0,Khung phụ (2 cái)
+FG-PRD-A1,SF-CVR-001,1,pcs,1,30,0,Vỏ ngoài
+FG-PRD-A1,SF-PNL-001,1,pcs,1,40,0,Panel điều khiển
+FG-PRD-A1,CMP-MOT-001,2,pcs,1,50,0,Motor DC 12V
+FG-PRD-A1,CMP-GBX-001,2,pcs,1,60,0,Hộp số
+FG-PRD-A1,PKG-BOX-001,1,pcs,1,70,0,Thùng đóng gói
+FG-PRD-A1,PKG-FOM-001,2,m2,1,80,5,Foam chống sốc
+#
+# === LEVEL 2: Khung chính SF-FRM-001 ===
+SF-FRM-001,RM-STL-002,15,kg,2,10,3,Thép tấm 3mm
+SF-FRM-001,RM-STL-003,8,m,2,20,2,Thép ống D21
+SF-FRM-001,CMP-SCR-002,24,pcs,2,30,0,Vít M5x12
+SF-FRM-001,CMP-NUT-002,24,pcs,2,40,0,Đai ốc M5
+SF-FRM-001,CMP-WSH-001,48,pcs,2,50,0,Long đền M4
+SF-FRM-001,CMP-BRG-002,4,pcs,2,60,0,Bạc đạn 6201
+#
+# === LEVEL 2: Khung phụ SF-FRM-002 ===
+SF-FRM-002,RM-STL-001,8,kg,2,10,3,Thép tấm 2mm
+SF-FRM-002,RM-STL-003,4,m,2,20,2,Thép ống D21
+SF-FRM-002,CMP-SCR-001,16,pcs,2,30,0,Vít M4x10
+SF-FRM-002,CMP-NUT-001,16,pcs,2,40,0,Đai ốc M4
+SF-FRM-002,CMP-BRG-001,2,pcs,2,50,0,Bạc đạn 6001
+#
+# === LEVEL 2: Vỏ ngoài SF-CVR-001 ===
+SF-CVR-001,RM-ALU-001,5,kg,2,10,5,Nhôm tấm 1.5mm
+SF-CVR-001,RM-PLS-001,2,kg,2,20,3,Nhựa ABS
+SF-CVR-001,CMP-SCR-001,32,pcs,2,30,0,Vít M4x10
+SF-CVR-001,CMP-SCR-002,16,pcs,2,40,0,Vít M5x12
+#
+# === LEVEL 2: Panel điều khiển SF-PNL-001 ===
+SF-PNL-001,RM-ALU-002,1.5,m,2,10,2,Nhôm định hình
+SF-PNL-001,RM-PLS-002,0.8,kg,2,20,3,Nhựa PP trong
+SF-PNL-001,CMP-SEN-001,4,pcs,2,30,0,Cảm biến tiệm cận
+SF-PNL-001,CMP-SEN-002,2,pcs,2,40,0,Cảm biến nhiệt độ
+SF-PNL-001,CMP-SCR-003,12,pcs,2,50,0,Vít M6x16
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOM CHO SẢN PHẨM MODEL A2 (FG-PRD-A2)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+FG-PRD-A2,SF-FRM-001,1,pcs,1,10,0,Khung chính
+FG-PRD-A2,SF-FRM-002,3,pcs,1,20,0,Khung phụ (3 cái - lớn hơn A1)
+FG-PRD-A2,SF-CVR-001,1,pcs,1,30,0,Vỏ ngoài
+FG-PRD-A2,SF-PNL-001,2,pcs,1,40,0,Panel điều khiển (2 panel)
+FG-PRD-A2,CMP-MOT-002,2,pcs,1,50,0,Motor DC 24V (mạnh hơn)
+FG-PRD-A2,CMP-GBX-001,2,pcs,1,60,0,Hộp số
+FG-PRD-A2,CMP-BRG-003,4,pcs,1,70,0,Bạc đạn 6301
+FG-PRD-A2,PKG-BOX-001,1,pcs,1,80,0,Thùng đóng gói
+FG-PRD-A2,PKG-FOM-001,3,m2,1,90,5,Foam chống sốc
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOM CHO SẢN PHẨM MODEL B1 (FG-PRD-B1) - Compact version
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+FG-PRD-B1,SF-FRM-002,2,pcs,1,10,0,Khung phụ (dùng khung nhỏ)
+FG-PRD-B1,SF-CVR-001,1,pcs,1,20,0,Vỏ ngoài
+FG-PRD-B1,CMP-MOT-001,1,pcs,1,30,0,Motor DC 12V (1 motor)
+FG-PRD-B1,CMP-GBX-001,1,pcs,1,40,0,Hộp số
+FG-PRD-B1,CMP-SEN-001,2,pcs,1,50,0,Cảm biến tiệm cận
+FG-PRD-B1,PKG-BOX-002,1,pcs,1,60,0,Thùng carton vừa
+FG-PRD-B1,PKG-FOM-001,1,m2,1,70,5,Foam chống sốc

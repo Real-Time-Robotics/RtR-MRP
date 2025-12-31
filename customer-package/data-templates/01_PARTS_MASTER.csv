@@ -1,0 +1,45 @@
+part_number,name,description,category,sub_category,unit,unit_cost,min_stock,max_stock,reorder_point,safety_stock,lead_time_days,supplier_code,critical
+# Mã vật tư (unique),Tên vật tư,Mô tả,Danh mục,Danh mục con,Đơn vị,Giá/đơn vị (VND),Tồn tối thiểu,Tồn tối đa,Điểm đặt hàng,Tồn an toàn,Thời gian giao (ngày),Mã NCC,Quan trọng (Y/N)
+#
+# === RAW MATERIALS (Nguyên vật liệu) ===
+RM-STL-001,Thép tấm 2mm,Thép tấm carbon 2mm x 1220 x 2440,Raw Materials,Steel,kg,25000,100,500,150,50,7,SUP-001,Y
+RM-STL-002,Thép tấm 3mm,Thép tấm carbon 3mm x 1220 x 2440,Raw Materials,Steel,kg,26000,80,400,120,40,7,SUP-001,Y
+RM-STL-003,Thép ống D21,Thép ống tròn D21 x 1.5mm,Raw Materials,Steel,m,18000,200,1000,300,100,5,SUP-001,N
+RM-ALU-001,Nhôm tấm 1.5mm,Nhôm tấm 1.5mm x 1220 x 2440,Raw Materials,Aluminum,kg,85000,50,200,80,30,10,SUP-002,Y
+RM-ALU-002,Nhôm định hình,Nhôm thanh định hình 40x40,Raw Materials,Aluminum,m,45000,100,500,150,50,10,SUP-002,N
+RM-PLS-001,Nhựa ABS đen,Hạt nhựa ABS màu đen,Raw Materials,Plastic,kg,42000,50,300,80,30,14,SUP-003,N
+RM-PLS-002,Nhựa PP trong,Hạt nhựa PP trong suốt,Raw Materials,Plastic,kg,35000,50,300,80,30,14,SUP-003,N
+RM-RUB-001,Cao su EPDM,Cao su EPDM dạng tấm 3mm,Raw Materials,Rubber,kg,120000,20,100,40,15,21,SUP-004,N
+#
+# === COMPONENTS (Linh kiện) ===
+CMP-SCR-001,Vít M4x10,Vít lục giác M4x10 inox,Components,Fasteners,pcs,500,1000,5000,1500,500,3,SUP-005,N
+CMP-SCR-002,Vít M5x12,Vít lục giác M5x12 inox,Components,Fasteners,pcs,600,1000,5000,1500,500,3,SUP-005,N
+CMP-SCR-003,Vít M6x16,Vít lục giác M6x16 inox,Components,Fasteners,pcs,800,500,3000,800,300,3,SUP-005,N
+CMP-NUT-001,Đai ốc M4,Đai ốc lục giác M4 inox,Components,Fasteners,pcs,300,1000,5000,1500,500,3,SUP-005,N
+CMP-NUT-002,Đai ốc M5,Đai ốc lục giác M5 inox,Components,Fasteners,pcs,350,1000,5000,1500,500,3,SUP-005,N
+CMP-WSH-001,Long đền M4,Long đền phẳng M4 inox,Components,Fasteners,pcs,200,1000,5000,1500,500,3,SUP-005,N
+CMP-BRG-001,Bạc đạn 6001,Bạc đạn bi 6001-2RS,Components,Bearings,pcs,35000,50,200,80,30,7,SUP-006,Y
+CMP-BRG-002,Bạc đạn 6201,Bạc đạn bi 6201-2RS,Components,Bearings,pcs,42000,50,200,80,30,7,SUP-006,Y
+CMP-BRG-003,Bạc đạn 6301,Bạc đạn bi 6301-2RS,Components,Bearings,pcs,55000,30,150,50,20,7,SUP-006,Y
+CMP-MOT-001,Motor DC 12V,Motor DC 12V 50W,Components,Motors,pcs,250000,20,100,30,10,14,SUP-007,Y
+CMP-MOT-002,Motor DC 24V,Motor DC 24V 100W,Components,Motors,pcs,380000,15,80,25,10,14,SUP-007,Y
+CMP-GBX-001,Hộp số 1:10,Hộp số giảm tốc 1:10,Components,Gearbox,pcs,450000,10,50,15,5,21,SUP-007,Y
+CMP-SEN-001,Cảm biến tiệm cận,Cảm biến tiệm cận NPN 12V,Components,Sensors,pcs,85000,30,150,50,20,10,SUP-008,N
+CMP-SEN-002,Cảm biến nhiệt độ,Cảm biến nhiệt độ PT100,Components,Sensors,pcs,120000,20,100,30,10,10,SUP-008,N
+#
+# === SEMI-FINISHED (Bán thành phẩm) ===
+SF-FRM-001,Khung chính A1,Khung thép chính model A1,Semi-Finished,Frames,pcs,850000,10,50,15,5,5,INTERNAL,Y
+SF-FRM-002,Khung phụ A1,Khung thép phụ model A1,Semi-Finished,Frames,pcs,420000,15,80,25,10,3,INTERNAL,N
+SF-CVR-001,Vỏ ngoài A1,Vỏ bọc ngoài model A1,Semi-Finished,Covers,pcs,380000,15,80,25,10,3,INTERNAL,N
+SF-PNL-001,Panel điều khiển,Panel điều khiển lắp ráp,Semi-Finished,Panels,pcs,650000,10,50,15,5,5,INTERNAL,Y
+#
+# === FINISHED GOODS (Thành phẩm) ===
+FG-PRD-A1,Sản phẩm Model A1,Máy model A1 hoàn chỉnh,Finished Goods,Machines,pcs,15000000,5,30,8,3,10,INTERNAL,Y
+FG-PRD-A2,Sản phẩm Model A2,Máy model A2 hoàn chỉnh,Finished Goods,Machines,pcs,18500000,5,25,8,3,10,INTERNAL,Y
+FG-PRD-B1,Sản phẩm Model B1,Máy model B1 compact,Finished Goods,Machines,pcs,12000000,8,40,12,5,7,INTERNAL,N
+#
+# === PACKAGING (Bao bì) ===
+PKG-BOX-001,Thùng carton lớn,Thùng carton 60x50x40cm,Packaging,Boxes,pcs,25000,50,300,80,30,5,SUP-009,N
+PKG-BOX-002,Thùng carton vừa,Thùng carton 40x30x30cm,Packaging,Boxes,pcs,15000,100,500,150,50,5,SUP-009,N
+PKG-FOM-001,Foam chống sốc,Foam EPE 10mm,Packaging,Foam,m2,18000,100,500,150,50,5,SUP-009,N
+PKG-WRP-001,Màng co PE,Màng co PE 500mm,Packaging,Wrap,roll,85000,20,100,30,10,5,SUP-009,N

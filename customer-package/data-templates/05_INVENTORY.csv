@@ -1,0 +1,75 @@
+part_number,warehouse_code,quantity,unit,lot_number,location_bin,last_count_date,status
+# Mã vật tư,Mã kho,Số lượng,Đơn vị,Số lô,Vị trí kệ,Ngày kiểm kê cuối,Trạng thái
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO NGUYÊN VẬT LIỆU (WH-MAIN-01)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+RM-STL-001,WH-MAIN-01,250,kg,LOT-2024-001,A-01-01,2024-12-01,Available
+RM-STL-002,WH-MAIN-01,180,kg,LOT-2024-002,A-01-02,2024-12-01,Available
+RM-STL-003,WH-MAIN-01,450,m,LOT-2024-003,A-02-01,2024-12-01,Available
+RM-ALU-001,WH-MAIN-01,85,kg,LOT-2024-004,A-03-01,2024-12-01,Available
+RM-ALU-002,WH-MAIN-01,200,m,LOT-2024-005,A-03-02,2024-12-01,Available
+RM-PLS-001,WH-MAIN-01,120,kg,LOT-2024-006,A-04-01,2024-12-01,Available
+RM-PLS-002,WH-MAIN-01,100,kg,LOT-2024-007,A-04-02,2024-12-01,Available
+RM-RUB-001,WH-MAIN-01,45,kg,LOT-2024-008,A-05-01,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO LINH KIỆN (WH-MAIN-02)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+CMP-SCR-001,WH-MAIN-02,2500,pcs,LOT-2024-010,B-01-01,2024-12-01,Available
+CMP-SCR-002,WH-MAIN-02,2200,pcs,LOT-2024-011,B-01-02,2024-12-01,Available
+CMP-SCR-003,WH-MAIN-02,1500,pcs,LOT-2024-012,B-01-03,2024-12-01,Available
+CMP-NUT-001,WH-MAIN-02,2800,pcs,LOT-2024-013,B-02-01,2024-12-01,Available
+CMP-NUT-002,WH-MAIN-02,2500,pcs,LOT-2024-014,B-02-02,2024-12-01,Available
+CMP-WSH-001,WH-MAIN-02,3500,pcs,LOT-2024-015,B-02-03,2024-12-01,Available
+CMP-BRG-001,WH-MAIN-02,120,pcs,LOT-2024-016,B-03-01,2024-12-01,Available
+CMP-BRG-002,WH-MAIN-02,100,pcs,LOT-2024-017,B-03-02,2024-12-01,Available
+CMP-BRG-003,WH-MAIN-02,80,pcs,LOT-2024-018,B-03-03,2024-12-01,Available
+CMP-MOT-001,WH-MAIN-02,45,pcs,LOT-2024-019,B-04-01,2024-12-01,Available
+CMP-MOT-002,WH-MAIN-02,35,pcs,LOT-2024-020,B-04-02,2024-12-01,Available
+CMP-GBX-001,WH-MAIN-02,25,pcs,LOT-2024-021,B-05-01,2024-12-01,Available
+CMP-SEN-001,WH-MAIN-02,80,pcs,LOT-2024-022,B-06-01,2024-12-01,Available
+CMP-SEN-002,WH-MAIN-02,50,pcs,LOT-2024-023,B-06-02,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO BÁN THÀNH PHẨM (WH-MAIN-04)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+SF-FRM-001,WH-MAIN-04,15,pcs,LOT-2024-030,C-01-01,2024-12-01,Available
+SF-FRM-002,WH-MAIN-04,25,pcs,LOT-2024-031,C-01-02,2024-12-01,Available
+SF-CVR-001,WH-MAIN-04,20,pcs,LOT-2024-032,C-02-01,2024-12-01,Available
+SF-PNL-001,WH-MAIN-04,18,pcs,LOT-2024-033,C-03-01,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO THÀNH PHẨM (WH-MAIN-03)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+FG-PRD-A1,WH-MAIN-03,8,pcs,LOT-2024-040,D-01-01,2024-12-01,Available
+FG-PRD-A2,WH-MAIN-03,5,pcs,LOT-2024-041,D-01-02,2024-12-01,Available
+FG-PRD-B1,WH-MAIN-03,12,pcs,LOT-2024-042,D-02-01,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO BAO BÌ (WH-MAIN-01)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+PKG-BOX-001,WH-MAIN-01,150,pcs,LOT-2024-050,E-01-01,2024-12-01,Available
+PKG-BOX-002,WH-MAIN-01,250,pcs,LOT-2024-051,E-01-02,2024-12-01,Available
+PKG-FOM-001,WH-MAIN-01,280,m2,LOT-2024-052,E-02-01,2024-12-01,Available
+PKG-WRP-001,WH-MAIN-01,45,roll,LOT-2024-053,E-02-02,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO CHI NHÁNH HÀ NỘI (WH-HN-01)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+FG-PRD-A1,WH-HN-01,3,pcs,LOT-2024-060,HN-01-01,2024-12-01,Available
+FG-PRD-B1,WH-HN-01,5,pcs,LOT-2024-061,HN-01-02,2024-12-01,Available
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# TỒN KHO CHI NHÁNH ĐÀ NẴNG (WH-DN-01)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+FG-PRD-A1,WH-DN-01,2,pcs,LOT-2024-070,DN-01-01,2024-12-01,Available
+FG-PRD-A2,WH-DN-01,2,pcs,LOT-2024-071,DN-01-02,2024-12-01,Available
+FG-PRD-B1,WH-DN-01,4,pcs,LOT-2024-072,DN-02-01,2024-12-01,Available
