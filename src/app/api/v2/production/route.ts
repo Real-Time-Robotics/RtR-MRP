@@ -35,8 +35,8 @@ const workOrderOperationSchema = z.object({
 const workOrderCreateSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().positive(),
-  startDate: z.string().datetime().optional(),
-  dueDate: z.string().datetime().optional(),
+  plannedStart: z.string().datetime().optional(),
+  plannedEnd: z.string().datetime().optional(),
   status: z.enum(['DRAFT', 'RELEASED']).default('DRAFT'),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
   workCenter: z.string().max(50).optional(),
@@ -103,33 +103,32 @@ export const GET = withAuth(
         where,
         skip: params.view === 'kanban' ? 0 : (params.page - 1) * params.pageSize,
         take: params.view === 'kanban' ? 100 : params.pageSize,
-        orderBy: { dueDate: 'asc' },
+        orderBy: { plannedEnd: 'asc' },
         include: {
           product: {
             select: {
               id: true,
               sku: true,
               name: true,
-              revision: true,
               basePrice: true,
               assemblyHours: true,
             }
           },
           operations: {
-            orderBy: { operationSeq: 'asc' },
+            orderBy: { operationNumber: 'asc' },
             select: {
               id: true,
-              operationSeq: true,
-              operationName: true,
-              workCenter: true,
-              plannedHours: true,
-              actualHours: true,
+              operationNumber: true,
+              name: true,
+              workCenterId: true,
+              plannedRunTime: true,
+              actualRunTime: true,
               status: true,
-              startTime: true,
-              endTime: true,
+              actualStartDate: true,
+              actualEndDate: true,
             }
           },
-          materials: {
+          allocations: {
             include: {
               part: {
                 select: {
@@ -155,10 +154,10 @@ export const GET = withAuth(
         const currentOp = wo.operations.find(op => op.status === 'in_progress')
           || wo.operations.find(op => op.status === 'pending');
 
-        const plannedHours = wo.operations.reduce((sum, op) => sum + Number(op.plannedHours), 0);
-        const actualHours = wo.operations.reduce((sum, op) => sum + Number(op.actualHours), 0);
+        const plannedHours = wo.operations.reduce((sum, op) => sum + Number(op.plannedRunTime || 0), 0);
+        const actualHours = wo.operations.reduce((sum, op) => sum + Number(op.actualRunTime || 0), 0);
 
-        const isOverdue = wo.dueDate && new Date(wo.dueDate) < new Date() && wo.status !== 'COMPLETED';
+        const isOverdue = wo.plannedEnd && new Date(wo.plannedEnd) < new Date() && wo.status !== 'COMPLETED';
 
         return {
           id: wo.id,
@@ -168,9 +167,10 @@ export const GET = withAuth(
           completedQty,
           scrapQty: Number(wo.scrapQty),
           progress,
-          startDate: wo.startDate,
-          dueDate: wo.dueDate,
-          completionDate: wo.completionDate,
+          plannedStart: wo.plannedStart,
+          plannedEnd: wo.plannedEnd,
+          actualStart: wo.actualStart,
+          actualEnd: wo.actualEnd,
           isOverdue,
           status: wo.status,
           priority: wo.priority,
@@ -178,20 +178,20 @@ export const GET = withAuth(
           operations: wo.operations,
           totalOperations: totalOps,
           completedOperations: completedOps,
-          currentOperation: currentOp?.operationName || null,
+          currentOperation: currentOp?.name || null,
           operationProgress: totalOps > 0 ? Math.round((completedOps / totalOps) * 100) : 0,
           plannedHours,
           actualHours,
           efficiency: plannedHours > 0 ? Math.round((plannedHours / Math.max(actualHours, plannedHours)) * 100) : 0,
-          materials: wo.materials.map(m => ({
+          materials: wo.allocations.map(m => ({
             id: m.id,
             part: m.part,
             requiredQty: Number(m.requiredQty),
             issuedQty: Number(m.issuedQty),
-            scrapQty: Number(m.scrapQty),
+            returnedQty: Number(m.returnedQty),
             status: m.status,
           })),
-          materialCount: wo.materials.length,
+          materialCount: wo.allocations.length,
           notes: wo.notes,
           createdAt: wo.createdAt,
           updatedAt: wo.updatedAt,
@@ -219,7 +219,7 @@ export const GET = withAuth(
         prisma.workOrder.count({
           where: {
             status: 'COMPLETED',
-            completionDate: { gte: startOfMonth }
+            actualEnd: { gte: startOfMonth }
           }
         }),
       ]);
@@ -281,11 +281,13 @@ export const POST = withAuth(
         : 1;
       const woNumber = `WO-${String(nextNumber).padStart(6, '0')}`;
 
-      // Get product BOM for materials
-      const bomLines = await prisma.bomLine.findMany({
-        where: { productId: sanitizedData.productId },
-        include: { part: true }
+      // Get product BOM for materials via BomHeader
+      const activeBom = await prisma.bomHeader.findFirst({
+        where: { productId: sanitizedData.productId, status: 'active' },
+        orderBy: { effectiveDate: 'desc' },
+        include: { bomLines: { include: { part: true } } }
       });
+      const bomLines = activeBom?.bomLines || [];
 
       // Create work order with materials from BOM
       const workOrder = await prisma.workOrder.create({
@@ -293,33 +295,34 @@ export const POST = withAuth(
           woNumber,
           productId: sanitizedData.productId,
           quantity: sanitizedData.quantity,
-          startDate: sanitizedData.startDate ? new Date(sanitizedData.startDate) : null,
-          dueDate: sanitizedData.dueDate ? new Date(sanitizedData.dueDate) : null,
+          plannedStart: sanitizedData.plannedStart ? new Date(sanitizedData.plannedStart) : null,
+          plannedEnd: sanitizedData.plannedEnd ? new Date(sanitizedData.plannedEnd) : null,
           status: sanitizedData.status,
           priority: sanitizedData.priority,
           workCenter: sanitizedData.workCenter,
           notes: sanitizedData.notes,
-          createdBy: user.id,
-          materials: {
+          allocations: {
             create: bomLines.map(bom => ({
               partId: bom.partId,
-              requiredQty: Number(bom.quantity) * sanitizedData.quantity,
+              requiredQty: Math.round(Number(bom.quantity) * sanitizedData.quantity),
               status: 'pending',
             })),
           },
-          operations: sanitizedData.operations ? {
-            create: sanitizedData.operations.map(op => ({
-              operationSeq: op.seq,
-              operationName: op.name,
-              workCenter: op.workCenter,
-              plannedHours: op.plannedHours,
+          operations: (sanitizedData.operations && sanitizedData.operations.length > 0) ? {
+            create: sanitizedData.operations.filter(op => op.workCenter).map((op, index) => ({
+              operationNumber: op.seq,
+              name: op.name,
+              workCenterId: op.workCenter!,
+              plannedSetupTime: 0,
+              plannedRunTime: op.plannedHours,
+              quantityPlanned: sanitizedData.quantity,
               status: 'pending',
             })),
           } : undefined,
         },
         include: {
           product: true,
-          materials: { include: { part: true } },
+          allocations: { include: { part: true } },
           operations: true,
         },
       });

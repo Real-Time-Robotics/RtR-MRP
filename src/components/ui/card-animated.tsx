@@ -120,7 +120,7 @@ Card.displayName = 'Card';
 // CARD HEADER
 // =============================================================================
 
-interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardHeaderProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;

@@ -322,10 +322,10 @@ export function checkRateLimit(
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of rateLimitStore.entries()) {
+    rateLimitStore.forEach((entry, key) => {
       if (now > entry.resetTime) {
         rateLimitStore.delete(key);
       }
-    }
+    });
   }, 60000);
 }

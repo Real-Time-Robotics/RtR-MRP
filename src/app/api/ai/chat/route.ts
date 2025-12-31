@@ -229,8 +229,8 @@ function generateResponse(
         lowItems.slice(0, 5).forEach((item: any, index: number) => {
           message += `${index + 1}. **${item.part?.name || item.partId}**\n`;
           message += isVietnamese
-            ? `   • Tồn kho: ${item.quantity} | Tối thiểu: ${item.part?.minStock || 'N/A'}\n`
-            : `   • Stock: ${item.quantity} | Min: ${item.part?.minStock || 'N/A'}\n`;
+            ? `   • Tồn kho: ${item.quantity} | Tối thiểu: ${item.part?.minStockLevel || 'N/A'}\n`
+            : `   • Stock: ${item.quantity} | Min: ${item.part?.minStockLevel || 'N/A'}\n`;
         });
         
         if (lowItems.length > 5) {

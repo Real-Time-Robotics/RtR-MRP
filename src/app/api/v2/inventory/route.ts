@@ -136,12 +136,12 @@ export const GET = withAuth(
               name: true,
               category: true,
               unit: true,
-              minStock: true,
+              minStockLevel: true,
               maxStock: true,
               reorderPoint: true,
               safetyStock: true,
               unitCost: true,
-              critical: true,
+              isCritical: true,
               lotControl: true,
               serialControl: true,
               shelfLifeDays: true,
@@ -162,8 +162,8 @@ export const GET = withAuth(
       const formattedInventory = inventory.map(inv => {
         const quantity = Number(inv.quantity);
         const reserved = Number(inv.reservedQty);
-        const available = Number(inv.availableQty);
-        const minStock = inv.part.minStock;
+        const available = quantity - reserved; // Calculate available
+        const minStockLevel = inv.part.minStockLevel;
         const reorderPoint = inv.part.reorderPoint;
         const maxStock = inv.part.maxStock;
         const unitCost = Number(inv.part.unitCost);
@@ -173,7 +173,7 @@ export const GET = withAuth(
         if (quantity <= 0) {
           status = 'OUT_OF_STOCK';
           statusColor = 'danger';
-        } else if (quantity <= minStock) {
+        } else if (quantity <= minStockLevel) {
           status = 'CRITICAL';
           statusColor = 'danger';
         } else if (quantity <= reorderPoint) {
@@ -195,23 +195,21 @@ export const GET = withAuth(
           partName: inv.part.name,
           category: inv.part.category,
           unit: inv.part.unit,
-          critical: inv.part.critical,
+          isCritical: inv.part.isCritical,
           warehouse: inv.warehouse,
-          location: inv.location,
+          locationCode: inv.locationCode,
           quantity,
           reservedQty: reserved,
           availableQty: available,
-          minStock,
+          minStockLevel,
           maxStock,
           reorderPoint,
           safetyStock: inv.part.safetyStock,
           stockStatus: status,
           statusColor,
           lotNumber: inv.lotNumber,
-          serialNumber: inv.serialNumber,
           lotControl: inv.part.lotControl,
           serialControl: inv.part.serialControl,
-          receivedDate: inv.receivedDate,
           expiryDate: inv.expiryDate,
           lastCountDate: inv.lastCountDate,
           isExpired,
@@ -220,8 +218,7 @@ export const GET = withAuth(
             ? Math.ceil((new Date(inv.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : null,
           unitCost,
-          totalValue: Number(inv.totalValue) || quantity * unitCost,
-          qualityStatus: inv.qualityStatus,
+          totalValue: quantity * unitCost, // Calculate total value
           updatedAt: inv.updatedAt,
         };
       });
@@ -335,26 +332,16 @@ export const POST = withAuth(
               where: { id: existing.id },
               data: {
                 quantity: { increment: sanitizedData.quantity },
-                availableQty: { increment: sanitizedData.quantity },
-                receivedDate: new Date(),
               },
             });
           } else {
-            const part = await prisma.part.findUnique({ where: { id: sanitizedData.partId } });
-
             result = await prisma.inventory.create({
               data: {
                 partId: sanitizedData.partId,
                 warehouseId: sanitizedData.warehouseId,
                 quantity: sanitizedData.quantity,
-                availableQty: sanitizedData.quantity,
                 reservedQty: 0,
                 lotNumber: sanitizedData.lotNumber,
-                serialNumber: sanitizedData.serialNumber,
-                receivedDate: new Date(),
-                unitCost: part?.unitCost || 0,
-                totalValue: Number(part?.unitCost || 0) * sanitizedData.quantity,
-                qualityStatus: 'PENDING',
               },
             });
           }
@@ -376,7 +363,8 @@ export const POST = withAuth(
             }
           });
 
-          if (!inventory || Number(inventory.availableQty) < sanitizedData.quantity) {
+          const availableQty = inventory ? Number(inventory.quantity) - Number(inventory.reservedQty) : 0;
+          if (!inventory || availableQty < sanitizedData.quantity) {
             throw new ValidationError('Insufficient inventory');
           }
 
@@ -384,7 +372,6 @@ export const POST = withAuth(
             where: { id: inventory.id },
             data: {
               quantity: { decrement: sanitizedData.quantity },
-              availableQty: { decrement: sanitizedData.quantity },
             },
           });
 
@@ -401,7 +388,8 @@ export const POST = withAuth(
             where: { partId: sanitizedData.partId, warehouseId: sanitizedData.warehouseId }
           });
 
-          if (!inventory || Number(inventory.availableQty) < sanitizedData.quantity) {
+          const availableQty = inventory ? Number(inventory.quantity) - Number(inventory.reservedQty) : 0;
+          if (!inventory || availableQty < sanitizedData.quantity) {
             throw new ValidationError('Insufficient available inventory');
           }
 
@@ -409,7 +397,6 @@ export const POST = withAuth(
             where: { id: inventory.id },
             data: {
               reservedQty: { increment: sanitizedData.quantity },
-              availableQty: { decrement: sanitizedData.quantity },
             },
           });
 
@@ -426,7 +413,8 @@ export const POST = withAuth(
             where: { partId: sanitizedData.partId, warehouseId: sanitizedData.warehouseId }
           });
 
-          if (!sourceInv || Number(sourceInv.availableQty) < sanitizedData.quantity) {
+          const sourceAvailable = sourceInv ? Number(sourceInv.quantity) - Number(sourceInv.reservedQty) : 0;
+          if (!sourceInv || sourceAvailable < sanitizedData.quantity) {
             throw new ValidationError('Insufficient inventory for transfer');
           }
 
@@ -435,7 +423,6 @@ export const POST = withAuth(
               where: { id: sourceInv.id },
               data: {
                 quantity: { decrement: sanitizedData.quantity },
-                availableQty: { decrement: sanitizedData.quantity },
               },
             }),
             prisma.inventory.upsert({
@@ -450,15 +437,11 @@ export const POST = withAuth(
                 partId: sanitizedData.partId,
                 warehouseId: sanitizedData.toWarehouseId,
                 quantity: sanitizedData.quantity,
-                availableQty: sanitizedData.quantity,
                 reservedQty: 0,
                 lotNumber: sanitizedData.lotNumber,
-                unitCost: sourceInv.unitCost,
-                totalValue: Number(sourceInv.unitCost || 0) * sanitizedData.quantity,
               },
               update: {
                 quantity: { increment: sanitizedData.quantity },
-                availableQty: { increment: sanitizedData.quantity },
               },
             }),
           ]);
@@ -487,15 +470,12 @@ export const POST = withAuth(
           }
 
           const oldQty = Number(inventory.quantity);
-          const difference = sanitizedData.quantity - oldQty;
 
           result = await prisma.inventory.update({
             where: { id: inventory.id },
             data: {
               quantity: sanitizedData.quantity,
-              availableQty: { increment: difference },
               lastCountDate: new Date(),
-              totalValue: Number(inventory.unitCost || 0) * sanitizedData.quantity,
             },
           });
 

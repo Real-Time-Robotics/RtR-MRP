@@ -24,7 +24,7 @@ const bomQuerySchema = z.object({
 });
 
 const bomLineCreateSchema = z.object({
-  productId: z.string().min(1),
+  bomId: z.string().min(1),
   partId: z.string().min(1),
   quantity: z.number().positive(),
   unit: z.string().max(20).default('pcs'),
@@ -85,21 +85,34 @@ export const GET = withAuth(
         const product = await prisma.product.findUnique({
           where: { id: params.productId },
           include: {
-            bomLines: {
-              orderBy: [{ module: 'asc' }, { sequence: 'asc' }],
+            bomHeaders: {
+              where: { status: 'active' },
+              orderBy: { effectiveDate: 'desc' },
+              take: 1,
               include: {
-                part: {
+                bomLines: {
+                  orderBy: [{ moduleName: 'asc' }, { sequence: 'asc' }],
                   include: {
-                    primarySupplier: {
-                      select: { id: true, code: true, name: true, leadTimeDays: true }
-                    },
-                    inventoryItems: {
-                      select: { quantity: true, availableQty: true }
-                    },
-                    partAlternates: {
+                    part: {
                       include: {
-                        alternatePart: {
-                          select: { id: true, partNumber: true, name: true, unitCost: true }
+                        partSuppliers: {
+                          where: { isPreferred: true },
+                          include: {
+                            supplier: {
+                              select: { id: true, code: true, name: true, leadTimeDays: true }
+                            }
+                          },
+                          take: 1
+                        },
+                        inventory: {
+                          select: { quantity: true, reservedQty: true }
+                        },
+                        partAlternates: {
+                          include: {
+                            alternatePart: {
+                              select: { id: true, partNumber: true, name: true, unitCost: true }
+                            }
+                          }
                         }
                       }
                     }
@@ -114,12 +127,17 @@ export const GET = withAuth(
           throw new NotFoundError('Product', params.productId);
         }
 
+        // Get active BOM header and its lines
+        const activeBom = product.bomHeaders[0];
+        const allBomLines = activeBom?.bomLines || [];
+
         // Format BOM lines
-        const bomLines = product.bomLines.map(line => {
+        const bomLines = allBomLines.map(line => {
           const part = line.part;
-          const totalQty = part.inventoryItems.reduce((sum, inv) => sum + Number(inv.quantity), 0);
-          const availableQty = part.inventoryItems.reduce((sum, inv) => sum + Number(inv.availableQty), 0);
+          const totalQty = part.inventory.reduce((sum, inv) => sum + Number(inv.quantity), 0);
+          const availableQty = part.inventory.reduce((sum, inv) => sum + Number(inv.quantity) - Number(inv.reservedQty), 0);
           const extendedCost = Number(line.quantity) * Number(part.unitCost);
+          const primarySupplier = part.partSuppliers[0]?.supplier;
 
           return {
             id: line.id,
@@ -134,11 +152,11 @@ export const GET = withAuth(
             unit: line.unit,
             scrapPercent: Number(line.scrapPercent),
             effectiveQty: Number(line.quantity) * (1 + Number(line.scrapPercent) / 100),
-            module: line.module,
+            module: line.moduleName,
             bomType: line.bomType,
             subAssembly: line.subAssembly,
             phantom: line.phantom,
-            critical: line.critical || part.critical,
+            critical: line.isCritical || part.isCritical,
             isPrimary: line.isPrimary,
             revision: line.revision,
             effectivityDate: line.effectivityDate,
@@ -157,7 +175,7 @@ export const GET = withAuth(
             onHand: totalQty,
             available: availableQty,
             shortage: Math.max(0, Number(line.quantity) - availableQty),
-            supplier: part.primarySupplier,
+            supplier: primarySupplier,
             leadTimeDays: part.leadTimeDays,
             positionX: line.positionX ? Number(line.positionX) : null,
             positionY: line.positionY ? Number(line.positionY) : null,
@@ -170,11 +188,11 @@ export const GET = withAuth(
         // Group by module for tree structure
         const moduleGroups: Record<string, any[]> = {};
         bomLines.forEach(line => {
-          const module = line.module || 'Unassigned';
-          if (!moduleGroups[module]) {
-            moduleGroups[module] = [];
+          const modName = line.module || 'Unassigned';
+          if (!moduleGroups[modName]) {
+            moduleGroups[modName] = [];
           }
-          moduleGroups[module].push(line);
+          moduleGroups[modName].push(line);
         });
 
         // Calculate totals
@@ -199,8 +217,7 @@ export const GET = withAuth(
             sku: product.sku,
             name: product.name,
             description: product.description,
-            revision: product.revision,
-            basePrice: Number(product.basePrice),
+            basePrice: Number(product.basePrice || 0),
             assemblyHours: product.assemblyHours ? Number(product.assemblyHours) : null,
           },
           bomLines,
@@ -241,37 +258,46 @@ export const GET = withAuth(
         take: params.pageSize,
         orderBy: { sku: 'asc' },
         include: {
-          bomLines: {
+          bomHeaders: {
+            where: { status: 'active' },
+            orderBy: { effectiveDate: 'desc' },
+            take: 1,
             include: {
-              part: {
-                select: { unitCost: true, critical: true }
+              bomLines: {
+                include: {
+                  part: {
+                    select: { unitCost: true, isCritical: true }
+                  }
+                }
               }
             }
           },
           _count: {
-            select: { bomLines: true, workOrders: true }
+            select: { bomHeaders: true, workOrders: true }
           }
         },
       });
 
       const productsWithBOM = products.map(product => {
-        const totalCost = product.bomLines.reduce((sum, line) => {
+        const activeBom = product.bomHeaders[0];
+        const bomLines = activeBom?.bomLines || [];
+
+        const totalCost = bomLines.reduce((sum, line) => {
           return sum + (Number(line.quantity) * Number(line.part.unitCost));
         }, 0);
 
-        const criticalParts = product.bomLines.filter(line => line.critical || line.part.critical).length;
-        const modules = [...new Set(product.bomLines.map(l => l.module).filter(Boolean))];
+        const criticalParts = bomLines.filter(line => line.isCritical || line.part.isCritical).length;
+        const modules = Array.from(new Set(bomLines.map(l => l.moduleName).filter(Boolean)));
 
         return {
           id: product.id,
           sku: product.sku,
           name: product.name,
           description: product.description,
-          revision: product.revision,
           status: product.status,
-          lifecycleStatus: product.lifecycleStatus,
-          basePrice: Number(product.basePrice),
-          bomLineCount: product._count.bomLines,
+          basePrice: Number(product.basePrice || 0),
+          bomHeaderCount: product._count.bomHeaders,
+          bomLineCount: bomLines.length,
           workOrderCount: product._count.workOrders,
           totalBOMCost: totalCost,
           criticalParts,
@@ -280,8 +306,6 @@ export const GET = withAuth(
             ? ((Number(product.basePrice) - totalCost) / Number(product.basePrice) * 100).toFixed(1)
             : 0,
           assemblyHours: product.assemblyHours ? Number(product.assemblyHours) : null,
-          weightKg: product.weightKg ? Number(product.weightKg) : null,
-          ndaaCompliant: product.ndaaCompliant,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
         };
@@ -328,7 +352,7 @@ export const POST = withAuth(
 
       logger.info('Creating BOM line', {
         userId: user.id,
-        productId: sanitizedData.productId,
+        bomId: sanitizedData.bomId,
         partId: sanitizedData.partId
       });
 
@@ -337,14 +361,22 @@ export const POST = withAuth(
         select: { unitCost: true }
       });
 
+      // Get the next line number for this BOM
+      const lastLine = await prisma.bomLine.findFirst({
+        where: { bomId: sanitizedData.bomId },
+        orderBy: { lineNumber: 'desc' }
+      });
+      const nextLineNumber = (lastLine?.lineNumber || 0) + 1;
+
       const bomLine = await prisma.bomLine.create({
         data: {
-          productId: sanitizedData.productId,
+          bomId: sanitizedData.bomId,
+          lineNumber: nextLineNumber,
           partId: sanitizedData.partId,
           quantity: sanitizedData.quantity,
           unit: sanitizedData.unit,
-          module: sanitizedData.module,
-          critical: sanitizedData.critical,
+          moduleName: sanitizedData.module,
+          isCritical: sanitizedData.critical,
           notes: sanitizedData.notes,
           findNumber: sanitizedData.findNumber,
           referenceDesignator: sanitizedData.referenceDesignator,
@@ -365,12 +397,12 @@ export const POST = withAuth(
         },
         include: {
           part: true,
-          product: true,
+          bom: true,
         },
       });
 
       logger.audit('CREATE', 'bomLine', bomLine.id, {
-        productId: sanitizedData.productId,
+        bomId: sanitizedData.bomId,
         partId: sanitizedData.partId,
         userId: user.id
       });
@@ -424,7 +456,7 @@ export const PUT = withAuth(
         data: sanitizedData,
         include: {
           part: true,
-          product: true,
+          bom: true,
         },
       });
 

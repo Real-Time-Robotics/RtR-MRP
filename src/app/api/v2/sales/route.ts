@@ -28,20 +28,17 @@ const salesOrderLineSchema = z.object({
   productId: z.string().min(1),
   quantity: z.number().positive(),
   unitPrice: z.number().min(0),
-  discountPercent: z.number().min(0).max(100).default(0),
+  discount: z.number().min(0).max(100).default(0),
 });
 
 const salesOrderCreateSchema = z.object({
   customerId: z.string().min(1),
   orderDate: z.string().datetime().optional(),
-  requestedDate: z.string().datetime().optional(),
+  requiredDate: z.string().datetime(),
   promisedDate: z.string().datetime().optional(),
-  status: z.enum(['DRAFT', 'PENDING', 'CONFIRMED']).default('DRAFT'),
+  status: z.enum(['draft', 'pending', 'confirmed']).default('draft'),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
   currency: z.string().length(3).default('USD'),
-  paymentTerms: z.string().max(50).optional(),
-  shippingMethod: z.string().max(50).optional(),
-  shippingAddress: z.string().max(500).optional(),
   notes: z.string().max(2000).optional(),
   lines: z.array(salesOrderLineSchema).min(1),
 });
@@ -79,7 +76,7 @@ export const GET = withAuth(
 
       if (sanitizedSearch) {
         where.OR = [
-          { soNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
+          { orderNumber: { contains: sanitizedSearch, mode: 'insensitive' } },
           { customer: { name: { contains: sanitizedSearch, mode: 'insensitive' } } },
           { customer: { code: { contains: sanitizedSearch, mode: 'insensitive' } } },
         ];
@@ -108,15 +105,14 @@ export const GET = withAuth(
               id: true,
               code: true,
               name: true,
-              email: true,
-              phone: true,
+              contactEmail: true,
+              contactPhone: true,
               contactName: true,
-              address: true,
-              city: true,
+              billingAddress: true,
               country: true,
               type: true,
-              ndaaRequired: true,
-              itarRequired: true,
+              paymentTerms: true,
+              creditLimit: true,
             }
           },
           lines: {
@@ -137,26 +133,23 @@ export const GET = withAuth(
       // Format orders
       const formattedOrders = orders.map(order => ({
         id: order.id,
-        soNumber: order.soNumber,
+        orderNumber: order.orderNumber,
         customer: order.customer,
         orderDate: order.orderDate,
-        requestedDate: order.requestedDate,
+        requiredDate: order.requiredDate,
         promisedDate: order.promisedDate,
         status: order.status,
         priority: order.priority,
-        totalAmount: Number(order.totalAmount),
+        totalAmount: Number(order.totalAmount || 0),
         currency: order.currency,
-        paymentTerms: order.paymentTerms,
-        shippingMethod: order.shippingMethod,
-        shippingAddress: order.shippingAddress,
         lines: order.lines.map(line => ({
           id: line.id,
           lineNumber: line.lineNumber,
           product: line.product,
           quantity: Number(line.quantity),
           unitPrice: Number(line.unitPrice),
-          discountPercent: Number(line.discountPercent),
-          lineTotal: Number(line.lineTotal),
+          discount: Number(line.discount),
+          lineTotal: Number(line.lineTotal || 0),
           status: line.status,
         })),
         lineCount: order.lines.length,
@@ -250,45 +243,41 @@ export const POST = withAuth(
 
       // Generate SO number
       const lastOrder = await prisma.salesOrder.findFirst({
-        orderBy: { soNumber: 'desc' }
+        orderBy: { orderNumber: 'desc' }
       });
       const nextNumber = lastOrder
-        ? parseInt(lastOrder.soNumber.replace('SO-', '')) + 1
+        ? parseInt(lastOrder.orderNumber.replace('SO-', '')) + 1
         : 1;
-      const soNumber = `SO-${String(nextNumber).padStart(6, '0')}`;
+      const orderNumber = `SO-${String(nextNumber).padStart(6, '0')}`;
 
       // Calculate totals
       const totalAmount = sanitizedData.lines.reduce((sum, line) => {
-        const lineTotal = line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100);
+        const lineTotal = line.quantity * line.unitPrice * (1 - (line.discount || 0) / 100);
         return sum + lineTotal;
       }, 0);
 
       // Create order with lines
       const order = await prisma.salesOrder.create({
         data: {
-          soNumber,
+          orderNumber,
           customerId: sanitizedData.customerId,
           orderDate: sanitizedData.orderDate ? new Date(sanitizedData.orderDate) : new Date(),
-          requestedDate: sanitizedData.requestedDate ? new Date(sanitizedData.requestedDate) : null,
+          requiredDate: new Date(sanitizedData.requiredDate),
           promisedDate: sanitizedData.promisedDate ? new Date(sanitizedData.promisedDate) : null,
           status: sanitizedData.status,
           priority: sanitizedData.priority,
           totalAmount,
           currency: sanitizedData.currency,
-          paymentTerms: sanitizedData.paymentTerms,
-          shippingMethod: sanitizedData.shippingMethod,
-          shippingAddress: sanitizedData.shippingAddress,
           notes: sanitizedData.notes,
-          createdBy: user.id,
           lines: {
             create: sanitizedData.lines.map((line, index) => ({
               productId: line.productId,
               lineNumber: index + 1,
               quantity: line.quantity,
               unitPrice: line.unitPrice,
-              discountPercent: line.discountPercent || 0,
-              lineTotal: line.quantity * line.unitPrice * (1 - (line.discountPercent || 0) / 100),
-              status: 'DRAFT',
+              discount: line.discount || 0,
+              lineTotal: line.quantity * line.unitPrice * (1 - (line.discount || 0) / 100),
+              status: 'pending',
             })),
           },
         },
@@ -300,7 +289,7 @@ export const POST = withAuth(
 
       // Audit log
       logger.audit('CREATE', 'salesOrder', order.id, {
-        soNumber: order.soNumber,
+        orderNumber: order.orderNumber,
         customerId: order.customerId,
         totalAmount,
         userId: user.id
@@ -310,7 +299,7 @@ export const POST = withAuth(
       logger.info('Sales order created', {
         userId: user.id,
         orderId: order.id,
-        soNumber: order.soNumber,
+        orderNumber: order.orderNumber,
         durationMs: duration.toFixed(2)
       });
 

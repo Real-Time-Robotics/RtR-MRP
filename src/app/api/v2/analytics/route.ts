@@ -360,29 +360,27 @@ async function getQualityAnalytics(startDate: Date, endDate: Date) {
   const [
     summary,
     bySource,
-    byType,
+    byCategory,
   ] = await Promise.all([
     prisma.nCR.aggregate({
       _count: true,
-      _sum: { quantityAffected: true, costImpact: true },
+      _sum: { quantityAffected: true },
       where: {
-        dateCreated: { gte: startDate, lte: endDate }
+        createdAt: { gte: startDate, lte: endDate }
       }
     }),
     prisma.nCR.groupBy({
       by: ['source'],
       _count: true,
-      _sum: { costImpact: true },
       where: {
-        dateCreated: { gte: startDate, lte: endDate }
+        createdAt: { gte: startDate, lte: endDate }
       }
     }),
     prisma.nCR.groupBy({
-      by: ['type'],
+      by: ['defectCategory'],
       _count: true,
-      _sum: { costImpact: true },
       where: {
-        dateCreated: { gte: startDate, lte: endDate }
+        createdAt: { gte: startDate, lte: endDate }
       }
     }),
   ]);
@@ -391,17 +389,14 @@ async function getQualityAnalytics(startDate: Date, endDate: Date) {
     summary: {
       totalNCRs: summary._count,
       quantityAffected: Number(summary._sum.quantityAffected || 0),
-      totalCost: Number(summary._sum.costImpact || 0),
     },
     bySource: bySource.map(s => ({
       source: s.source,
       count: s._count,
-      cost: Number(s._sum.costImpact || 0),
     })),
-    byType: byType.map(t => ({
-      type: t.type,
-      count: t._count,
-      cost: Number(t._sum.costImpact || 0),
+    byCategory: byCategory.map(c => ({
+      category: c.defectCategory,
+      count: c._count,
     })),
   };
 }

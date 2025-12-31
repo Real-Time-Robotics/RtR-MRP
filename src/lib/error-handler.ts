@@ -115,7 +115,7 @@ export function handleError(error: unknown): NextResponse<ErrorResponse> {
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
-    const details = error.errors.map(e => ({
+    const details = error.issues.map(e => ({
       field: e.path.join('.'),
       message: e.message,
     }));

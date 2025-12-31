@@ -228,7 +228,7 @@ export default function DashboardConnected() {
               <div key={order.id} className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-slate-900 dark:text-white">{order.soNumber}</p>
+                    <p className="font-medium text-slate-900 dark:text-white">{order.orderNumber}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{order.customer}</p>
                   </div>
                   <div className="text-right">

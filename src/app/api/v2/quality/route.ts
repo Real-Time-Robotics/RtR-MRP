@@ -26,17 +26,16 @@ const qualityQuerySchema = z.object({
 });
 
 const ncrCreateSchema = z.object({
-  type: z.enum(['Receiving', 'In-Process', 'Final', 'Customer']).default('In-Process'),
+  title: z.string().min(1).max(200),
   source: z.enum(['supplier', 'production', 'customer']).default('production'),
   partId: z.string().optional(),
-  partNumber: z.string().max(50).optional(),
-  partName: z.string().max(200).optional(),
   quantityAffected: z.number().positive().default(1),
   description: z.string().min(1).max(2000),
-  rootCause: z.string().max(2000).optional(),
+  defectCategory: z.string().max(100).optional(),
+  preliminaryCause: z.string().max(2000).optional(),
   disposition: z.enum(['Scrap', 'Rework', 'Return', 'Use-as-is']).optional(),
-  costImpact: z.number().min(0).optional(),
-  assignedTo: z.string().max(100).optional(),
+  totalCost: z.number().min(0).optional(),
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
 });
 
 // =============================================================================
@@ -94,15 +93,21 @@ export const GET = withAuth(
         where,
         skip: params.view === 'kanban' ? 0 : (params.page - 1) * params.pageSize,
         take: params.view === 'kanban' ? 100 : params.pageSize,
-        orderBy: { dateCreated: 'desc' },
+        orderBy: { createdAt: 'desc' },
         include: {
-          capas: {
+          capa: {
             select: {
               id: true,
               capaNumber: true,
               type: true,
               status: true,
-              dueDate: true,
+              targetDate: true,
+            }
+          },
+          part: {
+            select: {
+              partNumber: true,
+              name: true,
             }
           },
         },
@@ -111,36 +116,39 @@ export const GET = withAuth(
       // Format NCRs
       const formattedNCRs = ncrs.map(ncr => {
         let severity = 'minor';
-        if (Number(ncr.costImpact) > 5000 || ncr.type === 'Customer') {
+        const totalCost = Number(ncr.totalCost || 0);
+        if (totalCost > 5000 || ncr.source === 'CUSTOMER') {
           severity = 'critical';
-        } else if (Number(ncr.costImpact) > 1000) {
+        } else if (totalCost > 1000) {
           severity = 'major';
         }
 
-        const dueDate = new Date(ncr.dateCreated);
+        const dueDate = new Date(ncr.createdAt);
         dueDate.setDate(dueDate.getDate() + 7);
 
         return {
           id: ncr.id,
           ncrNumber: ncr.ncrNumber,
           partId: ncr.partId,
-          partNumber: ncr.partNumber,
-          partName: ncr.partName,
+          partNumber: ncr.part?.partNumber || null,
+          partName: ncr.part?.name || null,
+          title: ncr.title,
           description: ncr.description,
-          type: ncr.type,
+          defectCategory: ncr.defectCategory,
           source: ncr.source,
           quantityAffected: Number(ncr.quantityAffected),
-          rootCause: ncr.rootCause,
+          preliminaryCause: ncr.preliminaryCause,
           disposition: ncr.disposition,
-          costImpact: Number(ncr.costImpact || 0),
+          totalCost,
+          priority: ncr.priority,
           status: ncr.status,
           severity,
-          assignedTo: ncr.assignedTo,
-          dateCreated: ncr.dateCreated,
+          createdBy: ncr.createdBy,
+          dateCreated: ncr.createdAt,
           dueDate,
           isOverdue: ncr.status !== 'closed' && dueDate < new Date(),
-          capas: ncr.capas,
-          capaCount: ncr.capas.length,
+          capa: ncr.capa,
+          hasCAPA: !!ncr.capa,
           createdAt: ncr.createdAt,
           updatedAt: ncr.updatedAt,
         };
@@ -224,7 +232,6 @@ export const POST = withAuth(
 
       logger.info('Creating NCR', {
         userId: user.id,
-        type: sanitizedData.type,
         source: sanitizedData.source
       });
 
@@ -242,19 +249,17 @@ export const POST = withAuth(
       const ncr = await prisma.nCR.create({
         data: {
           ncrNumber,
-          dateCreated: new Date(),
-          type: sanitizedData.type,
           source: sanitizedData.source,
           partId: sanitizedData.partId,
-          partNumber: sanitizedData.partNumber,
-          partName: sanitizedData.partName,
+          title: sanitizedData.title,
           quantityAffected: sanitizedData.quantityAffected,
           description: sanitizedData.description,
-          rootCause: sanitizedData.rootCause,
+          defectCategory: sanitizedData.defectCategory,
+          preliminaryCause: sanitizedData.preliminaryCause,
           disposition: sanitizedData.disposition,
-          costImpact: sanitizedData.costImpact,
+          totalCost: sanitizedData.totalCost,
+          priority: sanitizedData.priority,
           status: 'open',
-          assignedTo: sanitizedData.assignedTo,
           createdBy: user.id,
         },
       });
@@ -262,7 +267,6 @@ export const POST = withAuth(
       // Audit log
       logger.audit('CREATE', 'ncr', ncr.id, {
         ncrNumber: ncr.ncrNumber,
-        type: ncr.type,
         source: ncr.source,
         userId: user.id
       });
