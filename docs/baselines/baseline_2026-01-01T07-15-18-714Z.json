@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-01-01T07:15:18.714Z",
+  "environment": "development",
+  "tests": [
+    {
+      "name": "Parts List",
+      "endpoint": "/api/parts",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 209,
+      "minMs": 10,
+      "maxMs": 937,
+      "p95Ms": 937,
+      "status": "pass"
+    },
+    {
+      "name": "Suppliers List",
+      "endpoint": "/api/suppliers",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 48,
+      "minMs": 10,
+      "maxMs": 202,
+      "p95Ms": 202,
+      "status": "pass"
+    },
+    {
+      "name": "Customers List",
+      "endpoint": "/api/customers",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 107,
+      "minMs": 12,
+      "maxMs": 477,
+      "p95Ms": 477,
+      "status": "fail"
+    },
+    {
+      "name": "Work Orders List",
+      "endpoint": "/api/work-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 12,
+      "minMs": 10,
+      "maxMs": 13,
+      "p95Ms": 13,
+      "status": "fail"
+    },
+    {
+      "name": "Sales Orders List",
+      "endpoint": "/api/sales-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 11,
+      "minMs": 11,
+      "maxMs": 12,
+      "p95Ms": 12,
+      "status": "fail"
+    },
+    {
+      "name": "Purchase Orders List",
+      "endpoint": "/api/purchase-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 12,
+      "minMs": 10,
+      "maxMs": 13,
+      "p95Ms": 13,
+      "status": "fail"
+    },
+    {
+      "name": "Inventory List",
+      "endpoint": "/api/inventory",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 12,
+      "minMs": 10,
+      "maxMs": 12,
+      "p95Ms": 12,
+      "status": "fail"
+    },
+    {
+      "name": "Dashboard Stats",
+      "endpoint": "/api/dashboard/stats",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 39,
+      "minMs": 9,
+      "maxMs": 153,
+      "p95Ms": 153,
+      "status": "pass"
+    },
+    {
+      "name": "MRP Planning",
+      "endpoint": "/api/mrp/planning",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 68,
+      "minMs": 11,
+      "maxMs": 285,
+      "p95Ms": 285,
+      "status": "fail"
+    },
+    {
+      "name": "NCR List",
+      "endpoint": "/api/quality/ncrs",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 23,
+      "minMs": 11,
+      "maxMs": 63,
+      "p95Ms": 63,
+      "status": "fail"
+    }
+  ],
+  "summary": {
+    "totalTests": 10,
+    "passed": 3,
+    "failed": 7,
+    "slow": 0,
+    "avgResponseTime": 54,
+    "p95ResponseTime": 217
+  }
+}

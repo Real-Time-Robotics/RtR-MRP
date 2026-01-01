@@ -1,0 +1,457 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Truck,
+  Factory,
+  ClipboardCheck,
+  BarChart3,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+  Layers,
+  FileText,
+  Users,
+  Box,
+  Wrench,
+  HelpCircle,
+  LogOut,
+  Moon,
+  Sun,
+  Sparkles,
+  Target,
+  Calculator,
+  AlertTriangle,
+  Bell,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// =============================================================================
+// MODERN SIDEBAR V2
+// Simplified navigation with colorful icons
+// =============================================================================
+
+interface NavItemType {
+  id: string;
+  label: string;
+  labelVi?: string;
+  icon: React.ReactNode;
+  href: string;
+  color: string;
+  bgColor: string;
+  badge?: string | number;
+  badgeColor?: string;
+}
+
+// Navigation items with distinct colors
+const mainNavItems: NavItemType[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    labelVi: 'Tổng quan',
+    icon: <LayoutDashboard className="w-5 h-5" />,
+    href: '/v2/dashboard',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/30',
+  },
+  {
+    id: 'inventory',
+    label: 'Inventory',
+    labelVi: 'Kho hàng',
+    icon: <Package className="w-5 h-5" />,
+    href: '/v2/inventory',
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-900/30',
+  },
+  {
+    id: 'sales',
+    label: 'Sales',
+    labelVi: 'Bán hàng',
+    icon: <ShoppingCart className="w-5 h-5" />,
+    href: '/v2/sales',
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-50 dark:bg-violet-900/30',
+    badge: 5,
+    badgeColor: 'bg-violet-500',
+  },
+  {
+    id: 'mrp',
+    label: 'MRP Planning',
+    labelVi: 'Hoạch định MRP',
+    icon: <Calculator className="w-5 h-5" />,
+    href: '/v2/mrp',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/30',
+    badge: 'New',
+    badgeColor: 'bg-purple-500',
+  },
+  {
+    id: 'production',
+    label: 'Production',
+    labelVi: 'Sản xuất',
+    icon: <Factory className="w-5 h-5" />,
+    href: '/v2/production',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/30',
+  },
+  {
+    id: 'quality',
+    label: 'Quality',
+    labelVi: 'Chất lượng',
+    icon: <ClipboardCheck className="w-5 h-5" />,
+    href: '/v2/quality',
+    color: 'text-teal-600 dark:text-teal-400',
+    bgColor: 'bg-teal-50 dark:bg-teal-900/30',
+  },
+  {
+    id: 'bom',
+    label: 'BOM',
+    labelVi: 'Định mức',
+    icon: <Layers className="w-5 h-5" />,
+    href: '/v2/bom',
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/30',
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    labelVi: 'Phân tích',
+    icon: <BarChart3 className="w-5 h-5" />,
+    href: '/v2/analytics',
+    color: 'text-pink-600 dark:text-pink-400',
+    bgColor: 'bg-pink-50 dark:bg-pink-900/30',
+  },
+];
+
+const bottomNavItems: NavItemType[] = [
+  {
+    id: 'settings',
+    label: 'Settings',
+    labelVi: 'Cài đặt',
+    icon: <Settings className="w-5 h-5" />,
+    href: '/v2/settings',
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-50 dark:bg-gray-800',
+  },
+];
+
+// =============================================================================
+// NAV ITEM COMPONENT
+// =============================================================================
+
+interface NavItemProps {
+  item: NavItemType;
+  isCollapsed: boolean;
+  isActive: boolean;
+  language?: 'en' | 'vi';
+}
+
+function NavItem({ item, isCollapsed, isActive, language = 'vi' }: NavItemProps) {
+  const label = language === 'vi' && item.labelVi ? item.labelVi : item.label;
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+        'hover:shadow-md group relative',
+        isActive
+          ? cn(item.bgColor, item.color, 'shadow-sm')
+          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+      )}
+      title={isCollapsed ? label : undefined}
+    >
+      {/* Icon container */}
+      <div className={cn(
+        'flex items-center justify-center',
+        isCollapsed ? 'w-5 h-5' : 'w-5 h-5'
+      )}>
+        <span className={isActive ? item.color : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'}>
+          {item.icon}
+        </span>
+      </div>
+      
+      {/* Label */}
+      {!isCollapsed && (
+        <span className={cn(
+          'font-medium text-sm flex-1',
+          isActive ? item.color : ''
+        )}>
+          {label}
+        </span>
+      )}
+      
+      {/* Badge */}
+      {item.badge && !isCollapsed && (
+        <span className={cn(
+          'px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full',
+          item.badgeColor || 'bg-gray-500'
+        )}>
+          {item.badge}
+        </span>
+      )}
+
+      {/* Collapsed badge dot */}
+      {item.badge && isCollapsed && (
+        <span className={cn(
+          'absolute top-1 right-1 w-2 h-2 rounded-full',
+          item.badgeColor || 'bg-gray-500'
+        )} />
+      )}
+
+      {/* Tooltip for collapsed state */}
+      {isCollapsed && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap">
+          {label}
+          {item.badge && (
+            <span className={cn(
+              'ml-2 px-1.5 py-0.5 text-[10px] font-bold rounded-full',
+              item.badgeColor || 'bg-gray-500'
+            )}>
+              {item.badge}
+            </span>
+          )}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+// =============================================================================
+// MAIN SIDEBAR COMPONENT
+// =============================================================================
+
+interface ModernSidebarProps {
+  className?: string;
+}
+
+export function ModernSidebar({ className }: ModernSidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === '/v2/dashboard') {
+      return pathname === '/v2/dashboard' || pathname === '/v2';
+    }
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg lg:hidden"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-900',
+          'border-r border-gray-200 dark:border-gray-800',
+          'transition-all duration-300 ease-out',
+          'flex flex-col',
+          isCollapsed ? 'w-[72px]' : 'w-64',
+          // Mobile styles
+          'lg:translate-x-0',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          className
+        )}
+      >
+        {/* Header */}
+        <div className={cn(
+          'flex items-center h-16 px-4 border-b border-gray-200 dark:border-gray-800',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}>
+          {!isCollapsed && (
+            <Link href="/v2/dashboard" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                RTR MRP
+              </span>
+            </Link>
+          )}
+
+          {isCollapsed && (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+          )}
+
+          {/* Mobile close button */}
+          <button
+            onClick={() => setIsMobileOpen(false)}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded lg:hidden"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+          {/* Main nav */}
+          {mainNavItems.map((item) => (
+            <NavItem
+              key={item.id}
+              item={item}
+              isCollapsed={isCollapsed}
+              isActive={isActive(item.href)}
+            />
+          ))}
+        </nav>
+
+        {/* Bottom section */}
+        <div className="p-3 space-y-1 border-t border-gray-200 dark:border-gray-800">
+          {bottomNavItems.map((item) => (
+            <NavItem
+              key={item.id}
+              item={item}
+              isCollapsed={isCollapsed}
+              isActive={isActive(item.href)}
+            />
+          ))}
+
+          {/* Collapse button - desktop only */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              'hidden lg:flex items-center gap-3 w-full px-3 py-2.5 rounded-xl',
+              'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+            )}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="w-5 h-5" />
+            ) : (
+              <>
+                <ChevronLeft className="w-5 h-5" />
+                <span className="text-sm">Thu gọn</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* User section */}
+        <div className={cn(
+          'p-3 border-t border-gray-200 dark:border-gray-800',
+          isCollapsed ? 'px-2' : ''
+        )}>
+          <div className={cn(
+            'flex items-center gap-3 p-2 rounded-xl',
+            'bg-gray-50 dark:bg-gray-800'
+          )}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
+              A
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  Admin
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  admin@rtr.vn
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Content offset */}
+      <div className={cn(
+        'transition-all duration-300',
+        isCollapsed ? 'lg:pl-[72px]' : 'lg:pl-64'
+      )} />
+    </>
+  );
+}
+
+// =============================================================================
+// TOPBAR COMPONENT
+// =============================================================================
+
+interface TopbarProps {
+  className?: string;
+}
+
+export function ModernTopbar({ className }: TopbarProps) {
+  const [isDark, setIsDark] = useState(false);
+
+  return (
+    <header className={cn(
+      'sticky top-0 z-30 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg',
+      'border-b border-gray-200 dark:border-gray-800',
+      'flex items-center justify-between px-4 lg:px-6',
+      className
+    )}>
+      {/* Search */}
+      <div className="flex-1 max-w-xl">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Tìm kiếm hoặc hỏi AI..."
+            className={cn(
+              'w-full pl-10 pr-4 py-2 rounded-xl',
+              'bg-gray-100 dark:bg-gray-800',
+              'border border-transparent',
+              'focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20',
+              'text-sm placeholder:text-gray-400',
+              'transition-all duration-200'
+            )}
+          />
+          <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-mono bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-gray-400">
+            ⌘K
+          </kbd>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 ml-4">
+        {/* Notifications */}
+        <button className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+          <Bell className="w-5 h-5 text-gray-500" />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+        </button>
+
+        {/* Theme toggle */}
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 text-amber-500" />
+          ) : (
+            <Moon className="w-5 h-5 text-gray-500" />
+          )}
+        </button>
+
+        {/* Help */}
+        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
+          <HelpCircle className="w-5 h-5 text-gray-500" />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+export default ModernSidebar;

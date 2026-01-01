@@ -329,7 +329,7 @@ function InsightCard({
       
       {/* Timestamp */}
       <div className="mt-3 pt-3 border-t border-gray-200/50">
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400" suppressHydrationWarning>
           {insight.timestamp.toLocaleTimeString(language === 'vi' ? 'vi-VN' : 'en-US', {
             hour: '2-digit',
             minute: '2-digit',

@@ -3,6 +3,8 @@
 // Bilingual EN/VI with Light/Dark Theme Support
 // =============================================================================
 
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -30,7 +32,13 @@ import { ThemeToggle } from '@/components/landing/theme-toggle';
 // MAIN COMPONENT
 // =============================================================================
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // If user is logged in, redirect to dashboard
+  const session = await auth();
+  if (session) {
+    redirect('/home');
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 text-zinc-900 dark:text-neutral-50 font-[system-ui] antialiased transition-colors duration-300">
       {/* ================================================================== */}

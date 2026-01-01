@@ -45,8 +45,10 @@ export default function ProductionSchedulePage() {
   const fetchWorkOrders = async () => {
     try {
       const res = await fetch("/api/production");
-      const data = await res.json();
-      setWorkOrders(data);
+      const response = await res.json();
+      // Handle paginated response format
+      const workOrderData = Array.isArray(response) ? response : (response.data || []);
+      setWorkOrders(workOrderData);
     } catch (error) {
       console.error("Failed to fetch work orders:", error);
     } finally {

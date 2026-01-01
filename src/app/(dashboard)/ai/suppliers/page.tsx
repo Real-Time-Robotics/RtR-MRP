@@ -54,9 +54,11 @@ export default function SupplierRiskPage() {
     setLoading(true);
     try {
       const res = await fetch("/api/suppliers");
-      const data = await res.json();
-      setSuppliers(data);
-      calculateRiskScores(data);
+      const response = await res.json();
+      // Handle paginated response format
+      const supplierData = Array.isArray(response) ? response : (response.data || []);
+      setSuppliers(supplierData);
+      calculateRiskScores(supplierData);
     } catch (error) {
       console.error("Failed to fetch suppliers:", error);
     } finally {

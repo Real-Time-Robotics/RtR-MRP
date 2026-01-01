@@ -3,9 +3,11 @@
 // Export all layout components for easy importing
 // =============================================================================
 
-// Sidebar
-export { Sidebar, NavItemComponent, defaultNavItems } from './sidebar';
-export type { SidebarProps, NavItem } from './sidebar';
+// =============================================================================
+// SIDEBAR CHÍNH: ProcessFlowSidebar
+// Import từ: @/components/layout/process-flow-sidebar
+// File này KHÔNG export sidebar - sử dụng ProcessFlowSidebar thay thế
+// =============================================================================
 
 // TopBar
 export { TopBar } from './topbar';

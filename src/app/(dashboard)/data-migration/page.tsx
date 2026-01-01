@@ -324,8 +324,8 @@ export default function DataMigrationCopilotPage() {
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
-                  className="border-2 border-dashed border-blue-300 rounded-xl p-8 text-center
-                    hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-xl p-8 text-center
+                    hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
                 >
                   <input
                     type="file"
@@ -337,7 +337,7 @@ export default function DataMigrationCopilotPage() {
                   />
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <Upload className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-                    <p className="text-lg font-medium">
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
                       Kéo thả file Excel vào đây
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -351,7 +351,7 @@ export default function DataMigrationCopilotPage() {
                   <div className="space-y-2">
                     <h3 className="font-medium text-sm">Files đã chọn:</h3>
                     {files.map(file => (
-                      <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
                         <FileSpreadsheet className="w-8 h-8 text-green-500" />
                         <div className="flex-1">
                           <div className="font-medium text-sm">{file.name}</div>
@@ -406,7 +406,7 @@ export default function DataMigrationCopilotPage() {
 
                   <div className="mt-6 max-w-md mx-auto space-y-2">
                     {files.map(file => (
-                      <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-neutral-800 rounded-lg">
                         <FileSpreadsheet className="w-6 h-6 text-green-500" />
                         <div className="flex-1 text-left text-sm font-medium">{file.name}</div>
                         {file.status === 'analyzing' && <Loader2 className="w-5 h-5 animate-spin text-blue-500" />}
@@ -562,15 +562,15 @@ export default function DataMigrationCopilotPage() {
 
               {/* Chat Input */}
               <div className="p-4 border-t">
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <Input
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAISend()}
                     placeholder="Hỏi AI Copilot..."
-                    className="flex-1"
+                    className="flex-1 h-10"
                   />
-                  <Button onClick={handleAISend} size="icon">
+                  <Button onClick={handleAISend} size="icon" className="h-10 w-10 shrink-0">
                     <MessageSquare className="w-5 h-5" />
                   </Button>
                 </div>

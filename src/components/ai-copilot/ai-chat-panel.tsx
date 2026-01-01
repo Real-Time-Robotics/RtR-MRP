@@ -6,8 +6,164 @@ import {
   ThumbsUp, ThumbsDown, Copy, Check, ChevronDown, ChevronUp,
   AlertTriangle, Info, Zap, History, Settings, Minimize2,
   Maximize2, Volume2, VolumeX, Lightbulb, ArrowRight,
-  RefreshCw, HelpCircle, Shield, Brain
+  RefreshCw, HelpCircle, Shield,
+  Package, ShoppingCart, Factory, Calculator, BarChart3
 } from 'lucide-react';
+
+// Icon mapping for AI message sections
+const SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
+  inventory: {
+    icon: <Package className="w-4 h-4" />,
+    color: 'text-blue-600',
+    bg: 'bg-blue-100 dark:bg-blue-900/30'
+  },
+  orders: {
+    icon: <ShoppingCart className="w-4 h-4" />,
+    color: 'text-green-600',
+    bg: 'bg-green-100 dark:bg-green-900/30'
+  },
+  production: {
+    icon: <Factory className="w-4 h-4" />,
+    color: 'text-purple-600',
+    bg: 'bg-purple-100 dark:bg-purple-900/30'
+  },
+  mrp: {
+    icon: <Calculator className="w-4 h-4" />,
+    color: 'text-orange-600',
+    bg: 'bg-orange-100 dark:bg-orange-900/30'
+  },
+  analytics: {
+    icon: <BarChart3 className="w-4 h-4" />,
+    color: 'text-indigo-600',
+    bg: 'bg-indigo-100 dark:bg-indigo-900/30'
+  },
+};
+
+// Professional markdown renderer - clean minimalist design
+function renderMessageContent(content: string, isUserMessage: boolean = false): React.ReactNode {
+  // For user messages, just return plain text with white color
+  if (isUserMessage) {
+    return <span className="text-white">{content}</span>;
+  }
+
+  const lines = content.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] = [];
+  let currentSection: { title: string; items: React.ReactNode[] } | null = null;
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <div key={`list-${elements.length}`} className="space-y-1.5 my-2">
+          {currentList}
+        </div>
+      );
+      currentList = [];
+    }
+  };
+
+  const flushSection = () => {
+    if (currentSection) {
+      const sectionKey = currentSection.title.toLowerCase();
+      const config = SECTION_ICONS[
+        sectionKey.includes('tồn kho') || sectionKey.includes('inventory') ? 'inventory' :
+        sectionKey.includes('đơn hàng') || sectionKey.includes('order') ? 'orders' :
+        sectionKey.includes('sản xuất') || sectionKey.includes('production') ? 'production' :
+        sectionKey.includes('mrp') ? 'mrp' : 'analytics'
+      ];
+
+      elements.push(
+        <div key={`section-${elements.length}`} className="mt-4 first:mt-0">
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`p-1.5 rounded-lg ${config?.bg || 'bg-gray-100 dark:bg-neutral-700'}`}>
+              {config?.icon || <BarChart3 className="w-3.5 h-3.5 text-gray-600" />}
+            </div>
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">
+              {currentSection.title}
+            </span>
+          </div>
+          <div className="pl-8 space-y-1">
+            {currentSection.items}
+          </div>
+        </div>
+      );
+      currentSection = null;
+    }
+  };
+
+  const parseInlineContent = (text: string): React.ReactNode => {
+    // Clean markdown and format
+    let cleaned = text
+      .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold markers
+      .replace(/^\s*[-•]\s*/, '')        // Remove list markers
+      .trim();
+
+    // Handle emoji indicators for status
+    if (cleaned.includes('🔵') || cleaned.includes('🟢') || cleaned.includes('🟡') || cleaned.includes('🔴')) {
+      const parts = cleaned.split(/(🔵|🟢|🟡|🔴)/);
+      return (
+        <span className="flex items-center gap-1.5">
+          {parts.map((part, i) => {
+            if (part === '🔵') return <span key={i} className="w-2 h-2 rounded-full bg-blue-500" />;
+            if (part === '🟢') return <span key={i} className="w-2 h-2 rounded-full bg-green-500" />;
+            if (part === '🟡') return <span key={i} className="w-2 h-2 rounded-full bg-yellow-500" />;
+            if (part === '🔴') return <span key={i} className="w-2 h-2 rounded-full bg-red-500" />;
+            return <span key={i}>{part}</span>;
+          })}
+        </span>
+      );
+    }
+
+    return cleaned;
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Handle headings (### or ##)
+    const headingMatch = trimmed.match(/^#{1,3}\s*(.+)$/);
+    if (headingMatch) {
+      flushList();
+      flushSection();
+      currentSection = { title: headingMatch[1], items: [] };
+      return;
+    }
+
+    // Handle list items (- or •)
+    const listMatch = trimmed.match(/^[-•]\s*(.+)$/);
+    if (listMatch || (currentSection && trimmed)) {
+      const content = listMatch ? listMatch[1] : trimmed;
+      const item = (
+        <div key={`item-${index}`} className="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300">
+          <span className="text-gray-400 dark:text-neutral-500 mt-0.5">›</span>
+          <span className="flex-1">{parseInlineContent(content)}</span>
+        </div>
+      );
+
+      if (currentSection) {
+        currentSection.items.push(item);
+      } else {
+        currentList.push(item);
+      }
+      return;
+    }
+
+    // Regular paragraph
+    flushList();
+    flushSection();
+    elements.push(
+      <p key={`p-${index}`} className="text-sm text-gray-700 dark:text-neutral-300 leading-relaxed">
+        {parseInlineContent(trimmed)}
+      </p>
+    );
+  });
+
+  flushList();
+  flushSection();
+
+  return <div className="space-y-2">{elements}</div>;
+}
 
 // Types
 interface AIMessage {
@@ -390,10 +546,10 @@ export default function AIChatPanel({
                           </span>
                         </div>
                       ) : (
-                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                        <div className="text-sm">{renderMessageContent(message.content, message.role === 'user')}</div>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-neutral-500 mt-1">
+                    <span className="text-xs text-gray-400 dark:text-neutral-500 mt-1" suppressHydrationWarning>
                       {message.timestamp.toLocaleTimeString(context.language === 'vi' ? 'vi-VN' : 'en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -409,7 +565,7 @@ export default function AIChatPanel({
 
         {/* Input Area */}
         <div className="p-4 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
-          <div className="flex items-end space-x-2">
+          <div className="flex items-center space-x-2">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
@@ -417,7 +573,7 @@ export default function AIChatPanel({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={context.language === 'vi' ? 'Hỏi AI Copilot...' : 'Ask AI Copilot...'}
-                className="w-full px-4 py-2.5 pr-10 border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 dark:placeholder-neutral-500"
+                className="w-full h-10 px-4 py-2 pr-10 border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 dark:placeholder-neutral-500"
                 rows={1}
                 disabled={isLoading}
               />
@@ -425,7 +581,7 @@ export default function AIChatPanel({
             <button
               onClick={() => sendMessage(inputValue)}
               disabled={!inputValue.trim() || isLoading}
-              className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="h-10 w-10 shrink-0 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -459,7 +615,7 @@ export default function AIChatPanel({
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="flex items-center space-x-2">
           <div className="p-1.5 bg-white/20 rounded-lg">
-            <Brain className="h-5 w-5" />
+            <Bot className="h-5 w-5" />
           </div>
           <div>
             <h3 className="font-semibold text-sm">RTR AI Copilot</h3>
@@ -526,7 +682,7 @@ export default function AIChatPanel({
                     <button
                       key={index}
                       onClick={() => sendMessage(context.language === 'vi' ? suggestion.vi : suggestion.en)}
-                      className="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                      className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-neutral-300 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
                     >
                       {context.language === 'vi' ? suggestion.vi : suggestion.en}
                     </button>
@@ -567,7 +723,7 @@ export default function AIChatPanel({
                             </span>
                           </div>
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <div className="text-sm">{renderMessageContent(message.content, message.role === 'user')}</div>
                         )}
                       </div>
 
@@ -652,7 +808,7 @@ export default function AIChatPanel({
                       )}
 
                       {/* Timestamp */}
-                      <span className="text-xs text-gray-400 mt-1">
+                      <span className="text-xs text-gray-400 mt-1" suppressHydrationWarning>
                         {message.timestamp.toLocaleTimeString(context.language === 'vi' ? 'vi-VN' : 'en-US', {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -668,7 +824,7 @@ export default function AIChatPanel({
 
           {/* Input Area */}
           <div className="p-4 bg-white border-t border-gray-200">
-            <div className="flex items-end space-x-2">
+            <div className="flex items-center space-x-2">
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
@@ -676,12 +832,12 @@ export default function AIChatPanel({
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={context.language === 'vi' ? 'Hỏi AI Copilot...' : 'Ask AI Copilot...'}
-                  className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full h-10 px-4 py-2 pr-10 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   rows={1}
                   disabled={isLoading}
                 />
                 {inputValue.length > 0 && (
-                  <span className="absolute right-3 bottom-2.5 text-xs text-gray-400">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                     {inputValue.length}/1000
                   </span>
                 )}
@@ -689,7 +845,7 @@ export default function AIChatPanel({
               <button
                 onClick={() => sendMessage(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
-                className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-10 w-10 shrink-0 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

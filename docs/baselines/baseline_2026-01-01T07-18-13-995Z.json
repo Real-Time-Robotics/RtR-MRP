@@ -1,0 +1,124 @@
+{
+  "timestamp": "2026-01-01T07:18:13.994Z",
+  "environment": "development",
+  "tests": [
+    {
+      "name": "Parts List",
+      "endpoint": "/api/parts",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 9,
+      "minMs": 1,
+      "maxMs": 37,
+      "p95Ms": 37,
+      "status": "fail"
+    },
+    {
+      "name": "Suppliers List",
+      "endpoint": "/api/suppliers",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 2,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "Customers List",
+      "endpoint": "/api/customers",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 2,
+      "minMs": 1,
+      "maxMs": 3,
+      "p95Ms": 3,
+      "status": "fail"
+    },
+    {
+      "name": "Work Orders List",
+      "endpoint": "/api/work-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 1,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "Sales Orders List",
+      "endpoint": "/api/sales-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 2,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "Purchase Orders List",
+      "endpoint": "/api/purchase-orders",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 1,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "Inventory List",
+      "endpoint": "/api/inventory",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 2,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "Dashboard Stats",
+      "endpoint": "/api/dashboard/stats",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 1,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "MRP Planning",
+      "endpoint": "/api/mrp/planning",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 1,
+      "minMs": 1,
+      "maxMs": 2,
+      "p95Ms": 2,
+      "status": "fail"
+    },
+    {
+      "name": "NCR List",
+      "endpoint": "/api/quality/ncrs",
+      "method": "GET",
+      "samples": 5,
+      "avgMs": 2,
+      "minMs": 1,
+      "maxMs": 3,
+      "p95Ms": 3,
+      "status": "fail"
+    }
+  ],
+  "summary": {
+    "totalTests": 10,
+    "passed": 0,
+    "failed": 10,
+    "slow": 0,
+    "avgResponseTime": 2,
+    "p95ResponseTime": 6
+  }
+}

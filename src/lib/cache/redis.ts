@@ -154,18 +154,28 @@ if (typeof window === "undefined") {
   logger.info("Using in-memory cache (Redis optional)");
 }
 
+// Cache statistics
+let cacheHits = 0;
+let cacheMisses = 0;
+
 // Cache utilities
 export const cache = {
   async get<T>(key: string): Promise<T | null> {
     try {
       const data = await redis.get(key);
-      return data ? JSON.parse(data) : null;
+      if (data) {
+        cacheHits++;
+        return JSON.parse(data);
+      }
+      cacheMisses++;
+      return null;
     } catch {
+      cacheMisses++;
       return null;
     }
   },
 
-  async set(key: string, value: unknown, ttlSeconds: number = 3600): Promise<void> {
+  async set(key: string, value: unknown, ttlSeconds: number = 300): Promise<void> {
     try {
       await redis.setex(key, ttlSeconds, JSON.stringify(value));
     } catch (error) {
@@ -196,7 +206,7 @@ export const cache = {
   async getOrSet<T>(
     key: string,
     fetcher: () => Promise<T>,
-    ttlSeconds: number = 3600
+    ttlSeconds: number = 300
   ): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) {
@@ -207,4 +217,98 @@ export const cache = {
     await this.set(key, value, ttlSeconds);
     return value;
   },
+
+  // Get cache statistics
+  getStats() {
+    const total = cacheHits + cacheMisses;
+    return {
+      hits: cacheHits,
+      misses: cacheMisses,
+      hitRate: total > 0 ? Math.round((cacheHits / total) * 100) : 0,
+    };
+  },
+
+  // Reset statistics
+  resetStats() {
+    cacheHits = 0;
+    cacheMisses = 0;
+  },
+};
+
+// ============================================
+// CACHE KEY BUILDERS
+// ============================================
+
+export const cacheKeys = {
+  // List queries with pagination
+  workOrders: (params: Record<string, unknown>) =>
+    `mrp:work-orders:${hashParams(params)}`,
+  salesOrders: (params: Record<string, unknown>) =>
+    `mrp:sales-orders:${hashParams(params)}`,
+  parts: (params: Record<string, unknown>) =>
+    `mrp:parts:${hashParams(params)}`,
+  suppliers: (params: Record<string, unknown>) =>
+    `mrp:suppliers:${hashParams(params)}`,
+  inventory: (params: Record<string, unknown>) =>
+    `mrp:inventory:${hashParams(params)}`,
+
+  // Single entity
+  workOrder: (id: string) => `mrp:work-order:${id}`,
+  salesOrder: (id: string) => `mrp:sales-order:${id}`,
+  part: (id: string) => `mrp:part:${id}`,
+  supplier: (id: string) => `mrp:supplier:${id}`,
+
+  // Dashboard and stats
+  dashboard: (userId: string) => `mrp:dashboard:${userId}`,
+  dashboardStats: () => "mrp:dashboard:stats",
+
+  // MRP calculations
+  mrpRun: (id: string) => `mrp:run:${id}`,
+  mrpShortages: () => "mrp:shortages",
+};
+
+// Simple hash function for cache keys
+function hashParams(params: Record<string, unknown>): string {
+  const sorted = Object.keys(params)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = params[key];
+      return acc;
+    }, {} as Record<string, unknown>);
+  return Buffer.from(JSON.stringify(sorted)).toString("base64").slice(0, 32);
+}
+
+// ============================================
+// CACHE TTL CONFIGURATIONS (in seconds)
+// ============================================
+
+export const cacheTTL = {
+  // Short-lived cache for frequently changing data
+  SHORT: 30, // 30 seconds
+
+  // Medium cache for list queries
+  MEDIUM: 60, // 1 minute
+
+  // Standard cache for most queries
+  STANDARD: 300, // 5 minutes
+
+  // Long cache for static data
+  LONG: 3600, // 1 hour
+
+  // Extended cache for reference data
+  EXTENDED: 86400, // 24 hours
+};
+
+// ============================================
+// CACHE INVALIDATION PATTERNS
+// ============================================
+
+export const cachePatterns = {
+  ALL_WORK_ORDERS: "mrp:work-orders:*",
+  ALL_SALES_ORDERS: "mrp:sales-orders:*",
+  ALL_PARTS: "mrp:parts:*",
+  ALL_SUPPLIERS: "mrp:suppliers:*",
+  ALL_INVENTORY: "mrp:inventory:*",
+  ALL_DASHBOARD: "mrp:dashboard:*",
+  ALL_MRP: "mrp:run:*",
 };

@@ -1,53 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  buildFilterQuery,
+  buildSearchQuery,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
+
+// Allowed filters for sales orders
+const ALLOWED_FILTERS = ["status", "customerId"];
+const SEARCH_FIELDS = ["orderNumber"];
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
 
-    const orders = await prisma.salesOrder.findMany({
-      where: status
-        ? {
-            status: status,
-          }
-        : undefined,
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        lines: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                sku: true,
-              },
+    // Parse pagination params
+    const params = parsePaginationParams(request);
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search");
+
+    // Build where clause
+    const filters = buildFilterQuery(request, ALLOWED_FILTERS);
+    const searchQuery = buildSearchQuery(search, SEARCH_FIELDS);
+
+    const where = {
+      ...filters,
+      ...searchQuery,
+    };
+
+    // Get total count and paginated data in parallel
+    const [totalCount, orders] = await Promise.all([
+      prisma.salesOrder.count({ where }),
+      prisma.salesOrder.findMany({
+        where,
+        ...buildOffsetPaginationQuery(params),
+        orderBy: params.sortBy
+          ? { [params.sortBy]: params.sortOrder }
+          : { createdAt: "desc" },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
             },
           },
+          lines: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                },
+              },
+            },
+            take: 10, // Limit lines per order for list view
+          },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+      }),
+    ]);
 
-    return NextResponse.json(orders);
+    return paginatedSuccess(
+      buildPaginatedResponse(orders, totalCount, params, startTime)
+    );
   } catch (error) {
     console.error("Failed to fetch orders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch orders" },
-      { status: 500 }
-    );
+    return paginatedError("Failed to fetch orders", 500);
   }
 }
 

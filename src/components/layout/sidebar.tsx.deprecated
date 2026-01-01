@@ -1,0 +1,398 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard,
+  Package,
+  Boxes,
+  Warehouse,
+  Truck,
+  ShoppingCart,
+  ClipboardList,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronDown,
+  Brain,
+  Factory,
+  Sparkles,
+  FileText,
+  Activity,
+  Shield,
+  FileSpreadsheet,
+  DollarSign,
+  Calculator,
+  Receipt,
+  BookOpen,
+  BarChart3,
+  CheckCircle,
+  AlertTriangle,
+  ClipboardCheck,
+  Search,
+  Smartphone,
+  LucideIcon,
+  Link2,
+  Clock,
+  FlaskConical,
+  Lock,
+  MapPin,
+  Upload,
+  Wand2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { signOut, useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+interface NavItem {
+  nameKey: string;
+  href: string;
+  icon: LucideIcon;
+  children?: { nameKey: string; href: string; icon: LucideIcon }[];
+}
+
+const navigation: NavItem[] = [
+  { nameKey: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { nameKey: "nav.dataMigration", href: "/data-migration", icon: Upload },
+  { nameKey: "nav.parts", href: "/parts", icon: Boxes },
+  { nameKey: "nav.bom", href: "/bom", icon: Package },
+  { nameKey: "nav.inventory", href: "/inventory", icon: Warehouse },
+  { nameKey: "nav.suppliers", href: "/suppliers", icon: Truck },
+  { nameKey: "nav.orders", href: "/orders", icon: ShoppingCart },
+  { nameKey: "nav.purchasing", href: "/purchasing", icon: ClipboardList },
+  {
+    nameKey: "nav.mrp",
+    href: "/mrp",
+    icon: Brain,
+    children: [
+      { nameKey: "nav.mrp.overview", href: "/mrp", icon: Brain },
+      { nameKey: "nav.mrp.wizard", href: "/mrp/wizard", icon: Wand2 },
+      { nameKey: "nav.mrp.planning", href: "/mrp/planning", icon: Calculator },
+      { nameKey: "nav.mrp.pegging", href: "/mrp/pegging", icon: Link2 },
+      { nameKey: "nav.mrp.atp", href: "/mrp/atp", icon: Clock },
+      { nameKey: "nav.mrp.simulation", href: "/mrp/simulation", icon: FlaskConical },
+      { nameKey: "nav.mrp.exceptions", href: "/mrp/exceptions", icon: AlertTriangle },
+      { nameKey: "nav.mrp.firmOrders", href: "/mrp/firm-orders", icon: Lock },
+      { nameKey: "nav.mrp.multiSite", href: "/mrp/multi-site", icon: MapPin },
+    ],
+  },
+  {
+    nameKey: "nav.production",
+    href: "/production",
+    icon: Factory,
+    children: [
+      { nameKey: "nav.production.overview", href: "/production", icon: Factory },
+      { nameKey: "nav.production.workCenters", href: "/production/work-centers", icon: Factory },
+      { nameKey: "nav.production.routing", href: "/production/routing", icon: ClipboardList },
+      { nameKey: "nav.production.schedule", href: "/production/schedule", icon: BarChart3 },
+      { nameKey: "nav.production.shopFloor", href: "/production/shop-floor", icon: Factory },
+      { nameKey: "nav.production.capacity", href: "/production/capacity", icon: BarChart3 },
+      { nameKey: "nav.production.oee", href: "/production/oee", icon: BarChart3 },
+    ],
+  },
+  {
+    nameKey: "nav.quality",
+    href: "/quality",
+    icon: Shield,
+    children: [
+      { nameKey: "nav.quality.overview", href: "/quality", icon: Shield },
+      { nameKey: "nav.quality.receiving", href: "/quality/receiving", icon: ClipboardCheck },
+      { nameKey: "nav.quality.inProcess", href: "/quality/in-process", icon: CheckCircle },
+      { nameKey: "nav.quality.final", href: "/quality/final", icon: CheckCircle },
+      { nameKey: "nav.quality.ncr", href: "/quality/ncr", icon: AlertTriangle },
+      { nameKey: "nav.quality.capa", href: "/quality/capa", icon: ClipboardCheck },
+      { nameKey: "nav.quality.inspectionPlans", href: "/quality/inspection-plans", icon: Search },
+      { nameKey: "nav.quality.certificates", href: "/quality/certificates", icon: FileText },
+      { nameKey: "nav.quality.traceability", href: "/quality/traceability", icon: Search },
+    ],
+  },
+  {
+    nameKey: "nav.finance",
+    href: "/finance",
+    icon: DollarSign,
+    children: [
+      { nameKey: "nav.finance.overview", href: "/finance", icon: DollarSign },
+      { nameKey: "nav.finance.costing", href: "/finance/costing", icon: Calculator },
+      { nameKey: "nav.finance.invoicing", href: "/finance/invoicing", icon: Receipt },
+      { nameKey: "nav.finance.gl", href: "/finance/gl", icon: BookOpen },
+      { nameKey: "nav.finance.reports", href: "/finance/reports", icon: BarChart3 },
+    ],
+  },
+  {
+    nameKey: "nav.ai",
+    href: "/ai",
+    icon: Sparkles,
+    children: [
+      { nameKey: "nav.ai.overview", href: "/ai", icon: Sparkles },
+      { nameKey: "nav.ai.insights", href: "/ai-insights", icon: Brain },
+      { nameKey: "nav.ai.forecast", href: "/ai/forecast", icon: BarChart3 },
+      { nameKey: "nav.ai.recommendations", href: "/ai/recommendations", icon: Wand2 },
+      { nameKey: "nav.ai.scenarios", href: "/ai/scenarios", icon: FlaskConical },
+      { nameKey: "nav.ai.suppliers", href: "/ai/suppliers", icon: Truck },
+    ],
+  },
+  { nameKey: "nav.excel", href: "/excel", icon: FileSpreadsheet },
+  { nameKey: "nav.analytics", href: "/analytics", icon: BarChart3 },
+  { nameKey: "nav.reports", href: "/reports", icon: FileText },
+  { nameKey: "nav.activity", href: "/activity", icon: Activity },
+  { nameKey: "nav.mobile", href: "/mobile", icon: Smartphone },
+];
+
+const bottomNavigation = [
+  { nameKey: "nav.settings", href: "/settings", icon: Settings },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { t } = useLanguage();
+  const { data: session } = useSession();
+  const [collapsed, setCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  const userInitials = session?.user?.name
+    ? session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : session?.user?.email?.[0]?.toUpperCase() || "U";
+
+  // Auto-expand menus based on current path (only on initial load)
+  useEffect(() => {
+    setExpandedMenus((prev) => {
+      const expanded = new Set(prev);
+      navigation.forEach((item) => {
+        if (item.children && item.href !== "/" && pathname.startsWith(item.href)) {
+          expanded.add(item.nameKey);
+        }
+      });
+      return expanded;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  const toggleMenu = (nameKey: string) => {
+    const newExpanded = new Set(expandedMenus);
+    if (newExpanded.has(nameKey)) {
+      newExpanded.delete(nameKey);
+    } else {
+      newExpanded.add(nameKey);
+    }
+    setExpandedMenus(newExpanded);
+  };
+
+  const isItemActive = (item: NavItem): boolean => {
+    if (item.href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+    if (item.children) {
+      return item.children.some((child) =>
+        child.href === item.href
+          ? pathname === child.href
+          : pathname.startsWith(child.href) && child.href !== item.href
+      ) || pathname === item.href;
+    }
+    return pathname.startsWith(item.href);
+  };
+
+  const isChildActive = (href: string, parentHref: string): boolean => {
+    if (href === parentHref) {
+      return pathname === href;
+    }
+    return pathname === href || (pathname.startsWith(href) && href !== parentHref);
+  };
+
+  const renderNavItem = (item: NavItem) => {
+    const isActive = isItemActive(item);
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus.has(item.nameKey);
+    const itemName = t(item.nameKey);
+
+    if (hasChildren) {
+      return (
+        <div key={item.nameKey}>
+          <button
+            onClick={() => toggleMenu(item.nameKey)}
+            className={cn(
+              "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              isActive
+                ? "bg-gray-200 text-gray-900 dark:bg-neutral-800 dark:text-white"
+                : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+            )}
+            title={collapsed ? itemName : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{itemName}</span>}
+            </div>
+            {!collapsed && (
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  isExpanded && "rotate-180"
+                )}
+              />
+            )}
+          </button>
+          {!collapsed && isExpanded && (
+            <div className="mt-1 ml-4 space-y-1 border-l border-gray-300 dark:border-neutral-700 pl-3">
+              {item.children!.map((child) => {
+                const childActive = isChildActive(child.href, item.href);
+                const childName = t(child.nameKey);
+                return (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      childActive
+                        ? "bg-primary text-white"
+                        : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                    )}
+                  >
+                    <child.icon className="h-4 w-4 shrink-0" />
+                    <span>{childName}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.nameKey}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary text-white"
+            : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+        )}
+        title={collapsed ? itemName : undefined}
+      >
+        <item.icon className="h-5 w-5 shrink-0" />
+        {!collapsed && <span>{itemName}</span>}
+      </Link>
+    );
+  };
+
+  return (
+    <div
+      className={cn(
+        "flex h-full flex-col transition-all duration-300",
+        "bg-gray-100 text-gray-900 dark:bg-neutral-900 dark:text-white",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      {/* Logo */}
+      <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-neutral-800">
+        {!collapsed && (
+          <Link href="/" className="flex items-center gap-3">
+            {/* Bloomberg-style Logo */}
+            <div className="h-8 w-8 rounded bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center">
+              <span className="text-white font-bold text-xs font-mono">MRP</span>
+            </div>
+            <span className="font-bold text-lg font-mono text-gray-900 dark:text-white tracking-tight flex items-end">
+              MRP<span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-1" />
+            </span>
+          </Link>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-neutral-800"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          <ChevronLeft
+            className={cn(
+              "h-5 w-5 transition-transform",
+              collapsed && "rotate-180"
+            )}
+          />
+        </Button>
+      </div>
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1 py-4">
+        <nav className="space-y-1 px-2">
+          {navigation.map((item) => renderNavItem(item))}
+        </nav>
+      </ScrollArea>
+
+      {/* Bottom Navigation */}
+      <div className="border-t border-gray-200 dark:border-neutral-800 p-2 space-y-1">
+        {bottomNavigation.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          const itemName = t(item.nameKey);
+          return (
+            <Link
+              key={item.nameKey}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-primary text-white"
+                  : "text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+              )}
+              title={collapsed ? itemName : undefined}
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{itemName}</span>}
+            </Link>
+          );
+        })}
+        {/* User Profile with Logout */}
+        <div className={cn(
+          "rounded-lg mt-2 bg-gray-200/70 dark:bg-neutral-800/50 overflow-hidden",
+          collapsed && "flex flex-col items-center"
+        )}>
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2",
+            collapsed && "justify-center"
+          )}>
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                {userInitials}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {session?.user?.name || session?.user?.email || "User"}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-neutral-400 capitalize">
+                  {session?.user?.role || "User"}
+                </span>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="p-1.5 rounded-md text-gray-500 hover:text-red-500 hover:bg-gray-300 dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-neutral-700 transition-colors"
+                title={t("auth.logout")}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {collapsed && (
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full p-2 text-gray-500 hover:text-red-500 hover:bg-gray-300 dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-neutral-700 transition-colors border-t border-gray-300 dark:border-neutral-700"
+              title={t("auth.logout")}
+            >
+              <LogOut className="h-4 w-4 mx-auto" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

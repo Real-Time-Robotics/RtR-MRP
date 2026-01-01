@@ -1,0 +1,542 @@
+'use client';
+
+// =============================================================================
+// !!! SIDEBAR CHÍNH - CHỈ SỬ DỤNG FILE NÀY !!!
+// Các file sidebar khác đã được đổi tên thành .deprecated
+// - sidebar.tsx.deprecated (cũ)
+// - sidebar-v2.tsx.deprecated (cũ)
+// - layout-v2/sidebar.tsx.deprecated (cũ)
+// =============================================================================
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useSidebar } from '@/lib/sidebar-context';
+import {
+  LayoutDashboard,
+  Package,
+  Layers,
+  Building2,
+  Warehouse,
+  ShoppingCart,
+  ClipboardList,
+  Calculator,
+  Truck,
+  Factory,
+  CheckCircle,
+  BarChart3,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+  ChevronDown,
+  User,
+  LogOut,
+  Bell,
+  Search,
+  Zap,
+  Upload,
+  FileSpreadsheet,
+  DollarSign,
+  Activity,
+  Smartphone,
+  Brain,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+// =============================================================================
+// PROCESS-FLOW SIDEBAR
+// Thiết kế theo Apple Design Principles
+// Navigation phản ánh quy trình MRP tự nhiên
+// =============================================================================
+
+// Types
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  href: string;
+  badge?: number;
+}
+
+interface NavStage {
+  id: string;
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  items: NavItem[];
+}
+
+// =============================================================================
+// NAVIGATION DATA - Theo Process Flow
+// =============================================================================
+
+const stages: NavStage[] = [
+  {
+    id: 'tools',
+    label: 'CÔNG CỤ',
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+    borderColor: 'border-cyan-500',
+    items: [
+      { id: 'data-migration', label: 'Di chuyển dữ liệu', icon: <Upload className="w-5 h-5" />, href: '/data-migration' },
+      { id: 'excel', label: 'Excel Import', icon: <FileSpreadsheet className="w-5 h-5" />, href: '/excel' },
+    ],
+  },
+  {
+    id: 'setup',
+    label: 'THIẾT LẬP',
+    color: 'text-blue-600 dark:text-blue-400',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    borderColor: 'border-blue-500',
+    items: [
+      { id: 'parts', label: 'Danh mục vật tư', icon: <Package className="w-5 h-5" />, href: '/parts' },
+      { id: 'bom', label: 'Định mức BOM', icon: <Layers className="w-5 h-5" />, href: '/bom' },
+      { id: 'suppliers', label: 'Nhà cung cấp', icon: <Building2 className="w-5 h-5" />, href: '/suppliers' },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'VẬN HÀNH',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+    borderColor: 'border-green-500',
+    items: [
+      { id: 'sales', label: 'Đơn hàng', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', badge: 5 },
+      { id: 'inventory', label: 'Tồn kho', icon: <ClipboardList className="w-5 h-5" />, href: '/inventory' },
+      { id: 'mrp', label: 'Hoạch định MRP', icon: <Calculator className="w-5 h-5" />, href: '/mrp' },
+    ],
+  },
+  {
+    id: 'execution',
+    label: 'THỰC HIỆN',
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+    borderColor: 'border-orange-500',
+    items: [
+      { id: 'purchasing', label: 'Mua hàng', icon: <Truck className="w-5 h-5" />, href: '/purchasing', badge: 3 },
+      { id: 'production', label: 'Sản xuất', icon: <Factory className="w-5 h-5" />, href: '/production' },
+      { id: 'quality', label: 'Chất lượng', icon: <CheckCircle className="w-5 h-5" />, href: '/quality' },
+      { id: 'finance', label: 'Tài chính', icon: <DollarSign className="w-5 h-5" />, href: '/finance' },
+    ],
+  },
+  {
+    id: 'analysis',
+    label: 'PHÂN TÍCH',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+    borderColor: 'border-purple-500',
+    items: [
+      { id: 'reports', label: 'Báo cáo', icon: <BarChart3 className="w-5 h-5" />, href: '/analytics' },
+      { id: 'ai', label: 'AI Insights', icon: <Brain className="w-5 h-5" />, href: '/ai' },
+      { id: 'activity', label: 'Hoạt động', icon: <Activity className="w-5 h-5" />, href: '/activity' },
+    ],
+  },
+  {
+    id: 'mobile',
+    label: 'DI ĐỘNG',
+    color: 'text-pink-600 dark:text-pink-400',
+    bgColor: 'bg-pink-50 dark:bg-pink-900/20',
+    borderColor: 'border-pink-500',
+    items: [
+      { id: 'mobile-app', label: 'Ứng dụng Mobile', icon: <Smartphone className="w-5 h-5" />, href: '/mobile' },
+    ],
+  },
+];
+
+// =============================================================================
+// MENU ITEM COMPONENT
+// =============================================================================
+
+interface MenuItemProps {
+  item: NavItem;
+  stage: NavStage;
+  isActive: boolean;
+  isCollapsed: boolean;
+}
+
+function MenuItem({ item, stage, isActive, isCollapsed }: MenuItemProps) {
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'group relative flex items-center gap-2.5 px-3 py-1.5 rounded-lg',
+        'transition-all duration-200 ease-out',
+        isActive
+          ? cn('bg-white dark:bg-gray-800 shadow-sm', stage.color, 'border-l-3', stage.borderColor)
+          : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white'
+      )}
+      title={isCollapsed ? item.label : undefined}
+    >
+      {/* Left border indicator for active */}
+      {isActive && (
+        <div className={cn('absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full', stage.bgColor.replace('bg-', 'bg-').replace('/20', ''))} />
+      )}
+
+      {/* Icon */}
+      <span className={cn(
+        'flex-shrink-0 transition-colors',
+        isActive ? stage.color : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300'
+      )}>
+        {item.icon}
+      </span>
+
+      {/* Label */}
+      {!isCollapsed && (
+        <span className="flex-1 font-medium text-sm truncate">
+          {item.label}
+        </span>
+      )}
+
+      {/* Badge */}
+      {item.badge && !isCollapsed && (
+        <span className={cn(
+          'px-2 py-0.5 text-xs font-bold rounded-full',
+          isActive
+            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+            : 'bg-red-500 text-white'
+        )}>
+          {item.badge}
+        </span>
+      )}
+
+      {/* Badge dot for collapsed */}
+      {item.badge && isCollapsed && (
+        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+      )}
+
+      {/* Tooltip for collapsed */}
+      {isCollapsed && (
+        <div className={cn(
+          'absolute left-full ml-3 px-3 py-2 rounded-lg shadow-lg',
+          'bg-gray-900 dark:bg-gray-700 text-white text-sm font-medium',
+          'opacity-0 invisible group-hover:opacity-100 group-hover:visible',
+          'transition-all duration-200 z-50 whitespace-nowrap'
+        )}>
+          {item.label}
+          {item.badge && (
+            <span className="ml-2 px-1.5 py-0.5 bg-red-500 rounded-full text-xs">
+              {item.badge}
+            </span>
+          )}
+          {/* Arrow */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+        </div>
+      )}
+    </Link>
+  );
+}
+
+// =============================================================================
+// STAGE GROUP COMPONENT
+// =============================================================================
+
+interface StageGroupProps {
+  stage: NavStage;
+  isCollapsed: boolean;
+  pathname: string;
+}
+
+function StageGroup({ stage, isCollapsed, pathname }: StageGroupProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  const hasActiveItem = stage.items.some((item) => pathname.startsWith(item.href));
+
+  // Auto-expand if has active item
+  useEffect(() => {
+    if (hasActiveItem) {
+      setIsExpanded(true);
+    }
+  }, [hasActiveItem]);
+
+  if (isCollapsed) {
+    return (
+      <div className="space-y-0.5 py-1">
+        {stage.items.map((item) => (
+          <MenuItem
+            key={item.id}
+            item={item}
+            stage={stage}
+            isActive={pathname.startsWith(item.href)}
+            isCollapsed={true}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-1">
+      {/* Stage header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={cn(
+          'w-full flex items-center justify-between px-3 py-1.5',
+          'text-[11px] font-semibold uppercase tracking-wider',
+          'transition-colors duration-200',
+          stage.color
+        )}
+      >
+        <span>{stage.label}</span>
+        <ChevronDown className={cn(
+          'w-3.5 h-3.5 transition-transform duration-200',
+          !isExpanded && '-rotate-90'
+        )} />
+      </button>
+
+      {/* Stage items */}
+      <div className={cn(
+        'space-y-0.5 overflow-hidden transition-all duration-300',
+        isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+      )}>
+        {stage.items.map((item) => (
+          <MenuItem
+            key={item.id}
+            item={item}
+            stage={stage}
+            isActive={pathname.startsWith(item.href)}
+            isCollapsed={false}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// MAIN SIDEBAR COMPONENT
+// =============================================================================
+
+interface ProcessFlowSidebarProps {
+  className?: string;
+}
+
+export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
+  const { isCollapsed, toggleCollapsed } = useSidebar();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 lg:hidden"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+      </button>
+
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed top-0 left-0 z-40 h-screen',
+          'bg-gray-50 dark:bg-gray-900',
+          'border-r border-gray-200 dark:border-gray-800',
+          'flex flex-col',
+          'transition-all duration-300 ease-out',
+          isCollapsed ? 'w-[72px]' : 'w-64',
+          // Mobile
+          'lg:translate-x-0',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          className
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-800">
+          <Link href="/home" className="flex items-center gap-3">
+            {/* Bloomberg-style Logo */}
+            <div className="h-8 w-8 rounded bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center">
+              <span className="text-white font-bold text-xs font-mono">MRP</span>
+            </div>
+            {!isCollapsed && (
+              <span className="font-bold text-lg font-mono text-gray-900 dark:text-white tracking-tight flex items-end">
+                MRP<span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-1" />
+              </span>
+            )}
+          </Link>
+
+          <div className="flex items-center gap-1">
+            {/* Collapse button - desktop only */}
+            <button
+              onClick={toggleCollapsed}
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Mobile close */}
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 lg:hidden"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dashboard link - always visible */}
+        <div className="px-3 pt-3 pb-1">
+          <Link
+            href="/home"
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded-lg',
+              'transition-all duration-200',
+              pathname === '/home' || pathname === '/'
+                ? 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200/50 dark:border-blue-800/50'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800'
+            )}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            {!isCollapsed && (
+              <span className="font-semibold text-sm">Tổng quan</span>
+            )}
+          </Link>
+        </div>
+
+        {/* Divider */}
+        <div className="mx-4 my-1 border-t border-gray-200 dark:border-gray-700" />
+
+        {/* Navigation stages */}
+        <nav className="flex-1 overflow-y-auto px-3 py-1 space-y-0">
+          {stages.map((stage) => (
+            <StageGroup
+              key={stage.id}
+              stage={stage}
+              isCollapsed={isCollapsed}
+              pathname={pathname}
+            />
+          ))}
+        </nav>
+
+        {/* Divider */}
+        <div className="mx-4 my-1 border-t border-gray-200 dark:border-gray-700" />
+
+        {/* User & Settings - Combined section */}
+        <div className={cn(
+          'p-2',
+          isCollapsed && 'flex flex-col items-center gap-1'
+        )}>
+          {isCollapsed ? (
+            <>
+              {/* Collapsed: Stack vertically - Settings on top, User at bottom */}
+              <Link
+                href="/settings"
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors',
+                  pathname === '/settings'
+                    ? 'text-blue-600 bg-white dark:bg-gray-800 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800'
+                )}
+                title="Cài đặt"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-sm cursor-pointer hover:scale-105 transition-transform" title="Admin User">
+                AU
+              </div>
+            </>
+          ) : (
+            /* Expanded: Horizontal layout */
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+              {/* Avatar */}
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
+                AU
+              </div>
+
+              {/* User info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  Admin User
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  admin@rtr.vn
+                </p>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-0.5">
+                <Link
+                  href="/settings"
+                  className={cn(
+                    'p-1.5 rounded-lg transition-colors',
+                    pathname === '/settings'
+                      ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  )}
+                  title="Cài đặt"
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+                <button
+                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
+  );
+}
+
+// =============================================================================
+// COMPACT PROCESS INDICATOR (for mobile/top bar)
+// =============================================================================
+
+export function ProcessIndicator() {
+  const pathname = usePathname();
+
+  // Find current stage and item
+  let currentStage: NavStage | null = null;
+  let currentItem: NavItem | null = null;
+
+  for (const stage of stages) {
+    const item = stage.items.find((i) => pathname.startsWith(i.href));
+    if (item) {
+      currentStage = stage;
+      currentItem = item;
+      break;
+    }
+  }
+
+  if (!currentStage || !currentItem) {
+    return null;
+  }
+
+  return (
+    <div className={cn(
+      'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm',
+      currentStage.bgColor,
+      currentStage.color
+    )}>
+      <span className="font-medium">{currentStage.label}</span>
+      <ChevronRight className="w-4 h-4 opacity-50" />
+      <span>{currentItem.label}</span>
+    </div>
+  );
+}
+
+export default ProcessFlowSidebar;

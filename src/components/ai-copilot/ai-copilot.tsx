@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Brain, MessageSquare, Sparkles, Settings, Bell, X,
+  Bot, MessageSquare, Sparkles, Settings, Bell, X,
   ChevronLeft, ChevronRight, Minimize2, Maximize2,
   HelpCircle, History, Shield, Zap
 } from 'lucide-react';
@@ -109,10 +109,10 @@ export default function AICopilot({
     return (
       <button
         onClick={() => setAiEnabled(true)}
-        className="fixed bottom-4 right-4 z-40 p-3 bg-gray-200 text-gray-500 rounded-full shadow-lg hover:bg-gray-300 transition-colors"
+        className="fixed bottom-4 right-4 z-40 p-2.5 bg-gray-200 text-gray-500 rounded-full shadow-lg hover:bg-gray-300 transition-colors"
         title={language === 'vi' ? 'Bật AI Copilot' : 'Enable AI Copilot'}
       >
-        <Brain className="h-6 w-6" />
+        <Bot className="h-5 w-5" />
       </button>
     );
   }
@@ -124,13 +124,13 @@ export default function AICopilot({
         <div className="fixed bottom-4 right-4 z-40">
           <button
             onClick={() => { setIsOpen(true); setActiveMode('chat'); }}
-            className="relative p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all group"
+            className="relative p-2 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
             title={language === 'vi' ? 'AI Copilot (Ctrl+K)' : 'AI Copilot (Ctrl+K)'}
           >
-            <Brain className="h-6 w-6" />
+            <Bot className="h-5 w-5" />
             {/* Insights badge */}
             {insightsCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+              <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md">
                 {insightsCount}
               </span>
             )}
@@ -149,7 +149,7 @@ export default function AICopilot({
           <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-white/20 rounded-lg">
-                <Brain className="h-5 w-5" />
+                <Bot className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-semibold text-sm">RTR AI Copilot</h3>
@@ -258,7 +258,7 @@ export default function AICopilot({
                   {/* AI Settings */}
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                      <Brain className="h-4 w-4 mr-2" />
+                      <Bot className="h-4 w-4 mr-2" />
                       {language === 'vi' ? 'Cài đặt AI' : 'AI Settings'}
                     </h4>
                     

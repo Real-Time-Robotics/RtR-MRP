@@ -239,6 +239,10 @@ model Part {
   @@index([ndaaCompliant])
   @@index([makeOrBuy])
   @@index([countryOfOrigin])
+  // Additional performance indexes
+  @@index([category, status])
+  @@index([status])
+  @@index([isCritical])
   @@map("parts")
 }
 
@@ -552,6 +556,11 @@ model Inventory {
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@unique([partId, warehouseId, lotNumber])
+  // Performance indexes
+  @@index([partId])
+  @@index([warehouseId])
+  @@index([partId, warehouseId])
+  @@index([expiryDate])
   @@map("inventory")
 }
 
@@ -602,6 +611,11 @@ model SalesOrder {
   // Financial relations
   salesInvoices SalesInvoice[]
 
+  // Performance indexes
+  @@index([customerId, orderDate])
+  @@index([status])
+  @@index([status, orderDate])
+  @@index([requiredDate])
   @@map("sales_orders")
 }
 
@@ -645,6 +659,11 @@ model PurchaseOrder {
   // Financial relations
   purchaseInvoices PurchaseInvoice[]
 
+  // Performance indexes
+  @@index([supplierId, status])
+  @@index([status])
+  @@index([expectedDate])
+  @@index([orderDate])
   @@map("purchase_orders")
 }
 
@@ -796,6 +815,11 @@ model WorkOrder {
   workOrderCosts WorkOrderCost[]
   costVariances  CostVariance[]
 
+  // Performance indexes
+  @@index([status])
+  @@index([productId])
+  @@index([status, createdAt])
+  @@index([plannedStart, plannedEnd])
   @@map("work_orders")
 }
 

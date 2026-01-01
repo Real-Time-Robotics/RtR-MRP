@@ -1,106 +1,98 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import {
-  exportPartsToExcel,
-  exportSuppliersToExcel,
-  exportOrdersToExcel,
-} from "@/lib/excel-handler";
-import { auth } from "@/lib/auth";
+// =============================================================================
+// EXPORT API ROUTE
+// Handle export requests for various entities
+// =============================================================================
 
-export async function GET(request: NextRequest) {
+import { NextRequest, NextResponse } from 'next/server';
+import { exportData, type ExportFormat, type ExportEntity } from '@/lib/export/export-service';
+
+// =============================================================================
+// POST /api/export
+// Export data in specified format
+// =============================================================================
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type") || "parts";
-    // Note: format parameter (xlsx/csv/pdf) can be added in future
+    const body = await request.json();
+    const { format, entity, title, filters } = body;
 
-    let blob: Blob;
-    let filename: string;
-
-    switch (type) {
-      case "parts": {
-        const parts = await prisma.part.findMany({
-          include: {
-            inventory: {
-              select: { quantity: true },
-            },
-          },
-          orderBy: { partNumber: "asc" },
-        });
-
-        const data = parts.map((part) => ({
-          partNumber: part.partNumber,
-          name: part.name,
-          category: part.category,
-          unitCost: part.unitCost,
-          quantity: part.inventory.reduce((sum, inv) => sum + inv.quantity, 0),
-          status: part.status,
-        }));
-
-        blob = exportPartsToExcel(data);
-        filename = `parts_${new Date().toISOString().split("T")[0]}.xlsx`;
-        break;
-      }
-
-      case "suppliers": {
-        const suppliers = await prisma.supplier.findMany({
-          orderBy: { name: "asc" },
-        });
-
-        const data = suppliers.map((s) => ({
-          code: s.code,
-          name: s.name,
-          country: s.country,
-          leadTimeDays: s.leadTimeDays,
-          rating: s.rating || 0,
-          status: s.status,
-        }));
-
-        blob = exportSuppliersToExcel(data);
-        filename = `suppliers_${new Date().toISOString().split("T")[0]}.xlsx`;
-        break;
-      }
-
-      case "orders": {
-        const orders = await prisma.salesOrder.findMany({
-          include: { customer: { select: { name: true } } },
-          orderBy: { createdAt: "desc" },
-        });
-
-        const data = orders.map((o) => ({
-          orderNumber: o.orderNumber,
-          customer: o.customer.name,
-          orderDate: o.orderDate.toISOString().split("T")[0],
-          requiredDate: o.requiredDate.toISOString().split("T")[0],
-          status: o.status,
-          totalAmount: o.totalAmount || 0,
-        }));
-
-        blob = exportOrdersToExcel(data);
-        filename = `orders_${new Date().toISOString().split("T")[0]}.xlsx`;
-        break;
-      }
-
-      default:
-        return NextResponse.json(
-          { error: "Invalid export type" },
-          { status: 400 }
-        );
+    // Validate required fields
+    if (!format || !entity) {
+      return NextResponse.json(
+        { success: false, error: 'Format and entity are required' },
+        { status: 400 }
+      );
     }
 
-    const headers = new Headers();
-    headers.set(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+    // Validate format
+    const validFormats: ExportFormat[] = ['xlsx', 'csv', 'pdf'];
+    if (!validFormats.includes(format)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid format. Supported: ${validFormats.join(', ')}` },
+        { status: 400 }
+      );
+    }
 
-    return new NextResponse(blob, { headers });
+    // Validate entity
+    const validEntities: ExportEntity[] = [
+      'sales-orders', 'parts', 'inventory', 'suppliers', 
+      'customers', 'work-orders', 'quality-records', 'mrp-results'
+    ];
+    if (!validEntities.includes(entity)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid entity. Supported: ${validEntities.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[Export API] Exporting ${entity} as ${format}`);
+
+    // Generate export
+    const result = await exportData({
+      format,
+      entity,
+      title,
+      filters,
+    });
+
+    console.log(`[Export API] Generated ${result.filename} (${result.size} bytes)`);
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+    });
   } catch (error) {
-    console.error("Export failed:", error);
-    return NextResponse.json({ error: "Export failed" }, { status: 500 });
+    console.error('[Export API] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Export failed' },
+      { status: 500 }
+    );
   }
+}
+
+// =============================================================================
+// GET /api/export
+// Get available export options
+// =============================================================================
+
+export async function GET(): Promise<NextResponse> {
+  return NextResponse.json({
+    success: true,
+    data: {
+      formats: [
+        { id: 'xlsx', label: 'Excel (.xls)', description: 'Microsoft Excel format' },
+        { id: 'csv', label: 'CSV (.csv)', description: 'Comma-separated values' },
+        { id: 'pdf', label: 'PDF (.html)', description: 'Printable HTML report' },
+      ],
+      entities: [
+        { id: 'sales-orders', label: 'Đơn hàng', description: 'Danh sách đơn hàng bán' },
+        { id: 'parts', label: 'Vật tư', description: 'Danh mục vật tư' },
+        { id: 'inventory', label: 'Tồn kho', description: 'Báo cáo tồn kho' },
+        { id: 'suppliers', label: 'Nhà cung cấp', description: 'Danh sách NCC' },
+        { id: 'customers', label: 'Khách hàng', description: 'Danh sách khách hàng' },
+        { id: 'work-orders', label: 'Lệnh sản xuất', description: 'Danh sách lệnh SX' },
+        { id: 'quality-records', label: 'Chất lượng', description: 'Báo cáo NCR' },
+      ],
+    },
+  });
 }

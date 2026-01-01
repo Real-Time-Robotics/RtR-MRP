@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
-import { generateMockRecommendations } from "@/lib/ai/recommendation-engine";
+import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
 
 type Recommendation = ReturnType<typeof generateMockRecommendations>[number];
 

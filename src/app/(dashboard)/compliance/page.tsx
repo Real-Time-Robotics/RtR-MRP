@@ -460,7 +460,7 @@ export default function ComplianceDashboard() {
                     <div className="font-medium text-green-500">
                       Audit Trail Integrity Verified
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground" suppressHydrationWarning>
                       Last verified: {new Date().toLocaleString()} | 15,234 entries checked
                     </div>
                   </div>

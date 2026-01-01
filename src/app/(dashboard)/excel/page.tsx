@@ -19,6 +19,9 @@ import {
   Users,
   Warehouse,
   Layers,
+  Zap,
+  Database,
+  Loader2,
 } from "lucide-react";
 
 interface RecentJob {
@@ -32,14 +35,93 @@ interface RecentJob {
   errorRows?: number;
 }
 
+interface StressTestInfo {
+  fileExists: boolean;
+  fileInfo?: {
+    fileName: string;
+    fileSize: number;
+    sheets: { name: string; rowCount: number }[];
+  };
+  currentData: {
+    suppliers: number;
+    parts: number;
+    customers: number;
+    salesOrders: number;
+    purchaseOrders: number;
+    workOrders: number;
+    ncrs: number;
+  };
+}
+
 export default function ExcelHubPage() {
   const [importJobs, setImportJobs] = useState<RecentJob[]>([]);
   const [exportJobs, setExportJobs] = useState<RecentJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stressTestInfo, setStressTestInfo] = useState<StressTestInfo | null>(null);
+  const [stressTestLoading, setStressTestLoading] = useState(false);
+  const [stressTestFetching, setStressTestFetching] = useState(true);
+  const [stressTestError, setStressTestError] = useState<string | null>(null);
+  const [stressTestResult, setStressTestResult] = useState<{
+    success: boolean;
+    message: string;
+    results?: Record<string, { processed: number; errors: number }>;
+  } | null>(null);
 
   useEffect(() => {
     fetchRecentJobs();
+    fetchStressTestInfo();
   }, []);
+
+  const fetchStressTestInfo = async () => {
+    setStressTestFetching(true);
+    setStressTestError(null);
+    try {
+      const res = await fetch('/api/excel/stress-test');
+      if (res.ok) {
+        const data = await res.json();
+        setStressTestInfo(data);
+      } else if (res.status === 401) {
+        setStressTestError('Vui lòng đăng nhập để sử dụng tính năng này');
+      } else {
+        const data = await res.json();
+        setStressTestError(data.error || 'Không thể tải thông tin stress test');
+      }
+    } catch (error) {
+      console.error('Error fetching stress test info:', error);
+      setStressTestError('Lỗi kết nối đến server');
+    } finally {
+      setStressTestFetching(false);
+    }
+  };
+
+  const runStressTestImport = async () => {
+    if (!confirm('Bạn có chắc muốn import dữ liệu stress test? Quá trình này có thể mất vài phút.')) return;
+
+    setStressTestLoading(true);
+    setStressTestResult(null);
+
+    try {
+      const res = await fetch('/api/excel/stress-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entities: ['all'] }),
+      });
+
+      const data = await res.json();
+      setStressTestResult(data);
+
+      if (data.success) {
+        fetchStressTestInfo(); // Refresh counts
+      }
+    } catch (error) {
+      setStressTestResult({
+        success: false,
+        message: 'Import failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+      });
+    } finally {
+      setStressTestLoading(false);
+    }
+  };
 
   const fetchRecentJobs = async () => {
     try {
@@ -158,6 +240,138 @@ export default function ExcelHubPage() {
           </div>
           <ArrowRight className="w-5 h-5 ml-auto" />
         </Link>
+      </div>
+
+      {/* Stress Test Data Section */}
+      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800 p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-orange-500 flex items-center justify-center">
+              <Zap className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Stress Test Data
+              </h2>
+              <p className="text-gray-600 dark:text-neutral-400 text-sm mt-1">
+                Load sample data for testing (1 năm vận hành 2024)
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={runStressTestImport}
+            disabled={!stressTestInfo?.fileExists || stressTestLoading || stressTestFetching}
+            className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+              stressTestInfo?.fileExists && !stressTestLoading && !stressTestFetching
+                ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {stressTestLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Đang import...
+              </>
+            ) : (
+              <>
+                <Database className="w-5 h-5" />
+                Import Data
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Loading State */}
+        {stressTestFetching && (
+          <div className="mt-4 p-4 bg-white/50 dark:bg-neutral-800/50 rounded-lg flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+            <span className="text-gray-600 dark:text-neutral-400">Đang tải thông tin stress test...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {stressTestError && !stressTestFetching && (
+          <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            {stressTestError}
+          </div>
+        )}
+
+        {/* File Info */}
+        {stressTestInfo?.fileExists && stressTestInfo.fileInfo && (
+          <div className="mt-4 p-4 bg-white/50 dark:bg-neutral-800/50 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-neutral-400 mb-2">
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="font-medium">{stressTestInfo.fileInfo.fileName}</span>
+              <span>({(stressTestInfo.fileInfo.fileSize / 1024 / 1024).toFixed(1)} MB)</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {stressTestInfo.fileInfo.sheets.map(sheet => (
+                <span
+                  key={sheet.name}
+                  className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-xs"
+                >
+                  {sheet.name}: {sheet.rowCount.toLocaleString()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {stressTestInfo && !stressTestInfo.fileExists && (
+          <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm">
+            File stress test chưa có. Vui lòng copy file RTR_MRP_StressTest_2024.xls vào thư mục data/
+          </div>
+        )}
+
+        {/* Current Database Stats */}
+        {stressTestInfo && (
+          <div className="mt-4 grid grid-cols-3 md:grid-cols-7 gap-2">
+            {[
+              { label: 'Suppliers', count: stressTestInfo.currentData.suppliers },
+              { label: 'Parts', count: stressTestInfo.currentData.parts },
+              { label: 'Customers', count: stressTestInfo.currentData.customers },
+              { label: 'Sales Orders', count: stressTestInfo.currentData.salesOrders },
+              { label: 'POs', count: stressTestInfo.currentData.purchaseOrders },
+              { label: 'Work Orders', count: stressTestInfo.currentData.workOrders },
+              { label: 'NCRs', count: stressTestInfo.currentData.ncrs },
+            ].map(item => (
+              <div key={item.label} className="text-center p-2 bg-white/50 dark:bg-neutral-800/50 rounded">
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  {item.count.toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-neutral-400">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Import Result */}
+        {stressTestResult && (
+          <div className={`mt-4 p-4 rounded-lg ${
+            stressTestResult.success
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+          }`}>
+            <div className="flex items-center gap-2 font-medium">
+              {stressTestResult.success ? (
+                <CheckCircle className="w-5 h-5" />
+              ) : (
+                <AlertCircle className="w-5 h-5" />
+              )}
+              {stressTestResult.message}
+            </div>
+            {stressTestResult.results && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.entries(stressTestResult.results).map(([entity, stats]) => (
+                  <span key={entity} className="text-xs px-2 py-1 bg-white/50 rounded">
+                    {entity}: {stats.processed} ✓ {stats.errors > 0 && `/ ${stats.errors} ✗`}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Recent Activity */}

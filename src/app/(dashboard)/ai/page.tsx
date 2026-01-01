@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
-import { generateMockRecommendations } from "@/lib/ai/recommendation-engine";
+import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ModelStatus {
@@ -41,9 +41,15 @@ export default function AiDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<ReturnType<typeof generateMockRecommendations>>([]);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<string>("");
   const [mlServiceStatus, setMlServiceStatus] = useState<MLServiceStatus | null>(null);
   const [models, setModels] = useState<ModelStatus[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    setLastUpdated(new Date().toLocaleTimeString());
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -54,7 +60,7 @@ export default function AiDashboardPage() {
     setLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
     setRecommendations(generateMockRecommendations());
-    setLastUpdated(new Date());
+    setLastUpdated(new Date().toLocaleTimeString());
     setLoading(false);
   };
 
@@ -122,8 +128,8 @@ export default function AiDashboardPage() {
                 </>
               )}
             </Badge>
-            <span className="text-sm text-muted-foreground">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+            <span className="text-sm text-muted-foreground" suppressHydrationWarning>
+              Last updated: {lastUpdated || "--:--:--"}
             </span>
             <Button variant="outline" onClick={loadData} disabled={loading}>
               <RefreshCw

@@ -125,7 +125,72 @@ export const rateLimitConfigs = {
 
   // AI/ML endpoints
   ai: { windowMs: 60000, maxRequests: 20 },
+
+  // Dashboard (frequently polled)
+  dashboard: { windowMs: 60000, maxRequests: 60 },
+
+  // List endpoints (paginated)
+  list: { windowMs: 60000, maxRequests: 120 },
+
+  // Write operations
+  write: { windowMs: 60000, maxRequests: 30 },
 };
+
+// ============================================
+// GRACEFUL DEGRADATION
+// ============================================
+
+interface DegradationConfig {
+  enabled: boolean;
+  thresholds: {
+    warning: number; // % of rate limit used
+    critical: number; // % of rate limit used
+  };
+  actions: {
+    warning: () => void;
+    critical: () => void;
+  };
+}
+
+const defaultDegradationConfig: DegradationConfig = {
+  enabled: true,
+  thresholds: {
+    warning: 70,
+    critical: 90,
+  },
+  actions: {
+    warning: () => {
+      logger.warn("Rate limit warning threshold reached");
+    },
+    critical: () => {
+      logger.error("Rate limit critical threshold reached");
+    },
+  },
+};
+
+export async function rateLimitWithDegradation(
+  identifier: string,
+  config: RateLimitConfig,
+  degradation: Partial<DegradationConfig> = {}
+): Promise<RateLimitResult & { degradationLevel: "normal" | "warning" | "critical" }> {
+  const result = await rateLimit(identifier, config);
+  const degradationConfig = { ...defaultDegradationConfig, ...degradation };
+
+  const usagePercent = ((config.maxRequests - result.remaining) / config.maxRequests) * 100;
+  let degradationLevel: "normal" | "warning" | "critical" = "normal";
+
+  if (degradationConfig.enabled) {
+    if (usagePercent >= degradationConfig.thresholds.critical) {
+      degradationLevel = "critical";
+      degradationConfig.actions.critical();
+    } else if (usagePercent >= degradationConfig.thresholds.warning) {
+      degradationLevel = "warning";
+      degradationConfig.actions.warning();
+    }
+  }
+
+  return { ...result, degradationLevel };
+}
 
 // Higher-order function for API routes
 export function withRateLimit(

@@ -42,8 +42,10 @@ export default function ScenariosPage() {
   const fetchSuppliers = async () => {
     try {
       const res = await fetch("/api/suppliers");
-      const data = await res.json();
-      setSuppliers(data);
+      const response = await res.json();
+      // Handle paginated response format
+      const supplierData = Array.isArray(response) ? response : (response.data || []);
+      setSuppliers(supplierData);
     } catch (error) {
       console.error("Failed to fetch suppliers:", error);
     }

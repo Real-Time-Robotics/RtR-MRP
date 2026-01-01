@@ -1,15 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
 
-// GET - List all parts with full details
+// Allowed filters for parts
+const ALLOWED_FILTERS = ["category", "lifecycleStatus", "makeOrBuy"];
+const SEARCH_FIELDS = ["partNumber", "name", "description", "manufacturerPn", "manufacturer"];
+
+// GET - List all parts with pagination
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Parse pagination params
+    const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
     const lifecycleStatus = searchParams.get("lifecycleStatus");
@@ -18,6 +33,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const includeRelations = searchParams.get("includeRelations") === "true";
 
+    // Build where clause
     const where: Record<string, unknown> = {};
 
     if (category) where.category = category;
@@ -27,54 +43,61 @@ export async function GET(request: NextRequest) {
       where.ndaaCompliant = ndaaCompliant === "true";
     }
     if (search) {
-      where.OR = [
-        { partNumber: { contains: search, mode: "insensitive" } },
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { manufacturerPn: { contains: search, mode: "insensitive" } },
-        { manufacturer: { contains: search, mode: "insensitive" } },
-      ];
+      where.OR = SEARCH_FIELDS.map(field => ({
+        [field]: { contains: search, mode: "insensitive" as const },
+      }));
     }
 
-    const parts = await prisma.part.findMany({
-      where,
-      include: includeRelations
-        ? {
-            partSuppliers: {
-              include: { supplier: true },
-              orderBy: { isPreferred: "desc" },
-            },
-            partAlternates: {
-              include: { alternatePart: true },
-              where: { approved: true },
-            },
-            partDocuments: true,
-            partCertifications: {
-              where: {
-                OR: [
-                  { expiryDate: null },
-                  { expiryDate: { gte: new Date() } },
-                ],
+    // Get total count and paginated data in parallel
+    const [totalCount, parts] = await Promise.all([
+      prisma.part.count({ where }),
+      prisma.part.findMany({
+        where,
+        ...buildOffsetPaginationQuery(params),
+        orderBy: params.sortBy
+          ? { [params.sortBy]: params.sortOrder }
+          : { partNumber: "asc" },
+        include: includeRelations
+          ? {
+              partSuppliers: {
+                include: { supplier: true },
+                orderBy: { isPreferred: "desc" },
+                take: 3, // Limit suppliers
+              },
+              partAlternates: {
+                include: { alternatePart: true },
+                where: { approved: true },
+                take: 3, // Limit alternates
+              },
+              partDocuments: {
+                take: 5, // Limit documents
+              },
+              partCertifications: {
+                where: {
+                  OR: [
+                    { expiryDate: null },
+                    { expiryDate: { gte: new Date() } },
+                  ],
+                },
+                take: 3, // Limit certifications
+              },
+            }
+          : {
+              partSuppliers: {
+                include: { supplier: true },
+                orderBy: { isPreferred: "desc" },
+                take: 1,
               },
             },
-          }
-        : {
-            partSuppliers: {
-              include: { supplier: true },
-              orderBy: { isPreferred: "desc" },
-              take: 1,
-            },
-          },
-      orderBy: { partNumber: "asc" },
-    });
+      }),
+    ]);
 
-    return NextResponse.json(parts);
+    return paginatedSuccess(
+      buildPaginatedResponse(parts, totalCount, params, startTime)
+    );
   } catch (error) {
     console.error("Failed to fetch parts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch parts" },
-      { status: 500 }
-    );
+    return paginatedError("Failed to fetch parts", 500);
   }
 }
 

@@ -118,8 +118,10 @@ export default function PartsPage() {
     try {
       const res = await fetch("/api/parts");
       if (res.ok) {
-        const data = await res.json();
-        setParts(data);
+        const response = await res.json();
+        // Handle paginated response format: { success, data, page, totalCount, ... }
+        const partsData = Array.isArray(response) ? response : (response.data || []);
+        setParts(partsData);
       }
     } catch (error) {
       console.error("Failed to fetch parts:", error);

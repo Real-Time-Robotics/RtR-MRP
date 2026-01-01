@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Factory, Loader2, Calendar } from "lucide-react";
+import { Plus, Factory, Loader2, Calendar, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -14,8 +15,11 @@ import {
 } from "@/components/ui/select";
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { usePaginatedData } from "@/hooks/use-paginated-data";
+import { useDebouncedCallback } from "use-debounce";
 
 interface WorkOrder {
   id: string;
@@ -27,60 +31,77 @@ interface WorkOrder {
   plannedEnd: string | null;
   completedQty: number;
   product: {
+    id: string;
     sku: string;
     name: string;
   };
   salesOrder: {
+    id: string;
     orderNumber: string;
     customer: {
+      id: string;
       name: string;
     };
   } | null;
   allocations: Array<{
+    id: string;
     requiredQty: number;
     allocatedQty: number;
+    part: { id: string; partNumber: string; name: string };
   }>;
 }
 
 export default function ProductionPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchInput, setSearchInput] = useState("");
 
-  useEffect(() => {
-    fetchWorkOrders();
-  }, []);
-
-  const fetchWorkOrders = async () => {
-    try {
-      const res = await fetch("/api/production");
-      const data = await res.json();
-      setWorkOrders(data);
-    } catch (error) {
-      console.error("Failed to fetch work orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredOrders = workOrders.filter((wo) => {
-    if (statusFilter === "all") return true;
-    return wo.status === statusFilter;
+  // Use paginated data hook
+  const {
+    data: workOrders,
+    pagination,
+    meta,
+    loading,
+    error,
+    fetchPage,
+    setPageSize,
+    setFilters,
+    setSearch,
+  } = usePaginatedData<WorkOrder>({
+    endpoint: "/api/production",
+    initialPageSize: 50,
   });
 
+  // Debounced search
+  const debouncedSearch = useDebouncedCallback((value: string) => {
+    setSearch(value);
+  }, 300);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+    debouncedSearch(e.target.value);
+  };
+
+  const handleStatusChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    if (value === "all") {
+      setFilters({});
+    } else {
+      setFilters({ status: value });
+    }
+  }, [setFilters]);
+
+  // Stats from pagination metadata (server-calculated)
   const stats = {
-    total: workOrders.length,
-    draft: workOrders.filter((wo) => wo.status === "draft").length,
-    inProgress: workOrders.filter((wo) => wo.status === "in_progress").length,
-    completed: workOrders.filter((wo) => wo.status === "completed").length,
+    total: pagination?.totalItems || 0,
+    displayed: workOrders.length,
   };
 
   const getMaterialReadiness = (allocations: WorkOrder["allocations"]) => {
-    if (allocations.length === 0) return 0;
-    const allocated = allocations.reduce((sum, a) => sum + a.allocatedQty, 0);
-    const required = allocations.reduce((sum, a) => sum + a.requiredQty, 0);
+    if (!allocations || allocations.length === 0) return 0;
+    const allocated = allocations.reduce((sum, a) => sum + (a.allocatedQty || 0), 0);
+    const required = allocations.reduce((sum, a) => sum + (a.requiredQty || 0), 0);
     return required > 0 ? Math.round((allocated / required) * 100) : 0;
   };
 
@@ -104,34 +125,34 @@ export default function ProductionPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Factory className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Factory className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
               <p className="text-sm text-muted-foreground">Total WOs</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div>
-            <p className="text-2xl font-bold">{stats.draft}</p>
-            <p className="text-sm text-muted-foreground">Draft</p>
+            <p className="text-2xl font-bold">{stats.displayed}</p>
+            <p className="text-sm text-muted-foreground">Showing</p>
           </div>
         </Card>
         <Card className="p-4">
           <div>
-            <p className="text-2xl font-bold">{stats.inProgress}</p>
-            <p className="text-sm text-muted-foreground">In Progress</p>
+            <p className="text-2xl font-bold">{meta?.took || 0}ms</p>
+            <p className="text-sm text-muted-foreground">Response Time</p>
           </div>
         </Card>
         <Card className="p-4">
           <div>
-            <p className="text-2xl font-bold">{stats.completed}</p>
-            <p className="text-sm text-muted-foreground">Completed</p>
+            <p className="text-2xl font-bold">{pagination?.totalPages || 0}</p>
+            <p className="text-sm text-muted-foreground">Pages</p>
           </div>
         </Card>
       </div>
@@ -139,28 +160,45 @@ export default function ProductionPage() {
       {/* Work Orders List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <CardTitle>Work Orders</CardTitle>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="released">Released</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search WO number..."
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  className="pl-9 w-full sm:w-[200px]"
+                />
+              </div>
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="released">Released</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {error ? (
+            <div className="text-center py-8 text-red-500">
+              Error: {error}
+            </div>
+          ) : loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : workOrders.length === 0 ? (
             <p className="text-center py-8 text-muted-foreground">
               No work orders found
             </p>
@@ -180,16 +218,16 @@ export default function ProductionPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((wo) => {
+                  {workOrders.map((wo) => {
                     const readiness = getMaterialReadiness(wo.allocations);
                     return (
-                      <tr key={wo.id} className="border-b hover:bg-gray-50">
+                      <tr key={wo.id} className="border-b hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-4 font-mono">{wo.woNumber}</td>
                         <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium">{wo.product.name}</p>
+                            <p className="font-medium">{wo.product?.name || "-"}</p>
                             <p className="text-sm text-muted-foreground">
-                              {wo.product.sku}
+                              {wo.product?.sku || "-"}
                             </p>
                           </div>
                         </td>
@@ -199,7 +237,7 @@ export default function ProductionPage() {
                             <div>
                               <p>{wo.salesOrder.orderNumber}</p>
                               <p className="text-sm text-muted-foreground">
-                                {wo.salesOrder.customer.name}
+                                {wo.salesOrder.customer?.name || "-"}
                               </p>
                             </div>
                           ) : (
@@ -235,6 +273,18 @@ export default function ProductionPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination && (
+            <div className="mt-4 pt-4 border-t">
+              <Pagination
+                pagination={pagination}
+                onPageChange={fetchPage}
+                onPageSizeChange={setPageSize}
+                loading={loading}
+              />
             </div>
           )}
         </CardContent>

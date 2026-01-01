@@ -1,178 +1,357 @@
-// src/components/ui/empty-state.tsx
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
+import React from 'react';
+import Link from 'next/link';
 import {
   Package,
-  FileText,
-  Users,
   ShoppingCart,
-  Warehouse,
-  AlertTriangle,
+  FileText,
   Search,
+  Inbox,
+  AlertCircle,
+  WifiOff,
+  Lock,
   Plus,
-  FileQuestion,
-  LucideIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+  RefreshCw,
+  ArrowRight,
+  Sparkles,
+  FolderOpen,
+  Database,
+  Server,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export interface EmptyStateProps {
-  icon?: LucideIcon;
+// =============================================================================
+// EMPTY STATES
+// Placeholder components for empty/error states
+// =============================================================================
+
+// =============================================================================
+// BASE EMPTY STATE
+// =============================================================================
+
+interface EmptyStateProps {
+  icon?: React.ReactNode;
   title: string;
   description?: string;
   action?: {
     label: string;
-    onClick: () => void;
-    icon?: LucideIcon;
+    href?: string;
+    onClick?: () => void;
   };
   secondaryAction?: {
     label: string;
-    onClick: () => void;
+    href?: string;
+    onClick?: () => void;
   };
-  variant?: "default" | "compact" | "inline";
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-// Preset configurations for common empty states
-export const EMPTY_STATE_PRESETS = {
-  noData: {
-    icon: FileQuestion,
-    title: "No data found",
-    description: "There's nothing here yet. Get started by adding your first item.",
-  },
-  noResults: {
-    icon: Search,
-    title: "No results found",
-    description: "Try adjusting your search or filter criteria.",
-  },
-  noParts: {
-    icon: Package,
-    title: "No parts found",
-    description: "Start by adding parts to your inventory.",
-  },
-  noOrders: {
-    icon: ShoppingCart,
-    title: "No orders yet",
-    description: "Orders will appear here once they're created.",
-  },
-  noSuppliers: {
-    icon: Users,
-    title: "No suppliers added",
-    description: "Add suppliers to manage your supply chain.",
-  },
-  noInventory: {
-    icon: Warehouse,
-    title: "No inventory records",
-    description: "Inventory records will appear here after parts are received.",
-  },
-  noDocuments: {
-    icon: FileText,
-    title: "No documents",
-    description: "Upload or create documents to see them here.",
-  },
-  error: {
-    icon: AlertTriangle,
-    title: "Something went wrong",
-    description: "We encountered an error loading this content.",
-  },
-} as const;
-
 export function EmptyState({
-  icon: Icon = FileQuestion,
+  icon,
   title,
   description,
   action,
   secondaryAction,
-  variant = "default",
   className,
+  size = 'md',
 }: EmptyStateProps) {
-  if (variant === "inline") {
-    return (
-      <div className={cn("flex items-center gap-3 py-4 text-muted-foreground", className)}>
-        <Icon className="h-5 w-5" />
-        <span className="text-sm">{title}</span>
-        {action && (
-          <Button size="sm" variant="ghost" onClick={action.onClick}>
-            {action.icon && <action.icon className="mr-1 h-4 w-4" />}
-            {action.label}
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const sizes = {
+    sm: { icon: 'w-12 h-12', title: 'text-base', desc: 'text-sm', padding: 'py-8' },
+    md: { icon: 'w-16 h-16', title: 'text-lg', desc: 'text-sm', padding: 'py-12' },
+    lg: { icon: 'w-20 h-20', title: 'text-xl', desc: 'text-base', padding: 'py-16' },
+  };
 
-  if (variant === "compact") {
-    return (
-      <div className={cn("flex flex-col items-center py-8 text-center", className)}>
-        <div className="rounded-full bg-muted p-3">
-          <Icon className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h3 className="mt-3 text-sm font-medium">{title}</h3>
-        {description && (
-          <p className="mt-1 max-w-xs text-xs text-muted-foreground">{description}</p>
-        )}
-        {action && (
-          <Button size="sm" className="mt-3" onClick={action.onClick}>
-            {action.icon && <action.icon className="mr-1 h-4 w-4" />}
-            {action.label}
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const s = sizes[size];
 
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center py-12 text-center",
-        className
+    <div className={cn('flex flex-col items-center justify-center text-center', s.padding, className)}>
+      {icon && (
+        <div className={cn('mx-auto text-gray-300 dark:text-gray-600 mb-4', s.icon)}>
+          {icon}
+        </div>
       )}
-    >
-      <div className="rounded-full bg-muted p-4">
-        <Icon className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+      <h3 className={cn('font-semibold text-gray-900 dark:text-white mb-2', s.title)}>
+        {title}
+      </h3>
       {description && (
-        <p className="mt-2 max-w-sm text-sm text-muted-foreground">{description}</p>
+        <p className={cn('text-gray-500 dark:text-gray-400 max-w-sm mb-6', s.desc)}>
+          {description}
+        </p>
       )}
-      <div className="mt-6 flex gap-3">
-        {action && (
-          <Button onClick={action.onClick}>
-            {action.icon ? (
-              <action.icon className="mr-2 h-4 w-4" />
+      {(action || secondaryAction) && (
+        <div className="flex items-center gap-3">
+          {action && (
+            action.href ? (
+              <Link
+                href={action.href}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {action.label}
+              </Link>
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
-            )}
-            {action.label}
-          </Button>
-        )}
-        {secondaryAction && (
-          <Button variant="outline" onClick={secondaryAction.onClick}>
-            {secondaryAction.label}
-          </Button>
-        )}
-      </div>
+              <button
+                onClick={action.onClick}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {action.label}
+              </button>
+            )
+          )}
+          {secondaryAction && (
+            secondaryAction.href ? (
+              <Link
+                href={secondaryAction.href}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                {secondaryAction.label}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            ) : (
+              <button
+                onClick={secondaryAction.onClick}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                {secondaryAction.label}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// Convenience components for common empty states
-export function NoDataFound(props: Partial<EmptyStateProps>) {
-  return <EmptyState {...EMPTY_STATE_PRESETS.noData} {...props} />;
+// =============================================================================
+// PRESET EMPTY STATES
+// =============================================================================
+
+// No Data
+export function NoDataState({ 
+  entity = 'dữ liệu',
+  actionLabel,
+  actionHref,
+  onAction,
+}: { 
+  entity?: string;
+  actionLabel?: string;
+  actionHref?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <EmptyState
+      icon={<Inbox className="w-full h-full" />}
+      title={`Chưa có ${entity}`}
+      description={`Bắt đầu bằng cách thêm ${entity} mới vào hệ thống.`}
+      action={actionLabel ? { label: actionLabel, href: actionHref, onClick: onAction } : undefined}
+    />
+  );
 }
 
-export function NoResultsFound(props: Partial<EmptyStateProps>) {
-  return <EmptyState {...EMPTY_STATE_PRESETS.noResults} {...props} />;
+// No Search Results
+export function NoSearchResults({ 
+  query,
+  onClear,
+}: { 
+  query: string;
+  onClear?: () => void;
+}) {
+  return (
+    <EmptyState
+      icon={<Search className="w-full h-full" />}
+      title="Không tìm thấy kết quả"
+      description={`Không tìm thấy kết quả nào cho "${query}". Thử tìm kiếm với từ khóa khác.`}
+      action={onClear ? { label: 'Xóa tìm kiếm', onClick: onClear } : undefined}
+    />
+  );
 }
 
-export function NoPartsFound(props: Partial<EmptyStateProps>) {
-  return <EmptyState {...EMPTY_STATE_PRESETS.noParts} {...props} />;
+// No Orders
+export function NoOrdersState({ actionHref = '/sales/new' }: { actionHref?: string }) {
+  return (
+    <EmptyState
+      icon={<ShoppingCart className="w-full h-full" />}
+      title="Chưa có đơn hàng"
+      description="Tạo đơn hàng đầu tiên để bắt đầu quản lý bán hàng."
+      action={{ label: 'Tạo đơn hàng', href: actionHref }}
+    />
+  );
 }
 
-export function NoOrdersFound(props: Partial<EmptyStateProps>) {
-  return <EmptyState {...EMPTY_STATE_PRESETS.noOrders} {...props} />;
+// No Inventory
+export function NoInventoryState({ actionHref = '/parts/new' }: { actionHref?: string }) {
+  return (
+    <EmptyState
+      icon={<Package className="w-full h-full" />}
+      title="Kho hàng trống"
+      description="Thêm vật tư vào danh mục để bắt đầu quản lý tồn kho."
+      action={{ label: 'Thêm vật tư', href: actionHref }}
+    />
+  );
 }
 
-export function NoSuppliersFound(props: Partial<EmptyStateProps>) {
-  return <EmptyState {...EMPTY_STATE_PRESETS.noSuppliers} {...props} />;
+// No Documents
+export function NoDocumentsState() {
+  return (
+    <EmptyState
+      icon={<FileText className="w-full h-full" />}
+      title="Chưa có tài liệu"
+      description="Các tài liệu và báo cáo sẽ xuất hiện ở đây."
+    />
+  );
 }
+
+// Empty Folder
+export function EmptyFolderState({ folderName }: { folderName?: string }) {
+  return (
+    <EmptyState
+      icon={<FolderOpen className="w-full h-full" />}
+      title={folderName ? `${folderName} trống` : 'Thư mục trống'}
+      description="Chưa có nội dung trong thư mục này."
+    />
+  );
+}
+
+// =============================================================================
+// ERROR STATES
+// =============================================================================
+
+// General Error
+export function ErrorState({ 
+  title = 'Đã xảy ra lỗi',
+  description,
+  onRetry,
+}: { 
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <EmptyState
+      icon={<AlertCircle className="w-full h-full text-red-400" />}
+      title={title}
+      description={description || 'Không thể tải dữ liệu. Vui lòng thử lại sau.'}
+      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+    />
+  );
+}
+
+// Network Error
+export function NetworkErrorState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <EmptyState
+      icon={<WifiOff className="w-full h-full text-amber-400" />}
+      title="Lỗi kết nối"
+      description="Không thể kết nối đến máy chủ. Kiểm tra kết nối mạng và thử lại."
+      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+    />
+  );
+}
+
+// Access Denied
+export function AccessDeniedState({ onGoBack }: { onGoBack?: () => void }) {
+  return (
+    <EmptyState
+      icon={<Lock className="w-full h-full text-red-400" />}
+      title="Không có quyền truy cập"
+      description="Bạn không có quyền xem nội dung này. Liên hệ quản trị viên nếu cần hỗ trợ."
+      action={onGoBack ? { label: 'Quay lại', onClick: onGoBack } : undefined}
+    />
+  );
+}
+
+// Server Error
+export function ServerErrorState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <EmptyState
+      icon={<Server className="w-full h-full text-red-400" />}
+      title="Lỗi máy chủ"
+      description="Máy chủ đang gặp sự cố. Vui lòng thử lại sau ít phút."
+      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+    />
+  );
+}
+
+// Database Error
+export function DatabaseErrorState({ onRetry }: { onRetry?: () => void }) {
+  return (
+    <EmptyState
+      icon={<Database className="w-full h-full text-red-400" />}
+      title="Lỗi cơ sở dữ liệu"
+      description="Không thể truy cập cơ sở dữ liệu. Vui lòng liên hệ quản trị viên."
+      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+    />
+  );
+}
+
+// =============================================================================
+// SPECIAL STATES
+// =============================================================================
+
+// Coming Soon
+export function ComingSoonState({ featureName }: { featureName?: string }) {
+  return (
+    <EmptyState
+      icon={<Sparkles className="w-full h-full text-purple-400" />}
+      title="Sắp ra mắt"
+      description={featureName ? `Tính năng ${featureName} đang được phát triển và sẽ sớm có mặt.` : 'Tính năng này đang được phát triển và sẽ sớm có mặt.'}
+    />
+  );
+}
+
+// Under Maintenance
+export function MaintenanceState() {
+  return (
+    <EmptyState
+      icon={<RefreshCw className="w-full h-full text-amber-400 animate-spin-slow" />}
+      title="Đang bảo trì"
+      description="Hệ thống đang được bảo trì. Vui lòng quay lại sau."
+    />
+  );
+}
+
+// =============================================================================
+// WRAPPER COMPONENT
+// =============================================================================
+
+interface EmptyStateWrapperProps {
+  isEmpty: boolean;
+  isLoading?: boolean;
+  isError?: boolean;
+  error?: string;
+  onRetry?: () => void;
+  emptyState: React.ReactNode;
+  loadingState?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+export function EmptyStateWrapper({
+  isEmpty,
+  isLoading,
+  isError,
+  error,
+  onRetry,
+  emptyState,
+  loadingState,
+  children,
+}: EmptyStateWrapperProps) {
+  if (isLoading && loadingState) {
+    return <>{loadingState}</>;
+  }
+
+  if (isError) {
+    return <ErrorState title="Đã xảy ra lỗi" description={error} onRetry={onRetry} />;
+  }
+
+  if (isEmpty) {
+    return <>{emptyState}</>;
+  }
+
+  return <>{children}</>;
+}
+
+export default EmptyState;
