@@ -677,15 +677,15 @@ const PartsMasterPage: React.FC = () => {
                   <div className="grid grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-500 mb-1">ITAR Status</label>
-                      <select className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+                      <select className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                         <option>All</option>
                         <option>ITAR Controlled</option>
                         <option>Not Controlled</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Stock Status</label>
-                      <select className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Stock Status</label>
+                      <select className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                         <option>All</option>
                         <option>In Stock</option>
                         <option>Low Stock</option>
@@ -693,16 +693,16 @@ const PartsMasterPage: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Tracking</label>
-                      <select className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Tracking</label>
+                      <select className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                         <option>All</option>
                         <option>Serial Tracked</option>
                         <option>Lot Tracked</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">HAZMAT</label>
-                      <select className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg">
+                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">HAZMAT</label>
+                      <select className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                         <option>All</option>
                         <option>Yes</option>
                         <option>No</option>
@@ -720,7 +720,7 @@ const PartsMasterPage: React.FC = () => {
               </p>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-500">Sort by:</span>
-                <select className="px-2 py-1 text-sm border border-slate-300 rounded-lg">
+                <select className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                   <option>Part Number</option>
                   <option>Name</option>
                   <option>Category</option>

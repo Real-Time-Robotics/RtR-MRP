@@ -648,13 +648,13 @@ const QualityPage: React.FC = () => {
                 className="w-64 pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
               />
             </div>
-            <select className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <select className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
               <option value="all">All Severity</option>
               <option value="MINOR">Minor</option>
               <option value="MAJOR">Major</option>
               <option value="CRITICAL">Critical</option>
             </select>
-            <select className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+            <select className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
               <option value="all">All Sources</option>
               <option value="INTERNAL">Internal</option>
               <option value="INCOMING">Incoming</option>

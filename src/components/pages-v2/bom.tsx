@@ -591,7 +591,7 @@ const BOMPage: React.FC = () => {
                   className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-              <select className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+              <select className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                 <option>All Status</option>
                 <option>Released</option>
                 <option>Draft</option>
