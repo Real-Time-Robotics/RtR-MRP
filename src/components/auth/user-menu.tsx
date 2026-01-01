@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { signOut, useSession } from 'next-auth/react';
 import {
   User,
   Settings,
@@ -12,8 +13,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/lib/auth/auth-context';
-import { getRoleLabel, getRoleColor, authConfig } from '@/lib/auth/auth-types';
+import { getRoleLabel, getRoleColor, type UserRole } from '@/lib/auth/auth-types';
 
 // =============================================================================
 // USER MENU
@@ -28,7 +28,21 @@ interface UserMenuProps {
 export function UserMenu({ className, compact = false }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, logout, isAdmin, isManager } = useAuth();
+  const { data: session } = useSession();
+
+  // Map NextAuth session to user object
+  const sessionUser = session?.user as { name?: string | null; email?: string | null; image?: string | null; role?: string; department?: string } | undefined;
+  const user = sessionUser ? {
+    name: sessionUser.name || 'User',
+    email: sessionUser.email || '',
+    avatar: sessionUser.image || undefined,
+    role: (sessionUser.role || 'viewer') as UserRole,
+    department: sessionUser.department,
+    lastLogin: undefined as Date | undefined,
+  } : null;
+
+  const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -54,11 +68,9 @@ export function UserMenu({ className, compact = false }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setIsOpen(false);
-    await logout();
-    // Redirect to landing page instead of login page
-    window.location.href = '/';
+    signOut({ callbackUrl: '/' });
   };
 
   if (!user) return null;
@@ -253,9 +265,16 @@ export function UserAvatar({
   showRole = false,
   className,
 }: UserAvatarProps) {
-  const { user } = useAuth();
+  const { data: session } = useSession();
 
-  if (!user) return null;
+  if (!session?.user) return null;
+
+  const sessionUser = session.user as { name?: string | null; image?: string | null; role?: string };
+  const user = {
+    name: sessionUser.name || 'User',
+    avatar: sessionUser.image || undefined,
+    role: (sessionUser.role || 'viewer') as UserRole,
+  };
 
   const initials = user.name
     .split(' ')
@@ -309,13 +328,19 @@ export function UserAvatar({
 // =============================================================================
 
 export function AuthStatusIndicator() {
-  const { status, user } = useAuth();
+  const { data: session, status } = useSession();
 
   const statusColors = {
     loading: 'bg-yellow-500',
     authenticated: 'bg-green-500',
     unauthenticated: 'bg-red-500',
   };
+
+  const sessionUser = session?.user as { email?: string | null; role?: string } | undefined;
+  const user = sessionUser ? {
+    role: (sessionUser.role || 'viewer') as UserRole,
+    email: sessionUser.email || '',
+  } : null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
