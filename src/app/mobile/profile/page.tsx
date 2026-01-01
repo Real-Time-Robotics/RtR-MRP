@@ -179,7 +179,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     haptic("light");
-    signOut({ callbackUrl: "/login" });
+    signOut({ callbackUrl: "/" });
   };
 
   const formatBytes = (bytes: number) => {

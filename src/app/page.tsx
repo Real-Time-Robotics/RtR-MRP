@@ -240,8 +240,8 @@ export default async function LandingPage() {
             ].map((stat, i) => (
               <div key={i} className="px-6 py-8 text-center bg-white dark:bg-neutral-950">
                 <div className="text-2xl lg:text-3xl font-bold tracking-tight">{stat.value}</div>
-                <div className="text-xs mt-1 text-zinc-500">{stat.label}</div>
-                <div className="text-[10px] text-zinc-400 dark:text-neutral-600">{stat.labelVi}</div>
+                <div className="text-xs mt-1 text-zinc-600 dark:text-zinc-400">{stat.label}</div>
+                <div className="text-[10px] text-zinc-500 dark:text-neutral-500">{stat.labelVi}</div>
               </div>
             ))}
           </div>
@@ -264,7 +264,7 @@ export default async function LandingPage() {
             <p className="text-base text-zinc-600 dark:text-neutral-400">
               Everything you need to manage manufacturing operations at scale
             </p>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-zinc-600 dark:text-zinc-500">
               Mọi thứ bạn cần để quản lý hoạt động sản xuất quy mô lớn
             </p>
           </div>
@@ -286,9 +286,9 @@ export default async function LandingPage() {
                   <feat.icon className="w-5 h-5 text-zinc-600 dark:text-neutral-300" />
                 </div>
                 <h3 className="text-sm font-semibold mb-1">{feat.title}</h3>
-                <p className="text-xs text-zinc-500 dark:text-neutral-600 mb-2">{feat.titleVi}</p>
-                <p className="text-sm leading-relaxed text-zinc-600 dark:text-neutral-400">{feat.desc}</p>
-                <p className="text-xs leading-relaxed text-zinc-500 dark:text-neutral-500 mt-1">{feat.descVi}</p>
+                <p className="text-xs text-zinc-600 dark:text-neutral-500 mb-2">{feat.titleVi}</p>
+                <p className="text-sm leading-relaxed text-zinc-700 dark:text-neutral-400">{feat.desc}</p>
+                <p className="text-xs leading-relaxed text-zinc-600 dark:text-neutral-500 mt-1">{feat.descVi}</p>
               </div>
             ))}
           </div>
@@ -305,7 +305,7 @@ export default async function LandingPage() {
             <h2 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
               Built with Modern Technology
             </h2>
-            <p className="text-lg text-zinc-500 mb-3">Xây dựng với Công nghệ Hiện đại</p>
+            <p className="text-lg text-zinc-600 dark:text-zinc-500 mb-3">Xây dựng với Công nghệ Hiện đại</p>
             <p className="text-base text-zinc-600 dark:text-neutral-400">
               Production-ready architecture using industry-leading tools
             </p>
@@ -365,9 +365,9 @@ export default async function LandingPage() {
                     <span className="text-sm font-semibold">{doc.title}</span>
                     <ChevronRight className="w-3.5 h-3.5 opacity-0 transition-all group-hover:opacity-100 text-zinc-400" />
                   </div>
-                  <p className="text-xs text-zinc-500 dark:text-neutral-600">{doc.titleVi}</p>
-                  <p className="text-sm mt-1 text-zinc-600 dark:text-neutral-400">{doc.desc}</p>
-                  <p className="text-xs text-zinc-500">{doc.descVi}</p>
+                  <p className="text-xs text-zinc-600 dark:text-neutral-500">{doc.titleVi}</p>
+                  <p className="text-sm mt-1 text-zinc-700 dark:text-neutral-400">{doc.desc}</p>
+                  <p className="text-xs text-zinc-600 dark:text-neutral-500">{doc.descVi}</p>
                 </div>
               </Link>
             ))}
@@ -390,7 +390,7 @@ export default async function LandingPage() {
               <p className="text-base mb-8 text-zinc-600 dark:text-neutral-400">
                 24 endpoints with webhooks and comprehensive documentation
               </p>
-              <p className="text-sm mb-8 text-zinc-500">
+              <p className="text-sm mb-8 text-zinc-600 dark:text-zinc-500">
                 24 endpoints với webhooks và tài liệu đầy đủ
               </p>
 
@@ -476,7 +476,7 @@ export default async function LandingPage() {
               <p className="font-mono text-sm text-zinc-600 dark:text-neutral-400 mb-8 max-w-md mx-auto">
                 Initialize your manufacturing operations
                 <br />
-                <span className="text-zinc-400 dark:text-neutral-600">Khởi tạo hệ thống quản lý sản xuất</span>
+                <span className="text-zinc-500 dark:text-neutral-500">Khởi tạo hệ thống quản lý sản xuất</span>
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -524,7 +524,7 @@ export default async function LandingPage() {
                   { en: 'API', vi: 'API' },
                 ].map((item) => (
                   <a key={item.en} href="#" className="block text-sm transition-colors text-zinc-600 dark:text-neutral-400 hover:text-zinc-900 dark:hover:text-white">
-                    {item.en} <span className="text-zinc-400 dark:text-neutral-600">/ {item.vi}</span>
+                    {item.en} <span className="text-zinc-500 dark:text-neutral-500">/ {item.vi}</span>
                   </a>
                 ))}
               </div>

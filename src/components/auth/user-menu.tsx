@@ -57,7 +57,8 @@ export function UserMenu({ className, compact = false }: UserMenuProps) {
   const handleLogout = async () => {
     setIsOpen(false);
     await logout();
-    window.location.href = authConfig.loginPath;
+    // Redirect to landing page instead of login page
+    window.location.href = '/';
   };
 
   if (!user) return null;
