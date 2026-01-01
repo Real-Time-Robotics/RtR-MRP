@@ -1,5 +1,5 @@
-import QualityPage from '@/components/pages-v2/quality';
+import QualityConnected from '@/components/pages-v2/quality-connected';
 
 export default function Quality() {
-  return <QualityPage />;
+  return <QualityConnected />;
 }

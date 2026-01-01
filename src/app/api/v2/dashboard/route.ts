@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { withAuth, AuthUser } from '@/lib/auth/middleware';
 import { handleError, successResponse } from '@/lib/error-handler';
 import { logger } from '@/lib/logger';
+import { cache, cacheTTL } from '@/lib/cache/redis';
 
 // =============================================================================
 // GET - Dashboard data (requires authentication)
@@ -19,6 +20,14 @@ export const GET = withAuth(
 
     try {
       logger.info('Fetching dashboard data', { userId: user.id });
+
+      // Try cache first
+      const cacheKey = `v2:dashboard:${user.id}`;
+      const cached = await cache.get<any>(cacheKey);
+      if (cached) {
+        logger.info('Dashboard served from cache', { userId: user.id });
+        return successResponse({ ...cached, _cached: true });
+      }
 
       // Get date ranges
       const now = new Date();
@@ -198,6 +207,9 @@ export const GET = withAuth(
 
       const duration = performance.now() - startTime;
       logger.info('Dashboard data fetched', { userId: user.id, durationMs: duration.toFixed(2) });
+
+      // Cache for 30 seconds
+      await cache.set(cacheKey, dashboardData, cacheTTL.SHORT);
 
       return successResponse(dashboardData);
     } catch (error) {

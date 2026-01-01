@@ -1,5 +1,5 @@
-import AnalyticsPage from '@/components/pages-v2/analytics';
+import AnalyticsConnected from '@/components/pages-v2/analytics-connected';
 
 export default function Analytics() {
-  return <AnalyticsPage />;
+  return <AnalyticsConnected />;
 }

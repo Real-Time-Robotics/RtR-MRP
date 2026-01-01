@@ -1,0 +1,408 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Download,
+  X,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Smartphone,
+  CheckCircle,
+  AlertTriangle,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  usePWAInstall,
+  useOnlineStatus,
+  useServiceWorker,
+} from '@/lib/pwa/pwa-utils';
+
+// =============================================================================
+// PWA COMPONENTS
+// Install prompts, offline banners, and update notifications
+// =============================================================================
+
+// =============================================================================
+// INSTALL PROMPT
+// =============================================================================
+
+interface InstallPromptProps {
+  className?: string;
+}
+
+export function InstallPrompt({ className }: InstallPromptProps) {
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const [isDismissed, setIsDismissed] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+
+  // Check if dismissed before
+  useEffect(() => {
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    if (dismissed) {
+      const dismissedTime = parseInt(dismissed, 10);
+      // Show again after 7 days
+      if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
+        setIsDismissed(true);
+      }
+    }
+  }, []);
+
+  if (!isInstallable || isInstalled || isDismissed) {
+    return null;
+  }
+
+  const handleInstall = async () => {
+    setIsInstalling(true);
+    await install();
+    setIsInstalling(false);
+  };
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+  };
+
+  return (
+    <div className={cn(
+      'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-bottom-4 duration-300',
+      className
+    )}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+              <Smartphone className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                Cài đặt RTR MRP
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Thêm vào màn hình chính để truy cập nhanh hơn và sử dụng offline.
+              </p>
+            </div>
+            <button
+              onClick={handleDismiss}
+              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="flex gap-2 px-4 pb-4">
+          <button
+            onClick={handleDismiss}
+            className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+          >
+            Để sau
+          </button>
+          <button
+            onClick={handleInstall}
+            disabled={isInstalling}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50"
+          >
+            {isInstalling ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Cài đặt
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// OFFLINE BANNER
+// =============================================================================
+
+interface OfflineBannerProps {
+  className?: string;
+}
+
+export function OfflineBanner({ className }: OfflineBannerProps) {
+  const { isOnline, wasOffline } = useOnlineStatus();
+  const [showReconnected, setShowReconnected] = useState(false);
+
+  useEffect(() => {
+    if (isOnline && wasOffline) {
+      setShowReconnected(true);
+      const timer = setTimeout(() => setShowReconnected(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOnline, wasOffline]);
+
+  if (isOnline && !showReconnected) {
+    return null;
+  }
+
+  return (
+    <div className={cn(
+      'fixed top-0 left-0 right-0 z-50 animate-in slide-in-from-top duration-300',
+      className
+    )}>
+      <div className={cn(
+        'px-4 py-2 text-center text-sm font-medium',
+        isOnline
+          ? 'bg-green-500 text-white'
+          : 'bg-amber-500 text-white'
+      )}>
+        <div className="flex items-center justify-center gap-2">
+          {isOnline ? (
+            <>
+              <Wifi className="w-4 h-4" />
+              <span>Đã kết nối lại! Đang đồng bộ dữ liệu...</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4" />
+              <span>Không có kết nối mạng. Đang làm việc offline.</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// UPDATE AVAILABLE BANNER
+// =============================================================================
+
+interface UpdateBannerProps {
+  className?: string;
+}
+
+export function UpdateBanner({ className }: UpdateBannerProps) {
+  const { updateAvailable, update } = useServiceWorker();
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  if (!updateAvailable || isDismissed) {
+    return null;
+  }
+
+  return (
+    <div className={cn(
+      'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-bottom-4 duration-300',
+      className
+    )}>
+      <div className="bg-blue-600 text-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-white/20 rounded-xl">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">Phiên bản mới có sẵn</h3>
+              <p className="text-sm text-blue-100 mt-1">
+                Cập nhật để sử dụng các tính năng mới nhất.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsDismissed(true)}
+              className="p-1 text-blue-200 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="flex gap-2 px-4 pb-4">
+          <button
+            onClick={() => setIsDismissed(true)}
+            className="flex-1 px-4 py-2 text-sm font-medium text-blue-100 hover:bg-white/10 rounded-xl transition-colors"
+          >
+            Để sau
+          </button>
+          <button
+            onClick={update}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-50 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Cập nhật ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// OFFLINE INDICATOR (compact)
+// =============================================================================
+
+export function OfflineIndicator() {
+  const { isOnline } = useOnlineStatus();
+
+  return (
+    <div className={cn(
+      'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all',
+      isOnline
+        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+        : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+    )}>
+      {isOnline ? (
+        <>
+          <Wifi className="w-3 h-3" />
+          <span>Online</span>
+        </>
+      ) : (
+        <>
+          <WifiOff className="w-3 h-3" />
+          <span>Offline</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// PWA STATUS CARD (for settings page)
+// =============================================================================
+
+export function PWAStatusCard() {
+  const { isInstallable, isInstalled, install } = usePWAInstall();
+  const { isOnline } = useOnlineStatus();
+  const { isRegistered, updateAvailable, update, checkForUpdates } = useServiceWorker();
+  const [checking, setChecking] = useState(false);
+
+  const handleCheckUpdates = async () => {
+    setChecking(true);
+    await checkForUpdates();
+    setTimeout(() => setChecking(false), 1000);
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <Smartphone className="w-5 h-5 text-purple-600" />
+          Ứng dụng PWA
+        </h3>
+      </div>
+      <div className="p-5 space-y-4">
+        {/* Install Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'p-2 rounded-lg',
+              isInstalled ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'
+            )}>
+              {isInstalled ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <Download className="w-5 h-5 text-gray-500" />
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Cài đặt</p>
+              <p className="text-sm text-gray-500">
+                {isInstalled ? 'Đã cài đặt' : isInstallable ? 'Sẵn sàng cài đặt' : 'Không khả dụng'}
+              </p>
+            </div>
+          </div>
+          {isInstallable && !isInstalled && (
+            <button
+              onClick={install}
+              className="px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Cài đặt
+            </button>
+          )}
+        </div>
+
+        {/* Network Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'p-2 rounded-lg',
+              isOnline ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30'
+            )}>
+              {isOnline ? (
+                <Wifi className="w-5 h-5 text-green-600" />
+              ) : (
+                <WifiOff className="w-5 h-5 text-amber-600" />
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Kết nối</p>
+              <p className="text-sm text-gray-500">
+                {isOnline ? 'Đang online' : 'Đang offline'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Service Worker Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'p-2 rounded-lg',
+              isRegistered ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'
+            )}>
+              {isRegistered ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-gray-500" />
+              )}
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Service Worker</p>
+              <p className="text-sm text-gray-500">
+                {isRegistered ? 'Đã kích hoạt' : 'Chưa đăng ký'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Update Status */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              'p-2 rounded-lg',
+              updateAvailable ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'
+            )}>
+              <RefreshCw className={cn(
+                'w-5 h-5',
+                updateAvailable ? 'text-blue-600' : 'text-gray-500'
+              )} />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">Cập nhật</p>
+              <p className="text-sm text-gray-500">
+                {updateAvailable ? 'Có phiên bản mới' : 'Đã là phiên bản mới nhất'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCheckUpdates}
+              disabled={checking}
+              className="px-3 py-1.5 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn('w-4 h-4', checking && 'animate-spin')} />
+            </button>
+            {updateAvailable && (
+              <button
+                onClick={update}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Cập nhật
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default {
+  InstallPrompt,
+  OfflineBanner,
+  UpdateBanner,
+  OfflineIndicator,
+  PWAStatusCard,
+};

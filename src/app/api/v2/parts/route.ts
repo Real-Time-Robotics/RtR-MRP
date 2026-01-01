@@ -10,6 +10,7 @@ import { handleError, paginatedResponse, successResponse, createdResponse } from
 import { logger } from '@/lib/logger';
 import { PartQuerySchema, PartCreateSchema, parseSearchParams, validateRequest } from '@/lib/validation/schemas';
 import { sanitizeSearchQuery } from '@/lib/security/sanitize';
+import { cache, cacheTTL, cachePatterns } from '@/lib/cache/redis';
 
 // GET - List parts (requires authentication + read permission)
 export const GET = withAuth(
@@ -40,6 +41,19 @@ export const GET = withAuth(
       const sanitizedSearch = search ? sanitizeSearchQuery(search) : '';
 
       logger.info('Fetching parts', { userId: user.id, search: sanitizedSearch, page });
+
+      // Try cache for non-search queries (search results are too variable)
+      const cacheKey = !sanitizedSearch
+        ? `v2:parts:${page}:${pageSize}:${category || ''}:${status || ''}:${type || ''}:${itar || ''}:${stockStatus || ''}:${sortBy}:${sortOrder}`
+        : null;
+
+      if (cacheKey) {
+        const cached = await cache.get<any>(cacheKey);
+        if (cached) {
+          logger.info('Parts served from cache', { userId: user.id, page });
+          return paginatedResponse(cached.data, cached.total, page, pageSize, { ...cached.meta, _cached: true });
+        }
+      }
 
       // Build where clause with sanitized inputs
       const where: any = {};
@@ -180,16 +194,27 @@ export const GET = withAuth(
         _count: true,
       });
 
+      const meta = {
+        filters: {
+          categories: categories.map(c => ({ value: c.category, count: c._count })),
+        }
+      };
+
+      // Cache results for 1 minute (non-search queries only)
+      if (cacheKey) {
+        await cache.set(cacheKey, {
+          data: filteredParts,
+          total: stockStatus ? filteredParts.length : total,
+          meta
+        }, cacheTTL.MEDIUM);
+      }
+
       return paginatedResponse(
         filteredParts,
         stockStatus ? filteredParts.length : total,
         page,
         pageSize,
-        {
-          filters: {
-            categories: categories.map(c => ({ value: c.category, count: c._count })),
-          }
-        }
+        meta
       );
 
     } catch (error) {
@@ -251,6 +276,9 @@ export const POST = withAuth(
       });
 
       logger.audit('create', 'part', part.id, { userId: user.id, partNumber: part.partNumber });
+
+      // Invalidate parts cache
+      await cache.deletePattern('v2:parts:*');
 
       return createdResponse(part);
 

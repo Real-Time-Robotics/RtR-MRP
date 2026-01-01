@@ -1,5 +1,5 @@
-import ProductionPage from '@/components/pages-v2/production';
+import ProductionConnected from '@/components/pages-v2/production-connected';
 
 export default function Production() {
-  return <ProductionPage />;
+  return <ProductionConnected />;
 }

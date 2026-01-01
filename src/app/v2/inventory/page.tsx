@@ -1,5 +1,5 @@
-import InventoryPage from '@/components/pages-v2/inventory';
+import InventoryConnected from '@/components/pages-v2/inventory-connected';
 
 export default function Inventory() {
-  return <InventoryPage />;
+  return <InventoryConnected />;
 }

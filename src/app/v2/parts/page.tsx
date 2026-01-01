@@ -1,5 +1,5 @@
-import PartsPage from '@/components/pages-v2/parts-master';
+import PartsMasterConnected from '@/components/pages-v2/parts-master-connected';
 
 export default function Parts() {
-  return <PartsPage />;
+  return <PartsMasterConnected />;
 }

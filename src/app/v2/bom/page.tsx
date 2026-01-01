@@ -1,5 +1,5 @@
-import BOMPage from '@/components/pages-v2/bom';
+import BOMConnected from '@/components/pages-v2/bom-connected';
 
 export default function BOM() {
-  return <BOMPage />;
+  return <BOMConnected />;
 }

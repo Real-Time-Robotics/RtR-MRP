@@ -132,3 +132,50 @@ export {
   type LabelElement,
   type LabelTemplate,
 } from "./label-generator";
+
+// Scanner Utils (Phase 2)
+export {
+  parseBarcode as parseScanBarcode,
+  getAvailableActions,
+  triggerHaptic,
+  playAudioFeedback,
+  validateScan,
+  HapticPatterns,
+  DEFAULT_SCANNER_CONFIG,
+  type BarcodeFormat,
+  type EntityType as ScannerEntityType,
+  type ScanResult as ScannerScanResult,
+  type ScannerConfig,
+  type ResolvedEntity,
+} from "./scanner-utils";
+
+// Sync Store (Phase 2)
+export {
+  getDB as getSyncDB,
+  cacheParts as cacheSyncParts,
+  getCachedPart,
+  getCachedPartByNumber,
+  searchCachedParts,
+  getAllCachedParts,
+  cacheLocations as cacheSyncLocations,
+  getCachedLocationByCode,
+  getAllCachedLocations,
+  queueOperation,
+  getPendingOperationsCount,
+  getPendingOperations as getQueuedOperations,
+  updateOperationStatus as updateQueuedOperationStatus,
+  syncPendingOperations as syncQueuedOperations,
+  logScan,
+  getRecentScans as getSyncRecentScans,
+  getSyncMetadata,
+  getAllSyncMetadata,
+  downloadMasterData,
+  clearAllCache,
+  getOfflineStatus,
+  type CachedPart,
+  type CachedLocation,
+  type QueuedOperation,
+  type OperationType,
+  type ScanHistoryItem,
+  type SyncMetadata,
+} from "./sync-store";

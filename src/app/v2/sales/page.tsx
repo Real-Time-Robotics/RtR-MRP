@@ -1,5 +1,5 @@
-import SalesPage from '@/components/pages-v2/sales-orders';
+import SalesOrdersConnected from '@/components/pages-v2/sales-orders-connected';
 
 export default function Sales() {
-  return <SalesPage />;
+  return <SalesOrdersConnected />;
 }

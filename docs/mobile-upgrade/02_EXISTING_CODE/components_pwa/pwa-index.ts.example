@@ -1,0 +1,7 @@
+// =============================================================================
+// RTR MRP - PWA COMPONENTS INDEX
+// Central export for all PWA components
+// =============================================================================
+
+export * from './index';
+export * from './meta-tags';

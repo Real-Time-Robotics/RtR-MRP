@@ -1,9 +1,9 @@
 # RTR MRP - HANDOVER DOCUMENT
-> Last updated: 2025-12-31 (UI-API Integration Complete)
+> Last updated: 2026-01-01 (AI Kernel + Mobile Upgrade Package)
 
 ---
 
-## TRANG THAI HIEN TAI: UI-API Integration Complete - Build OK
+## TRANG THAI HIEN TAI: Production Ready + Mobile Upgrade Package Available
 
 ### LENH TIEP TUC NHANH
 Khi quay lai, chi can noi:
@@ -14,9 +14,119 @@ Khi quay lai, chi can noi:
 
 ---
 
+## DA HOAN THANH (2026-01-01)
+
+### NEW: Mobile Upgrade Package (LATEST)
+
+#### Gói nâng cấp Mobile Shop Floor đã sẵn sàng!
+
+**Location:** `docs/mobile-upgrade/`
+
+| Folder | Nội dung |
+|--------|----------|
+| `01_CODER_PACK/` | Đặc tả kỹ thuật đầy đủ (2000+ dòng) |
+| `02_EXISTING_CODE/` | PWA components, manifest, service worker |
+| `03_GUIDES/` | Hướng dẫn thi công + Barcode scanner reference |
+| `04_CHECKLIST/` | 100+ checkbox từng bước |
+
+#### Features (20-27 ngày):
+- PWA installable (Android/iOS)
+- Camera barcode scanner (@zxing/library)
+- Mobile Inventory (adjust, transfer, count)
+- Mobile Receiving (PO workflow)
+- Mobile Picking (pick lists)
+- Work Orders mobile
+- Offline support với sync
+
+#### Bắt đầu:
+```bash
+# 1. Đọc README
+cat docs/mobile-upgrade/README.md
+
+# 2. Follow checklist
+cat docs/mobile-upgrade/04_CHECKLIST/CHECKLIST_THI_CONG.md
+
+# 3. Copy code từ CODER_PACK
+cat docs/mobile-upgrade/01_CODER_PACK/CODER_PACK_PHASE12.md
+```
+
+---
+
+### AI Kernel Integration
+
+#### Files Installed
+| File | Location | Purpose |
+|------|----------|---------|
+| `CLAUDE.md` | Root | Claude Code auto-reads this |
+| `RTR_MRP_AI_KERNEL_MASTER_PROMPT.md` | docs/ | Full AI kernel (41KB) |
+| `AI_KERNEL_IMPLEMENTATION_GUIDE.md` | docs/ | Implementation guide |
+
+#### Task-Specific Prompts (docs/ai-prompts/)
+- `code-review.md` - Security, performance, quality review
+- `debugging.md` - Error analysis and fix
+- `architecture.md` - ADR and design decisions
+- `feature-development.md` - Feature implementation guide
+
+#### Usage
+```bash
+# Claude Code auto-reads CLAUDE.md
+claude "Add new feature X"
+
+# Or use specific prompt
+claude --context docs/ai-prompts/code-review.md "Review src/app/api/v2/parts"
+
+# Test context
+claude "What project are you working on?"
+# → Should answer: RTR-MRP
+```
+
+---
+
+### Route Integration + Caching + Unit Tests
+
+#### A. Route Integration (8/8 pages - COMPLETE)
+Tat ca V2 pages da chuyen sang su dung connected components:
+
+| Page | Route | Component | Status |
+|------|-------|-----------|--------|
+| Dashboard | `/v2/dashboard` | `DashboardConnected` | OK (da co) |
+| Parts | `/v2/parts` | `PartsMasterConnected` | OK (moi) |
+| Sales | `/v2/sales` | `SalesOrdersConnected` | OK (moi) |
+| Production | `/v2/production` | `ProductionConnected` | OK (moi) |
+| Quality | `/v2/quality` | `QualityConnected` | OK (moi) |
+| Inventory | `/v2/inventory` | `InventoryConnected` | OK (moi) |
+| BOM | `/v2/bom` | `BOMConnected` | OK (moi) |
+| Analytics | `/v2/analytics` | `AnalyticsConnected` | OK (moi) |
+
+#### B. API Caching (COMPLETE)
+- Dashboard API: Cache 30s per user (`v2:dashboard:{userId}`)
+- Parts API: Cache 60s cho list queries (ko search)
+- Cache invalidation khi create new part
+
+#### C. Unit Tests (41 tests - ALL PASS)
+```bash
+npm run test:run    # Chay tests
+npm run test        # Watch mode
+```
+
+| Test File | Tests | Status |
+|-----------|-------|--------|
+| `cache.test.ts` | 14 | PASS |
+| `validation.test.ts` | 27 | PASS |
+
+**Test Coverage:**
+- Cache get/set/delete/deletePattern/getOrSet
+- Cache statistics (hits/misses/hitRate)
+- Cache key builders
+- Pagination/Sort/Search schemas
+- Part query & create schemas
+- Date range validation
+
+---
+
 ## DA HOAN THANH (2025-12-31)
 
-### 0. UI-API Integration (NEW - 8/8 pages)
+### 0. UI-API Integration (8/8 pages)
 Tao 8 Connected Pages su dung hooks tu `use-data.ts`:
 
 | Page | File | Hook | Status |
@@ -164,11 +274,10 @@ npx prisma studio             # Open DB GUI
 
 ## CONG VIEC TIEP THEO (GOI Y)
 
-### Option A: Tich hop Connected Pages vao App (RECOMMENDED)
-Connected pages da tao xong, can:
-1. Cap nhat routes trong `/src/app/v2/` de su dung `*-connected.tsx`
-2. Test CRUD operations (Create, Read, Update, Delete)
-3. Test edge cases (empty data, errors, slow network)
+### Option A: Testing & QA
+1. Test CRUD operations tren tat ca pages
+2. Test edge cases (empty data, errors, slow network)
+3. E2E tests voi Playwright/Cypress
 
 ### Option B: Them tinh nang
 1. Real-time updates (WebSocket)
@@ -176,26 +285,40 @@ Connected pages da tao xong, can:
 3. Email notifications
 4. Advanced reporting
 
-### Option C: Toi uu
-1. Redis caching
-2. Performance optimization
-3. Unit tests
-4. E2E tests
+### Option C: Production Deployment
+1. Deploy to Render/Vercel
+2. Setup monitoring (Sentry)
+3. Configure production database
+4. SSL certificate
 
 ---
 
 ## FILES QUAN TRONG
 
 ```
+CLAUDE.md                     # AI KERNEL - Claude Code reads this!
 prisma/schema.prisma          # DATABASE SCHEMA (SOURCE OF TRUTH)
-src/app/api/v2/               # API routes
+src/app/api/v2/               # API routes (with caching)
 src/lib/hooks/use-data.ts     # Data fetching hooks
-src/app/v2/                   # V2 UI pages
+src/lib/cache/redis.ts        # Cache layer (memory/Redis)
+src/lib/validation/schemas.ts # Zod validation schemas
+src/app/v2/                   # V2 UI pages (connected)
 src/components/pages-v2/      # V2 components
-  ├── *-connected.tsx         # NEW: Connected pages (8 files)
+  ├── *-connected.tsx         # Connected pages (8 files)
   └── *.tsx                   # Original mock pages
+src/__tests__/                # Unit tests
+  ├── cache.test.ts           # Cache tests
+  └── validation.test.ts      # Validation tests
+docs/
+  ├── RTR_MRP_AI_KERNEL_MASTER_PROMPT.md  # Full AI kernel
+  ├── AI_KERNEL_IMPLEMENTATION_GUIDE.md   # Implementation guide
+  └── ai-prompts/             # Task-specific prompts
+      ├── code-review.md
+      ├── debugging.md
+      ├── architecture.md
+      └── feature-development.md
+vitest.config.ts              # Test configuration
 .env                          # Local env vars
-render.yaml                   # Render config
 HANDOVER.md                   # This file
 ```
 
@@ -220,27 +343,22 @@ f4968a9 Fix Inventory field names
 | TypeScript | PASS |
 | Prisma Generate | PASS |
 | Next.js Build | PASS |
-| Git Push | PASS |
-| Render Deploy | Auto-triggered |
+| Unit Tests | 41/41 PASS |
+| API Caching | ACTIVE |
+| Route Integration | 8/8 COMPLETE |
+| AI Kernel | INSTALLED |
 
 ---
 
-**San sang cho:** Route Integration, Feature Development, hoac Production Testing
+**San sang cho:** AI-Assisted Development, Feature Development, Production Deployment
 
 ---
 
-## LUU Y KHI TICH HOP ROUTES
+## COMMANDS
 
-De su dung connected pages, cap nhat file page trong `/src/app/v2/[page]/page.tsx`:
-
-```tsx
-// Thay doi import tu:
-import { PartsMaster } from '@/components/pages-v2/parts-master';
-// Thanh:
-import { PartsMasterConnected } from '@/components/pages-v2/parts-master-connected';
-
-// Thay doi component:
-export default function PartsPage() {
-  return <PartsMasterConnected />;
-}
+```bash
+npm run dev          # Start dev server
+npm run build        # Production build
+npm run test:run     # Run all tests
+npm run test         # Watch mode tests
 ```
