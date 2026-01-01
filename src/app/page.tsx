@@ -3,7 +3,7 @@
 // Bilingual EN/VI with Light/Dark Theme Support
 // =============================================================================
 
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation';  // Temporarily disabled for debugging
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -32,18 +32,17 @@ import { ThemeToggle } from '@/components/landing/theme-toggle';
 // =============================================================================
 
 export default async function LandingPage() {
-  // If user is logged in, redirect to dashboard
-  // Use dynamic import to prevent module-level errors from breaking the page
-  try {
-    const { auth } = await import('@/lib/auth');
-    const session = await auth();
-    if (session) {
-      redirect('/home');
-    }
-  } catch (error) {
-    // If auth fails (e.g., database/env not available), continue to show landing page
-    console.error('Auth check failed:', error);
-  }
+  // Auth redirect temporarily disabled to debug 500 errors
+  // TODO: Re-enable after verifying landing page works
+  // try {
+  //   const { auth } = await import('@/lib/auth');
+  //   const session = await auth();
+  //   if (session) {
+  //     redirect('/home');
+  //   }
+  // } catch (error) {
+  //   console.error('Auth check failed:', error);
+  // }
 
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 text-zinc-900 dark:text-neutral-50 font-[system-ui] antialiased transition-colors duration-300">
