@@ -323,6 +323,20 @@
   fill: transparent !important;
 }
 
+/* =============================================================================
+   NATIVE SELECT DARK MODE FIX
+   ============================================================================= */
+.dark select:not([class*="dark:"]) {
+  background-color: #262626 !important; /* neutral-800 */
+  border-color: #404040 !important; /* neutral-700 */
+  color: #fafafa !important; /* neutral-50 */
+}
+
+.dark select option {
+  background-color: #262626;
+  color: #fafafa;
+}
+
 /* Landing Page Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
