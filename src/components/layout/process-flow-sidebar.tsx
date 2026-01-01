@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useSidebar } from '@/lib/sidebar-context';
 import { useLanguage } from '@/lib/i18n/language-context';
 import {
@@ -496,6 +497,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                   <Settings className="w-4 h-4" />
                 </Link>
                 <button
+                  onClick={() => signOut({ callbackUrl: '/' })}
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title={t('sidebar.logout')}
                 >
