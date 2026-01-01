@@ -127,8 +127,8 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable standalone output for Docker
-  output: "standalone",
+  // Standalone mode disabled for Render compatibility
+  // Enable for Docker: output: "standalone",
 
   // Production optimizations
   poweredByHeader: false,
