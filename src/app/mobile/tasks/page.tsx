@@ -59,43 +59,13 @@ export default function TasksPage() {
         const data = await response.json();
         setTasks(data.tasks || []);
       } else {
-        // Demo data
-        setTasks([
-          {
-            id: "1",
-            type: "picking",
-            reference: "PL-2024-001",
-            description: "Sales Order SO-2024-0025",
-            status: "pending",
-            priority: "high",
-            dueDate: "2024-12-28",
-            items: 5,
-            completedItems: 0,
-          },
-          {
-            id: "2",
-            type: "receiving",
-            reference: "PO-2024-0015",
-            description: "Motor Components from KDE Direct",
-            status: "in_progress",
-            priority: "medium",
-            items: 8,
-            completedItems: 3,
-          },
-          {
-            id: "3",
-            type: "work_order",
-            reference: "WO-2024-001",
-            description: "HERA X8 Professional Drone",
-            status: "in_progress",
-            priority: "urgent",
-            items: 10,
-            completedItems: 7,
-          },
-        ]);
+        // No mock data - show empty state when API fails
+        setTasks([]);
       }
     } catch (error) {
       console.error("Failed to load tasks:", error);
+      // No mock data - show empty state on error
+      setTasks([]);
     } finally {
       setIsLoading(false);
     }

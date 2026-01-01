@@ -44,31 +44,31 @@ export default function InventoryPage() {
     setError(null);
 
     try {
-      // First try local cache
-      const localResults = await searchParts(searchQuery);
-      if (localResults.length > 0) {
-        // For demo, mock inventory data
-        setItems(
-          localResults.map((part) => ({
-            id: part.id,
-            sku: part.sku,
-            name: part.name,
-            onHand: Math.floor(Math.random() * 100),
-            available: Math.floor(Math.random() * 80),
-            uom: part.uom,
-            location: "A-01-01",
-          }))
-        );
+      // Try API first for real data
+      const response = await fetch(
+        `/api/mobile/inventory/search?q=${encodeURIComponent(searchQuery)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setItems(data.items || []);
       } else {
-        // Try API
-        const response = await fetch(
-          `/api/mobile/inventory/search?q=${encodeURIComponent(searchQuery)}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setItems(data.items || []);
+        // Fall back to local cache if API fails
+        const localResults = await searchParts(searchQuery);
+        if (localResults.length > 0) {
+          // Use real data from cache, not mock random numbers
+          setItems(
+            localResults.map((part) => ({
+              id: part.id,
+              sku: part.sku,
+              name: part.name,
+              onHand: part.onHand ?? 0,
+              available: part.available ?? 0,
+              uom: part.uom,
+              location: part.location || "",
+            }))
+          );
         } else {
-          setError("Failed to search inventory");
+          setError("No results found");
         }
       }
     } catch {

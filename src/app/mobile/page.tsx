@@ -94,6 +94,8 @@ export default function MobileHomePage() {
       <MobileHeader
         title="RTR MRP Mobile"
         subtitle="Shop Floor Operations"
+        showBack
+        backHref="/home"
         menuItems={[
           { label: "Settings", onClick: () => window.location.href = "/mobile/profile" },
           { label: "Scan History", onClick: () => window.location.href = "/mobile/scan/history" },
