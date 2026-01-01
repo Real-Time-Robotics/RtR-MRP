@@ -34,9 +34,15 @@ import { ThemeToggle } from '@/components/landing/theme-toggle';
 
 export default async function LandingPage() {
   // If user is logged in, redirect to dashboard
-  const session = await auth();
-  if (session) {
-    redirect('/home');
+  // Wrap in try-catch to handle database connection failures gracefully
+  try {
+    const session = await auth();
+    if (session) {
+      redirect('/home');
+    }
+  } catch (error) {
+    // If auth fails (e.g., database not available), continue to show landing page
+    console.error('Auth check failed:', error);
   }
 
   return (
