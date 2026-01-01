@@ -55,16 +55,17 @@ export default function InventoryPage() {
         // Fall back to local cache if API fails
         const localResults = await searchParts(searchQuery);
         if (localResults.length > 0) {
-          // Use real data from cache, not mock random numbers
+          // Cache only has basic part info, not inventory levels
+          // Show parts found but indicate inventory data unavailable
           setItems(
             localResults.map((part) => ({
               id: part.id,
               sku: part.sku,
               name: part.name,
-              onHand: part.onHand ?? 0,
-              available: part.available ?? 0,
+              onHand: 0, // Inventory data not available in offline cache
+              available: 0, // Inventory data not available in offline cache
               uom: part.uom,
-              location: part.location || "",
+              location: "", // Location not stored in basic part cache
             }))
           );
         } else {
