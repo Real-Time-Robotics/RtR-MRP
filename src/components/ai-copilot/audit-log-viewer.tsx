@@ -80,7 +80,7 @@ function generateMockAuditLogs(count: number = 50): AuditLogEntry[] {
 
   return Array.from({ length: count }, (_, i) => {
     const user = users[Math.floor(Math.random() * users.length)];
-    const module = modules[Math.floor(Math.random() * modules.length)];
+    const selectedModule = modules[Math.floor(Math.random() * modules.length)];
     const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
     
     return {
@@ -94,13 +94,13 @@ function generateMockAuditLogs(count: number = 50): AuditLogEntry[] {
         type: 'text' as const,
         content: queries[Math.floor(Math.random() * queries.length)],
         context: {
-          page: module.charAt(0).toUpperCase() + module.slice(1),
-          module,
+          page: selectedModule.charAt(0).toUpperCase() + selectedModule.slice(1),
+          module: selectedModule,
         },
       },
       processing: {
         intent: intents[Math.floor(Math.random() * intents.length)],
-        agent: `${module}_agent`,
+        agent: `${selectedModule}_agent`,
         tokensUsed: Math.floor(Math.random() * 2000) + 500,
         latencyMs: Math.floor(Math.random() * 2000) + 200,
       },

@@ -93,7 +93,7 @@ function renderMessageContent(content: string, isUserMessage: boolean = false): 
 
   const parseInlineContent = (text: string): React.ReactNode => {
     // Clean markdown and format
-    let cleaned = text
+    const cleaned = text
       .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold markers
       .replace(/^\s*[-•]\s*/, '')        // Remove list markers
       .trim();
