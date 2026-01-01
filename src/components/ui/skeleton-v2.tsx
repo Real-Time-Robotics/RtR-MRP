@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // LOADING SKELETONS
@@ -336,11 +337,12 @@ export function ButtonSkeleton({ size = 'md', className }: ButtonSkeletonProps) 
 // =============================================================================
 
 export function PageLoading() {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 animate-pulse" />
-        <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('common.loading')}</p>
       </div>
     </div>
   );

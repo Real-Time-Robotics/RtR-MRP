@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // CONFIRM DIALOG
@@ -78,14 +79,18 @@ export function ConfirmDialog({
   onConfirm,
   title,
   description,
-  confirmLabel = 'Xác nhận',
-  cancelLabel = 'Hủy',
+  confirmLabel,
+  cancelLabel,
   variant = 'default',
   isLoading = false,
   icon,
 }: ConfirmDialogProps) {
+  const { t } = useLanguage();
   const [isConfirming, setIsConfirming] = useState(false);
   const config = variantConfig[variant];
+
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel');
+  const resolvedConfirmLabel = confirmLabel ?? t('common.confirm');
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -148,7 +153,7 @@ export function ConfirmDialog({
               disabled={loading}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </button>
             <button
               onClick={handleConfirm}
@@ -162,12 +167,12 @@ export function ConfirmDialog({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Đang xử lý...
+                  {t('common.processing')}
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  {confirmLabel}
+                  {resolvedConfirmLabel}
                 </>
               )}
             </button>
@@ -199,18 +204,19 @@ export function DeleteConfirmDialog({
   itemType = 'mục',
   isLoading,
 }: DeleteConfirmDialogProps) {
+  const { t } = useLanguage();
   return (
     <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title={`Xóa ${itemType}?`}
+      title={t('common.confirmDelete', { itemType })}
       description={
         itemName
           ? `Bạn có chắc muốn xóa "${itemName}"? Hành động này không thể hoàn tác.`
           : `Bạn có chắc muốn xóa ${itemType} này? Hành động này không thể hoàn tác.`
       }
-      confirmLabel="Xóa"
+      confirmLabel={t('common.delete')}
       variant="danger"
       isLoading={isLoading}
     />
@@ -250,6 +256,7 @@ export function UnsavedChangesDialog({
   onSave: () => void;
   onDiscard: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <>
       {/* Backdrop */}
@@ -268,7 +275,7 @@ export function UnsavedChangesDialog({
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Lưu thay đổi?
+                    {t('common.confirmSave')}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Bạn có những thay đổi chưa lưu. Bạn muốn lưu trước khi rời đi?
@@ -281,19 +288,19 @@ export function UnsavedChangesDialog({
                 onClick={onDiscard}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-medium transition-colors"
               >
-                Không lưu
+                {t('common.dontSave')}
               </button>
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl font-medium transition-colors"
               >
-                Hủy
+                {t('common.cancel')}
               </button>
               <button
                 onClick={onSave}
                 className="px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-xl font-medium transition-colors"
               >
-                Lưu
+                {t('common.save')}
               </button>
             </div>
           </div>

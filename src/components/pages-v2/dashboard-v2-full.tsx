@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -181,6 +182,7 @@ interface KPICardProps {
   chartColor?: string;
   href?: string;
   isLoading?: boolean;
+  viewDetailsText?: string;
 }
 
 function KPICard({
@@ -195,6 +197,7 @@ function KPICard({
   chartColor,
   href,
   isLoading,
+  viewDetailsText = 'View details',
 }: KPICardProps) {
   const cardClassName = cn(
     'bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5',
@@ -252,7 +255,7 @@ function KPICard({
 
           {href && (
             <div className="flex items-center gap-1 mt-3 text-sm text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              <span>Xem chi tiết</span>
+              <span>{viewDetailsText}</span>
               <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           )}
@@ -285,9 +288,10 @@ interface AlertBannerProps {
   onDismiss: (id: string) => void;
   onDismissAll: () => void;
   isLoading?: boolean;
+  t: (key: string) => string;
 }
 
-function AlertBanner({ alerts, onDismiss, onDismissAll, isLoading }: AlertBannerProps) {
+function AlertBanner({ alerts, onDismiss, onDismissAll, isLoading, t }: AlertBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (isLoading) {
@@ -325,19 +329,19 @@ function AlertBanner({ alerts, onDismiss, onDismissAll, isLoading }: AlertBanner
           <div className="flex items-center gap-1.5">
             <Bell className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {alerts.length} thông báo
+              {alerts.length} {t('home.notifications')}
             </span>
           </div>
           {criticalCount > 0 && (
             <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-medium">
               <Zap className="w-3 h-3" />
-              {criticalCount} khẩn cấp
+              {criticalCount} {t('home.critical')}
             </span>
           )}
           {warningCount > 0 && (
             <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full text-xs font-medium">
               <AlertTriangle className="w-3 h-3" />
-              {warningCount} cảnh báo
+              {warningCount} {t('home.warning')}
             </span>
           )}
         </div>
@@ -345,7 +349,7 @@ function AlertBanner({ alerts, onDismiss, onDismissAll, isLoading }: AlertBanner
           onClick={onDismissAll}
           className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
         >
-          Bỏ qua tất cả
+          {t('home.dismissAll')}
         </button>
       </div>
 
@@ -394,7 +398,7 @@ function AlertBanner({ alerts, onDismiss, onDismissAll, isLoading }: AlertBanner
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
         >
-          {isExpanded ? 'Thu gọn' : `Xem thêm ${alerts.length - 2} thông báo`}
+          {isExpanded ? t('home.collapse') : `${t('home.showMore')} ${alerts.length - 2} ${t('home.notifications')}`}
         </button>
       )}
     </div>
@@ -581,6 +585,7 @@ function AIInsightCard() {
 // =============================================================================
 
 export default function DashboardV2() {
+  const { t } = useLanguage();
   const { stats, isLoading: statsLoading, refetch } = useDashboardStats();
   const { orders, isLoading: ordersLoading } = useRecentOrders(5);
   const { alerts, isLoading: alertsLoading, dismissAlert, dismissAll } = useAlerts();
@@ -613,15 +618,15 @@ export default function DashboardV2() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                 <LayoutDashboard className="w-6 h-6" />
               </div>
-              Tổng quan
+              {t('home.title')}
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Chào mừng bạn trở lại! Đây là tình hình hôm nay.
+              {t('home.welcome')}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-500" suppressHydrationWarning>
-              Cập nhật: {lastUpdated || '--:--:--'}
+              {t('home.updated')}: {lastUpdated || '--:--:--'}
             </span>
             <button
               onClick={handleRefresh}
@@ -643,14 +648,15 @@ export default function DashboardV2() {
           onDismiss={dismissAlert}
           onDismissAll={dismissAll}
           isLoading={alertsLoading}
+          t={t}
         />
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
-            title="Doanh thu tháng"
+            title={t('home.monthlyRevenue')}
             value={stats ? formatCurrency(stats.revenue.current) : '---'}
-            subtitle="So với tháng trước"
+            subtitle={t('home.comparedToLastMonth')}
             icon={<DollarSign className="w-5 h-5" />}
             iconColor="text-green-600 dark:text-green-400"
             iconBg="bg-green-100 dark:bg-green-900/30"
@@ -659,22 +665,24 @@ export default function DashboardV2() {
             chartColor="#22C55E"
             href="/analytics"
             isLoading={isLoading}
+            viewDetailsText={t('home.viewDetails')}
           />
           <KPICard
-            title="Đơn hàng"
+            title={t('home.orders')}
             value={stats ? formatNumber(stats.orders.total) : '---'}
-            subtitle={stats ? `${stats.orders.pending} đơn chờ xử lý` : ''}
+            subtitle={stats ? `${stats.orders.pending} ${t('home.pendingOrders')}` : ''}
             icon={<ShoppingCart className="w-5 h-5" />}
             iconColor="text-blue-600 dark:text-blue-400"
             iconBg="bg-blue-100 dark:bg-blue-900/30"
             trend={stats ? { value: stats.orders.growth } : undefined}
             href="/sales"
             isLoading={isLoading}
+            viewDetailsText={t('home.viewDetails')}
           />
           <KPICard
-            title="Hiệu suất SX"
+            title={t('home.productionEfficiency')}
             value={stats ? formatPercent(stats.production.efficiency) : '---'}
-            subtitle={stats ? `${stats.production.running} lệnh đang chạy` : ''}
+            subtitle={stats ? `${stats.production.running} ${t('home.runningOrders')}` : ''}
             icon={<Factory className="w-5 h-5" />}
             iconColor="text-orange-600 dark:text-orange-400"
             iconBg="bg-orange-100 dark:bg-orange-900/30"
@@ -682,16 +690,18 @@ export default function DashboardV2() {
             chartColor="#F97316"
             href="/production"
             isLoading={isLoading}
+            viewDetailsText={t('home.viewDetails')}
           />
           <KPICard
-            title="Chất lượng"
+            title={t('home.quality')}
             value={stats ? formatPercent(stats.quality.passRate) : '---'}
-            subtitle={stats ? `${stats.quality.openNCRs} NCR đang mở` : ''}
+            subtitle={stats ? `${stats.quality.openNCRs} ${t('home.openNCRs')}` : ''}
             icon={<CheckCircle className="w-5 h-5" />}
             iconColor="text-teal-600 dark:text-teal-400"
             iconBg="bg-teal-100 dark:bg-teal-900/30"
             href="/quality"
             isLoading={isLoading}
+            viewDetailsText={t('home.viewDetails')}
           />
         </div>
 
@@ -706,16 +716,16 @@ export default function DashboardV2() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-amber-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Hành động nhanh</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('home.quickActions')}</h3>
                 </div>
-                <span className="text-xs text-gray-400">Nhấn phím tắt để thực hiện nhanh</span>
+                <span className="text-xs text-gray-400">{t('home.shortcutHint')}</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { icon: <Plus className="w-5 h-5" />, label: 'Tạo đơn hàng', color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', href: '/sales/new', shortcut: 'N' },
-                  { icon: <Package className="w-5 h-5" />, label: 'Nhập kho', color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', href: '/inventory/receive', shortcut: 'I' },
-                  { icon: <Target className="w-5 h-5" />, label: 'Chạy MRP', color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', href: '/mrp', shortcut: 'M' },
-                  { icon: <BarChart3 className="w-5 h-5" />, label: 'Báo cáo', color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', href: '/analytics', shortcut: 'R' },
+                  { icon: <Plus className="w-5 h-5" />, label: t('home.createOrder'), color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/20', href: '/sales/new', shortcut: 'N' },
+                  { icon: <Package className="w-5 h-5" />, label: t('home.receiveInventory'), color: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', href: '/inventory/receive', shortcut: 'I' },
+                  { icon: <Target className="w-5 h-5" />, label: t('home.runMRP'), color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/20', href: '/mrp', shortcut: 'M' },
+                  { icon: <BarChart3 className="w-5 h-5" />, label: t('home.reports'), color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/20', href: '/analytics', shortcut: 'R' },
                 ].map((action) => (
                   <Link
                     key={action.label}
@@ -744,10 +754,10 @@ export default function DashboardV2() {
               <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Đơn hàng gần đây</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('home.recentOrders')}</h3>
                 </div>
                 <Link href="/sales" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                  Xem tất cả
+                  {t('home.viewAll')}
                   <ArrowUpRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -765,9 +775,9 @@ export default function DashboardV2() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Package className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">Tình trạng tồn kho</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">{t('home.inventoryStatus')}</h3>
               </div>
-              
+
               <div className="flex items-center gap-4 mb-4">
                 <DonutChart data={inventoryChart} size={80} />
                 <div className="flex-1 space-y-2">
@@ -788,7 +798,7 @@ export default function DashboardV2() {
               {stats && (
                 <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Tổng giá trị</span>
+                    <span className="text-gray-500">{t('home.totalValue')}</span>
                     <span className="font-semibold text-gray-900 dark:text-white">
                       {formatCurrency(stats.inventory.totalValue)}
                     </span>
@@ -800,7 +810,7 @@ export default function DashboardV2() {
                 href="/inventory"
                 className="flex items-center justify-center gap-1 w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
               >
-                Xem chi tiết
+                {t('home.viewDetails')}
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -810,10 +820,10 @@ export default function DashboardV2() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Hoạt động gần đây</h3>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('home.recentActivity')}</h3>
                 </div>
                 <Link href="/activity" className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                  Xem tất cả
+                  {t('home.viewAll')}
                 </Link>
               </div>
               <ActivityFeed activities={activities} isLoading={activitiesLoading} />

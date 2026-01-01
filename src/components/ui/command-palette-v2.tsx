@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   Search,
   LayoutDashboard,
@@ -38,8 +39,8 @@ import { cn } from '@/lib/utils';
 // Types
 interface CommandItem {
   id: string;
-  label: string;
-  description?: string;
+  labelKey: string;
+  descriptionKey?: string;
   icon: React.ReactNode;
   action: () => void;
   keywords?: string[];
@@ -49,7 +50,7 @@ interface CommandItem {
 
 interface CommandGroup {
   id: string;
-  label: string;
+  labelKey: string;
   items: CommandItem[];
 }
 
@@ -58,27 +59,27 @@ interface CommandGroup {
 // =============================================================================
 
 const navigationCommands: CommandItem[] = [
-  { id: 'nav-dashboard', label: 'Tổng quan', description: 'Dashboard chính', icon: <LayoutDashboard className="w-4 h-4" />, action: () => {}, keywords: ['dashboard', 'home', 'trang chủ'], category: 'navigation' },
-  { id: 'nav-parts', label: 'Danh mục vật tư', description: 'Quản lý parts master', icon: <Package className="w-4 h-4" />, action: () => {}, keywords: ['parts', 'vật tư', 'linh kiện'], category: 'navigation' },
-  { id: 'nav-bom', label: 'Định mức BOM', description: 'Bill of Materials', icon: <Layers className="w-4 h-4" />, action: () => {}, keywords: ['bom', 'định mức', 'công thức'], category: 'navigation' },
-  { id: 'nav-suppliers', label: 'Nhà cung cấp', description: 'Quản lý suppliers', icon: <Building2 className="w-4 h-4" />, action: () => {}, keywords: ['suppliers', 'ncc', 'vendor'], category: 'navigation' },
-  { id: 'nav-sales', label: 'Đơn hàng', description: 'Sales orders', icon: <ShoppingCart className="w-4 h-4" />, action: () => {}, keywords: ['sales', 'orders', 'đơn hàng'], category: 'navigation' },
-  { id: 'nav-inventory', label: 'Tồn kho', description: 'Inventory management', icon: <ClipboardList className="w-4 h-4" />, action: () => {}, keywords: ['inventory', 'tồn kho', 'stock'], category: 'navigation' },
-  { id: 'nav-mrp', label: 'Hoạch định MRP', description: 'Material Requirements Planning', icon: <Calculator className="w-4 h-4" />, action: () => {}, keywords: ['mrp', 'planning', 'hoạch định'], category: 'navigation' },
-  { id: 'nav-purchasing', label: 'Mua hàng', description: 'Purchase orders', icon: <Truck className="w-4 h-4" />, action: () => {}, keywords: ['purchasing', 'po', 'mua hàng'], category: 'navigation' },
-  { id: 'nav-production', label: 'Sản xuất', description: 'Work orders', icon: <Factory className="w-4 h-4" />, action: () => {}, keywords: ['production', 'sản xuất', 'work order'], category: 'navigation' },
-  { id: 'nav-quality', label: 'Chất lượng', description: 'Quality control', icon: <CheckCircle className="w-4 h-4" />, action: () => {}, keywords: ['quality', 'qc', 'chất lượng', 'ncr'], category: 'navigation' },
-  { id: 'nav-analytics', label: 'Báo cáo', description: 'Reports & Analytics', icon: <BarChart3 className="w-4 h-4" />, action: () => {}, keywords: ['analytics', 'reports', 'báo cáo'], category: 'navigation' },
-  { id: 'nav-ai', label: 'Trợ lý AI', description: 'AI Insights', icon: <Sparkles className="w-4 h-4" />, action: () => {}, keywords: ['ai', 'assistant', 'trợ lý'], category: 'navigation' },
-  { id: 'nav-settings', label: 'Cài đặt', description: 'System settings', icon: <Settings className="w-4 h-4" />, action: () => {}, keywords: ['settings', 'cài đặt', 'config'], category: 'navigation' },
+  { id: 'nav-dashboard', labelKey: 'command.dashboard', descriptionKey: 'command.dashboardDesc', icon: <LayoutDashboard className="w-4 h-4" />, action: () => {}, keywords: ['dashboard', 'home', 'trang chủ'], category: 'navigation' },
+  { id: 'nav-parts', labelKey: 'command.parts', descriptionKey: 'command.partsDesc', icon: <Package className="w-4 h-4" />, action: () => {}, keywords: ['parts', 'vật tư', 'linh kiện'], category: 'navigation' },
+  { id: 'nav-bom', labelKey: 'command.bom', descriptionKey: 'command.bomDesc', icon: <Layers className="w-4 h-4" />, action: () => {}, keywords: ['bom', 'định mức', 'công thức'], category: 'navigation' },
+  { id: 'nav-suppliers', labelKey: 'command.suppliers', descriptionKey: 'command.suppliersDesc', icon: <Building2 className="w-4 h-4" />, action: () => {}, keywords: ['suppliers', 'ncc', 'vendor'], category: 'navigation' },
+  { id: 'nav-sales', labelKey: 'command.sales', descriptionKey: 'command.salesDesc', icon: <ShoppingCart className="w-4 h-4" />, action: () => {}, keywords: ['sales', 'orders', 'đơn hàng'], category: 'navigation' },
+  { id: 'nav-inventory', labelKey: 'command.inventory', descriptionKey: 'command.inventoryDesc', icon: <ClipboardList className="w-4 h-4" />, action: () => {}, keywords: ['inventory', 'tồn kho', 'stock'], category: 'navigation' },
+  { id: 'nav-mrp', labelKey: 'command.mrp', descriptionKey: 'command.mrpDesc', icon: <Calculator className="w-4 h-4" />, action: () => {}, keywords: ['mrp', 'planning', 'hoạch định'], category: 'navigation' },
+  { id: 'nav-purchasing', labelKey: 'command.purchasing', descriptionKey: 'command.purchasingDesc', icon: <Truck className="w-4 h-4" />, action: () => {}, keywords: ['purchasing', 'po', 'mua hàng'], category: 'navigation' },
+  { id: 'nav-production', labelKey: 'command.production', descriptionKey: 'command.productionDesc', icon: <Factory className="w-4 h-4" />, action: () => {}, keywords: ['production', 'sản xuất', 'work order'], category: 'navigation' },
+  { id: 'nav-quality', labelKey: 'command.quality', descriptionKey: 'command.qualityDesc', icon: <CheckCircle className="w-4 h-4" />, action: () => {}, keywords: ['quality', 'qc', 'chất lượng', 'ncr'], category: 'navigation' },
+  { id: 'nav-analytics', labelKey: 'command.analytics', descriptionKey: 'command.analyticsDesc', icon: <BarChart3 className="w-4 h-4" />, action: () => {}, keywords: ['analytics', 'reports', 'báo cáo'], category: 'navigation' },
+  { id: 'nav-ai', labelKey: 'command.ai', descriptionKey: 'command.aiDesc', icon: <Sparkles className="w-4 h-4" />, action: () => {}, keywords: ['ai', 'assistant', 'trợ lý'], category: 'navigation' },
+  { id: 'nav-settings', labelKey: 'command.settings', descriptionKey: 'command.settingsDesc', icon: <Settings className="w-4 h-4" />, action: () => {}, keywords: ['settings', 'cài đặt', 'config'], category: 'navigation' },
 ];
 
 const actionCommands: CommandItem[] = [
-  { id: 'action-new-order', label: 'Tạo đơn hàng mới', icon: <Plus className="w-4 h-4" />, action: () => {}, keywords: ['new order', 'tạo đơn'], shortcut: '⌘N', category: 'action' },
-  { id: 'action-new-part', label: 'Thêm vật tư mới', icon: <Plus className="w-4 h-4" />, action: () => {}, keywords: ['new part', 'thêm vật tư'], category: 'action' },
-  { id: 'action-run-mrp', label: 'Chạy MRP', icon: <Zap className="w-4 h-4" />, action: () => {}, keywords: ['run mrp', 'chạy mrp'], shortcut: '⌘M', category: 'action' },
-  { id: 'action-receive', label: 'Nhập kho', icon: <Package className="w-4 h-4" />, action: () => {}, keywords: ['receive', 'nhập kho'], shortcut: '⌘I', category: 'action' },
-  { id: 'action-report', label: 'Xuất báo cáo', icon: <FileText className="w-4 h-4" />, action: () => {}, keywords: ['export', 'xuất', 'báo cáo'], shortcut: '⌘R', category: 'action' },
+  { id: 'action-new-order', labelKey: 'command.newOrder', icon: <Plus className="w-4 h-4" />, action: () => {}, keywords: ['new order', 'tạo đơn'], shortcut: '⌘N', category: 'action' },
+  { id: 'action-new-part', labelKey: 'command.newPart', icon: <Plus className="w-4 h-4" />, action: () => {}, keywords: ['new part', 'thêm vật tư'], category: 'action' },
+  { id: 'action-run-mrp', labelKey: 'command.runMRP', icon: <Zap className="w-4 h-4" />, action: () => {}, keywords: ['run mrp', 'chạy mrp'], shortcut: '⌘M', category: 'action' },
+  { id: 'action-receive', labelKey: 'command.receive', icon: <Package className="w-4 h-4" />, action: () => {}, keywords: ['receive', 'nhập kho'], shortcut: '⌘I', category: 'action' },
+  { id: 'action-report', labelKey: 'command.exportReport', icon: <FileText className="w-4 h-4" />, action: () => {}, keywords: ['export', 'xuất', 'báo cáo'], shortcut: '⌘R', category: 'action' },
 ];
 
 // =============================================================================
@@ -95,7 +96,8 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const { t } = useLanguage();
+
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -155,21 +157,23 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
   const filteredCommands = useMemo(() => {
     if (!query.trim()) {
       return [
-        { id: 'nav', label: 'Điều hướng', items: commands.filter((c) => c.category === 'navigation').slice(0, 6) },
-        { id: 'actions', label: 'Hành động', items: commands.filter((c) => c.category === 'action') },
+        { id: 'nav', labelKey: 'command.navigation', items: commands.filter((c) => c.category === 'navigation').slice(0, 6) },
+        { id: 'actions', labelKey: 'command.actions', items: commands.filter((c) => c.category === 'action') },
       ];
     }
 
     const lowerQuery = query.toLowerCase();
     const filtered = commands.filter((cmd) => {
-      const matchLabel = cmd.label.toLowerCase().includes(lowerQuery);
-      const matchDescription = cmd.description?.toLowerCase().includes(lowerQuery);
+      const translatedLabel = t(cmd.labelKey).toLowerCase();
+      const translatedDesc = cmd.descriptionKey ? t(cmd.descriptionKey).toLowerCase() : '';
+      const matchLabel = translatedLabel.includes(lowerQuery);
+      const matchDescription = translatedDesc.includes(lowerQuery);
       const matchKeywords = cmd.keywords?.some((kw) => kw.toLowerCase().includes(lowerQuery));
       return matchLabel || matchDescription || matchKeywords;
     });
 
-    return [{ id: 'results', label: 'Kết quả', items: filtered }];
-  }, [query, commands]);
+    return [{ id: 'results', labelKey: 'command.results', items: filtered }];
+  }, [query, commands, t]);
 
   // Flatten items for keyboard navigation
   const flatItems = useMemo(() => {
@@ -255,7 +259,7 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
                 setSelectedIndex(0);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Tìm kiếm hoặc nhập lệnh..."
+              placeholder={t('command.searchPlaceholder')}
               className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none"
             />
             <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-gray-500">
@@ -268,15 +272,15 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
             {flatItems.length === 0 ? (
               <div className="py-8 text-center">
                 <Search className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">Không tìm thấy kết quả</p>
-                <p className="text-sm text-gray-400 mt-1">Thử tìm kiếm với từ khóa khác</p>
+                <p className="text-gray-500 dark:text-gray-400">{t('command.noResults')}</p>
+                <p className="text-sm text-gray-400 mt-1">{t('command.tryDifferent')}</p>
               </div>
             ) : (
               <>
                 {filteredCommands.map((group) => (
                   <div key={group.id} className="mb-2">
                     <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      {group.label}
+                      {t(group.labelKey)}
                     </div>
                     {group.items.map((item) => {
                       const index = flatItems.indexOf(item);
@@ -305,9 +309,9 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
                             {item.icon}
                           </div>
                           <div className="flex-1 text-left">
-                            <p className="font-medium">{item.label}</p>
-                            {item.description && (
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
+                            <p className="font-medium">{t(item.labelKey)}</p>
+                            {item.descriptionKey && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{t(item.descriptionKey)}</p>
                             )}
                           </div>
                           {item.shortcut && (
@@ -332,11 +336,11 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
             <div className="flex items-center gap-4 text-xs text-gray-500">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-[10px]">↑↓</kbd>
-                Điều hướng
+                {t('command.navigate')}
               </span>
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-[10px]">↵</kbd>
-                Chọn
+                {t('command.select')}
               </span>
             </div>
             <span className="text-xs text-gray-400">
@@ -355,6 +359,7 @@ export function CommandPalette({ isOpen: controlledIsOpen, onClose }: CommandPal
 
 export function CommandPaletteTrigger() {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useLanguage();
 
   return (
     <>
@@ -369,7 +374,7 @@ export function CommandPaletteTrigger() {
         )}
       >
         <Search className="w-4 h-4" />
-        <span className="text-sm hidden sm:block">Tìm kiếm...</span>
+        <span className="text-sm hidden sm:block">{t('command.search')}</span>
         <kbd className="hidden sm:flex items-center gap-1 px-2 py-0.5 text-xs font-mono bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
           <Command className="w-3 h-3" />K
         </kbd>

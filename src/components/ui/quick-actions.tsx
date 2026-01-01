@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   Plus,
   Package,
@@ -38,8 +39,8 @@ import { cn } from '@/lib/utils';
 interface QuickAction {
   id: string;
   icon: React.ReactNode;
-  label: string;
-  description?: string;
+  labelKey: string;
+  descriptionKey?: string;
   href?: string;
   onClick?: () => void;
   color: string;
@@ -62,8 +63,8 @@ const defaultActions: QuickAction[] = [
   {
     id: 'new-order',
     icon: <Plus className="w-5 h-5" />,
-    label: 'Tạo đơn hàng',
-    description: 'Tạo đơn hàng bán mới',
+    labelKey: 'quickActions.newOrder',
+    descriptionKey: 'quickActions.newOrderDesc',
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50',
     shortcut: 'N',
@@ -71,8 +72,8 @@ const defaultActions: QuickAction[] = [
   {
     id: 'inventory',
     icon: <Package className="w-5 h-5" />,
-    label: 'Nhập kho',
-    description: 'Nhập hàng vào kho',
+    labelKey: 'quickActions.inventory',
+    descriptionKey: 'quickActions.inventoryDesc',
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50',
     shortcut: 'I',
@@ -80,8 +81,8 @@ const defaultActions: QuickAction[] = [
   {
     id: 'mrp',
     icon: <Calculator className="w-5 h-5" />,
-    label: 'Chạy MRP',
-    description: 'Tính toán nhu cầu vật tư',
+    labelKey: 'quickActions.runMRP',
+    descriptionKey: 'quickActions.runMRPDesc',
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50',
     shortcut: 'M',
@@ -89,8 +90,8 @@ const defaultActions: QuickAction[] = [
   {
     id: 'report',
     icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Báo cáo',
-    description: 'Xem báo cáo tổng hợp',
+    labelKey: 'quickActions.report',
+    descriptionKey: 'quickActions.reportDesc',
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
     shortcut: 'R',
@@ -98,6 +99,8 @@ const defaultActions: QuickAction[] = [
 ];
 
 export function QuickActionBar({ actions = defaultActions, className }: QuickActionBarProps) {
+  const { t } = useLanguage();
+
   return (
     <div className={cn(
       'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4',
@@ -107,11 +110,11 @@ export function QuickActionBar({ actions = defaultActions, className }: QuickAct
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-amber-500" />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Hành động nhanh
+            {t('quickActions.title')}
           </span>
         </div>
         <span className="text-xs text-gray-400">
-          Nhấn phím tắt để thực hiện nhanh
+          {t('quickActions.shortcutHint')}
         </span>
       </div>
 
@@ -137,7 +140,7 @@ export function QuickActionBar({ actions = defaultActions, className }: QuickAct
               {action.icon}
             </div>
             <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {action.label}
+              {t(action.labelKey)}
             </span>
             {action.shortcut && (
               <kbd className="px-2 py-0.5 text-[10px] font-mono bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 text-gray-500">
@@ -170,6 +173,8 @@ export function QuickActionGrid({
   size = 'md',
   className,
 }: QuickActionGridProps) {
+  const { t } = useLanguage();
+
   const sizeStyles = {
     sm: 'p-2 gap-1',
     md: 'p-3 gap-2',
@@ -205,20 +210,20 @@ export function QuickActionGrid({
             sizeStyles[size],
             action.bgColor
           )}
-          title={action.description || action.label}
+          title={action.descriptionKey ? t(action.descriptionKey) : t(action.labelKey)}
         >
           {action.badge && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
               {action.badge}
             </span>
           )}
-          
+
           <div className={cn(action.color)}>
             {React.cloneElement(action.icon as React.ReactElement, {
               className: iconSizes[size],
             })}
           </div>
-          
+
           {showLabels && (
             <span className={cn(
               'text-gray-700 dark:text-gray-300 text-center',
@@ -226,7 +231,7 @@ export function QuickActionGrid({
               size === 'md' && 'text-xs',
               size === 'lg' && 'text-sm font-medium'
             )}>
-              {action.label}
+              {t(action.labelKey)}
             </span>
           )}
         </button>
@@ -461,13 +466,24 @@ export function WelcomeBanner({
   date = new Date(),
   className,
 }: WelcomeBannerProps) {
+  const { t, language } = useLanguage();
   const hour = date.getHours();
-  const defaultGreeting = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
-  
+
+  const getDefaultGreeting = () => {
+    if (hour < 12) return t('welcome.morning');
+    if (hour < 18) return t('welcome.afternoon');
+    return t('welcome.evening');
+  };
+
   const formatDate = (d: Date) => {
-    const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-    const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
-    return `${days[d.getDay()]}, ${d.getDate()} tháng ${months[d.getMonth()]} năm ${d.getFullYear()}`;
+    const dayKeys = ['days.sunday', 'days.monday', 'days.tuesday', 'days.wednesday', 'days.thursday', 'days.friday', 'days.saturday'];
+    const dayName = t(dayKeys[d.getDay()]);
+
+    if (language === 'vi') {
+      return `${dayName}, ${d.getDate()} tháng ${d.getMonth() + 1} năm ${d.getFullYear()}`;
+    }
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${dayName}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   };
 
   return (
@@ -488,13 +504,13 @@ export function WelcomeBanner({
           <Calendar className="w-4 h-4" />
           {formatDate(date)}
         </div>
-        
+
         <h1 className="text-2xl md:text-3xl font-bold mb-1">
-          {greeting || defaultGreeting}, {userName}! 👋
+          {greeting || getDefaultGreeting()}, {userName}!
         </h1>
-        
+
         <p className="text-white/80">
-          {subtitle || 'Chúc bạn một ngày làm việc hiệu quả'}
+          {subtitle || t('welcome.subtitle')}
         </p>
       </div>
 

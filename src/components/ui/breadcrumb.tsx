@@ -5,34 +5,36 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, Home, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // BREADCRUMB NAVIGATION
 // Auto-generates breadcrumbs from pathname
 // =============================================================================
 
-// Route label mappings
-const routeLabels: Record<string, string> = {
-  dashboard: 'Tổng quan',
-  parts: 'Danh mục vật tư',
-  bom: 'Định mức BOM',
-  suppliers: 'Nhà cung cấp',
-  inventory: 'Tồn kho',
-  sales: 'Đơn hàng',
-  purchasing: 'Mua hàng',
-  mrp: 'Hoạch định MRP',
-  production: 'Sản xuất',
-  quality: 'Chất lượng',
-  analytics: 'Báo cáo',
-  settings: 'Cài đặt',
-  'ai-insights': 'Trợ lý AI',
-  new: 'Tạo mới',
-  edit: 'Chỉnh sửa',
-  wizard: 'Wizard',
+// Route label translation keys
+const routeLabelKeys: Record<string, string> = {
+  dashboard: 'nav.dashboard',
+  parts: 'nav.parts',
+  bom: 'nav.bom',
+  suppliers: 'nav.suppliers',
+  inventory: 'nav.inventory',
+  sales: 'nav.sales',
+  purchasing: 'nav.purchasing',
+  mrp: 'nav.mrp',
+  production: 'nav.production',
+  quality: 'nav.quality',
+  analytics: 'nav.analytics',
+  settings: 'nav.settings',
+  'ai-insights': 'nav.aiInsights',
+  new: 'common.createNew',
+  edit: 'common.edit',
+  wizard: 'common.wizard',
 };
 
 interface BreadcrumbItem {
-  label: string;
+  labelKey: string | null;
+  fallbackLabel: string;
   href: string;
   isCurrent: boolean;
 }
@@ -44,9 +46,11 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
   let currentPath = '';
   paths.forEach((path, index) => {
     currentPath += `/${path}`;
-    const label = routeLabels[path] || path.charAt(0).toUpperCase() + path.slice(1);
+    const labelKey = routeLabelKeys[path] || null;
+    const fallbackLabel = path.charAt(0).toUpperCase() + path.slice(1);
     breadcrumbs.push({
-      label,
+      labelKey,
+      fallbackLabel,
       href: currentPath,
       isCurrent: index === paths.length - 1,
     });
@@ -66,8 +70,13 @@ interface BreadcrumbProps {
 }
 
 export function Breadcrumb({ className, showHome = true, maxItems = 4 }: BreadcrumbProps) {
+  const { t } = useLanguage();
   const pathname = usePathname();
   const breadcrumbs = generateBreadcrumbs(pathname);
+
+  const getLabel = (item: BreadcrumbItem) => {
+    return item.labelKey ? t(item.labelKey) : item.fallbackLabel;
+  };
 
   // Don't show on dashboard
   if (pathname === '/dashboard' || pathname === '/') {
@@ -97,7 +106,7 @@ export function Breadcrumb({ className, showHome = true, maxItems = 4 }: Breadcr
                 className="flex items-center gap-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
               >
                 <Home className="w-4 h-4" />
-                <span className="sr-only">Trang chủ</span>
+                <span className="sr-only">{t('nav.home')}</span>
               </Link>
             </li>
             <li>
@@ -124,14 +133,14 @@ export function Breadcrumb({ className, showHome = true, maxItems = 4 }: Breadcr
             <li>
               {item.isCurrent ? (
                 <span className="font-medium text-gray-900 dark:text-white" aria-current="page">
-                  {item.label}
+                  {getLabel(item)}
                 </span>
               ) : (
                 <Link
                   href={item.href}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                 >
-                  {item.label}
+                  {getLabel(item)}
                 </Link>
               )}
             </li>

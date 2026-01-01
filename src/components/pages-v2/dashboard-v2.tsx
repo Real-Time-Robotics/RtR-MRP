@@ -108,7 +108,7 @@ const quickActions = [
   {
     id: 'new-order',
     icon: <ShoppingCart className="w-5 h-5" />,
-    label: 'Tạo đơn hàng',
+    labelKey: 'quickActions.newOrder',
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50',
     shortcut: 'N',
@@ -116,7 +116,7 @@ const quickActions = [
   {
     id: 'inventory',
     icon: <Package className="w-5 h-5" />,
-    label: 'Nhập kho',
+    labelKey: 'quickActions.inventory',
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50',
     shortcut: 'I',
@@ -124,7 +124,7 @@ const quickActions = [
   {
     id: 'mrp',
     icon: <Layers className="w-5 h-5" />,
-    label: 'Chạy MRP',
+    labelKey: 'quickActions.runMRP',
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50',
     shortcut: 'M',
@@ -132,7 +132,7 @@ const quickActions = [
   {
     id: 'report',
     icon: <BarChart3 className="w-5 h-5" />,
-    label: 'Báo cáo',
+    labelKey: 'quickActions.report',
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
     shortcut: 'R',

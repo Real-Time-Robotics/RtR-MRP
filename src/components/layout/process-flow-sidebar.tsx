@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '@/lib/sidebar-context';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   LayoutDashboard,
   Package,
@@ -54,7 +55,7 @@ import { cn } from '@/lib/utils';
 // Types
 interface NavItem {
   id: string;
-  label: string;
+  labelKey: string; // Translation key
   icon: React.ReactNode;
   href: string;
   badge?: number;
@@ -62,7 +63,7 @@ interface NavItem {
 
 interface NavStage {
   id: string;
-  label: string;
+  labelKey: string; // Translation key
   color: string;
   bgColor: string;
   borderColor: string;
@@ -76,72 +77,72 @@ interface NavStage {
 const stages: NavStage[] = [
   {
     id: 'tools',
-    label: 'CÔNG CỤ',
+    labelKey: 'sidebar.tools',
     color: 'text-cyan-600 dark:text-cyan-400',
     bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
     borderColor: 'border-cyan-500',
     items: [
-      { id: 'data-migration', label: 'Di chuyển dữ liệu', icon: <Upload className="w-5 h-5" />, href: '/data-migration' },
-      { id: 'excel', label: 'Excel Import', icon: <FileSpreadsheet className="w-5 h-5" />, href: '/excel' },
+      { id: 'data-migration', labelKey: 'sidebar.dataMigration', icon: <Upload className="w-5 h-5" />, href: '/data-migration' },
+      { id: 'excel', labelKey: 'sidebar.excelImport', icon: <FileSpreadsheet className="w-5 h-5" />, href: '/excel' },
     ],
   },
   {
     id: 'setup',
-    label: 'THIẾT LẬP',
+    labelKey: 'sidebar.setup',
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-50 dark:bg-blue-900/20',
     borderColor: 'border-blue-500',
     items: [
-      { id: 'parts', label: 'Danh mục vật tư', icon: <Package className="w-5 h-5" />, href: '/parts' },
-      { id: 'bom', label: 'Định mức BOM', icon: <Layers className="w-5 h-5" />, href: '/bom' },
-      { id: 'suppliers', label: 'Nhà cung cấp', icon: <Building2 className="w-5 h-5" />, href: '/suppliers' },
+      { id: 'parts', labelKey: 'sidebar.parts', icon: <Package className="w-5 h-5" />, href: '/parts' },
+      { id: 'bom', labelKey: 'sidebar.bom', icon: <Layers className="w-5 h-5" />, href: '/bom' },
+      { id: 'suppliers', labelKey: 'sidebar.suppliers', icon: <Building2 className="w-5 h-5" />, href: '/suppliers' },
     ],
   },
   {
     id: 'operations',
-    label: 'VẬN HÀNH',
+    labelKey: 'sidebar.operations',
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-50 dark:bg-green-900/20',
     borderColor: 'border-green-500',
     items: [
-      { id: 'sales', label: 'Đơn hàng', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', badge: 5 },
-      { id: 'inventory', label: 'Tồn kho', icon: <ClipboardList className="w-5 h-5" />, href: '/inventory' },
-      { id: 'mrp', label: 'Hoạch định MRP', icon: <Calculator className="w-5 h-5" />, href: '/mrp' },
+      { id: 'sales', labelKey: 'sidebar.orders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', badge: 5 },
+      { id: 'inventory', labelKey: 'sidebar.inventory', icon: <ClipboardList className="w-5 h-5" />, href: '/inventory' },
+      { id: 'mrp', labelKey: 'sidebar.mrp', icon: <Calculator className="w-5 h-5" />, href: '/mrp' },
     ],
   },
   {
     id: 'execution',
-    label: 'THỰC HIỆN',
+    labelKey: 'sidebar.execution',
     color: 'text-orange-600 dark:text-orange-400',
     bgColor: 'bg-orange-50 dark:bg-orange-900/20',
     borderColor: 'border-orange-500',
     items: [
-      { id: 'purchasing', label: 'Mua hàng', icon: <Truck className="w-5 h-5" />, href: '/purchasing', badge: 3 },
-      { id: 'production', label: 'Sản xuất', icon: <Factory className="w-5 h-5" />, href: '/production' },
-      { id: 'quality', label: 'Chất lượng', icon: <CheckCircle className="w-5 h-5" />, href: '/quality' },
-      { id: 'finance', label: 'Tài chính', icon: <DollarSign className="w-5 h-5" />, href: '/finance' },
+      { id: 'purchasing', labelKey: 'sidebar.purchasing', icon: <Truck className="w-5 h-5" />, href: '/purchasing', badge: 3 },
+      { id: 'production', labelKey: 'sidebar.production', icon: <Factory className="w-5 h-5" />, href: '/production' },
+      { id: 'quality', labelKey: 'sidebar.quality', icon: <CheckCircle className="w-5 h-5" />, href: '/quality' },
+      { id: 'finance', labelKey: 'sidebar.finance', icon: <DollarSign className="w-5 h-5" />, href: '/finance' },
     ],
   },
   {
     id: 'analysis',
-    label: 'PHÂN TÍCH',
+    labelKey: 'sidebar.analysis',
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     borderColor: 'border-purple-500',
     items: [
-      { id: 'reports', label: 'Báo cáo', icon: <BarChart3 className="w-5 h-5" />, href: '/analytics' },
-      { id: 'ai', label: 'AI Insights', icon: <Brain className="w-5 h-5" />, href: '/ai' },
-      { id: 'activity', label: 'Hoạt động', icon: <Activity className="w-5 h-5" />, href: '/activity' },
+      { id: 'reports', labelKey: 'sidebar.reports', icon: <BarChart3 className="w-5 h-5" />, href: '/analytics' },
+      { id: 'ai', labelKey: 'sidebar.ai', icon: <Brain className="w-5 h-5" />, href: '/ai' },
+      { id: 'activity', labelKey: 'sidebar.activity', icon: <Activity className="w-5 h-5" />, href: '/activity' },
     ],
   },
   {
     id: 'mobile',
-    label: 'DI ĐỘNG',
+    labelKey: 'sidebar.mobile',
     color: 'text-pink-600 dark:text-pink-400',
     bgColor: 'bg-pink-50 dark:bg-pink-900/20',
     borderColor: 'border-pink-500',
     items: [
-      { id: 'mobile-app', label: 'Ứng dụng Mobile', icon: <Smartphone className="w-5 h-5" />, href: '/mobile' },
+      { id: 'mobile-app', labelKey: 'sidebar.mobileApp', icon: <Smartphone className="w-5 h-5" />, href: '/mobile' },
     ],
   },
 ];
@@ -155,9 +156,11 @@ interface MenuItemProps {
   stage: NavStage;
   isActive: boolean;
   isCollapsed: boolean;
+  t: (key: string) => string;
 }
 
-function MenuItem({ item, stage, isActive, isCollapsed }: MenuItemProps) {
+function MenuItem({ item, stage, isActive, isCollapsed, t }: MenuItemProps) {
+  const label = t(item.labelKey);
   return (
     <Link
       href={item.href}
@@ -168,7 +171,7 @@ function MenuItem({ item, stage, isActive, isCollapsed }: MenuItemProps) {
           ? cn('bg-white dark:bg-gray-800 shadow-sm', stage.color, 'border-l-3', stage.borderColor)
           : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white'
       )}
-      title={isCollapsed ? item.label : undefined}
+      title={isCollapsed ? label : undefined}
     >
       {/* Left border indicator for active */}
       {isActive && (
@@ -186,7 +189,7 @@ function MenuItem({ item, stage, isActive, isCollapsed }: MenuItemProps) {
       {/* Label */}
       {!isCollapsed && (
         <span className="flex-1 font-medium text-sm truncate">
-          {item.label}
+          {label}
         </span>
       )}
 
@@ -215,7 +218,7 @@ function MenuItem({ item, stage, isActive, isCollapsed }: MenuItemProps) {
           'opacity-0 invisible group-hover:opacity-100 group-hover:visible',
           'transition-all duration-200 z-50 whitespace-nowrap'
         )}>
-          {item.label}
+          {label}
           {item.badge && (
             <span className="ml-2 px-1.5 py-0.5 bg-red-500 rounded-full text-xs">
               {item.badge}
@@ -237,9 +240,10 @@ interface StageGroupProps {
   stage: NavStage;
   isCollapsed: boolean;
   pathname: string;
+  t: (key: string) => string;
 }
 
-function StageGroup({ stage, isCollapsed, pathname }: StageGroupProps) {
+function StageGroup({ stage, isCollapsed, pathname, t }: StageGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasActiveItem = stage.items.some((item) => pathname.startsWith(item.href));
 
@@ -260,6 +264,7 @@ function StageGroup({ stage, isCollapsed, pathname }: StageGroupProps) {
             stage={stage}
             isActive={pathname.startsWith(item.href)}
             isCollapsed={true}
+            t={t}
           />
         ))}
       </div>
@@ -278,7 +283,7 @@ function StageGroup({ stage, isCollapsed, pathname }: StageGroupProps) {
           stage.color
         )}
       >
-        <span>{stage.label}</span>
+        <span>{t(stage.labelKey)}</span>
         <ChevronDown className={cn(
           'w-3.5 h-3.5 transition-transform duration-200',
           !isExpanded && '-rotate-90'
@@ -297,6 +302,7 @@ function StageGroup({ stage, isCollapsed, pathname }: StageGroupProps) {
             stage={stage}
             isActive={pathname.startsWith(item.href)}
             isCollapsed={false}
+            t={t}
           />
         ))}
       </div>
@@ -316,6 +322,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
   const { isCollapsed, toggleCollapsed } = useSidebar();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -375,7 +382,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
             <button
               onClick={toggleCollapsed}
               className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+              title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             >
               {isCollapsed ? (
                 <ChevronRight className="w-4 h-4" />
@@ -408,7 +415,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
           >
             <LayoutDashboard className="w-5 h-5" />
             {!isCollapsed && (
-              <span className="font-semibold text-sm">Tổng quan</span>
+              <span className="font-semibold text-sm">{t('sidebar.dashboard')}</span>
             )}
           </Link>
         </div>
@@ -424,6 +431,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
               stage={stage}
               isCollapsed={isCollapsed}
               pathname={pathname}
+              t={t}
             />
           ))}
         </nav>
@@ -447,7 +455,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                     ? 'text-blue-600 bg-white dark:bg-gray-800 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800'
                 )}
-                title="Cài đặt"
+                title={t('sidebar.settings')}
               >
                 <Settings className="w-4 h-4" />
               </Link>
@@ -483,13 +491,13 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                       ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30'
                       : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   )}
-                  title="Cài đặt"
+                  title={t('sidebar.settings')}
                 >
                   <Settings className="w-4 h-4" />
                 </Link>
                 <button
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  title="Đăng xuất"
+                  title={t('sidebar.logout')}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -508,6 +516,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
 
 export function ProcessIndicator() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   // Find current stage and item
   let currentStage: NavStage | null = null;
@@ -532,9 +541,9 @@ export function ProcessIndicator() {
       currentStage.bgColor,
       currentStage.color
     )}>
-      <span className="font-medium">{currentStage.label}</span>
+      <span className="font-medium">{t(currentStage.labelKey)}</span>
       <ChevronRight className="w-4 h-4 opacity-50" />
-      <span>{currentItem.label}</span>
+      <span>{t(currentItem.labelKey)}</span>
     </div>
   );
 }

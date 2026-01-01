@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   AlertTriangle,
   AlertCircle,
@@ -208,6 +209,7 @@ export function AlertBanner({
   className,
 }: AlertBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useLanguage();
 
   if (alerts.length === 0) return null;
 
@@ -233,21 +235,21 @@ export function AlertBanner({
             <div className="flex items-center gap-1.5">
               <Bell className="w-4 h-4 text-gray-500" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {alerts.length} thông báo
+                {alerts.length} {t('home.notifications')}
               </span>
             </div>
-            
+
             {criticalCount > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-medium">
                 <Zap className="w-3 h-3" />
-                {criticalCount} khẩn cấp
+                {criticalCount} {t('home.critical')}
               </span>
             )}
-            
+
             {warningCount > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-full text-xs font-medium">
                 <AlertTriangle className="w-3 h-3" />
-                {warningCount} cảnh báo
+                {warningCount} {t('home.warning')}
               </span>
             )}
           </div>
@@ -257,7 +259,7 @@ export function AlertBanner({
               onClick={onDismissAll}
               className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
             >
-              Bỏ qua tất cả
+              {t('home.dismissAll')}
             </button>
           )}
         </div>
@@ -281,9 +283,9 @@ export function AlertBanner({
           className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center justify-center gap-1 transition-colors"
         >
           {isExpanded ? (
-            <>Thu gọn</>
+            <>{t('home.collapse')}</>
           ) : (
-            <>Xem thêm {hiddenCount} thông báo</>
+            <>{t('home.showMore', { count: String(hiddenCount) })} {t('home.notifications')}</>
           )}
         </button>
       )}
@@ -391,6 +393,7 @@ interface TodayPrioritiesProps {
 }
 
 export function TodayPriorities({ items, className }: TodayPrioritiesProps) {
+  const { t } = useLanguage();
   return (
     <div className={cn(
       'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4',
@@ -401,8 +404,8 @@ export function TodayPriorities({ items, className }: TodayPrioritiesProps) {
           <Zap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">Ưu tiên hôm nay</h3>
-          <p className="text-xs text-gray-500">Những việc cần chú ý</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{t('home.todayPriorities')}</h3>
+          <p className="text-xs text-gray-500">{t('home.thingsToNote')}</p>
         </div>
       </div>
 

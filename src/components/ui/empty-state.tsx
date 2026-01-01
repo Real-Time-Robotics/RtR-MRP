@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   Package,
   ShoppingCart,
@@ -131,87 +132,93 @@ export function EmptyState({
 // =============================================================================
 
 // No Data
-export function NoDataState({ 
+export function NoDataState({
   entity = 'dữ liệu',
   actionLabel,
   actionHref,
   onAction,
-}: { 
+}: {
   entity?: string;
   actionLabel?: string;
   actionHref?: string;
   onAction?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Inbox className="w-full h-full" />}
-      title={`Chưa có ${entity}`}
-      description={`Bắt đầu bằng cách thêm ${entity} mới vào hệ thống.`}
+      title={t('empty.noData', { entity })}
+      description={t('empty.noDataDescription', { entity })}
       action={actionLabel ? { label: actionLabel, href: actionHref, onClick: onAction } : undefined}
     />
   );
 }
 
 // No Search Results
-export function NoSearchResults({ 
+export function NoSearchResults({
   query,
   onClear,
-}: { 
+}: {
   query: string;
   onClear?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Search className="w-full h-full" />}
-      title="Không tìm thấy kết quả"
-      description={`Không tìm thấy kết quả nào cho "${query}". Thử tìm kiếm với từ khóa khác.`}
-      action={onClear ? { label: 'Xóa tìm kiếm', onClick: onClear } : undefined}
+      title={t('empty.noSearchResults')}
+      description={t('empty.noSearchResultsDescription', { query })}
+      action={onClear ? { label: t('empty.clearSearch'), onClick: onClear } : undefined}
     />
   );
 }
 
 // No Orders
 export function NoOrdersState({ actionHref = '/sales/new' }: { actionHref?: string }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<ShoppingCart className="w-full h-full" />}
-      title="Chưa có đơn hàng"
-      description="Tạo đơn hàng đầu tiên để bắt đầu quản lý bán hàng."
-      action={{ label: 'Tạo đơn hàng', href: actionHref }}
+      title={t('empty.noOrders')}
+      description={t('empty.noOrdersDescription')}
+      action={{ label: t('empty.createOrder'), href: actionHref }}
     />
   );
 }
 
 // No Inventory
 export function NoInventoryState({ actionHref = '/parts/new' }: { actionHref?: string }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Package className="w-full h-full" />}
-      title="Kho hàng trống"
-      description="Thêm vật tư vào danh mục để bắt đầu quản lý tồn kho."
-      action={{ label: 'Thêm vật tư', href: actionHref }}
+      title={t('empty.noParts')}
+      description={t('empty.noPartsDescription')}
+      action={{ label: t('empty.addPart'), href: actionHref }}
     />
   );
 }
 
 // No Documents
 export function NoDocumentsState() {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<FileText className="w-full h-full" />}
-      title="Chưa có tài liệu"
-      description="Các tài liệu và báo cáo sẽ xuất hiện ở đây."
+      title={t('empty.noDocuments')}
+      description={t('empty.noDocumentsDescription')}
     />
   );
 }
 
 // Empty Folder
 export function EmptyFolderState({ folderName }: { folderName?: string }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<FolderOpen className="w-full h-full" />}
-      title={folderName ? `${folderName} trống` : 'Thư mục trống'}
-      description="Chưa có nội dung trong thư mục này."
+      title={folderName ? t('empty.folderEmpty', { folderName }) : t('empty.emptyFolder')}
+      description={t('empty.emptyFolderDescription')}
     />
   );
 }
@@ -221,69 +228,74 @@ export function EmptyFolderState({ folderName }: { folderName?: string }) {
 // =============================================================================
 
 // General Error
-export function ErrorState({ 
-  title = 'Đã xảy ra lỗi',
+export function ErrorState({
+  title,
   description,
   onRetry,
-}: { 
+}: {
   title?: string;
   description?: string;
   onRetry?: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<AlertCircle className="w-full h-full text-red-400" />}
-      title={title}
-      description={description || 'Không thể tải dữ liệu. Vui lòng thử lại sau.'}
-      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+      title={title || t('error.occurred')}
+      description={description || t('error.loadFailed')}
+      action={onRetry ? { label: t('error.retry'), onClick: onRetry } : undefined}
     />
   );
 }
 
 // Network Error
 export function NetworkErrorState({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<WifiOff className="w-full h-full text-amber-400" />}
-      title="Lỗi kết nối"
-      description="Không thể kết nối đến máy chủ. Kiểm tra kết nối mạng và thử lại."
-      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+      title={t('error.connection')}
+      description={t('error.connectionDescription')}
+      action={onRetry ? { label: t('error.retry'), onClick: onRetry } : undefined}
     />
   );
 }
 
 // Access Denied
 export function AccessDeniedState({ onGoBack }: { onGoBack?: () => void }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Lock className="w-full h-full text-red-400" />}
-      title="Không có quyền truy cập"
-      description="Bạn không có quyền xem nội dung này. Liên hệ quản trị viên nếu cần hỗ trợ."
-      action={onGoBack ? { label: 'Quay lại', onClick: onGoBack } : undefined}
+      title={t('error.noAccess')}
+      description={t('error.noAccessDescription')}
+      action={onGoBack ? { label: t('error.goBack'), onClick: onGoBack } : undefined}
     />
   );
 }
 
 // Server Error
 export function ServerErrorState({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Server className="w-full h-full text-red-400" />}
-      title="Lỗi máy chủ"
-      description="Máy chủ đang gặp sự cố. Vui lòng thử lại sau ít phút."
-      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+      title={t('error.server')}
+      description={t('error.serverDescription')}
+      action={onRetry ? { label: t('error.retry'), onClick: onRetry } : undefined}
     />
   );
 }
 
 // Database Error
 export function DatabaseErrorState({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Database className="w-full h-full text-red-400" />}
-      title="Lỗi cơ sở dữ liệu"
-      description="Không thể truy cập cơ sở dữ liệu. Vui lòng liên hệ quản trị viên."
-      action={onRetry ? { label: 'Thử lại', onClick: onRetry } : undefined}
+      title={t('error.database')}
+      description={t('error.databaseDescription')}
+      action={onRetry ? { label: t('error.retry'), onClick: onRetry } : undefined}
     />
   );
 }
@@ -294,22 +306,24 @@ export function DatabaseErrorState({ onRetry }: { onRetry?: () => void }) {
 
 // Coming Soon
 export function ComingSoonState({ featureName }: { featureName?: string }) {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<Sparkles className="w-full h-full text-purple-400" />}
-      title="Sắp ra mắt"
-      description={featureName ? `Tính năng ${featureName} đang được phát triển và sẽ sớm có mặt.` : 'Tính năng này đang được phát triển và sẽ sớm có mặt.'}
+      title={t('empty.comingSoon')}
+      description={featureName ? t('empty.comingSoonFeature', { featureName }) : t('empty.comingSoonDescription')}
     />
   );
 }
 
 // Under Maintenance
 export function MaintenanceState() {
+  const { t } = useLanguage();
   return (
     <EmptyState
       icon={<RefreshCw className="w-full h-full text-amber-400 animate-spin-slow" />}
-      title="Đang bảo trì"
-      description="Hệ thống đang được bảo trì. Vui lòng quay lại sau."
+      title={t('error.maintenance')}
+      description={t('error.maintenanceDescription')}
     />
   );
 }
@@ -344,7 +358,7 @@ export function EmptyStateWrapper({
   }
 
   if (isError) {
-    return <ErrorState title="Đã xảy ra lỗi" description={error} onRetry={onRetry} />;
+    return <ErrorState description={error} onRetry={onRetry} />;
   }
 
   if (isEmpty) {
