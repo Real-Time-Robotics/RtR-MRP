@@ -1,421 +1,380 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { MobileHeader } from "@/components/mobile/mobile-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Scanner } from "@/components/mobile/scanner";
-import { QuantityInput } from "@/components/mobile/quantity-input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Scan,
-  Check,
-  Package,
   Plus,
   Minus,
+  Package,
+  MapPin,
+  Check,
   Loader2,
-  Search,
-  AlertCircle,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { haptic } from "@/lib/mobile/haptics";
+  Scan,
+  AlertCircle
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface SelectedPart {
-  id: string;
-  sku: string;
-  name: string;
-  currentQty: number;
-  uom: string;
-  location: string;
+// =============================================================================
+// MOBILE INVENTORY ADJUST PAGE
+// =============================================================================
+
+export default function MobileInventoryAdjustPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>}>
+      <MobileInventoryAdjustContent />
+    </Suspense>
+  );
 }
 
-// Mock data
-const mockParts: SelectedPart[] = [
-  {
-    id: "1",
-    sku: "MTR-001",
-    name: "Brushless Motor 2207",
-    currentQty: 150,
-    uom: "pcs",
-    location: "A-01-01",
-  },
-  {
-    id: "2",
-    sku: "ESC-002",
-    name: "ESC 30A",
-    currentQty: 75,
-    uom: "pcs",
-    location: "B-02-03",
-  },
-  {
-    id: "3",
-    sku: "PROP-003",
-    name: "Propeller 5x4.5",
-    currentQty: 500,
-    uom: "pcs",
-    location: "C-01-02",
-  },
-];
-
-export default function InventoryAdjustPage() {
-  const [showScanner, setShowScanner] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPart, setSelectedPart] = useState<SelectedPart | null>(null);
-  const [adjustmentType, setAdjustmentType] = useState<"add" | "remove">("add");
-  const [adjustmentQty, setAdjustmentQty] = useState(0);
-  const [reason, setReason] = useState("");
+function MobileInventoryAdjustContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const [adjustType, setAdjustType] = useState<'add' | 'remove'>('add');
+  const [partNumber, setPartNumber] = useState('');
+  const [partInfo, setPartInfo] = useState<any>(null);
+  const [location, setLocation] = useState('');
+  const [quantity, setQuantity] = useState(1);
+  const [reason, setReason] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [searchResults, setSearchResults] = useState<SelectedPart[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
+  // Reason options
+  const reasons = adjustType === 'add' 
+    ? ['Nhận từ sản xuất', 'Tìm thấy', 'Điều chỉnh kiểm kê', 'Trả hàng', 'Khác']
+    : ['Hư hỏng', 'Mất mát', 'Điều chỉnh kiểm kê', 'Xuất sử dụng nội bộ', 'Khác'];
+
+  // Get params from URL
+  useEffect(() => {
+    const part = searchParams.get('part');
+    const type = searchParams.get('type');
+    
+    if (part) setPartNumber(part);
+    if (type === 'add' || type === 'remove') setAdjustType(type);
+  }, [searchParams]);
+
+  // Fetch part info when part number changes
+  useEffect(() => {
+    if (!partNumber) {
+      setPartInfo(null);
       return;
     }
-    haptic("selection");
-    const results = mockParts.filter(
-      (p) =>
-        p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setSearchResults(results);
-  };
 
-  const handleScan = (result: any) => {
-    haptic("success");
-    setShowScanner(false);
-    const found = mockParts.find((p) => p.sku === result.value);
-    if (found) {
-      setSelectedPart(found);
-      setAdjustmentQty(0);
-    }
-  };
+    const fetchPart = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/mobile/inventory?search=${partNumber}`);
+        if (response.ok) {
+          const data = await response.json();
+          const found = data.data?.find((p: any) => 
+            p.partNumber.toLowerCase() === partNumber.toLowerCase()
+          );
+          if (found) {
+            setPartInfo(found);
+            if (found.locations?.[0]) {
+              setLocation(found.locations[0].code);
+            }
+          } else {
+            setPartInfo(null);
+            setError('Không tìm thấy vật tư');
+          }
+        }
+      } catch (err) {
+        setError('Lỗi khi tải thông tin');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleSelectPart = (part: SelectedPart) => {
-    haptic("selection");
-    setSelectedPart(part);
-    setSearchResults([]);
-    setSearchQuery("");
-    setAdjustmentQty(0);
-  };
+    const debounce = setTimeout(fetchPart, 500);
+    return () => clearTimeout(debounce);
+  }, [partNumber]);
 
+  // Handle submit
   const handleSubmit = async () => {
-    if (!selectedPart || adjustmentQty <= 0) return;
+    if (!partInfo || !location || !reason) {
+      setError('Vui lòng điền đầy đủ thông tin');
+      return;
+    }
+
+    if (quantity <= 0) {
+      setError('Số lượng phải lớn hơn 0');
+      return;
+    }
 
     setIsSubmitting(true);
-    haptic("medium");
+    setError(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch('/api/mobile/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'adjust',
+          partId: partInfo.id,
+          partNumber: partInfo.partNumber,
+          locationId: location,
+          adjustmentType: adjustType,
+          quantity,
+          reason,
+          notes,
+        }),
+      });
 
-      // TODO: Call actual API
-      haptic("success");
-      setSelectedPart(null);
-      setAdjustmentQty(0);
-      setReason("");
-    } catch (error) {
-      haptic("error");
-      console.error("Failed to submit adjustment:", error);
+      if (response.ok) {
+        setSuccess(true);
+        // Vibrate on success
+        if ('vibrate' in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+        // Redirect after delay
+        setTimeout(() => {
+          router.push('/mobile/inventory');
+        }, 1500);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Lỗi khi điều chỉnh');
+      }
+    } catch (err) {
+      setError('Lỗi kết nối');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const newQty =
-    adjustmentType === "add"
-      ? (selectedPart?.currentQty || 0) + adjustmentQty
-      : (selectedPart?.currentQty || 0) - adjustmentQty;
-
-  // Scanner view
-  if (showScanner) {
+  if (success) {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
-        <Scanner
-          onScan={handleScan}
-          onClose={() => setShowScanner(false)}
-          continuous={false}
-        />
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Điều chỉnh thành công!
+          </h2>
+          <p className="text-gray-500">
+            Đã {adjustType === 'add' ? 'thêm' : 'giảm'} {quantity} {partInfo?.partNumber}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <MobileHeader
-        title="Adjust Inventory"
-        subtitle="Add or remove stock"
-        showBack
-        backHref="/mobile/inventory"
-      />
+    <div className="p-4 space-y-4">
+      {/* Type Toggle */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+        <button
+          onClick={() => setAdjustType('add')}
+          className={cn(
+            'py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors',
+            adjustType === 'add' 
+              ? 'bg-green-500 text-white' 
+              : 'text-gray-600 dark:text-gray-400'
+          )}
+        >
+          <Plus className="w-5 h-5" />
+          Thêm
+        </button>
+        <button
+          onClick={() => setAdjustType('remove')}
+          className={cn(
+            'py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors',
+            adjustType === 'remove' 
+              ? 'bg-red-500 text-white' 
+              : 'text-gray-600 dark:text-gray-400'
+          )}
+        >
+          <Minus className="w-5 h-5" />
+          Giảm
+        </button>
+      </div>
 
-      <div className="p-4 space-y-4">
-        {/* Part selection */}
-        {!selectedPart ? (
-          <>
-            {/* Search and Scan */}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search part number..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pl-10 h-12"
-                />
+      {/* Part Number Input */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Mã vật tư
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={partNumber}
+            onChange={(e) => setPartNumber(e.target.value.toUpperCase())}
+            placeholder="VD: RTR-MOTOR-001"
+            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 font-mono"
+          />
+          <button
+            onClick={() => router.push('/mobile/scan?returnTo=/mobile/inventory/adjust')}
+            className="px-4 py-3 bg-blue-600 text-white rounded-xl"
+          >
+            <Scan className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Part Info */}
+        {isLoading && (
+          <div className="flex items-center gap-2 text-gray-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Đang tìm...
+          </div>
+        )}
+        
+        {partInfo && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              <Package className="w-8 h-8 text-blue-600" />
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {partInfo.description}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Tồn hiện tại: <span className="font-semibold text-blue-600">{partInfo.onHand}</span>
+                </div>
               </div>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 w-12 p-0"
-                onClick={() => setShowScanner(true)}
-              >
-                <Scan className="h-5 w-5" />
-              </Button>
             </div>
+          </div>
+        )}
+      </div>
 
-            <Button onClick={handleSearch} className="w-full">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
+      {/* Location */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Vị trí
+        </label>
+        {partInfo?.locations?.length > 0 ? (
+          <div className="space-y-2">
+            {partInfo.locations.map((loc: any, i: number) => (
+              <button
+                key={i}
+                onClick={() => setLocation(loc.code)}
+                className={cn(
+                  'w-full p-3 rounded-xl border-2 flex items-center justify-between transition-colors',
+                  location === loc.code
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-700'
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className={cn(
+                    'w-5 h-5',
+                    location === loc.code ? 'text-blue-600' : 'text-gray-400'
+                  )} />
+                  <span className="font-mono">{loc.code}</span>
+                </div>
+                <span className="text-gray-500">Qty: {loc.qty}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value.toUpperCase())}
+            placeholder="VD: WH-01-R01-C01-S01"
+            className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 font-mono"
+          />
+        )}
+      </div>
 
-            {/* Search results */}
-            {searchResults.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground">
-                  SELECT PART
-                </h3>
-                {searchResults.map((part) => (
-                  <Card
-                    key={part.id}
-                    className="cursor-pointer active:scale-[0.98] transition-transform"
-                    onClick={() => handleSelectPart(part)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <Package className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-mono font-bold">{part.sku}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {part.name}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{part.currentQty}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {part.uom}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+      {/* Quantity */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Số lượng
+        </label>
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-2xl font-bold"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-24 h-14 text-center text-2xl font-bold bg-gray-100 dark:bg-gray-700 rounded-xl border-0"
+          />
+          <button
+            onClick={() => setQuantity(quantity + 1)}
+            className="w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold"
+          >
+            +
+          </button>
+        </div>
+      </div>
 
-            {/* Empty state */}
-            {searchResults.length === 0 && !searchQuery && (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Scan className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">
-                    Scan a barcode or search for a part
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+      {/* Reason */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Lý do
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {reasons.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => setReason(r)}
+              className={cn(
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                reason === r
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+              )}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 space-y-3">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Ghi chú (tùy chọn)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Thêm ghi chú..."
+          rows={2}
+          className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 resize-none"
+        />
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 flex items-center gap-2 text-red-600 dark:text-red-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Submit */}
+      <button
+        onClick={handleSubmit}
+        disabled={!partInfo || !location || !reason || isSubmitting}
+        className={cn(
+          'w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors',
+          adjustType === 'add' ? 'bg-green-600' : 'bg-red-600',
+          'text-white',
+          (!partInfo || !location || !reason || isSubmitting) && 'opacity-50 cursor-not-allowed'
+        )}
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Đang xử lý...
           </>
         ) : (
           <>
-            {/* Selected part info */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Package className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-mono font-bold">{selectedPart.sku}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedPart.name}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedPart(null)}
-                  >
-                    Change
-                  </Button>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Location:</span>
-                  <span className="font-mono">{selectedPart.location}</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Current Qty:</span>
-                  <span className="font-semibold">
-                    {selectedPart.currentQty} {selectedPart.uom}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Adjustment type */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Adjustment Type</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup
-                  value={adjustmentType}
-                  onValueChange={(v: "add" | "remove") => {
-                    haptic("selection");
-                    setAdjustmentType(v);
-                  }}
-                  className="flex gap-4"
-                >
-                  <div
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-colors cursor-pointer",
-                      adjustmentType === "add"
-                        ? "border-green-500 bg-green-50 dark:bg-green-900/20"
-                        : "border-transparent bg-muted"
-                    )}
-                    onClick={() => {
-                      haptic("selection");
-                      setAdjustmentType("add");
-                    }}
-                  >
-                    <RadioGroupItem value="add" id="add" className="sr-only" />
-                    <Plus className="h-5 w-5 text-green-600" />
-                    <Label htmlFor="add" className="font-medium cursor-pointer">
-                      Add
-                    </Label>
-                  </div>
-                  <div
-                    className={cn(
-                      "flex-1 flex items-center justify-center gap-2 p-4 rounded-lg border-2 transition-colors cursor-pointer",
-                      adjustmentType === "remove"
-                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                        : "border-transparent bg-muted"
-                    )}
-                    onClick={() => {
-                      haptic("selection");
-                      setAdjustmentType("remove");
-                    }}
-                  >
-                    <RadioGroupItem
-                      value="remove"
-                      id="remove"
-                      className="sr-only"
-                    />
-                    <Minus className="h-5 w-5 text-red-600" />
-                    <Label
-                      htmlFor="remove"
-                      className="font-medium cursor-pointer"
-                    >
-                      Remove
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </CardContent>
-            </Card>
-
-            {/* Quantity */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Quantity</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <QuantityInput
-                  value={adjustmentQty}
-                  onChange={setAdjustmentQty}
-                  min={0}
-                  max={
-                    adjustmentType === "remove"
-                      ? selectedPart.currentQty
-                      : 99999
-                  }
-                />
-
-                {/* Preview */}
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">
-                    New Quantity:
-                  </span>
-                  <span
-                    className={cn(
-                      "text-lg font-bold",
-                      newQty < 0 && "text-red-600"
-                    )}
-                  >
-                    {newQty} {selectedPart.uom}
-                  </span>
-                </div>
-
-                {newQty < 0 && (
-                  <div className="flex items-center gap-2 text-red-600 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    Cannot remove more than current quantity
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Reason */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Reason</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Enter reason for adjustment..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={3}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Submit */}
-            <Button
-              className={cn(
-                "w-full h-14 text-lg",
-                adjustmentType === "add"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              )}
-              onClick={handleSubmit}
-              disabled={
-                isSubmitting ||
-                adjustmentQty <= 0 ||
-                newQty < 0 ||
-                !reason.trim()
-              }
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Check className="h-5 w-5 mr-2" />
-                  Confirm Adjustment
-                </>
-              )}
-            </Button>
+            {adjustType === 'add' ? <Plus className="w-5 h-5" /> : <Minus className="w-5 h-5" />}
+            Xác nhận {adjustType === 'add' ? 'thêm' : 'giảm'} {quantity}
           </>
         )}
-      </div>
+      </button>
     </div>
   );
 }

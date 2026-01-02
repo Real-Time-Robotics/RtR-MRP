@@ -1,174 +1,229 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
-import { MobileHeader } from "@/components/mobile/mobile-header";
-import { cn } from "@/lib/utils";
-import {
-  Scan,
-  Package,
-  Truck,
-  ClipboardList,
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { 
+  Scan, 
+  Package, 
+  PackagePlus,
+  PackageMinus,
+  ArrowLeftRight,
+  ClipboardCheck,
   Factory,
   CheckCircle,
-  ArrowRightLeft,
-  Calculator,
-  History,
-} from "lucide-react";
-import { haptic } from "@/lib/mobile/haptics";
+  Clock,
+  AlertTriangle,
+  TrendingUp,
+  BarChart3,
+  Boxes
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface QuickAction {
-  name: string;
-  description: string;
-  href: string;
-  icon: React.ElementType;
-  color: string;
-}
-
-const quickActions: QuickAction[] = [
-  {
-    name: "Scan",
-    description: "Scan barcode or QR code",
-    href: "/mobile/scan",
-    icon: Scan,
-    color: "bg-blue-500",
-  },
-  {
-    name: "Inventory",
-    description: "View & adjust inventory",
-    href: "/mobile/inventory",
-    icon: Package,
-    color: "bg-green-500",
-  },
-  {
-    name: "Receiving",
-    description: "Receive PO items",
-    href: "/mobile/receiving",
-    icon: Truck,
-    color: "bg-orange-500",
-  },
-  {
-    name: "Picking",
-    description: "Pick sales orders",
-    href: "/mobile/picking",
-    icon: ClipboardList,
-    color: "bg-purple-500",
-  },
-  {
-    name: "Work Orders",
-    description: "View & update WOs",
-    href: "/mobile/work-orders",
-    icon: Factory,
-    color: "bg-indigo-500",
-  },
-  {
-    name: "Quality",
-    description: "Inspections & checks",
-    href: "/mobile/quality",
-    icon: CheckCircle,
-    color: "bg-red-500",
-  },
-  {
-    name: "Transfer",
-    description: "Move inventory",
-    href: "/mobile/inventory/transfer",
-    icon: ArrowRightLeft,
-    color: "bg-cyan-500",
-  },
-  {
-    name: "Cycle Count",
-    description: "Count inventory",
-    href: "/mobile/inventory/count",
-    icon: Calculator,
-    color: "bg-yellow-500",
-  },
-];
+// =============================================================================
+// MOBILE HOME PAGE
+// =============================================================================
 
 export default function MobileHomePage() {
-  const handleActionClick = () => {
-    haptic("selection");
-  };
+  const router = useRouter();
+
+  // Quick actions
+  const quickActions = [
+    { 
+      icon: Scan, 
+      label: 'Quét mã', 
+      href: '/mobile/scan',
+      color: 'bg-blue-500',
+      description: 'Quét barcode/QR'
+    },
+    { 
+      icon: PackagePlus, 
+      label: 'Nhận hàng', 
+      href: '/mobile/receiving',
+      color: 'bg-green-500',
+      description: 'PO receiving'
+    },
+    { 
+      icon: PackageMinus, 
+      label: 'Xuất hàng', 
+      href: '/mobile/picking',
+      color: 'bg-orange-500',
+      description: 'SO picking'
+    },
+    { 
+      icon: ArrowLeftRight, 
+      label: 'Chuyển kho', 
+      href: '/mobile/inventory/transfer',
+      color: 'bg-purple-500',
+      description: 'Chuyển vị trí'
+    },
+    { 
+      icon: ClipboardCheck, 
+      label: 'Kiểm kê', 
+      href: '/mobile/inventory/count',
+      color: 'bg-cyan-500',
+      description: 'Cycle count'
+    },
+    { 
+      icon: CheckCircle, 
+      label: 'Kiểm tra CL', 
+      href: '/mobile/quality',
+      color: 'bg-pink-500',
+      description: 'QC inspection'
+    },
+  ];
+
+  // Mock stats
+  const stats = [
+    { label: 'Chờ nhận', value: 5, icon: PackagePlus, color: 'text-green-600', bgColor: 'bg-green-50' },
+    { label: 'Chờ xuất', value: 8, icon: PackageMinus, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+    { label: 'Lệnh SX', value: 3, icon: Factory, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+    { label: 'Chờ QC', value: 2, icon: CheckCircle, color: 'text-pink-600', bgColor: 'bg-pink-50' },
+  ];
+
+  // Mock recent activity
+  const recentActivity = [
+    { action: 'Nhận hàng', item: 'RTR-MOTOR-001', qty: 50, time: '5 phút trước', status: 'success' },
+    { action: 'Xuất hàng', item: 'RTR-ESC-002', qty: 20, time: '15 phút trước', status: 'success' },
+    { action: 'Chuyển kho', item: 'RTR-FRAME-003', qty: 10, time: '30 phút trước', status: 'success' },
+    { action: 'Kiểm kê', item: 'WH-01-R01-C01', qty: null, time: '1 giờ trước', status: 'warning' },
+  ];
 
   return (
-    <div className="min-h-screen">
-      <MobileHeader
-        title="RTR MRP Mobile"
-        subtitle="Shop Floor Operations"
-        showBack
-        backHref="/home"
-        menuItems={[
-          { label: "Settings", onClick: () => window.location.href = "/mobile/profile" },
-          { label: "Scan History", onClick: () => window.location.href = "/mobile/scan/history" },
-          { label: "Sync Now", onClick: () => {} },
-        ]}
-      />
-
-      <div className="p-4 space-y-6">
-        {/* Welcome section */}
-        <Card className="bg-gradient-to-r from-primary to-primary/80 text-white">
-          <CardContent className="p-4">
-            <h2 className="text-lg font-semibold">Welcome!</h2>
-            <p className="text-sm text-white/80 mt-1">
-              Tap an action below to get started, or use the scan button to
-              quickly look up parts and locations.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Quick actions grid */}
-        <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3">
-            QUICK ACTIONS
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => (
-              <Link
-                key={action.name}
-                href={action.href}
-                onClick={handleActionClick}
-              >
-                <Card className="h-full hover:shadow-md transition-shadow active:scale-95">
-                  <CardContent className="p-4">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-lg flex items-center justify-center mb-3",
-                        action.color
-                      )}
-                    >
-                      <action.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <h4 className="font-medium">{action.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {action.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+    <div className="p-4 space-y-6">
+      {/* Big Scan Button */}
+      <button
+        onClick={() => router.push('/mobile/scan')}
+        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl p-6 shadow-lg active:scale-[0.98] transition-transform"
+      >
+        <div className="flex items-center justify-center gap-4">
+          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+            <Scan className="w-8 h-8" />
+          </div>
+          <div className="text-left">
+            <div className="text-2xl font-bold">Quét mã</div>
+            <div className="text-blue-100">Barcode / QR Code</div>
           </div>
         </div>
+      </button>
 
-        {/* Recent activity */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-muted-foreground">
-              RECENT ACTIVITY
-            </h3>
-            <Link
-              href="/mobile/scan/history"
-              className="text-xs text-primary font-medium"
+      {/* Stats Grid */}
+      <div className="grid grid-cols-4 gap-3">
+        {stats.map((stat, i) => {
+          const Icon = stat.icon;
+          return (
+            <div 
+              key={i}
+              className={cn(
+                'rounded-xl p-3 text-center',
+                stat.bgColor
+              )}
             >
-              View All
-            </Link>
-          </div>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-center text-muted-foreground py-6">
-                <History className="h-5 w-5 mr-2" />
-                <span className="text-sm">No recent activity</span>
+              <Icon className={cn('w-5 h-5 mx-auto mb-1', stat.color)} />
+              <div className={cn('text-2xl font-bold', stat.color)}>{stat.value}</div>
+              <div className="text-xs text-gray-600 truncate">{stat.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          Thao tác nhanh
+        </h2>
+        <div className="grid grid-cols-3 gap-3">
+          {quickActions.map((action, i) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={i}
+                onClick={() => router.push(action.href)}
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 active:scale-95 transition-transform"
+              >
+                <div className={cn(
+                  'w-12 h-12 rounded-xl flex items-center justify-center mb-2 mx-auto',
+                  action.color
+                )}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white text-center">
+                  {action.label}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+          Hoạt động gần đây
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          {recentActivity.map((item, i) => (
+            <div key={i} className="p-3 flex items-center gap-3">
+              <div className={cn(
+                'w-10 h-10 rounded-full flex items-center justify-center',
+                item.status === 'success' ? 'bg-green-100' : 'bg-yellow-100'
+              )}>
+                {item.status === 'success' ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                )}
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {item.action}
+                </div>
+                <div className="text-sm text-gray-500 truncate">
+                  {item.item} {item.qty && `× ${item.qty}`}
+                </div>
+              </div>
+              <div className="text-xs text-gray-400">
+                {item.time}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Inventory Alerts */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-yellow-500" />
+          Cảnh báo tồn kho
+        </h2>
+        <div className="space-y-2">
+          {[
+            { part: 'RTR-MOTOR-001', name: 'Brushless Motor', current: 15, min: 50 },
+            { part: 'RTR-BATT-005', name: 'LiPo Battery', current: 8, min: 25 },
+          ].map((item, i) => (
+            <div 
+              key={i}
+              className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-yellow-800 dark:text-yellow-200">
+                    {item.part}
+                  </div>
+                  <div className="text-sm text-yellow-600 dark:text-yellow-300">
+                    {item.name}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                    {item.current}
+                  </div>
+                  <div className="text-xs text-yellow-600">
+                    Min: {item.min}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
