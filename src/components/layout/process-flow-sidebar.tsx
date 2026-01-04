@@ -44,6 +44,9 @@ import {
   Activity,
   Smartphone,
   Brain,
+  Wand2,
+  Gauge,
+  Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -109,6 +112,7 @@ const stages: NavStage[] = [
       { id: 'sales', labelKey: 'sidebar.orders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', badge: 5 },
       { id: 'inventory', labelKey: 'sidebar.inventory', icon: <ClipboardList className="w-5 h-5" />, href: '/inventory' },
       { id: 'mrp', labelKey: 'sidebar.mrp', icon: <Calculator className="w-5 h-5" />, href: '/mrp' },
+      { id: 'mrp-wizard', labelKey: 'sidebar.mrpWizard', icon: <Wand2 className="w-5 h-5" />, href: '/mrp/wizard' },
     ],
   },
   {
@@ -120,6 +124,7 @@ const stages: NavStage[] = [
     items: [
       { id: 'purchasing', labelKey: 'sidebar.purchasing', icon: <Truck className="w-5 h-5" />, href: '/purchasing', badge: 3 },
       { id: 'production', labelKey: 'sidebar.production', icon: <Factory className="w-5 h-5" />, href: '/production' },
+      { id: 'oee', labelKey: 'sidebar.oee', icon: <Gauge className="w-5 h-5" />, href: '/production/oee' },
       { id: 'quality', labelKey: 'sidebar.quality', icon: <CheckCircle className="w-5 h-5" />, href: '/quality' },
       { id: 'finance', labelKey: 'sidebar.finance', icon: <DollarSign className="w-5 h-5" />, href: '/finance' },
     ],
@@ -133,6 +138,7 @@ const stages: NavStage[] = [
     items: [
       { id: 'reports', labelKey: 'sidebar.reports', icon: <BarChart3 className="w-5 h-5" />, href: '/analytics' },
       { id: 'ai', labelKey: 'sidebar.ai', icon: <Brain className="w-5 h-5" />, href: '/ai' },
+      { id: 'alerts', labelKey: 'sidebar.alerts', icon: <Bell className="w-5 h-5" />, href: '/alerts' },
       { id: 'activity', labelKey: 'sidebar.activity', icon: <Activity className="w-5 h-5" />, href: '/activity' },
     ],
   },
@@ -144,6 +150,7 @@ const stages: NavStage[] = [
     borderColor: 'border-pink-500',
     items: [
       { id: 'mobile-app', labelKey: 'sidebar.mobileApp', icon: <Smartphone className="w-5 h-5" />, href: '/mobile' },
+      { id: 'technician', labelKey: 'sidebar.technician', icon: <Wrench className="w-5 h-5" />, href: '/mobile/technician' },
     ],
   },
 ];

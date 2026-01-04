@@ -1,5 +1,7 @@
-import MRPWizardV2 from '@/components/pages-v2/mrp-wizard-v2';
+'use client';
+
+import { MRPWizard } from '@/components/mrp';
 
 export default function MRPWizardPage() {
-  return <MRPWizardV2 />;
+  return <MRPWizard />;
 }

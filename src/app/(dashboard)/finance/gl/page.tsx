@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   BookOpen,
@@ -80,7 +80,15 @@ interface TrialBalanceData {
   totalCredits: number;
 }
 
-export default function GeneralLedgerPage() {
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+    </div>
+  );
+}
+
+function GeneralLedgerContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "accounts";
   const showNew = searchParams.get("new") === "true";
@@ -427,5 +435,13 @@ export default function GeneralLedgerPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function GeneralLedgerPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <GeneralLedgerContent />
+    </Suspense>
   );
 }

@@ -422,6 +422,10 @@ model Product {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Default work center for capacity planning
+  defaultWorkCenterId String?
+  defaultWorkCenter   WorkCenter? @relation("ProductDefaultWorkCenter", fields: [defaultWorkCenterId], references: [id])
+
   bomHeaders      BomHeader[]
   salesOrderLines SalesOrderLine[]
   workOrders      WorkOrder[]
@@ -798,18 +802,20 @@ model WorkOrder {
   actualEnd      DateTime?
   assignedTo     String?
   workCenter     String?
+  workCenterId   String?
   notes          String?
   completedQty   Int       @default(0)
   scrapQty       Int       @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  product     Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
-  salesOrder  SalesOrder?          @relation(fields: [salesOrderId], references: [id])
-  allocations MaterialAllocation[]
-  inspections Inspection[]
-  ncrs        NCR[]
-  operations  WorkOrderOperation[]
+  product         Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  salesOrder      SalesOrder?          @relation(fields: [salesOrderId], references: [id])
+  workCenterRef   WorkCenter?          @relation("WorkOrderWorkCenter", fields: [workCenterId], references: [id])
+  allocations     MaterialAllocation[]
+  inspections     Inspection[]
+  ncrs            NCR[]
+  operations      WorkOrderOperation[]
 
   // Financial relations
   workOrderCosts WorkOrderCost[]
@@ -1768,6 +1774,10 @@ model WorkCenter {
   downtimeRecords   DowntimeRecord[]
   capacityRecords   CapacityRecord[]
   woOperations      WorkOrderOperation[]
+  equipment         Equipment[]
+  workCenterCapacity WorkCenterCapacity[]
+  defaultProducts   Product[] @relation("ProductDefaultWorkCenter")
+  workOrders        WorkOrder[] @relation("WorkOrderWorkCenter")
 
   @@index([status])
   @@index([type])
@@ -3716,4 +3726,446 @@ model PartSubstitute {
   @@unique([primaryPartId, substitutePartId])
   @@index([primaryPartId])
   @@map("part_substitutes")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    PHASE 3: RESOURCE & CAPACITY MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ EQUIPMENT (OEE Tracking) ============
+model Equipment {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+
+  // Classification
+  type            String   // CNC, ASSEMBLY, TESTING, PACKAGING, etc.
+  category        String?  // Primary, Secondary, Support
+  manufacturer    String?
+  model           String?
+  serialNumber    String?  @unique
+
+  // Location
+  workCenterId    String
+  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+  location        String?
+
+  // Specifications
+  capacity        Float?   // Units per hour
+  powerKw         Float?
+  weightKg        Float?
+  dimensions      String?  // LxWxH in mm
+
+  // Dates
+  purchaseDate    DateTime?
+  installDate     DateTime?
+  warrantyExpiry  DateTime?
+
+  // Costs
+  purchaseCost    Float?
+  depreciationRate Float?  // Annual percentage
+  currentValue    Float?
+  hourlyRunCost   Float?
+
+  // OEE Metrics (Overall Equipment Effectiveness)
+  targetOee       Float    @default(85)  // Target OEE %
+  currentOee      Float?   // Latest calculated OEE
+  availability    Float?   // Availability %
+  performance     Float?   // Performance %
+  quality         Float?   // Quality %
+  lastOeeUpdate   DateTime?
+
+  // Status
+  status          String   @default("operational") // operational, maintenance, breakdown, retired
+  criticality     String   @default("medium")      // low, medium, high, critical
+
+  // Maintenance
+  lastMaintenanceDate   DateTime?
+  nextMaintenanceDate   DateTime?
+  maintenanceIntervalDays Int?
+  totalDowntimeHours    Float    @default(0)
+  mtbf                  Float?   // Mean Time Between Failures (hours)
+  mttr                  Float?   // Mean Time To Repair (hours)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  maintenanceSchedules MaintenanceSchedule[]
+  maintenanceOrders    MaintenanceOrder[]
+
+  @@index([workCenterId])
+  @@index([status])
+  @@index([type])
+  @@map("equipment")
+}
+
+// ============ MAINTENANCE SCHEDULE (PM - Preventive Maintenance) ============
+model MaintenanceSchedule {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+
+  // Equipment
+  equipmentId     String
+  equipment       Equipment @relation(fields: [equipmentId], references: [id])
+
+  // Schedule Type
+  type            String   // PREVENTIVE, PREDICTIVE, CALIBRATION, INSPECTION
+  frequency       String   // DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY, HOURS_BASED
+  intervalValue   Int      // Every X days/hours
+  intervalUnit    String   @default("days") // days, hours, cycles
+
+  // Estimated times
+  estimatedDuration Float   // Duration in hours
+  requiredSkills  Json?    // Array of skill IDs required
+
+  // Instructions
+  checklistItems  Json?    // Array of checklist items
+  instructions    String?
+  safetyNotes     String?
+  partsRequired   Json?    // Array of part IDs and quantities
+
+  // Scheduling
+  lastExecutedAt  DateTime?
+  nextDueDate     DateTime?
+  advanceNoticeDays Int    @default(7) // Notify X days before
+
+  // Costs
+  estimatedCost   Float?
+  laborCostPerHour Float?
+
+  // Status
+  isActive        Boolean  @default(true)
+  priority        String   @default("medium") // low, medium, high, critical
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  maintenanceOrders MaintenanceOrder[]
+
+  @@index([equipmentId])
+  @@index([nextDueDate])
+  @@index([isActive])
+  @@map("maintenance_schedules")
+}
+
+// ============ MAINTENANCE ORDER (Work Order for Maintenance) ============
+model MaintenanceOrder {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+
+  // Equipment
+  equipmentId     String
+  equipment       Equipment @relation(fields: [equipmentId], references: [id])
+
+  // Schedule (if PM)
+  scheduleId      String?
+  schedule        MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
+
+  // Type
+  type            String   // PM (Preventive), CM (Corrective), EM (Emergency), CAL (Calibration)
+  priority        String   @default("medium") // low, medium, high, critical, emergency
+
+  // Description
+  title           String
+  description     String?
+  problemReported String?  // For corrective/emergency
+  rootCause       String?
+
+  // Planning
+  plannedStartDate DateTime?
+  plannedEndDate   DateTime?
+  estimatedDuration Float?  // Hours
+
+  // Execution
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
+  actualDuration  Float?   // Hours
+
+  // Assignment
+  assignedTo      String?  // Employee ID
+  assignedTeam    Json?    // Array of employee IDs
+
+  // Status
+  status          String   @default("pending")
+  // pending, scheduled, in_progress, waiting_parts, completed, cancelled
+
+  // Completion
+  workPerformed   String?
+  partsUsed       Json?    // Array of {partId, qty, cost}
+  findings        String?
+  recommendations String?
+
+  // Costs
+  laborCost       Float    @default(0)
+  partsCost       Float    @default(0)
+  externalCost    Float    @default(0)  // External contractors
+  totalCost       Float    @default(0)
+
+  // Approval
+  requestedBy     String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  completedBy     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([equipmentId])
+  @@index([status])
+  @@index([type])
+  @@index([plannedStartDate])
+  @@map("maintenance_orders")
+}
+
+// ============ EMPLOYEE (Production Workers) ============
+model Employee {
+  id              String   @id @default(cuid())
+  employeeCode    String   @unique
+
+  // Personal Info
+  firstName       String
+  lastName        String
+  email           String?  @unique
+  phone           String?
+
+  // User Account (optional link)
+  userId          String?  @unique
+
+  // Employment
+  department      String?
+  position        String?
+  employmentType  String   @default("full_time") // full_time, part_time, contract, temp
+  hireDate        DateTime?
+  terminationDate DateTime?
+
+  // Work Info
+  defaultWorkCenterId String?
+  shiftPattern    String?  // Default shift pattern
+  hourlyRate      Float?
+  overtimeRate    Float?
+
+  // Certifications
+  certifications  Json?    // Array of {name, issuedDate, expiryDate}
+
+  // Status
+  status          String   @default("active") // active, on_leave, suspended, terminated
+
+  // Contact
+  emergencyContact String?
+  emergencyPhone  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  skills          EmployeeSkill[]
+  shiftAssignments ShiftAssignment[]
+
+  @@index([department])
+  @@index([status])
+  @@map("employees")
+}
+
+// ============ SKILL (Skill Matrix) ============
+model Skill {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+
+  // Classification
+  category        String   // MACHINE_OPERATION, QUALITY, SAFETY, TECHNICAL, SOFT_SKILL
+  workCenterType  String?  // Applicable work center type
+
+  // Requirements
+  trainingRequired Boolean @default(true)
+  certificationRequired Boolean @default(false)
+  recertificationDays Int?  // Days until recertification needed
+
+  // Levels
+  hasLevels       Boolean  @default(true)  // If skill has proficiency levels
+  maxLevel        Int      @default(5)     // Maximum proficiency level
+
+  // Status
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  employeeSkills  EmployeeSkill[]
+
+  @@index([category])
+  @@map("skills")
+}
+
+// ============ EMPLOYEE SKILL (Skill Assignment) ============
+model EmployeeSkill {
+  id              String   @id @default(cuid())
+
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+
+  skillId         String
+  skill           Skill    @relation(fields: [skillId], references: [id])
+
+  // Proficiency
+  level           Int      @default(1)      // 1-5 typically
+  proficiency     String   @default("beginner") // beginner, intermediate, advanced, expert
+
+  // Training/Certification
+  trainedDate     DateTime?
+  trainedBy       String?
+  certifiedDate   DateTime?
+  certificationExpiry DateTime?
+  certificateNumber String?
+
+  // Assessment
+  lastAssessedDate DateTime?
+  assessedBy      String?
+  assessmentScore Float?   // 0-100
+
+  // Status
+  isActive        Boolean  @default(true)
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([employeeId, skillId])
+  @@index([employeeId])
+  @@index([skillId])
+  @@map("employee_skills")
+}
+
+// ============ SHIFT (Work Shifts) ============
+model Shift {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  description     String?
+
+  // Timing
+  startTime       String   // HH:mm format, e.g., "06:00"
+  endTime         String   // HH:mm format, e.g., "14:00"
+  durationHours   Float    // Total shift duration
+
+  // Breaks
+  breakMinutes    Int      @default(0)  // Total break time
+  breakSchedule   Json?    // Array of {startTime, endTime, type}
+
+  // Working Days
+  workingDays     Json     @default("[1,2,3,4,5]") // 0=Sun, 1=Mon, ...
+
+  // Overtime
+  overtimeAfterHours Float? // Overtime kicks in after X hours
+  overtimeRate    Float    @default(1.5) // Multiplier
+
+  // Capacity Impact
+  efficiencyFactor Float   @default(1.0) // Night shift might be 0.9
+
+  // Status
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignments     ShiftAssignment[]
+
+  @@map("shifts")
+}
+
+// ============ SHIFT ASSIGNMENT (Employee Shift Scheduling & Attendance) ============
+model ShiftAssignment {
+  id              String   @id @default(cuid())
+
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+
+  shiftId         String
+  shift           Shift    @relation(fields: [shiftId], references: [id])
+
+  // Date
+  date            DateTime @db.Date
+
+  // Assignment Type
+  assignmentType  String   @default("regular") // regular, overtime, on_call, training
+
+  // Status
+  status          String   @default("scheduled")
+  // scheduled, checked_in, checked_out, absent, leave, holiday
+
+  // Attendance
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
+  actualStart     DateTime? // Clock in
+  actualEnd       DateTime? // Clock out
+
+  // Hours
+  regularHours    Float    @default(0)
+  overtimeHours   Float    @default(0)
+  breakMinutes    Int      @default(0)
+
+  // Leave
+  leaveType       String?  // sick, vacation, personal, unpaid
+  leaveApprovedBy String?
+
+  // Notes
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([employeeId, shiftId, date])
+  @@index([employeeId, date])
+  @@index([shiftId, date])
+  @@index([date, status])
+  @@map("shift_assignments")
+}
+
+// ============ WORK CENTER CAPACITY (Daily Capacity Planning) ============
+model WorkCenterCapacity {
+  id              String   @id @default(cuid())
+
+  workCenterId    String
+  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+  date            DateTime @db.Date
+
+  // Base Capacity
+  baseCapacityHours Float  // Standard available hours
+
+  // Adjustments
+  shiftHours      Float    @default(0)  // Hours from shift assignments
+  maintenanceHours Float   @default(0)  // Planned maintenance
+  downtimeHours   Float    @default(0)  // Unplanned downtime
+  holidayHours    Float    @default(0)  // Holiday reduction
+
+  // Net Available
+  availableHours  Float    // = base - maintenance - downtime - holiday
+
+  // Loaded
+  scheduledHours  Float    @default(0)  // Hours scheduled from WO
+  actualHours     Float    @default(0)  // Hours actually worked
+
+  // Utilization
+  utilization     Float?   // = scheduled / available * 100
+  efficiency      Float?   // = actual / scheduled * 100 (if completed)
+
+  // Staffing
+  plannedHeadcount Int     @default(0)
+  actualHeadcount Int      @default(0)
+
+  // Status
+  isLocked        Boolean  @default(false) // Manual override
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([workCenterId, date])
+  @@index([workCenterId, date])
+  @@index([date])
+  @@map("work_center_capacity")
 }

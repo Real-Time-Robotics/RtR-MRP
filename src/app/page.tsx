@@ -396,10 +396,10 @@ export default async function LandingPage() {
 
               <div className="space-y-2">
                 {[
-                  { method: 'GET', path: '/api/v2/dashboard' },
-                  { method: 'GET', path: '/api/v2/parts' },
-                  { method: 'POST', path: '/api/v2/sales' },
-                  { method: 'GET', path: '/api/v2/analytics' },
+                  { method: 'GET', path: '/api/dashboard' },
+                  { method: 'GET', path: '/api/parts' },
+                  { method: 'POST', path: '/api/sales-orders' },
+                  { method: 'GET', path: '/api/analytics' },
                 ].map((endpoint, i) => (
                   <div
                     key={i}

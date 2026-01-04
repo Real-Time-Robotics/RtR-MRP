@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Brain, Play, History, Loader2, AlertTriangle } from "lucide-react";
+import { Brain, Play, History, Loader2, AlertTriangle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -90,10 +90,16 @@ export default function MrpPage() {
           <h1 className="text-2xl font-bold tracking-tight">{t("mrp.title")}</h1>
           <p className="text-muted-foreground">{t("mrp.description")}</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/mrp/shortages")}>
-          <AlertTriangle className="h-4 w-4 mr-2" />
-          {t("mrp.shortages")}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => router.push("/mrp/wizard")}>
+            <Wand2 className="h-4 w-4 mr-2" />
+            MRP Wizard
+          </Button>
+          <Button variant="outline" onClick={() => router.push("/mrp/shortages")}>
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            {t("mrp.shortages")}
+          </Button>
+        </div>
       </div>
 
       {/* Run MRP Form */}

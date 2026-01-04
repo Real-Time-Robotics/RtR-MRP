@@ -15,7 +15,7 @@ export default function OfflinePage() {
   // Redirect to dashboard if back online
   React.useEffect(() => {
     if (isOnline) {
-      window.location.href = '/v2/dashboard';
+      window.location.href = '/home';
     }
   }, [isOnline]);
 

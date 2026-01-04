@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Calculator,
@@ -59,7 +59,15 @@ interface Variance {
   createdAt: string;
 }
 
-export default function CostingPage() {
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+    </div>
+  );
+}
+
+function CostingContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "costs";
 
@@ -408,5 +416,13 @@ export default function CostingPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function CostingPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <CostingContent />
+    </Suspense>
   );
 }

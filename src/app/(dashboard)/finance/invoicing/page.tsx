@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Receipt,
@@ -61,7 +61,15 @@ interface AgingData {
   }>;
 }
 
-export default function InvoicingPage() {
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+    </div>
+  );
+}
+
+function InvoicingContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialTab = searchParams.get("tab") || "sales";
@@ -364,5 +372,13 @@ export default function InvoicingPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function InvoicingPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <InvoicingContent />
+    </Suspense>
   );
 }
