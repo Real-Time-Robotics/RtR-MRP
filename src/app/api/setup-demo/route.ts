@@ -30,8 +30,7 @@ export async function GET() {
           status: "active",
           failedLoginCount: 0,
           lockedUntil: null,
-          mfaEnabled: false,
-          mfaSecret: null
+          mfaEnabled: false
         }
       });
 

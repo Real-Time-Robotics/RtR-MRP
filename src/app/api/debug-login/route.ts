@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
         failedLoginCount: true,
         lockedUntil: true,
         mfaEnabled: true,
-        mfaSecret: true,
       },
     });
 
@@ -65,7 +64,6 @@ export async function POST(request: NextRequest) {
         failedLoginCount: user.failedLoginCount,
         lockedUntil: user.lockedUntil,
         mfaEnabled: user.mfaEnabled,
-        hasMfaSecret: !!user.mfaSecret,
       }
     });
 
