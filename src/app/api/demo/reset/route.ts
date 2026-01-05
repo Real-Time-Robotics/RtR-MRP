@@ -47,8 +47,8 @@ export async function POST() {
 
     // Reset demo data in order (respecting foreign key constraints)
     await prisma.$transaction(async (tx) => {
-      // Delete work order materials and items first
-      await tx.workOrderMaterial.deleteMany({
+      // Delete material allocations first (depends on work orders)
+      await tx.materialAllocation.deleteMany({
         where: {
           workOrder: {
             createdById: { in: demoUserIds },
@@ -63,8 +63,8 @@ export async function POST() {
         },
       });
 
-      // Delete sales order items
-      await tx.salesOrderItem.deleteMany({
+      // Delete sales order lines first
+      await tx.salesOrderLine.deleteMany({
         where: {
           salesOrder: {
             createdById: { in: demoUserIds },
@@ -79,8 +79,8 @@ export async function POST() {
         },
       });
 
-      // Delete purchase order items
-      await tx.purchaseOrderItem.deleteMany({
+      // Delete purchase order lines first
+      await tx.purchaseOrderLine.deleteMany({
         where: {
           purchaseOrder: {
             createdById: { in: demoUserIds },
@@ -90,13 +90,6 @@ export async function POST() {
 
       // Delete purchase orders
       await tx.purchaseOrder.deleteMany({
-        where: {
-          createdById: { in: demoUserIds },
-        },
-      });
-
-      // Delete inventory transactions
-      await tx.inventoryTransaction.deleteMany({
         where: {
           createdById: { in: demoUserIds },
         },
@@ -162,21 +155,17 @@ export async function GET() {
 
     const demoUserIds = demoUsers.map((u) => u.id);
 
-    const [workOrders, salesOrders, purchaseOrders, inventoryTransactions] =
-      await Promise.all([
-        prisma.workOrder.count({
-          where: { createdById: { in: demoUserIds } },
-        }),
-        prisma.salesOrder.count({
-          where: { createdById: { in: demoUserIds } },
-        }),
-        prisma.purchaseOrder.count({
-          where: { createdById: { in: demoUserIds } },
-        }),
-        prisma.inventoryTransaction.count({
-          where: { createdById: { in: demoUserIds } },
-        }),
-      ]);
+    const [workOrders, salesOrders, purchaseOrders] = await Promise.all([
+      prisma.workOrder.count({
+        where: { createdById: { in: demoUserIds } },
+      }),
+      prisma.salesOrder.count({
+        where: { createdById: { in: demoUserIds } },
+      }),
+      prisma.purchaseOrder.count({
+        where: { createdById: { in: demoUserIds } },
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -185,8 +174,7 @@ export async function GET() {
         workOrders,
         salesOrders,
         purchaseOrders,
-        inventoryTransactions,
-        total: workOrders + salesOrders + purchaseOrders + inventoryTransactions,
+        total: workOrders + salesOrders + purchaseOrders,
       },
       message: 'Demo data statistics retrieved',
     });
