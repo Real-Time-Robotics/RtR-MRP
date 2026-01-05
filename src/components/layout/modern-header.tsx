@@ -112,8 +112,8 @@ const navigationTabs: NavTab[] = [
         titleVi: 'Bán hàng',
         items: [
           { id: 'sales', label: 'Sales Orders', labelVi: 'Đơn hàng', description: 'Manage customer orders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', color: 'text-violet-600 bg-violet-50' },
-          { id: 'customers', label: 'Customers', labelVi: 'Khách hàng', description: 'Customer management', icon: <Users className="w-5 h-5" />, href: '/customer', color: 'text-blue-600 bg-blue-50' },
-          { id: 'quotes', label: 'Quotations', labelVi: 'Báo giá', description: 'Sales quotations', icon: <FileText className="w-5 h-5" />, href: '/sales/quotes', color: 'text-indigo-600 bg-indigo-50' },
+          { id: 'customers', label: 'Customers', labelVi: 'Khách hàng', description: 'Customer management', icon: <Users className="w-5 h-5" />, href: '/suppliers', color: 'text-blue-600 bg-blue-50' },
+          { id: 'quotes', label: 'Quotations', labelVi: 'Báo giá', description: 'Sales quotations', icon: <FileText className="w-5 h-5" />, href: '/sales', color: 'text-indigo-600 bg-indigo-50' },
         ]
       },
       {
@@ -130,14 +130,14 @@ const navigationTabs: NavTab[] = [
         titleVi: 'Mua hàng',
         items: [
           { id: 'purchasing', label: 'Purchase Orders', labelVi: 'Đơn mua hàng', description: 'PO management', icon: <Truck className="w-5 h-5" />, href: '/purchasing', color: 'text-orange-600 bg-orange-50', badge: '3' },
-          { id: 'suppliers', label: 'Suppliers', labelVi: 'Nhà cung cấp', description: 'Supplier management', icon: <Building2 className="w-5 h-5" />, href: '/supplier', color: 'text-amber-600 bg-amber-50' },
-          { id: 'receiving', label: 'Receiving', labelVi: 'Nhận hàng', description: 'Goods receipt', icon: <Download className="w-5 h-5" />, href: '/receiving', color: 'text-lime-600 bg-lime-50' },
+          { id: 'suppliers', label: 'Suppliers', labelVi: 'Nhà cung cấp', description: 'Supplier management', icon: <Building2 className="w-5 h-5" />, href: '/suppliers', color: 'text-amber-600 bg-amber-50' },
+          { id: 'receiving', label: 'Receiving', labelVi: 'Nhận hàng', description: 'Goods receipt', icon: <Download className="w-5 h-5" />, href: '/inventory', color: 'text-lime-600 bg-lime-50' },
         ]
       },
     ],
     quickActions: [
-      { id: 'new-so', label: 'New Sales Order', labelVi: 'Tạo đơn hàng', icon: <Plus className="w-4 h-4" />, href: '/sales/new', color: 'text-violet-600 bg-violet-100' },
-      { id: 'new-po', label: 'New Purchase Order', labelVi: 'Tạo đơn mua', icon: <Plus className="w-4 h-4" />, href: '/purchasing/new', color: 'text-orange-600 bg-orange-100' },
+      { id: 'new-so', label: 'New Sales Order', labelVi: 'Tạo đơn hàng', icon: <Plus className="w-4 h-4" />, href: '/sales', color: 'text-violet-600 bg-violet-100' },
+      { id: 'new-po', label: 'New Purchase Order', labelVi: 'Tạo đơn mua', icon: <Plus className="w-4 h-4" />, href: '/purchasing', color: 'text-orange-600 bg-orange-100' },
     ]
   },
   {
@@ -151,32 +151,32 @@ const navigationTabs: NavTab[] = [
         titleVi: 'Sản xuất',
         items: [
           { id: 'work-orders', label: 'Work Orders', labelVi: 'Lệnh sản xuất', description: 'Production orders', icon: <Factory className="w-5 h-5" />, href: '/production', color: 'text-orange-600 bg-orange-50' },
-          { id: 'scheduling', label: 'Scheduling', labelVi: 'Lập lịch', description: 'Production schedule', icon: <CalendarDays className="w-5 h-5" />, href: '/scheduling', color: 'text-blue-600 bg-blue-50' },
-          { id: 'shop-floor', label: 'Shop Floor', labelVi: 'Xưởng SX', description: 'Real-time tracking', icon: <Activity className="w-5 h-5" />, href: '/shop-floor', color: 'text-emerald-600 bg-emerald-50', isNew: true },
+          { id: 'scheduling', label: 'Scheduling', labelVi: 'Lập lịch', description: 'Production schedule', icon: <CalendarDays className="w-5 h-5" />, href: '/production', color: 'text-blue-600 bg-blue-50' },
+          { id: 'shop-floor', label: 'Shop Floor', labelVi: 'Xưởng SX', description: 'Real-time tracking', icon: <Activity className="w-5 h-5" />, href: '/production', color: 'text-emerald-600 bg-emerald-50', isNew: true },
         ]
       },
       {
         title: 'Planning',
         titleVi: 'Hoạch định',
         items: [
-          { id: 'mrp', label: 'MRP Planning', labelVi: 'Hoạch định MRP', description: 'Material requirements', icon: <Calculator className="w-5 h-5" />, href: '/mrp-wizard', color: 'text-purple-600 bg-purple-50' },
-          { id: 'capacity', label: 'Capacity Planning', labelVi: 'Hoạch định năng lực', description: 'Resource capacity', icon: <Gauge className="w-5 h-5" />, href: '/mrp-capacity', color: 'text-indigo-600 bg-indigo-50' },
-          { id: 'resource', label: 'Resource Planning', labelVi: 'Nguồn lực', description: 'Resource allocation', icon: <Target className="w-5 h-5" />, href: '/resource-planning', color: 'text-pink-600 bg-pink-50' },
+          { id: 'mrp', label: 'MRP Planning', labelVi: 'Hoạch định MRP', description: 'Material requirements', icon: <Calculator className="w-5 h-5" />, href: '/mrp', color: 'text-purple-600 bg-purple-50' },
+          { id: 'capacity', label: 'Capacity Planning', labelVi: 'Hoạch định năng lực', description: 'Resource capacity', icon: <Gauge className="w-5 h-5" />, href: '/mrp', color: 'text-indigo-600 bg-indigo-50' },
+          { id: 'resource', label: 'Resource Planning', labelVi: 'Nguồn lực', description: 'Resource allocation', icon: <Target className="w-5 h-5" />, href: '/mrp', color: 'text-pink-600 bg-pink-50' },
         ]
       },
       {
         title: 'Resources',
         titleVi: 'Tài nguyên',
         items: [
-          { id: 'workcenters', label: 'Work Centers', labelVi: 'Trung tâm SX', description: 'Work center setup', icon: <Cog className="w-5 h-5" />, href: '/workcenters', color: 'text-slate-600 bg-slate-50' },
-          { id: 'equipment', label: 'Equipment', labelVi: 'Thiết bị', description: 'Machine management', icon: <Wrench className="w-5 h-5" />, href: '/equipment', color: 'text-gray-600 bg-gray-50' },
-          { id: 'workforce', label: 'Workforce', labelVi: 'Nhân công', description: 'Labor management', icon: <Users className="w-5 h-5" />, href: '/workforce', color: 'text-sky-600 bg-sky-50' },
+          { id: 'workcenters', label: 'Work Centers', labelVi: 'Trung tâm SX', description: 'Work center setup', icon: <Cog className="w-5 h-5" />, href: '/production', color: 'text-slate-600 bg-slate-50' },
+          { id: 'equipment', label: 'Equipment', labelVi: 'Thiết bị', description: 'Machine management', icon: <Wrench className="w-5 h-5" />, href: '/production', color: 'text-gray-600 bg-gray-50' },
+          { id: 'workforce', label: 'Workforce', labelVi: 'Nhân công', description: 'Labor management', icon: <Users className="w-5 h-5" />, href: '/production', color: 'text-sky-600 bg-sky-50' },
         ]
       },
     ],
     quickActions: [
-      { id: 'new-wo', label: 'New Work Order', labelVi: 'Tạo lệnh SX', icon: <Plus className="w-4 h-4" />, href: '/production/new', color: 'text-orange-600 bg-orange-100' },
-      { id: 'run-mrp', label: 'Run MRP', labelVi: 'Chạy MRP', icon: <Zap className="w-4 h-4" />, href: '/mrp-wizard', color: 'text-purple-600 bg-purple-100' },
+      { id: 'new-wo', label: 'New Work Order', labelVi: 'Tạo lệnh SX', icon: <Plus className="w-4 h-4" />, href: '/production', color: 'text-orange-600 bg-orange-100' },
+      { id: 'run-mrp', label: 'Run MRP', labelVi: 'Chạy MRP', icon: <Zap className="w-4 h-4" />, href: '/mrp', color: 'text-purple-600 bg-purple-100' },
     ]
   },
   {
@@ -198,9 +198,9 @@ const navigationTabs: NavTab[] = [
         title: 'Performance',
         titleVi: 'Hiệu suất',
         items: [
-          { id: 'oee', label: 'OEE Dashboard', labelVi: 'OEE Dashboard', description: 'Equipment efficiency', icon: <Activity className="w-5 h-5" />, href: '/oee', color: 'text-emerald-600 bg-emerald-50', badge: 'Live' },
-          { id: 'downtime', label: 'Downtime Tracking', labelVi: 'Theo dõi dừng máy', description: 'Machine downtime', icon: <Clock className="w-5 h-5" />, href: '/downtime', color: 'text-red-600 bg-red-50' },
-          { id: 'maintenance', label: 'Maintenance', labelVi: 'Bảo trì', description: 'Preventive maintenance', icon: <Wrench className="w-5 h-5" />, href: '/maintenance', color: 'text-amber-600 bg-amber-50' },
+          { id: 'oee', label: 'OEE Dashboard', labelVi: 'OEE Dashboard', description: 'Equipment efficiency', icon: <Activity className="w-5 h-5" />, href: '/production/oee', color: 'text-emerald-600 bg-emerald-50', badge: 'Live' },
+          { id: 'downtime', label: 'Downtime Tracking', labelVi: 'Theo dõi dừng máy', description: 'Machine downtime', icon: <Clock className="w-5 h-5" />, href: '/production', color: 'text-red-600 bg-red-50' },
+          { id: 'maintenance', label: 'Maintenance', labelVi: 'Bảo trì', description: 'Preventive maintenance', icon: <Wrench className="w-5 h-5" />, href: '/production', color: 'text-amber-600 bg-amber-50' },
         ]
       },
       {
@@ -208,7 +208,7 @@ const navigationTabs: NavTab[] = [
         titleVi: 'Cảnh báo',
         items: [
           { id: 'alerts', label: 'Alert Center', labelVi: 'Trung tâm cảnh báo', description: 'All system alerts', icon: <AlertTriangle className="w-5 h-5" />, href: '/alerts', color: 'text-orange-600 bg-orange-50', badge: '5' },
-          { id: 'nc', label: 'Non-Conformance', labelVi: 'Không phù hợp', description: 'NC management', icon: <X className="w-5 h-5" />, href: '/quality/nc', color: 'text-red-600 bg-red-50' },
+          { id: 'nc', label: 'Non-Conformance', labelVi: 'Không phù hợp', description: 'NC management', icon: <X className="w-5 h-5" />, href: '/quality/ncr', color: 'text-red-600 bg-red-50' },
         ]
       },
     ],
@@ -225,7 +225,7 @@ const navigationTabs: NavTab[] = [
         items: [
           { id: 'overview', label: 'Overview', labelVi: 'Tổng quan', description: 'Main dashboard', icon: <LayoutGrid className="w-5 h-5" />, href: '/dashboard', color: 'text-blue-600 bg-blue-50' },
           { id: 'analytics', label: 'Analytics', labelVi: 'Phân tích', description: 'Advanced analytics', icon: <TrendingUp className="w-5 h-5" />, href: '/analytics', color: 'text-violet-600 bg-violet-50' },
-          { id: 'realtime', label: 'Real-time', labelVi: 'Thời gian thực', description: 'Live monitoring', icon: <Activity className="w-5 h-5" />, href: '/realtime', color: 'text-emerald-600 bg-emerald-50', isNew: true },
+          { id: 'realtime', label: 'Real-time', labelVi: 'Thời gian thực', description: 'Live monitoring', icon: <Activity className="w-5 h-5" />, href: '/dashboard', color: 'text-emerald-600 bg-emerald-50', isNew: true },
         ]
       },
       {
@@ -250,11 +250,11 @@ const navigationTabs: NavTab[] = [
 
 // Quick Create menu items
 const quickCreateItems: MegaMenuItem[] = [
-  { id: 'new-so', label: 'Sales Order', labelVi: 'Đơn hàng', icon: <ShoppingCart className="w-4 h-4" />, href: '/sales/new', color: 'text-violet-600' },
-  { id: 'new-po', label: 'Purchase Order', labelVi: 'Đơn mua', icon: <Truck className="w-4 h-4" />, href: '/purchasing/new', color: 'text-orange-600' },
-  { id: 'new-wo', label: 'Work Order', labelVi: 'Lệnh SX', icon: <Factory className="w-4 h-4" />, href: '/production/new', color: 'text-blue-600' },
-  { id: 'new-part', label: 'New Part', labelVi: 'Vật tư mới', icon: <Box className="w-4 h-4" />, href: '/parts/new', color: 'text-emerald-600' },
-  { id: 'new-quality', label: 'Quality Record', labelVi: 'Hồ sơ CL', icon: <ClipboardCheck className="w-4 h-4" />, href: '/quality/new', color: 'text-teal-600' },
+  { id: 'new-so', label: 'Sales Order', labelVi: 'Đơn hàng', icon: <ShoppingCart className="w-4 h-4" />, href: '/sales', color: 'text-violet-600' },
+  { id: 'new-po', label: 'Purchase Order', labelVi: 'Đơn mua', icon: <Truck className="w-4 h-4" />, href: '/purchasing', color: 'text-orange-600' },
+  { id: 'new-wo', label: 'Work Order', labelVi: 'Lệnh SX', icon: <Factory className="w-4 h-4" />, href: '/production', color: 'text-blue-600' },
+  { id: 'new-part', label: 'New Part', labelVi: 'Vật tư mới', icon: <Box className="w-4 h-4" />, href: '/parts', color: 'text-emerald-600' },
+  { id: 'new-quality', label: 'Quality Record', labelVi: 'Hồ sơ CL', icon: <ClipboardCheck className="w-4 h-4" />, href: '/quality', color: 'text-teal-600' },
 ];
 
 // =============================================================================
