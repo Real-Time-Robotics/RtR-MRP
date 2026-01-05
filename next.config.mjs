@@ -10,6 +10,12 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Exclude build manifests from precaching to avoid 404 errors
+  buildExcludes: [/app-build-manifest\.json$/],
+  // Fallback for offline pages
+  fallbacks: {
+    document: "/offline",
+  },
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:gstatic)\.com\/.*/i,
