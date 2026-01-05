@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/pwa";
 
@@ -48,6 +49,7 @@ export default function RootLayout({
             {children}
           </PWAProvider>
           <Toaster />
+          <SonnerToaster position="top-right" richColors />
         </Providers>
       </body>
     </html>
