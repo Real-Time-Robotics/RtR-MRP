@@ -19,6 +19,7 @@ const publicRoutes = [
   '/reset-password',
   '/api/auth',
   '/api/health',
+  '/api/setup-demo',
   '/_next',
   '/favicon.ico',
   '/manifest.json',
