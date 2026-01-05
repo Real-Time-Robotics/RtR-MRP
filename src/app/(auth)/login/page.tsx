@@ -416,7 +416,7 @@ function LoginContent() {
                 </div>
                 <div>
                   <p className="text-gray-500 dark:text-gray-400 text-xs">Password</p>
-                  <p className="font-mono text-gray-900 dark:text-gray-100">Demo@2026</p>
+                  <p className="font-mono text-gray-900 dark:text-gray-100">DemoMRP@2026!</p>
                 </div>
               </div>
             </div>
@@ -424,7 +424,7 @@ function LoginContent() {
               type="button"
               onClick={() => {
                 setEmail('demo@rtr-mrp.com');
-                setPassword('Demo@2026');
+                setPassword('DemoMRP@2026!');
               }}
               className="mt-3 w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors"
             >

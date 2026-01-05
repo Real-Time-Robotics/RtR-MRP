@@ -52,7 +52,7 @@ async function main() {
   console.log("Created admin user");
 
   // Create demo user for customer trials
-  const demoPassword = "Demo@2026";
+  const demoPassword = "DemoMRP@2026!";
   console.log(`Creating demo user with email: demo@rtr-mrp.com`);
   const hashedDemoPassword = await bcrypt.hash(demoPassword, 12);
   await prisma.user.create({

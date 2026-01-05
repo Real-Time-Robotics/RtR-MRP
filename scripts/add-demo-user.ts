@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const demoEmail = "demo@rtr-mrp.com";
-  const demoPassword = "Demo@2026";
+  const demoPassword = "DemoMRP@2026!";
 
   // Check if demo user already exists
   const existingUser = await prisma.user.findUnique({
