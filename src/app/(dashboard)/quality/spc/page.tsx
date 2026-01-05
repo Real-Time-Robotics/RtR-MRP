@@ -6,7 +6,6 @@
 // =============================================================================
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
 import { 
   BarChart3, 
   AlertTriangle, 
@@ -19,10 +18,20 @@ import {
   Info,
   TrendingUp,
   TrendingDown,
-  Minus
+  Minus,
+  Loader2
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { SPCEngine, ControlChart, ProcessCharacteristic, ChartType } from '@/lib/spc';
+
+// Loading fallback
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+    </div>
+  );
+}
 
 // Simple chart component using SVG
 const ControlChartSVG: React.FC<{
@@ -275,15 +284,7 @@ const SecondaryChartSVG: React.FC<{
   );
 };
 
-function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-    </div>
-  );
-}
-
-function SPCControlChartsContent() {
+function SPCControlChartsPageContent() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
   
@@ -603,7 +604,7 @@ function SPCControlChartsContent() {
 export default function SPCControlChartsPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <SPCControlChartsContent />
+      <SPCControlChartsPageContent />
     </Suspense>
   );
 }

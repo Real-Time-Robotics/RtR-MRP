@@ -6,7 +6,6 @@
 // =============================================================================
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -18,11 +17,21 @@ import {
   RefreshCw,
   Download,
   Info,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SPCEngine, ProcessCapability, ProcessCharacteristic } from '@/lib/spc';
+
+// Loading fallback
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+    </div>
+  );
+}
 
 // Histogram component
 const HistogramSVG: React.FC<{
@@ -257,15 +266,7 @@ const CapabilityGauge: React.FC<{
   );
 };
 
-function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-    </div>
-  );
-}
-
-function ProcessCapabilityContent() {
+function ProcessCapabilityPageContent() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
   
@@ -597,7 +598,7 @@ function ProcessCapabilityContent() {
 export default function ProcessCapabilityPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <ProcessCapabilityContent />
+      <ProcessCapabilityPageContent />
     </Suspense>
   );
 }
