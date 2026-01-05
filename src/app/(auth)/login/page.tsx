@@ -107,77 +107,71 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-white rounded-full translate-x-1/3 translate-y-1/3" />
+    <div className="min-h-screen w-full flex bg-gray-900">
+      {/* Full Width Layout */}
+      <div className="w-full flex flex-col lg:flex-row">
+        {/* Left Panel - Branding (Full width on mobile, 55% on desktop) */}
+        <div className="w-full lg:w-[55%] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden flex flex-col justify-between p-8 lg:p-12 min-h-[40vh] lg:min-h-screen">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-indigo-500 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
+          </div>
+
+          {/* Grid pattern overlay */}
+          <div className="absolute inset-0 opacity-[0.02]" style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '50px 50px'
+          }} />
+
+          {/* Content */}
+          <div className="relative z-10 flex flex-col h-full justify-between text-white">
+            {/* Bloomberg-style Logo */}
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded bg-neutral-800 border border-neutral-700 flex items-center justify-center">
+                <span className="text-white font-bold text-sm lg:text-base font-mono">MRP</span>
+              </div>
+              <span className="font-bold text-xl lg:text-2xl font-mono text-white tracking-tight flex items-end">
+                MRP<span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-orange-500 ml-0.5 mb-1" />
+              </span>
+            </div>
+
+            {/* Features */}
+            <div className="space-y-6 lg:space-y-8 my-8 lg:my-0">
+              <div>
+                <h2 className="text-3xl lg:text-5xl font-bold mb-4 leading-tight">
+                  Manufacturing<br />Intelligence
+                </h2>
+                <p className="text-gray-400 text-base lg:text-lg max-w-md">
+                  Enterprise MRP with AI-powered analytics. Optimize production, manage inventory, and drive efficiency.
+                </p>
+              </div>
+
+              <div className="space-y-3 lg:space-y-4">
+                {[
+                  'MRP & Capacity Planning',
+                  'Real-time OEE Dashboard',
+                  'SPC Quality Management',
+                  'Shop Floor Mobile App',
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-gray-300">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="text-gray-500 text-sm font-mono">
+              © 2026 RTR Manufacturing
+            </div>
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-              <span className="text-xl font-bold">MRP</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">RTR MRP</h1>
-              <p className="text-blue-200 text-sm">Manufacturing Resource Planning</p>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-4xl font-bold mb-4">
-                Quản lý sản xuất<br />thông minh
-              </h2>
-              <p className="text-blue-100 text-lg max-w-md">
-                Hệ thống MRP toàn diện với AI, giúp tối ưu hóa quy trình sản xuất và quản lý tồn kho hiệu quả.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {[
-                'Hoạch định MRP & Capacity Planning',
-                'OEE Dashboard real-time',
-                'Quản lý chất lượng SPC',
-                'Mobile App cho xưởng sản xuất',
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-blue-300" />
-                  <span className="text-blue-50">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-blue-200 text-sm">
-            © 2026 RTR Manufacturing. All rights reserved.
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-900">
+        {/* Right Panel - Login Form (Full width on mobile, 45% on desktop) */}
+        <div className="w-full lg:w-[45%] flex items-center justify-center p-6 lg:p-12 bg-gray-50 dark:bg-gray-950">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden mb-8 text-center">
-            <div className="inline-flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                <span className="text-xl font-bold text-white">MRP</span>
-              </div>
-              <div className="text-left">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">RTR MRP</h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Manufacturing System</p>
-              </div>
-            </div>
-          </div>
-
           {/* Form Header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -406,27 +400,37 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Demo Credentials (Development only) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
-                Demo Credentials (Dev only)
+          {/* Demo Credentials */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Demo Account Available
               </p>
-              <div className="space-y-1 text-sm text-amber-700 dark:text-amber-300">
-                <p><strong>Admin:</strong> admin@rtr.com / admin123456@</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@rtr.com');
-                  setPassword('admin123456@');
-                }}
-                className="mt-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
-              >
-                Fill automatically
-              </button>
             </div>
-          )}
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">Email</p>
+                  <p className="font-mono text-gray-900 dark:text-gray-100">demo@rtr-mrp.com</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">Password</p>
+                  <p className="font-mono text-gray-900 dark:text-gray-100">Demo@2026</p>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('demo@rtr-mrp.com');
+                setPassword('Demo@2026');
+              }}
+              className="mt-3 w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors"
+            >
+              Use Demo Account
+            </button>
+          </div>
 
           {/* Footer Links */}
           <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -437,6 +441,7 @@ function LoginContent() {
               </Link>
             </p>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -51,6 +51,21 @@ async function main() {
   });
   console.log("Created admin user");
 
+  // Create demo user for customer trials
+  const demoPassword = "Demo@2026";
+  console.log(`Creating demo user with email: demo@rtr-mrp.com`);
+  const hashedDemoPassword = await bcrypt.hash(demoPassword, 12);
+  await prisma.user.create({
+    data: {
+      email: "demo@rtr-mrp.com",
+      name: "Demo User",
+      password: hashedDemoPassword,
+      role: "admin", // Full access for demo
+      status: "active",
+    },
+  });
+  console.log("Created demo user");
+
   // Create GL Accounts (Chart of Accounts)
   const glAccounts = await Promise.all([
     // ASSETS (1000-1999)
