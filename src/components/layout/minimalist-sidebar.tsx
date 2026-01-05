@@ -9,8 +9,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ChevronLeft,
-  ChevronRight,
   Package,
   ShoppingCart,
   Factory,
@@ -144,56 +142,35 @@ export function MinimalistSidebar({
         collapsed ? 'w-14' : 'w-52'
       )}
     >
-      {/* Header with Logo & Product Name */}
+      {/* Header with Product Name & Toggle */}
       <div className={cn(
         "flex items-center h-14 px-3 border-b border-gray-100 dark:border-gray-800",
         collapsed ? "justify-center" : "justify-between"
       )}>
-        {/* Back Button & Product Name */}
-        <div className="flex items-center gap-2.5">
-          {/* Back to Landing */}
-          <Link
-            href="/"
-            className="h-8 w-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-            title="Back to Home"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-          </Link>
-          {!collapsed && (
-            <div className="flex items-baseline">
-              <span className="font-bold text-base font-mono text-gray-900 dark:text-white tracking-tight">
-                MRP
-              </span>
-              <span className="text-violet-500 font-bold text-base font-mono">-AI</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-0.5 animate-pulse" />
-            </div>
-          )}
-        </div>
+        {/* Product Name */}
+        {!collapsed && (
+          <div className="flex items-baseline">
+            <span className="font-bold text-base font-mono text-gray-900 dark:text-white tracking-tight">
+              MRP
+            </span>
+            <span className="text-violet-500 font-bold text-base font-mono">-AI</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-0.5 animate-pulse" />
+          </div>
+        )}
 
         {/* Toggle Button */}
-        {!collapsed && (
-          <button
-            onClick={onToggle}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-            title="Collapse"
-          >
-            <PanelLeftClose className="w-4 h-4 text-gray-400" />
-          </button>
-        )}
-      </div>
-
-      {/* Expand button when collapsed */}
-      {collapsed && (
-        <div className="flex justify-center py-2">
-          <button
-            onClick={onToggle}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-            title="Expand"
-          >
+        <button
+          onClick={onToggle}
+          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+          title={collapsed ? 'Expand' : 'Collapse'}
+        >
+          {collapsed ? (
             <PanelLeft className="w-4 h-4 text-gray-400" />
-          </button>
-        </div>
-      )}
+          ) : (
+            <PanelLeftClose className="w-4 h-4 text-gray-400" />
+          )}
+        </button>
+      </div>
 
       {/* Quick Navigation */}
       <div className="flex-1 overflow-y-auto p-2">
