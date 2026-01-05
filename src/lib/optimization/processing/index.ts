@@ -162,7 +162,7 @@ export function parseCSV(
 ): any[] {
   const { delimiter = ',', skipHeader = false, columns = true } = options;
 
-  const text = content instanceof Buffer ? content.toString('utf-8') : content;
+  const text: string = typeof content === 'string' ? content : content.toString('utf-8');
   const lines = text.split(/\r?\n/).filter(line => line.trim());
 
   if (lines.length === 0) return [];
@@ -600,11 +600,11 @@ export function findDuplicates<T>(
   
   // Filter to only duplicates
   const duplicates = new Map<string, T[]>();
-  for (const [key, items] of groups) {
+  Array.from(groups.entries()).forEach(([key, items]) => {
     if (items.length > 1) {
       duplicates.set(key, items);
     }
-  }
+  });
   
   return duplicates;
 }

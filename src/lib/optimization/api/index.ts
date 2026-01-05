@@ -23,11 +23,11 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 // Clean up expired entries periodically
 setInterval(() => {
   const now = Date.now();
-  for (const [key, value] of rateLimitStore.entries()) {
+  Array.from(rateLimitStore.entries()).forEach(([key, value]) => {
     if (value.resetTime < now) {
       rateLimitStore.delete(key);
     }
-  }
+  });
 }, 60000); // Every minute
 
 export function rateLimit(config: RateLimitConfig) {
@@ -118,7 +118,7 @@ export const rateLimiters = {
 export interface ValidationResult<T> {
   success: boolean;
   data?: T;
-  errors?: z.ZodError['errors'];
+  errors?: z.ZodIssue[];
 }
 
 /**
@@ -249,10 +249,10 @@ export function errorResponse(
 ): NextResponse {
   if (error instanceof z.ZodError) {
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Validation failed',
-        errors: error.errors,
+        errors: error.issues,
       },
       { status: 400 }
     );
@@ -312,9 +312,15 @@ export const cacheHeaders = {
  * Generate ETag from data
  */
 export function generateETag(data: any): string {
-  const crypto = require('crypto');
   const content = JSON.stringify(data);
-  return `"${crypto.createHash('md5').update(content).digest('hex')}"`;
+  // Simple hash without crypto for edge runtime compatibility
+  let hash = 0;
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return `"${Math.abs(hash).toString(16)}"`;
 }
 
 /**

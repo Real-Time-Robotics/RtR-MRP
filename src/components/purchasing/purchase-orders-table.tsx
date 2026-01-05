@@ -216,7 +216,6 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       permission: 'orders:edit',
       disabled: !['draft', 'pending', 'confirmed'].includes(order.status),
     },
-    { type: 'separator' },
     {
       label: order.status === 'draft' ? 'Xóa' : 'Hủy PO',
       onClick: () => handleDelete(order),

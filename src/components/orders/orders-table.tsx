@@ -220,7 +220,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       permission: 'orders:edit',
       disabled: !['draft', 'pending', 'confirmed'].includes(order.status),
     },
-    { type: 'separator' },
     {
       label: order.status === 'draft' ? 'Xóa' : 'Hủy đơn',
       onClick: () => handleDelete(order),

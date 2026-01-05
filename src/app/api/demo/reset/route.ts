@@ -33,70 +33,32 @@ export async function POST() {
       );
     }
 
-    // Get demo user IDs to preserve
-    const demoUsers = await prisma.user.findMany({
-      where: {
-        email: {
-          contains: '@demo.rtr-mrp.com',
-        },
-      },
-      select: { id: true },
-    });
+    // Reset demo data - delete recent records (last 7 days) to simulate reset
+    // Note: WorkOrder, SalesOrder, PurchaseOrder don't have createdById field
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const demoUserIds = demoUsers.map((u) => u.id);
-
-    // Reset demo data in order (respecting foreign key constraints)
     await prisma.$transaction(async (tx) => {
-      // Delete material allocations first (depends on work orders)
-      await tx.materialAllocation.deleteMany({
-        where: {
-          workOrder: {
-            createdById: { in: demoUserIds },
-          },
-        },
-      });
-
-      // Delete work orders
+      // Delete recent work orders (MaterialAllocations will cascade)
       await tx.workOrder.deleteMany({
         where: {
-          createdById: { in: demoUserIds },
+          createdAt: { gte: sevenDaysAgo },
         },
       });
 
-      // Delete sales order lines first
-      await tx.salesOrderLine.deleteMany({
-        where: {
-          salesOrder: {
-            createdById: { in: demoUserIds },
-          },
-        },
-      });
-
-      // Delete sales orders
+      // Delete recent sales orders (SalesOrderLines will cascade due to onDelete: Cascade)
       await tx.salesOrder.deleteMany({
         where: {
-          createdById: { in: demoUserIds },
+          createdAt: { gte: sevenDaysAgo },
         },
       });
 
-      // Delete purchase order lines first
-      await tx.purchaseOrderLine.deleteMany({
-        where: {
-          purchaseOrder: {
-            createdById: { in: demoUserIds },
-          },
-        },
-      });
-
-      // Delete purchase orders
+      // Delete recent purchase orders (PurchaseOrderLines will cascade due to onDelete: Cascade)
       await tx.purchaseOrder.deleteMany({
         where: {
-          createdById: { in: demoUserIds },
+          createdAt: { gte: sevenDaysAgo },
         },
       });
-
-      // Note: We don't delete master data (Parts, Suppliers, Customers, Warehouses)
-      // as these are shared and seeded initially
     });
 
     // Log the reset action
@@ -122,7 +84,7 @@ export async function POST() {
   }
 }
 
-// GET endpoint to check reset status
+// GET endpoint to check demo status
 export async function GET() {
   try {
     const session = await auth();
@@ -143,28 +105,11 @@ export async function GET() {
       );
     }
 
-    // Get current demo data counts
-    const demoUsers = await prisma.user.findMany({
-      where: {
-        email: {
-          contains: '@demo.rtr-mrp.com',
-        },
-      },
-      select: { id: true },
-    });
-
-    const demoUserIds = demoUsers.map((u) => u.id);
-
+    // Get current data counts
     const [workOrders, salesOrders, purchaseOrders] = await Promise.all([
-      prisma.workOrder.count({
-        where: { createdById: { in: demoUserIds } },
-      }),
-      prisma.salesOrder.count({
-        where: { createdById: { in: demoUserIds } },
-      }),
-      prisma.purchaseOrder.count({
-        where: { createdById: { in: demoUserIds } },
-      }),
+      prisma.workOrder.count(),
+      prisma.salesOrder.count(),
+      prisma.purchaseOrder.count(),
     ]);
 
     return NextResponse.json({

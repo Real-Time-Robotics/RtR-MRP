@@ -46,42 +46,42 @@ const partSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
   category: z.string().min(1, 'Danh mục là bắt buộc'),
   unit: z.string().min(1, 'Đơn vị là bắt buộc'),
-  unitCost: z.coerce.number().min(0, 'Giá phải >= 0'),
+  unitCost: z.number().min(0, 'Giá phải >= 0'),
 
   // Physical
-  weightKg: z.coerce.number().min(0).optional().nullable(),
-  lengthMm: z.coerce.number().min(0).optional().nullable(),
-  widthMm: z.coerce.number().min(0).optional().nullable(),
-  heightMm: z.coerce.number().min(0).optional().nullable(),
+  weightKg: z.number().min(0).optional().nullable(),
+  lengthMm: z.number().min(0).optional().nullable(),
+  widthMm: z.number().min(0).optional().nullable(),
+  heightMm: z.number().min(0).optional().nullable(),
   material: z.string().max(100).optional().nullable(),
   color: z.string().max(50).optional().nullable(),
 
   // Procurement
-  makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']).default('BUY'),
+  makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']),
   procurementType: z.string().optional().nullable(),
-  leadTimeDays: z.coerce.number().int().min(0).default(14),
-  moq: z.coerce.number().int().min(1).default(1),
-  orderMultiple: z.coerce.number().int().min(1).optional().nullable(),
+  leadTimeDays: z.number().int().min(0),
+  moq: z.number().int().min(1),
+  orderMultiple: z.number().int().min(1).optional().nullable(),
 
   // Inventory
-  minStockLevel: z.coerce.number().int().min(0).default(0),
-  reorderPoint: z.coerce.number().int().min(0).default(0),
-  maxStock: z.coerce.number().int().min(0).optional().nullable(),
-  safetyStock: z.coerce.number().int().min(0).optional().nullable(),
-  isCritical: z.boolean().default(false),
+  minStockLevel: z.number().int().min(0),
+  reorderPoint: z.number().int().min(0),
+  maxStock: z.number().int().min(0).optional().nullable(),
+  safetyStock: z.number().int().min(0).optional().nullable(),
+  isCritical: z.boolean(),
 
   // Compliance
   countryOfOrigin: z.string().max(50).optional().nullable(),
-  ndaaCompliant: z.boolean().default(true),
-  itarControlled: z.boolean().default(false),
-  rohsCompliant: z.boolean().default(true),
-  reachCompliant: z.boolean().default(true),
+  ndaaCompliant: z.boolean(),
+  itarControlled: z.boolean(),
+  rohsCompliant: z.boolean(),
+  reachCompliant: z.boolean(),
 
   // Engineering
-  revision: z.string().max(20).default('A'),
+  revision: z.string().max(20),
   manufacturer: z.string().max(100).optional().nullable(),
   manufacturerPn: z.string().max(100).optional().nullable(),
-  lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']).default('ACTIVE'),
+  lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']),
 });
 
 type PartFormData = z.infer<typeof partSchema>;

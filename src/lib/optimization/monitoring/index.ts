@@ -114,7 +114,7 @@ class MetricsCollector {
       histograms: {},
     };
 
-    for (const [key, values] of this.histograms) {
+    Array.from(this.histograms.entries()).forEach(([key, values]) => {
       if (values.length > 0) {
         const sorted = [...values].sort((a, b) => a - b);
         summary.histograms[key] = {
@@ -127,7 +127,7 @@ class MetricsCollector {
           p99: sorted[Math.floor(sorted.length * 0.99)],
         };
       }
-    }
+    });
 
     return summary;
   }

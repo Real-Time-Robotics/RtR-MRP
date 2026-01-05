@@ -290,7 +290,6 @@ export function PartsTable() {
       onClick: () => handleEdit(part),
       permission: 'orders:edit',
     },
-    { type: 'separator' },
     {
       label: 'Xóa',
       onClick: () => handleDelete(part),

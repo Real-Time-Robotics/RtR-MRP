@@ -48,8 +48,8 @@ import { format } from 'date-fns';
 
 const orderLineSchema = z.object({
   productId: z.string().min(1, 'Sản phẩm là bắt buộc'),
-  quantity: z.coerce.number().int().min(1, 'Số lượng >= 1'),
-  unitPrice: z.coerce.number().min(0, 'Giá >= 0'),
+  quantity: z.number().int().min(1, 'Số lượng >= 1'),
+  unitPrice: z.number().min(0, 'Giá >= 0'),
 });
 
 const salesOrderSchema = z.object({
@@ -58,8 +58,8 @@ const salesOrderSchema = z.object({
   orderDate: z.string().min(1, 'Ngày đặt hàng là bắt buộc'),
   requiredDate: z.string().min(1, 'Ngày yêu cầu là bắt buộc'),
   promisedDate: z.string().optional().nullable(),
-  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
-  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled']).default('draft'),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']),
+  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
   notes: z.string().max(1000).optional().nullable(),
   lines: z.array(orderLineSchema).optional(),
 });

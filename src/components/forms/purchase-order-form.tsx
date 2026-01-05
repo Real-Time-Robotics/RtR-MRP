@@ -48,8 +48,8 @@ import { format } from 'date-fns';
 
 const poLineSchema = z.object({
   partId: z.string().min(1, 'Part là bắt buộc'),
-  quantity: z.coerce.number().int().min(1, 'Số lượng >= 1'),
-  unitPrice: z.coerce.number().min(0, 'Giá >= 0'),
+  quantity: z.number().int().min(1, 'Số lượng >= 1'),
+  unitPrice: z.number().min(0, 'Giá >= 0'),
 });
 
 const purchaseOrderSchema = z.object({
@@ -57,8 +57,8 @@ const purchaseOrderSchema = z.object({
   supplierId: z.string().min(1, 'Nhà cung cấp là bắt buộc'),
   orderDate: z.string().min(1, 'Ngày đặt hàng là bắt buộc'),
   expectedDate: z.string().min(1, 'Ngày dự kiến là bắt buộc'),
-  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']).default('draft'),
-  currency: z.string().default('USD'),
+  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']),
+  currency: z.string(),
   notes: z.string().max(1000).optional().nullable(),
   lines: z.array(poLineSchema).optional(),
 });

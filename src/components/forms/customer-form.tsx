@@ -47,8 +47,8 @@ const customerSchema = z.object({
   contactPhone: z.string().max(20).optional().nullable(),
   billingAddress: z.string().max(500).optional().nullable(),
   paymentTerms: z.string().max(50).optional().nullable(),
-  creditLimit: z.coerce.number().min(0).optional().nullable(),
-  status: z.enum(['active', 'inactive', 'pending']).default('active'),
+  creditLimit: z.number().min(0).optional().nullable(),
+  status: z.enum(['active', 'inactive', 'pending']),
 });
 
 type CustomerFormData = z.infer<typeof customerSchema>;

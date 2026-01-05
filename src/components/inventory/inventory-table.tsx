@@ -224,7 +224,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       onClick: () => handleAdjust(item),
       permission: 'inventory:adjust',
     },
-    { type: 'separator' },
     {
       label: 'Xem Part',
       href: `/parts/${item.partId}`,

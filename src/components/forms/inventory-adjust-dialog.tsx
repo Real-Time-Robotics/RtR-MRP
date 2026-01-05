@@ -43,7 +43,7 @@ const adjustmentSchema = z.object({
   partId: z.string().min(1, 'Part là bắt buộc'),
   warehouseId: z.string().min(1, 'Kho là bắt buộc'),
   adjustmentType: z.enum(['add', 'subtract', 'set', 'cycle_count']),
-  quantity: z.coerce.number().int().min(0, 'Số lượng >= 0'),
+  quantity: z.number().int().min(0, 'Số lượng >= 0'),
   reason: z.string().min(1, 'Lý do là bắt buộc'),
   reference: z.string().optional(),
   notes: z.string().optional(),
@@ -53,7 +53,7 @@ const transferSchema = z.object({
   partId: z.string().min(1, 'Part là bắt buộc'),
   fromWarehouseId: z.string().min(1, 'Kho nguồn là bắt buộc'),
   toWarehouseId: z.string().min(1, 'Kho đích là bắt buộc'),
-  quantity: z.coerce.number().int().min(1, 'Số lượng >= 1'),
+  quantity: z.number().int().min(1, 'Số lượng >= 1'),
   reason: z.string().optional(),
 });
 

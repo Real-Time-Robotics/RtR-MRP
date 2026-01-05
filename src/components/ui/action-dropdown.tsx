@@ -52,6 +52,9 @@ export interface ActionItem {
   className?: string;
 }
 
+// Alias for backwards compatibility
+export type ActionDropdownItem = ActionItem;
+
 interface ActionDropdownProps {
   /** Action items to display */
   items: ActionItem[];

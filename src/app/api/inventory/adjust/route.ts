@@ -77,7 +77,7 @@ async function adjustHandler(
         warehouseId,
         quantity: 0,
         reservedQty: 0,
-        location: 'DEFAULT',
+        locationCode: 'DEFAULT',
       },
     });
   }
@@ -120,20 +120,24 @@ async function adjustHandler(
     },
   });
 
-  // Create audit log (if LotTransaction model exists, create a record)
+  // Create audit log (LotTransaction requires lotNumber and userId)
   try {
-    await prisma.lotTransaction.create({
-      data: {
-        partId,
-        transactionType: adjustmentType.toUpperCase(),
-        quantity: adjustmentAmount,
-        reference: reference || `ADJ-${Date.now()}`,
-        notes: `${reason}${notes ? ` - ${notes}` : ''}`,
-        createdBy: user.email,
-      },
-    });
+    if (user.id) {
+      await prisma.lotTransaction.create({
+        data: {
+          lotNumber: `ADJ-${Date.now()}`,
+          partId,
+          transactionType: adjustmentType.toUpperCase(),
+          quantity: adjustmentAmount,
+          previousQty: inventory.quantity,
+          newQty: newQuantity,
+          userId: user.id,
+          notes: `${reason}${notes ? ` - ${notes}` : ''}`,
+        },
+      });
+    }
   } catch {
-    // LotTransaction might not exist, skip audit log
+    // Skip audit log if it fails
     console.log('Could not create audit log');
   }
 
@@ -212,7 +216,7 @@ async function handleTransfer(body: unknown, user: any) {
           warehouseId: toWarehouseId,
           quantity,
           reservedQty: 0,
-          location: 'DEFAULT',
+          locationCode: 'DEFAULT',
         },
       });
     }
