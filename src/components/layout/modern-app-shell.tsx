@@ -7,7 +7,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
 
@@ -45,8 +44,9 @@ export function ModernAppShell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [language, setLanguage] = useState<'en' | 'vi'>('vi');
   const [darkMode, setDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Load preferences from localStorage
+  // Load preferences from localStorage and sync dark mode
   useEffect(() => {
     const savedCollapsed = localStorage.getItem('sidebar-collapsed');
     const savedLanguage = localStorage.getItem('language') as 'en' | 'vi';
@@ -54,10 +54,14 @@ export function ModernAppShell({
 
     if (savedCollapsed) setSidebarCollapsed(savedCollapsed === 'true');
     if (savedLanguage) setLanguage(savedLanguage);
-    if (savedDarkMode) {
-      setDarkMode(savedDarkMode === 'true');
-      document.documentElement.classList.toggle('dark', savedDarkMode === 'true');
-    }
+
+    // Initialize dark mode
+    const isDark = savedDarkMode === 'true';
+    setDarkMode(isDark);
+    // Only use document.documentElement for dark class (single source of truth)
+    document.documentElement.classList.toggle('dark', isDark);
+
+    setMounted(true);
   }, []);
 
   // Save sidebar state
@@ -98,10 +102,7 @@ export function ModernAppShell({
   }
 
   return (
-    <div className={cn(
-      'min-h-screen bg-gray-50 dark:bg-gray-950',
-      darkMode && 'dark'
-    )}>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
       <ModernHeader
         user={user}
