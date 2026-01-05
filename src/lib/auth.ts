@@ -220,19 +220,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      // Validate user object exists with required fields
+      if (!user || !user.id) {
+        console.error('[AUTH] SignIn callback: Invalid user object');
+        return false;
+      }
+      console.log('[AUTH] SignIn callback: User validated', { id: user.id, email: user.email });
+      return true;
+    },
     async jwt({ token, user }) {
+      // On initial sign in, add all user fields to token
       if (user) {
         token.id = user.id;
-        token.role = (user as { role?: string }).role;
+        token.email = user.email;
+        token.name = user.name;
+        token.role = (user as { role?: string }).role || 'viewer';
+        console.log('[AUTH] JWT callback: Token created', { id: token.id, email: token.email, role: token.role });
       }
       return token;
     },
     async session({ session, token }) {
+      // Transfer token data to session
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string || null;
+        session.user.role = token.role as string || 'viewer';
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Handle redirects properly
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return baseUrl;
     },
   },
   pages: {
