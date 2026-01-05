@@ -1,0 +1,98 @@
+# =============================================================================
+# RTR MRP - HORIZONTAL POD AUTOSCALER
+# Auto-scaling based on CPU, Memory, and Custom Metrics
+# =============================================================================
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rtr-mrp
+  namespace: rtr-mrp
+  labels:
+    app: rtr-mrp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rtr-mrp
+  
+  # Replica bounds
+  minReplicas: 2
+  maxReplicas: 10
+  
+  # Scaling metrics
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    
+    # Custom metric: Request rate (requires Prometheus Adapter)
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: http_requests_per_second
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "100"
+  
+  # Scaling behavior
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+      selectPolicy: Max
+    
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+        - type: Percent
+          value: 25
+          periodSeconds: 120
+      selectPolicy: Min
+
+---
+# Vertical Pod Autoscaler (optional)
+# Requires VPA to be installed
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: rtr-mrp-vpa
+  namespace: rtr-mrp
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rtr-mrp
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: rtr-mrp
+        minAllowed:
+          cpu: "100m"
+          memory: "256Mi"
+        maxAllowed:
+          cpu: "2000m"
+          memory: "4Gi"
+        controlledResources: ["cpu", "memory"]

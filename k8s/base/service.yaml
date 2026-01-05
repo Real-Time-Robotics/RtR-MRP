@@ -1,0 +1,42 @@
+# =============================================================================
+# RTR MRP - KUBERNETES SERVICE
+# =============================================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtr-mrp
+  namespace: rtr-mrp
+  labels:
+    app: rtr-mrp
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+spec:
+  type: ClusterIP
+  selector:
+    app: rtr-mrp
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+
+---
+# Headless service for StatefulSet (if needed)
+apiVersion: v1
+kind: Service
+metadata:
+  name: rtr-mrp-headless
+  namespace: rtr-mrp
+  labels:
+    app: rtr-mrp
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: rtr-mrp
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

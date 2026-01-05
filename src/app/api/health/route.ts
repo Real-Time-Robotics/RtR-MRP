@@ -1,108 +1,109 @@
-// src/app/api/health/route.ts
-// Health check endpoint for RTR MRP System
+// =============================================================================
+// RTR MRP - HEALTH CHECK ENDPOINT
+// Used by Render.com to verify application health
+// =============================================================================
 
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/cache/redis";
+import { NextResponse } from 'next/server';
 
-interface HealthCheck {
-  status: "pass" | "fail";
-  latency?: number;
-  message?: string;
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// Lazy import prisma to avoid build errors
+let prismaClient: any = null;
+const getPrisma = async () => {
+  if (!prismaClient) {
+    try {
+      const { prisma } = await import('@/lib/prisma');
+      prismaClient = prisma;
+    } catch {
+      prismaClient = null;
+    }
+  }
+  return prismaClient;
+};
 
 interface HealthStatus {
-  status: "healthy" | "degraded" | "unhealthy";
+  status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   version: string;
   uptime: number;
   checks: {
-    database: HealthCheck;
-    cache: HealthCheck;
+    database: 'ok' | 'error';
+    memory: 'ok' | 'warning' | 'critical';
+  };
+  details?: {
+    database?: string;
+    memory?: {
+      used: number;
+      total: number;
+      percentage: number;
+    };
   };
 }
-
-const startTime = Date.now();
 
 export async function GET() {
-  const checks: HealthStatus["checks"] = {
-    database: { status: "fail" },
-    cache: { status: "fail" },
+  const startTime = Date.now();
+  
+  const health: HealthStatus = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0',
+    uptime: process.uptime(),
+    checks: {
+      database: 'ok',
+      memory: 'ok',
+    },
+    details: {},
   };
 
-  // Check database
+  // Check database connection
   try {
-    const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    checks.database = {
-      status: "pass",
-      latency: Date.now() - dbStart,
-    };
-  } catch (error) {
-    checks.database = {
-      status: "fail",
-      message:
-        error instanceof Error ? error.message : "Database connection failed",
-    };
-  }
-
-  // Check Redis
-  try {
-    const redisStart = Date.now();
-    const pong = await redis.ping();
-    if (pong === "PONG") {
-      checks.cache = {
-        status: "pass",
-        latency: Date.now() - redisStart,
-      };
+    const prisma = await getPrisma();
+    if (prisma) {
+      await prisma.$queryRaw`SELECT 1`;
+      health.checks.database = 'ok';
+      health.details!.database = 'Connected';
     } else {
-      checks.cache = {
-        status: "fail",
-        message: "Redis ping failed",
-      };
+      health.checks.database = 'error';
+      health.details!.database = 'Prisma client not available';
     }
   } catch (error) {
-    checks.cache = {
-      status: "fail",
-      message:
-        error instanceof Error ? error.message : "Redis connection failed",
-    };
+    health.checks.database = 'error';
+    health.status = 'unhealthy';
+    health.details!.database = error instanceof Error ? error.message : 'Connection failed';
   }
 
-  // Determine overall status
-  const allPassed = Object.values(checks).every((c) => c.status === "pass");
-  const allFailed = Object.values(checks).every((c) => c.status === "fail");
-
-  const overallStatus: HealthStatus["status"] = allPassed
-    ? "healthy"
-    : allFailed
-    ? "unhealthy"
-    : "degraded";
-
-  const healthStatus: HealthStatus = {
-    status: overallStatus,
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || "1.0.0",
-    uptime: Math.floor((Date.now() - startTime) / 1000),
-    checks,
+  // Check memory usage
+  const memUsage = process.memoryUsage();
+  const memPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+  
+  health.details!.memory = {
+    used: Math.round(memUsage.heapUsed / 1024 / 1024),
+    total: Math.round(memUsage.heapTotal / 1024 / 1024),
+    percentage: Math.round(memPercentage),
   };
 
-  const httpStatus = overallStatus === "unhealthy" ? 503 : 200;
-
-  return NextResponse.json(healthStatus, { status: httpStatus });
-}
-
-// Liveness probe (simple check)
-export async function HEAD() {
-  return new NextResponse(null, { status: 200 });
-}
-
-// Readiness probe
-export async function OPTIONS() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return new NextResponse(null, { status: 200 });
-  } catch {
-    return new NextResponse(null, { status: 503 });
+  if (memPercentage > 90) {
+    health.checks.memory = 'critical';
+    health.status = 'degraded';
+  } else if (memPercentage > 75) {
+    health.checks.memory = 'warning';
   }
+
+  // Response time
+  const responseTime = Date.now() - startTime;
+
+  // Return appropriate status code
+  const statusCode = health.status === 'healthy' ? 200 : 
+                     health.status === 'degraded' ? 200 : 503;
+
+  return NextResponse.json({
+    ...health,
+    responseTime: `${responseTime}ms`,
+  }, { 
+    status: statusCode,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
+  });
 }

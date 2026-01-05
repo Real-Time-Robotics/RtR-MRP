@@ -1,0 +1,197 @@
+# =============================================================================
+# RTR MRP - KUBERNETES DEPLOYMENT
+# Production-ready deployment with health checks and resource limits
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rtr-mrp
+  namespace: rtr-mrp
+  labels:
+    app: rtr-mrp
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rtr-mrp
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: rtr-mrp
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      # Service Account
+      serviceAccountName: rtr-mrp-sa
+      
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Init containers (optional - for migrations)
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 2; done']
+        
+        - name: run-migrations
+          image: ghcr.io/your-org/rtr-mrp:latest
+          command: ['npx', 'prisma', 'migrate', 'deploy']
+          envFrom:
+            - configMapRef:
+                name: rtr-mrp-config
+            - secretRef:
+                name: rtr-mrp-secrets
+      
+      # Main containers
+      containers:
+        - name: rtr-mrp
+          image: ghcr.io/your-org/rtr-mrp:latest
+          imagePullPolicy: Always
+          
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          
+          # Environment
+          envFrom:
+            - configMapRef:
+                name: rtr-mrp-config
+            - secretRef:
+                name: rtr-mrp-secrets
+          
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          
+          # Resource limits
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+          
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          
+          # Security
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          
+          # Volume mounts
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /app/.next/cache
+      
+      # Volumes
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      
+      # Pod affinity/anti-affinity
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: rtr-mrp
+                topologyKey: kubernetes.io/hostname
+      
+      # Tolerations (for dedicated nodes)
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "rtr-mrp"
+          effect: "NoSchedule"
+      
+      # Topology spread
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: rtr-mrp
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rtr-mrp-sa
+  namespace: rtr-mrp
+  labels:
+    app: rtr-mrp
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rtr-mrp-pdb
+  namespace: rtr-mrp
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: rtr-mrp

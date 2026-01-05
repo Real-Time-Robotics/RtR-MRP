@@ -1,0 +1,12 @@
+# =============================================================================
+# RTR MRP - KUBERNETES NAMESPACE
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rtr-mrp
+  labels:
+    app: rtr-mrp
+    env: production
+    monitoring: enabled

@@ -43,7 +43,11 @@ export function captureError(
   error: Error,
   context?: Record<string, unknown>
 ) {
-  logger.error("Error captured", error, context);
+  logger.error("Error captured", {
+    error: error.message,
+    stack: error.stack,
+    ...context
+  });
 }
 
 // Capture messages

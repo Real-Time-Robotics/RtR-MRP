@@ -56,17 +56,18 @@ export async function rateLimit(
     const resetTime = now + windowMs;
 
     if (!allowed) {
-      logger.security("Rate limit exceeded", {
-        identifier,
-        requestCount,
-        maxRequests,
+      logger.security({
+        type: 'rate_limited',
+        ip: identifier,
+        details: `Request count: ${requestCount}/${maxRequests}`,
       });
     }
 
     return { allowed, remaining, resetTime, limit: maxRequests };
   } catch (error) {
     // On error, allow request but log
-    logger.error("Rate limit check failed", error as Error);
+    const err = error as Error;
+    logger.error("Rate limit check failed", { error: err.message, stack: err.stack });
     return { allowed: true, remaining: maxRequests, resetTime: now + windowMs, limit: maxRequests };
   }
 }

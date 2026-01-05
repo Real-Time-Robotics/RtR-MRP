@@ -1,0 +1,181 @@
+# =============================================================================
+# RTR MRP - PROMETHEUS ALERTING RULES
+# =============================================================================
+
+groups:
+  # ===========================================================================
+  # APPLICATION ALERTS
+  # ===========================================================================
+  - name: rtr-mrp-application
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(rtr_mrp_http_requests_total{status=~"5.."}[5m])) 
+          / sum(rate(rtr_mrp_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # High latency
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(rtr_mrp_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High P95 latency detected"
+          description: "P95 latency is {{ $value | humanizeDuration }} over the last 5 minutes"
+
+      # Too many active connections
+      - alert: TooManyConnections
+        expr: rtr_mrp_http_active_connections > 1000
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Too many active HTTP connections"
+          description: "Active connections: {{ $value }}"
+
+      # Application down
+      - alert: ApplicationDown
+        expr: up{job="rtr-mrp"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "RTR-MRP application is down"
+          description: "Instance {{ $labels.instance }} has been down for more than 1 minute"
+
+  # ===========================================================================
+  # DATABASE ALERTS
+  # ===========================================================================
+  - name: rtr-mrp-database
+    rules:
+      # Database connection failures
+      - alert: DatabaseConnectionFailed
+        expr: sum(rate(rtr_mrp_db_queries_total{success="false"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connection failures detected"
+          description: "Database queries are failing at {{ $value }} per second"
+
+      # Slow database queries
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95, sum(rate(rtr_mrp_db_query_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Slow database queries detected"
+          description: "P95 query duration is {{ $value | humanizeDuration }}"
+
+  # ===========================================================================
+  # CACHE ALERTS
+  # ===========================================================================
+  - name: rtr-mrp-cache
+    rules:
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: rtr_mrp_cache_hit_rate < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+  # ===========================================================================
+  # BUSINESS ALERTS
+  # ===========================================================================
+  - name: rtr-mrp-business
+    rules:
+      # MRP run taking too long
+      - alert: MRPRunTooLong
+        expr: |
+          histogram_quantile(0.95, sum(rate(rtr_mrp_run_duration_seconds_bucket[1h])) by (le)) > 300
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "MRP runs are taking too long"
+          description: "P95 MRP run duration is {{ $value | humanizeDuration }}"
+
+      # Low stock alerts
+      - alert: HighLowStockAlerts
+        expr: sum(rtr_mrp_low_stock_alerts) by (tenant) > 50
+        for: 1h
+        labels:
+          severity: warning
+          team: operations
+        annotations:
+          summary: "High number of low stock alerts"
+          description: "Tenant {{ $labels.tenant }} has {{ $value }} low stock items"
+
+      # Jobs stuck in queue
+      - alert: JobsStuckInQueue
+        expr: sum(rtr_mrp_jobs_in_queue) by (queue) > 100
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Jobs stuck in queue"
+          description: "Queue {{ $labels.queue }} has {{ $value }} pending jobs"
+
+  # ===========================================================================
+  # INFRASTRUCTURE ALERTS
+  # ===========================================================================
+  - name: rtr-mrp-infrastructure
+    rules:
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (process_resident_memory_bytes{job="rtr-mrp"} / 1024 / 1024 / 1024) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize }}GB"
+
+      # Pod restart
+      - alert: PodRestarting
+        expr: |
+          increase(kube_pod_container_status_restarts_total{pod=~"rtr-mrp.*"}[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Pod restarting frequently"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+      # Not enough replicas
+      - alert: NotEnoughReplicas
+        expr: |
+          kube_deployment_status_replicas_available{deployment="rtr-mrp"} 
+          < kube_deployment_spec_replicas{deployment="rtr-mrp"}
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Not enough replicas available"
+          description: "Only {{ $value }} replicas available"
