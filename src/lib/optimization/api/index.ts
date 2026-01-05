@@ -136,7 +136,7 @@ export async function validateBody<T>(
       return { success: true, data: result.data };
     }
     
-    return { success: false, errors: result.error.errors };
+    return { success: false, errors: result.error.issues };
   } catch (error) {
     return {
       success: false,
@@ -165,7 +165,7 @@ export function validateQuery<T>(
     return { success: true, data: result.data };
   }
   
-  return { success: false, errors: result.error.errors };
+  return { success: false, errors: result.error.issues };
 }
 
 // Common validation schemas

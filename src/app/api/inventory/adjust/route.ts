@@ -54,7 +54,7 @@ async function adjustHandler(
   const validation = adjustmentSchema.safeParse(body);
   if (!validation.success) {
     const errors: Record<string, string[]> = {};
-    validation.error.errors.forEach((err) => {
+    validation.error.issues.forEach((err) => {
       const path = err.path.join('.');
       if (!errors[path]) errors[path] = [];
       errors[path].push(err.message);
@@ -159,7 +159,7 @@ async function handleTransfer(body: unknown, user: any) {
   const validation = transferSchema.safeParse(body);
   if (!validation.success) {
     const errors: Record<string, string[]> = {};
-    validation.error.errors.forEach((err) => {
+    validation.error.issues.forEach((err) => {
       const path = err.path.join('.');
       if (!errors[path]) errors[path] = [];
       errors[path].push(err.message);

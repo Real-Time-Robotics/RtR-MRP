@@ -112,7 +112,7 @@ async function postHandler(
   const validation = createOrderSchema.safeParse(body);
   if (!validation.success) {
     const errors: Record<string, string[]> = {};
-    validation.error.errors.forEach((err) => {
+    validation.error.issues.forEach((err) => {
       const path = err.path.join('.');
       if (!errors[path]) errors[path] = [];
       errors[path].push(err.message);
