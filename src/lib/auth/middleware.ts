@@ -10,7 +10,7 @@ import { auth } from '@/lib/auth';
 // TYPES
 // =============================================================================
 
-export type UserRole = 'admin' | 'manager' | 'supervisor' | 'operator' | 'viewer';
+export type UserRole = 'admin' | 'manager' | 'supervisor' | 'planner' | 'operator' | 'viewer' | 'user';
 
 export interface AuthUser {
   id: string;
@@ -36,8 +36,10 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   admin: 100,
   manager: 80,
   supervisor: 60,
+  planner: 50,
   operator: 40,
   viewer: 20,
+  user: 10,
 };
 
 const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
@@ -63,6 +65,16 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'analytics:read',
     'reports:read',
   ],
+  planner: [
+    'parts:read', 'parts:write',
+    'inventory:read', 'inventory:write',
+    'sales:read', 'sales:write',
+    'production:read', 'production:write',
+    'quality:read',
+    'bom:read', 'bom:write',
+    'analytics:read',
+    'reports:read',
+  ],
   operator: [
     'parts:read',
     'inventory:read', 'inventory:write',
@@ -79,6 +91,11 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'quality:read',
     'bom:read',
     'analytics:read',
+  ],
+  user: [
+    'parts:read',
+    'inventory:read',
+    'production:read',
   ],
 };
 

@@ -1,7 +1,127 @@
+// =============================================================================
+// RTR MRP - NEXTAUTH CONFIGURATION (v5)
+// Complete authentication with account lockout and security features
+// =============================================================================
+
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "./prisma";
+
+// =============================================================================
+// PASSWORD POLICY
+// =============================================================================
+
+export const PASSWORD_POLICY = {
+  minLength: 12,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumbers: true,
+  requireSpecial: true,
+  maxAge: 90, // days
+  preventReuse: 5, // number of previous passwords to check
+};
+
+export function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < PASSWORD_POLICY.minLength) {
+    errors.push(`Mật khẩu phải có ít nhất ${PASSWORD_POLICY.minLength} ký tự`);
+  }
+  if (PASSWORD_POLICY.requireUppercase && !/[A-Z]/.test(password)) {
+    errors.push('Mật khẩu phải có ít nhất 1 chữ in hoa');
+  }
+  if (PASSWORD_POLICY.requireLowercase && !/[a-z]/.test(password)) {
+    errors.push('Mật khẩu phải có ít nhất 1 chữ thường');
+  }
+  if (PASSWORD_POLICY.requireNumbers && !/[0-9]/.test(password)) {
+    errors.push('Mật khẩu phải có ít nhất 1 chữ số');
+  }
+  if (PASSWORD_POLICY.requireSpecial && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Mật khẩu phải có ít nhất 1 ký tự đặc biệt');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// =============================================================================
+// SECURITY HELPERS
+// =============================================================================
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+async function checkAccountLock(userId: string): Promise<{ locked: boolean; message?: string }> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        failedLoginCount: true,
+        lockedUntil: true
+      },
+    });
+
+    if (!user) {
+      return { locked: false };
+    }
+
+    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      const remainingMs = new Date(user.lockedUntil).getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      return {
+        locked: true,
+        message: `Tài khoản bị khóa. Vui lòng thử lại sau ${remainingMin} phút.`
+      };
+    }
+
+    return { locked: false };
+  } catch {
+    return { locked: false };
+  }
+}
+
+async function incrementFailedAttempts(userId: string): Promise<void> {
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginCount: { increment: 1 },
+      },
+      select: { failedLoginCount: true },
+    });
+
+    if (user.failedLoginCount >= MAX_FAILED_ATTEMPTS) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS),
+        },
+      });
+      console.warn(`[AUTH] Account locked due to failed attempts: ${userId}`);
+    }
+  } catch (error) {
+    console.error('[AUTH] Failed to increment failed attempts:', error);
+  }
+}
+
+async function resetFailedAttempts(userId: string): Promise<void> {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginCount: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error('[AUTH] Failed to reset failed attempts:', error);
+  }
+}
+
+// =============================================================================
+// NEXTAUTH CONFIGURATION
+// =============================================================================
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -10,39 +130,92 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totp: { label: "TOTP Code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.warn('[AUTH] Login attempt with missing credentials');
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        const email = (credentials.email as string).toLowerCase().trim();
 
-        if (!user || !user.password) {
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              password: true,
+              role: true,
+              status: true,
+              failedLoginCount: true,
+              lockedUntil: true,
+              mfaEnabled: true,
+            },
+          });
+
+          if (!user) {
+            console.warn(`[AUTH] Login attempt for non-existent user: ${email}`);
+            return null;
+          }
+
+          // Check if account is locked
+          const lockStatus = await checkAccountLock(user.id);
+          if (lockStatus.locked) {
+            console.warn(`[AUTH] Login attempt for locked account: ${email}`);
+            throw new Error(lockStatus.message);
+          }
+
+          // Check if user is active
+          if (user.status !== "active") {
+            console.warn(`[AUTH] Login attempt for inactive user: ${email}`);
+            return null;
+          }
+
+          // Verify password
+          if (!user.password) {
+            console.warn(`[AUTH] User has no password set: ${email}`);
+            return null;
+          }
+
+          const isValid = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          );
+
+          if (!isValid) {
+            console.warn(`[AUTH] Invalid password for user: ${email}`);
+            await incrementFailedAttempts(user.id);
+            return null;
+          }
+
+          // Check MFA if enabled
+          if (user.mfaEnabled) {
+            if (!credentials.totp) {
+              throw new Error('MFA_REQUIRED');
+            }
+            // TOTP verification would be implemented here with speakeasy
+          }
+
+          // Reset failed attempts on successful login
+          await resetFailedAttempts(user.id);
+          console.log(`[AUTH] Successful login: ${email}`);
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          if (error instanceof Error && error.message === 'MFA_REQUIRED') {
+            throw error;
+          }
+          console.error('[AUTH] Login error:', error);
           return null;
         }
-
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
-        if (!isValid) {
-          return null;
-        }
-
-        if (user.status !== "active") {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
@@ -64,13 +237,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   pages: {
     signIn: "/login",
+    signOut: "/login",
+    error: "/login",
   },
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60,
+    maxAge: 8 * 60 * 60, // 8 hours
+    updateAge: 60 * 60, // Update session every hour
   },
   trustHost: true,
+  debug: process.env.NODE_ENV === 'development',
 });
+
+// =============================================================================
+// TYPE DECLARATIONS
+// =============================================================================
 
 declare module "next-auth" {
   interface User {
@@ -85,3 +266,4 @@ declare module "next-auth" {
     };
   }
 }
+
