@@ -66,6 +66,29 @@ async function main() {
   });
   console.log("Created demo user");
 
+  // Create role-based demo users for demo mode role testing
+  console.log("Creating role-based demo users...");
+  const demoRoleUsers = [
+    { email: "admin@demo.rtr-mrp.com", name: "Demo Admin", password: "Admin@Demo2026!", role: "admin" },
+    { email: "manager@demo.rtr-mrp.com", name: "Demo Manager", password: "Manager@Demo2026!", role: "manager" },
+    { email: "operator@demo.rtr-mrp.com", name: "Demo Operator", password: "Operator@Demo2026!", role: "operator" },
+    { email: "viewer@demo.rtr-mrp.com", name: "Demo Viewer", password: "Viewer@Demo2026!", role: "viewer" },
+  ];
+  for (const user of demoRoleUsers) {
+    const hashedPwd = await bcrypt.hash(user.password, 12);
+    await prisma.user.create({
+      data: {
+        email: user.email,
+        name: user.name,
+        password: hashedPwd,
+        role: user.role,
+        status: "active",
+      },
+    });
+    console.log(`  Created ${user.role}: ${user.email}`);
+  }
+  console.log("Role-based demo users created");
+
   // Create GL Accounts (Chart of Accounts)
   const glAccounts = await Promise.all([
     // ASSETS (1000-1999)
