@@ -1,0 +1,116 @@
+# =============================================================================
+# RTR-MRP - ARTILLERY STRESS TEST
+# Push system to its limits
+# Run: artillery run load-tests/artillery/stress.yml
+# =============================================================================
+
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3000' }}"
+  
+  phases:
+    # Warm up
+    - name: "Warm up"
+      duration: 30
+      arrivalRate: 10
+    
+    # Increase load
+    - name: "Ramp to 100"
+      duration: 60
+      arrivalRate: 10
+      rampTo: 100
+    
+    # Push harder
+    - name: "Ramp to 200"
+      duration: 60
+      arrivalRate: 100
+      rampTo: 200
+    
+    # Maximum stress
+    - name: "Maximum load"
+      duration: 120
+      arrivalRate: 200
+      rampTo: 300
+    
+    # Sustain
+    - name: "Sustain max"
+      duration: 120
+      arrivalRate: 300
+    
+    # Ramp down
+    - name: "Ramp down"
+      duration: 60
+      arrivalRate: 300
+      rampTo: 10
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  # More aggressive settings for stress
+  http:
+    timeout: 60
+    pool: 50
+
+scenarios:
+  # High-frequency health checks
+  - name: "Health Check Stress"
+    weight: 10
+    flow:
+      - loop:
+        - get:
+            url: "/api/health"
+        - think: 0.1
+        count: 10
+
+  # Dashboard hammering
+  - name: "Dashboard Stress"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/home"
+      - think: 0.5
+      - get:
+          url: "/api/analytics/dashboard"
+      - think: 0.5
+
+  # Parts rapid pagination
+  - name: "Parts Pagination Stress"
+    weight: 30
+    flow:
+      - loop:
+        - get:
+            url: "/api/parts?page={{ $loopCount }}&limit=50"
+        - think: 0.2
+        count: 5
+
+  # Production heavy load
+  - name: "Production Stress"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/production/work-orders?page=1&limit=100"
+      - think: 0.3
+      - get:
+          url: "/api/production/work-orders"
+      - think: 0.3
+      - get:
+          url: "/api/production/work-orders?status=in_progress"
+      - think: 0.3
+
+  # Mixed endpoint stress
+  - name: "Mixed Stress"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/parts?page=1"
+      - get:
+          url: "/api/inventory"
+      - get:
+          url: "/api/production/work-orders?page=1"
+      - get:
+          url: "/api/sales-orders?page=1"
+      - think: 0.5

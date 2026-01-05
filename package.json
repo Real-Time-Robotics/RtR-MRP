@@ -14,7 +14,14 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
-    "db:add-demo": "tsx scripts/add-demo-user.ts"
+    "db:add-demo": "tsx scripts/add-demo-user.ts",
+    "load:smoke": "k6 run load-testing/k6/main.js --env SCENARIO=smoke",
+    "load:test": "k6 run load-testing/k6/main.js",
+    "load:stress": "k6 run load-testing/k6/main.js --env SCENARIO=stress",
+    "load:api": "k6 run load-testing/k6/api-tests.js",
+    "artillery:smoke": "artillery run load-testing/artillery/smoke.yml",
+    "artillery:main": "artillery run load-testing/artillery/main.yml",
+    "artillery:stress": "artillery run load-testing/artillery/stress.yml"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

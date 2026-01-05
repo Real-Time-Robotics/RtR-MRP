@@ -68,9 +68,21 @@ export function UserMenu({ className, compact = false }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
-    signOut({ callbackUrl: '/' });
+
+    // Clear any local storage data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth-session');
+      localStorage.removeItem('user-preferences');
+      sessionStorage.clear();
+    }
+
+    // Sign out using NextAuth
+    await signOut({ callbackUrl: '/login', redirect: false });
+
+    // Force redirect to login
+    window.location.href = '/login';
   };
 
   if (!user) return null;

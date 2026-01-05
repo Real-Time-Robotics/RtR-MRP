@@ -1,0 +1,209 @@
+# =============================================================================
+# RTR-MRP - ARTILLERY LOAD TEST CONFIGURATION
+# Run: artillery run load-tests/artillery/main.yml
+# =============================================================================
+
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3000' }}"
+  
+  phases:
+    # Warm up
+    - name: "Warm up"
+      duration: 60
+      arrivalRate: 5
+      rampTo: 10
+    
+    # Ramp up load
+    - name: "Ramp up"
+      duration: 120
+      arrivalRate: 10
+      rampTo: 50
+    
+    # Sustained load
+    - name: "Sustained load"
+      duration: 300
+      arrivalRate: 50
+    
+    # Peak load
+    - name: "Peak load"
+      duration: 120
+      arrivalRate: 100
+    
+    # Ramp down
+    - name: "Ramp down"
+      duration: 60
+      arrivalRate: 100
+      rampTo: 10
+
+  # Variables
+  variables:
+    roles:
+      - admin
+      - manager
+      - operator
+      - viewer
+    pageNumbers:
+      - 1
+      - 2
+      - 3
+    pageSizes:
+      - 10
+      - 20
+      - 50
+    statuses:
+      - DRAFT
+      - IN_PROGRESS
+      - COMPLETED
+
+  # Plugins
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  # Default headers
+  defaults:
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+
+  # Ensure connections are reused
+  http:
+    timeout: 30
+    pool: 10
+
+# =============================================================================
+# SCENARIOS
+# =============================================================================
+
+scenarios:
+  # ---------------------------------------------------------------------------
+  # Health Check Flow
+  # ---------------------------------------------------------------------------
+  - name: "Health Check"
+    weight: 5
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+  # ---------------------------------------------------------------------------
+  # Dashboard Flow
+  # ---------------------------------------------------------------------------
+  - name: "Dashboard View"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/home"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.data"
+              as: dashboardData
+      - think: 2
+      - get:
+          url: "/api/analytics/dashboard"
+          expect:
+            - statusCode: 200
+      - think: 3
+
+  # ---------------------------------------------------------------------------
+  # Parts Browsing Flow
+  # ---------------------------------------------------------------------------
+  - name: "Parts Browsing"
+    weight: 25
+    flow:
+      # List parts
+      - get:
+          url: "/api/parts?page={{ $randomNumber(1, 3) }}&limit=20"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+      - think: 2
+
+      # Search parts
+      - get:
+          url: "/api/parts?search=component"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Filter by category
+      - get:
+          url: "/api/parts?category=Component&page=1"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+  # ---------------------------------------------------------------------------
+  # Inventory Flow
+  # ---------------------------------------------------------------------------
+  - name: "Inventory Management"
+    weight: 20
+    flow:
+      # List inventory
+      - get:
+          url: "/api/inventory"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+      # Check low stock (critical status)
+      - get:
+          url: "/api/inventory?status=critical"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+  # ---------------------------------------------------------------------------
+  # Production Flow
+  # ---------------------------------------------------------------------------
+  - name: "Production Monitoring"
+    weight: 20
+    flow:
+      # List work orders
+      - get:
+          url: "/api/production/work-orders?page=1&limit=20"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+      # Filter by status
+      - get:
+          url: "/api/production/work-orders?status=in_progress"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Kanban view
+      - get:
+          url: "/api/production/work-orders"
+          expect:
+            - statusCode: 200
+      - think: 3
+
+  # ---------------------------------------------------------------------------
+  # Sales Flow
+  # ---------------------------------------------------------------------------
+  - name: "Sales Orders"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/sales-orders?page=1&limit=20"
+          expect:
+            - statusCode: 200
+      - think: 2
+      - get:
+          url: "/api/sales-orders?status=confirmed"
+          expect:
+            - statusCode: 200
+      - think: 2
+
+# =============================================================================
+# REPORTING
+# =============================================================================
+
+# Output results
+after:
+  - log: "Test completed"

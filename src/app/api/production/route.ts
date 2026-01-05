@@ -42,6 +42,18 @@ export async function GET(request: NextRequest) {
     const filters = buildFilterQuery(request, ALLOWED_FILTERS);
     const searchQuery = buildSearchQuery(search, SEARCH_FIELDS);
 
+    // Normalize status filter to uppercase (fix case-sensitive issue)
+    if (filters.status) {
+      if (typeof filters.status === 'string') {
+        filters.status = filters.status.toUpperCase();
+      } else if (typeof filters.status === 'object' && 'in' in filters.status) {
+        // Handle multiple status values: status=draft,pending
+        filters.status = {
+          in: (filters.status as { in: string[] }).in.map((s: string) => s.toUpperCase())
+        };
+      }
+    }
+
     const where = {
       ...filters,
       ...searchQuery,
@@ -117,9 +129,16 @@ export async function POST(request: Request) {
   try {
     const session = await auth();
     if (!session) {
+      console.log('[WO CREATE] Unauthorized - no session');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
     const body = await request.json();
+
+    // Log incoming request for debugging
+    console.log('[WO CREATE] Request body:', JSON.stringify(body, null, 2));
+    console.log('[WO CREATE] User:', session.user?.email);
+
     const {
       productId,
       quantity,
@@ -128,6 +147,25 @@ export async function POST(request: Request) {
       plannedStart,
       priority = "normal",
     } = body;
+
+    // Validate required fields
+    if (!productId) {
+      console.log('[WO CREATE] Validation failed: productId is required');
+      return NextResponse.json(
+        { error: "productId is required", field: "productId" },
+        { status: 400 }
+      );
+    }
+
+    if (!quantity || quantity <= 0) {
+      console.log('[WO CREATE] Validation failed: quantity must be > 0');
+      return NextResponse.json(
+        { error: "quantity must be greater than 0", field: "quantity" },
+        { status: 400 }
+      );
+    }
+
+    console.log('[WO CREATE] Creating work order for product:', productId, 'quantity:', quantity);
 
     const workOrder = await createWorkOrder(
       productId,
@@ -138,14 +176,27 @@ export async function POST(request: Request) {
       priority
     );
 
+    console.log('[WO CREATE] Success! WO Number:', workOrder.woNumber);
+
     // Invalidate work orders cache after creation
     await cache.deletePattern(cachePatterns.ALL_WORK_ORDERS);
 
-    return NextResponse.json(workOrder);
-  } catch (error) {
-    console.error("Create work order error:", error);
+    return NextResponse.json({
+      success: true,
+      data: workOrder,
+      message: "Work order created successfully"
+    });
+  } catch (error: any) {
+    console.error("[WO CREATE] Error:", error);
+    console.error("[WO CREATE] Stack:", error?.stack);
+
+    // Return detailed error for debugging
     return NextResponse.json(
-      { error: "Failed to create work order" },
+      {
+        success: false,
+        error: error?.message || "Failed to create work order",
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }

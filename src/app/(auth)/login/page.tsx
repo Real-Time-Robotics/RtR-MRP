@@ -100,8 +100,8 @@ function LoginContent() {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <Loader2 className="w-8 h-8 animate-spin text-white" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -432,6 +432,22 @@ function LoginContent() {
             </button>
           </div>
 
+          {/* Demo Page Link */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800/30">
+            <div className="text-center">
+              <p className="text-sm text-green-800 dark:text-green-200 mb-2">
+                Want to try different roles?
+              </p>
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Try Demo with Role Selector
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
           {/* Footer Links */}
           <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
@@ -451,8 +467,8 @@ function LoginContent() {
 // Loading fallback
 function LoginLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <Loader2 className="w-8 h-8 animate-spin text-white" />
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
     </div>
   );
 }

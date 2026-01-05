@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { z } from "zod";
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -9,8 +10,38 @@ import {
   paginatedSuccess,
   paginatedError,
 } from "@/lib/pagination";
+import {
+  withPermission,
+  successResponse,
+  errorResponse,
+  validationErrorResponse,
+} from "@/lib/api/with-permission";
 
 const SEARCH_FIELDS = ["name", "code", "email", "contactName"];
+
+// =============================================================================
+// VALIDATION SCHEMA
+// =============================================================================
+
+const createSupplierSchema = z.object({
+  code: z.string().min(1, 'Mã nhà cung cấp là bắt buộc'),
+  name: z.string().min(1, 'Tên nhà cung cấp là bắt buộc'),
+  country: z.string().min(1, 'Quốc gia là bắt buộc'),
+  ndaaCompliant: z.boolean().default(true),
+  contactName: z.string().nullish(),
+  contactEmail: z.string().email('Email không hợp lệ').nullish(),
+  contactPhone: z.string().nullish(),
+  address: z.string().nullish(),
+  paymentTerms: z.string().nullish(),
+  leadTimeDays: z.number().int().min(0, 'Lead time phải >= 0').default(14),
+  rating: z.number().min(0).max(5).nullish(),
+  category: z.string().nullish(),
+  status: z.enum(['active', 'inactive', 'pending']).default('active'),
+});
+
+// =============================================================================
+// GET - List suppliers
+// =============================================================================
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -54,3 +85,52 @@ export async function GET(request: NextRequest) {
     return paginatedError("Failed to fetch suppliers", 500);
   }
 }
+
+// =============================================================================
+// POST - Create supplier
+// =============================================================================
+
+async function postHandler(
+  request: NextRequest,
+  { user }: { params?: Record<string, string>; user: any }
+) {
+  // Parse and validate body
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return errorResponse('Invalid JSON body', 400);
+  }
+
+  const validation = createSupplierSchema.safeParse(body);
+  if (!validation.success) {
+    const errors: Record<string, string[]> = {};
+    validation.error.errors.forEach((err) => {
+      const path = err.path.join('.');
+      if (!errors[path]) errors[path] = [];
+      errors[path].push(err.message);
+    });
+    return validationErrorResponse(errors);
+  }
+
+  // Check unique code
+  const codeExists = await prisma.supplier.findUnique({
+    where: { code: validation.data.code },
+  });
+  if (codeExists) {
+    return errorResponse('Mã nhà cung cấp đã tồn tại', 409);
+  }
+
+  // Create supplier
+  const supplier = await prisma.supplier.create({
+    data: {
+      ...validation.data,
+    },
+  });
+
+  return successResponse(supplier, 201);
+}
+
+export const POST = withPermission(postHandler, {
+  create: 'orders:create',
+});

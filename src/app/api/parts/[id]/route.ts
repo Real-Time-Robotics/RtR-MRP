@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { rolePermissions, UserRole } from "@/lib/auth/auth-types";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+// Permission check helper
+async function checkPermission(permission: string): Promise<{ authorized: boolean; session: any }> {
+  const session = await auth();
+  if (!session?.user) return { authorized: false, session: null };
+
+  const userRole = (session.user as { role?: string }).role as UserRole | undefined;
+  if (!userRole) return { authorized: false, session };
+
+  const userPermissions = rolePermissions[userRole] || [];
+  return { authorized: userPermissions.includes(permission as any), session };
 }
 
 // GET - Get single part with full details
@@ -73,9 +86,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT - Update part
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
+    const { authorized, session } = await checkPermission('orders:edit');
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!authorized) {
+      return NextResponse.json({ error: "Forbidden - Bạn không có quyền chỉnh sửa" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -220,9 +236,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE - Delete part
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await auth();
+    const { authorized, session } = await checkPermission('orders:delete');
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!authorized) {
+      return NextResponse.json({ error: "Forbidden - Bạn không có quyền xóa" }, { status: 403 });
     }
 
     const { id } = await params;

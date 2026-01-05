@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
 
@@ -84,9 +85,16 @@ export function ModernAppShell({
   };
 
   // Handle logout
-  const handleLogout = () => {
-    // Implement logout logic
-    console.log('Logout');
+  const handleLogout = async () => {
+    // Clear local storage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth-session');
+      sessionStorage.clear();
+    }
+
+    // Sign out and redirect
+    await signOut({ callbackUrl: '/login', redirect: false });
+    window.location.href = '/login';
   };
 
   // Close mobile menu on route change

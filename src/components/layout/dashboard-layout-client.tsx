@@ -2,6 +2,7 @@
 
 import { ModernAppShell } from '@/components/layout/modern-app-shell';
 import AIWrapper from '@/components/ai-copilot/ai-wrapper';
+import { DemoFloatingBadge } from '@/components/demo/demo-floating-badge';
 
 export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
       <AIWrapper>
         {children}
       </AIWrapper>
+      {/* Demo Mode Badge - only visible for demo users */}
+      <DemoFloatingBadge position="bottom-left" />
     </ModernAppShell>
   );
 }

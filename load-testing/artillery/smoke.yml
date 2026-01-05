@@ -1,0 +1,88 @@
+# =============================================================================
+# RTR-MRP - ARTILLERY SMOKE TEST
+# Quick validation test
+# Run: artillery run load-tests/artillery/smoke.yml
+# =============================================================================
+
+config:
+  target: "{{ $processEnvironment.BASE_URL || 'http://localhost:3000' }}"
+  
+  phases:
+    - name: "Smoke test"
+      duration: 30
+      arrivalRate: 1
+      maxVusers: 3
+
+  plugins:
+    expect: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Smoke Test - All Endpoints"
+    flow:
+      # Health
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - contentType: json
+      - think: 1
+
+      # Dashboard/Home
+      - get:
+          url: "/api/home"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Parts
+      - get:
+          url: "/api/parts?page=1&limit=10"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Inventory
+      - get:
+          url: "/api/inventory"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Production
+      - get:
+          url: "/api/production/work-orders?page=1&limit=10"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Sales Orders
+      - get:
+          url: "/api/sales-orders?page=1&limit=10"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Purchase Orders
+      - get:
+          url: "/api/purchase-orders?page=1&limit=10"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Suppliers
+      - get:
+          url: "/api/suppliers"
+          expect:
+            - statusCode: 200
+      - think: 1
+
+      # Customers
+      - get:
+          url: "/api/customers"
+          expect:
+            - statusCode: 200
+      - think: 1
