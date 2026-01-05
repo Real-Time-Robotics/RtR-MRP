@@ -49,6 +49,11 @@ export async function GET() {
           newPasswordWorks: newPasswordWorks,
           failedLoginCount: existingUser.failedLoginCount,
           wasLocked: !!existingUser.lockedUntil
+        },
+        env: {
+          NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NOT SET',
+          NEXTAUTH_SECRET_SET: !!process.env.NEXTAUTH_SECRET,
+          NODE_ENV: process.env.NODE_ENV
         }
       });
     }
