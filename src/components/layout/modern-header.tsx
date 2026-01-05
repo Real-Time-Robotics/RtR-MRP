@@ -728,7 +728,7 @@ export function ModernHeader({
           {/* Back to Home */}
           <Link
             href="/"
-            className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-4"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-4"
             title={language === 'vi' ? 'Về trang chủ' : 'Back to Home'}
           >
             <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
