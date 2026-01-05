@@ -11,24 +11,45 @@ export async function GET() {
     // Check if demo user exists
     const existingUser = await prisma.user.findUnique({
       where: { email: demoEmail },
-      select: { id: true, email: true, name: true, status: true }
+      select: { id: true, email: true, name: true, status: true, password: true, failedLoginCount: true, lockedUntil: true }
     });
 
     if (existingUser) {
+      // Test current password first
+      let passwordWorks = false;
+      if (existingUser.password) {
+        passwordWorks = await bcrypt.compare(demoPassword, existingUser.password);
+      }
+
       // Update password to ensure it's correct
       const hashedPassword = await bcrypt.hash(demoPassword, 12);
       await prisma.user.update({
         where: { email: demoEmail },
         data: {
           password: hashedPassword,
-          status: "active"
+          status: "active",
+          failedLoginCount: 0,
+          lockedUntil: null
         }
       });
+
+      // Verify new password works
+      const verifyUser = await prisma.user.findUnique({
+        where: { email: demoEmail },
+        select: { password: true }
+      });
+      const newPasswordWorks = verifyUser?.password ? await bcrypt.compare(demoPassword, verifyUser.password) : false;
 
       return NextResponse.json({
         success: true,
         message: "Demo user exists, password updated",
-        user: existingUser
+        user: { id: existingUser.id, email: existingUser.email, name: existingUser.name, status: existingUser.status },
+        debug: {
+          oldPasswordWorked: passwordWorks,
+          newPasswordWorks: newPasswordWorks,
+          failedLoginCount: existingUser.failedLoginCount,
+          wasLocked: !!existingUser.lockedUntil
+        }
       });
     }
 
