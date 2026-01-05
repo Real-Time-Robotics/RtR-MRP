@@ -186,10 +186,14 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
-  // Get session token
+  // Get session token - use correct cookie name for production
+  const isProduction = process.env.NODE_ENV === 'production';
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    cookieName: isProduction
+      ? '__Secure-authjs.session-token'
+      : 'authjs.session-token',
   });
 
   // Redirect to login if not authenticated
