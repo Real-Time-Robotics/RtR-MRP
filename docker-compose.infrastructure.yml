@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Redis for caching and queues
+  redis:
+    image: redis:7-alpine
+    container_name: rtr-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Commander (UI for Redis)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: rtr-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+  # LocalStack for S3 (development)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: rtr-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: ap-southeast-1
+      DATA_DIR: /var/lib/localstack/data
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  # BullMQ Dashboard (optional)
+  bull-board:
+    image: deadly0/bull-board:latest
+    container_name: rtr-bull-board
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3001:3000"
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
+  localstack_data:

@@ -729,6 +729,11 @@ model User {
   itarAccessLogs      ITARAccessLog[]
   mobileDevices       MobileDevice[]
 
+  // Multi-tenancy
+  tenantId            String?
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
   @@map("users")
 }
 
@@ -4168,4 +4173,325 @@ model WorkCenterCapacity {
   @@index([workCenterId, date])
   @@index([date])
   @@map("work_center_capacity")
+}
+// =============================================================================
+// RTR MRP - TENANT & MULTI-TENANCY MODELS
+// Add these to the end of your prisma/schema.prisma file
+// =============================================================================
+
+// =============================================================================
+// TENANT MANAGEMENT
+// =============================================================================
+
+model Tenant {
+  id              String    @id @default(cuid())
+  
+  // Identity
+  code            String    @unique  // e.g., "acme", "samsung"
+  name            String              // "ACME Corporation"
+  slug            String    @unique  // URL-friendly: acme-corp
+  domain          String?   @unique  // Custom domain: acme.rtr-mrp.com
+  
+  // Contact
+  email           String
+  phone           String?
+  address         String?
+  city            String?
+  country         String    @default("Vietnam")
+  taxCode         String?
+  
+  // Branding
+  logo            String?
+  primaryColor    String?   @default("#3B82F6")
+  secondaryColor  String?   @default("#1E40AF")
+  
+  // Subscription
+  plan            TenantPlan @default(TRIAL)
+  planStartDate   DateTime   @default(now())
+  planEndDate     DateTime?
+  trialEndsAt     DateTime?
+  
+  // Limits based on plan
+  maxUsers        Int       @default(5)
+  maxStorage      BigInt    @default(1073741824)  // 1GB in bytes
+  maxApiCalls     Int       @default(10000)       // per month
+  maxParts        Int       @default(1000)
+  maxOrders       Int       @default(500)         // per month
+  
+  // Current usage
+  currentUsers    Int       @default(0)
+  currentStorage  BigInt    @default(0)
+  currentApiCalls Int       @default(0)
+  currentParts    Int       @default(0)
+  
+  // Features (JSON for flexibility)
+  features        Json?     // { "mrp": true, "quality": true, "oee": false }
+  settings        Json?     // Tenant-specific settings
+  
+  // Billing
+  billingEmail    String?
+  billingAddress  String?
+  currency        String    @default("USD")
+  
+  // Status
+  status          TenantStatus @default(ACTIVE)
+  suspendedAt     DateTime?
+  suspendedReason String?
+  
+  // Relations
+  users           User[]
+  subscriptions   TenantSubscription[]
+  invitations     TenantInvitation[]
+  apiKeys         TenantApiKey[]
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([code])
+  @@index([slug])
+  @@index([domain])
+  @@index([status])
+}
+
+enum TenantPlan {
+  TRIAL         // 14 days free, 5 users, limited features
+  STARTER       // $49/mo, 10 users, 5GB, basic features
+  PROFESSIONAL  // $149/mo, 50 users, 25GB, all features
+  ENTERPRISE    // Custom pricing, unlimited users, priority support
+}
+
+enum TenantStatus {
+  PENDING       // Awaiting verification
+  ACTIVE        // Normal operation
+  SUSPENDED     // Payment issue or violation
+  CANCELLED     // Subscription ended
+  DELETED       // Soft deleted
+}
+
+// =============================================================================
+// TENANT SUBSCRIPTION HISTORY
+// =============================================================================
+
+model TenantSubscription {
+  id              String    @id @default(cuid())
+  
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Plan details
+  plan            TenantPlan
+  priceMonthly    Float
+  priceYearly     Float?
+  currency        String    @default("USD")
+  billingCycle    BillingCycle @default(MONTHLY)
+  
+  // Period
+  startDate       DateTime
+  endDate         DateTime?
+  cancelledAt     DateTime?
+  
+  // Payment
+  paymentMethod   String?   // "credit_card", "bank_transfer", "paypal"
+  paymentStatus   PaymentStatus @default(PENDING)
+  lastPaymentDate DateTime?
+  nextPaymentDate DateTime?
+  
+  // Invoice reference
+  invoiceNumber   String?
+  invoiceUrl      String?
+  
+  // Discount
+  discountPercent Float     @default(0)
+  discountReason  String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tenantId])
+  @@index([plan])
+  @@index([paymentStatus])
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// =============================================================================
+// TENANT INVITATIONS
+// =============================================================================
+
+model TenantInvitation {
+  id              String    @id @default(cuid())
+  
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Invitation details
+  email           String
+  role            String    @default("viewer")
+  department      String?
+  
+  // Sender
+  invitedById     String
+  invitedByName   String?
+  
+  // Token for verification
+  token           String    @unique
+  
+  // Status
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  
+  // Message
+  message         String?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([tenantId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+// =============================================================================
+// TENANT API KEYS (for integrations)
+// =============================================================================
+
+model TenantApiKey {
+  id              String    @id @default(cuid())
+  
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Key info
+  name            String               // "Production API Key"
+  description     String?
+  keyHash         String    @unique   // Hashed API key
+  keyPrefix       String               // First 8 chars for identification (e.g., "rtr_live_")
+  
+  // Creator
+  createdById     String
+  createdByName   String?
+  
+  // Permissions
+  permissions     String[]             // ["read:parts", "write:orders"]
+  scopes          String[]             // ["inventory", "sales"]
+  
+  // Rate limiting
+  rateLimit       Int       @default(1000) // requests per hour
+  rateLimitBurst  Int       @default(100)  // burst limit
+  
+  // IP whitelist (optional)
+  allowedIps      String[]
+  
+  // Validity
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  lastUsedIp      String?
+  
+  // Usage tracking
+  totalRequests   BigInt    @default(0)
+  
+  // Status
+  isActive        Boolean   @default(true)
+  revokedAt       DateTime?
+  revokedById     String?
+  revokedReason   String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([keyPrefix])
+  @@index([isActive])
+}
+
+// =============================================================================
+// TENANT WEBHOOKS
+// =============================================================================
+
+model TenantWebhook {
+  id              String    @id @default(cuid())
+  
+  tenantId        String
+  
+  // Webhook config
+  name            String
+  url             String
+  secret          String              // For signature verification
+  
+  // Events to trigger
+  events          String[]            // ["order.created", "inventory.low"]
+  
+  // Headers (JSON)
+  headers         Json?
+  
+  // Retry config
+  maxRetries      Int       @default(3)
+  retryDelay      Int       @default(60)  // seconds
+  
+  // Status
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  lastStatus      Int?                // Last HTTP status code
+  failureCount    Int       @default(0)
+  
+  createdById     String
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+// =============================================================================
+// TENANT USAGE LOGS (for billing)
+// =============================================================================
+
+model TenantUsageLog {
+  id              String    @id @default(cuid())
+  
+  tenantId        String
+  
+  // Usage period
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  // Metrics
+  apiCalls        Int       @default(0)
+  storageBytes    BigInt    @default(0)
+  activeUsers     Int       @default(0)
+  partsCount      Int       @default(0)
+  ordersCount     Int       @default(0)
+  reportsGenerated Int      @default(0)
+  
+  // Compute usage (for MRP runs, etc.)
+  computeMinutes  Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([tenantId])
+  @@index([periodStart])
+  @@unique([tenantId, periodStart, periodEnd])
 }
