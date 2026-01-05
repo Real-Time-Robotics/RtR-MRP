@@ -29,7 +29,9 @@ export async function GET() {
           password: hashedPassword,
           status: "active",
           failedLoginCount: 0,
-          lockedUntil: null
+          lockedUntil: null,
+          mfaEnabled: false,
+          mfaSecret: null
         }
       });
 
