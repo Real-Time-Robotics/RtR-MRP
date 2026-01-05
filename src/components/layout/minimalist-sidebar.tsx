@@ -144,20 +144,52 @@ export function MinimalistSidebar({
         collapsed ? 'w-14' : 'w-52'
       )}
     >
-      {/* Toggle Button */}
-      <div className="flex items-center justify-end p-2 border-b border-gray-100 dark:border-gray-800">
-        <button
-          onClick={onToggle}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-          title={collapsed ? 'Expand' : 'Collapse'}
-        >
-          {collapsed ? (
-            <PanelLeft className="w-4 h-4 text-gray-400" />
-          ) : (
-            <PanelLeftClose className="w-4 h-4 text-gray-400" />
+      {/* Header with Logo & Product Name */}
+      <div className={cn(
+        "flex items-center h-14 px-3 border-b border-gray-100 dark:border-gray-800",
+        collapsed ? "justify-center" : "justify-between"
+      )}>
+        {/* Logo & Name */}
+        <Link href="/home" className="flex items-center gap-2.5">
+          {/* Bloomberg-style Logo */}
+          <div className="h-8 w-8 rounded-md bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <span className="text-white font-bold text-[10px] font-mono tracking-tight">MRP</span>
+          </div>
+          {!collapsed && (
+            <div className="flex items-baseline">
+              <span className="font-bold text-base font-mono text-gray-900 dark:text-white tracking-tight">
+                MRP
+              </span>
+              <span className="text-violet-500 font-bold text-base font-mono">-AI</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-0.5 animate-pulse" />
+            </div>
           )}
-        </button>
+        </Link>
+
+        {/* Toggle Button */}
+        {!collapsed && (
+          <button
+            onClick={onToggle}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+            title="Collapse"
+          >
+            <PanelLeftClose className="w-4 h-4 text-gray-400" />
+          </button>
+        )}
       </div>
+
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="flex justify-center py-2">
+          <button
+            onClick={onToggle}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+            title="Expand"
+          >
+            <PanelLeft className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+      )}
 
       {/* Quick Navigation */}
       <div className="flex-1 overflow-y-auto p-2">
