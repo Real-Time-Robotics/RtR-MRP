@@ -25,7 +25,7 @@ import {
   RTRAreaChart,
   StatCardWithChart,
   chartColors,
-} from '@/components/charts/chart-components';
+} from '@/components/charts';
 
 // =============================================================================
 // ANALYTICS DASHBOARD

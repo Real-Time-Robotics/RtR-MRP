@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cache, cacheKeys, cacheTTL } from '@/lib/cache/redis';
 
 // =============================================================================
 // ANALYTICS DASHBOARD API
@@ -7,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 // =============================================================================
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '6m'; // 1m, 3m, 6m, 1y, all
@@ -33,6 +35,21 @@ export async function GET(request: NextRequest) {
         break;
     }
 
+    // Check cache first
+    const cacheKey = `analytics:${period}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return NextResponse.json({
+        ...cached,
+        cached: true,
+        took: Date.now() - startTime,
+      }, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+        },
+      });
+    }
+
     // Fetch all metrics in parallel
     const [
       inventoryMetrics,
@@ -52,7 +69,7 @@ export async function GET(request: NextRequest) {
       getChartData(startDate)
     ]);
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       period,
       dateRange: {
@@ -68,6 +85,19 @@ export async function GET(request: NextRequest) {
         compliance: complianceMetrics
       },
       charts: chartData
+    };
+
+    // Cache for 2 minutes
+    await cache.set(cacheKey, responseData, cacheTTL.MEDIUM);
+
+    return NextResponse.json({
+      ...responseData,
+      cached: false,
+      took: Date.now() - startTime,
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+      },
     });
 
   } catch (error) {
@@ -92,7 +122,10 @@ async function getInventoryMetrics(startDate: Date) {
     ] = await Promise.all([
       prisma.part.count(),
       prisma.inventory.findMany({
-        include: { part: true }
+        select: {
+          quantity: true,
+          part: { select: { unitCost: true } }
+        }
       }),
       prisma.inventory.count({
         where: {
