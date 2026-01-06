@@ -245,8 +245,8 @@ async function checkDataIntegrity(): Promise<HealthCheck> {
     const orphanedInventory = await prisma.inventory.count({
       where: {
         OR: [
-          { part: null },
-          { warehouse: null },
+          { part: { is: null } },
+          { warehouse: { is: null } },
         ],
       },
     });
@@ -256,7 +256,7 @@ async function checkDataIntegrity(): Promise<HealthCheck> {
 
     // Check for work orders without product
     const orphanedWorkOrders = await prisma.workOrder.count({
-      where: { product: null },
+      where: { product: { is: null } },
     });
     if (orphanedWorkOrders > 0) {
       issues.push(`${orphanedWorkOrders} orphaned work orders`);
@@ -264,7 +264,7 @@ async function checkDataIntegrity(): Promise<HealthCheck> {
 
     // Check for negative inventory
     const negativeInventory = await prisma.inventory.count({
-      where: { quantity: { lt: 0 } },
+      where: { onHand: { lt: 0 } },
     });
     if (negativeInventory > 0) {
       issues.push(`${negativeInventory} negative inventory records`);
