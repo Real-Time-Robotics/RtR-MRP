@@ -187,10 +187,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Get session token - use correct cookie name for production
+  // IMPORTANT: Must use AUTH_SECRET to match NextAuth v5 token signing
   const isProduction = process.env.NODE_ENV === 'production';
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret,
     cookieName: isProduction
       ? '__Secure-authjs.session-token'
       : 'authjs.session-token',
