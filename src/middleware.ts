@@ -21,8 +21,7 @@ const publicRoutes = [
   '/api/auth',
   '/api/health',
   '/api/metrics',
-  '/api/demo/check',
-  '/api/demo/unlock',
+  '/api/demo',  // Covers /api/demo/check, /api/demo/unlock, etc.
   '/_next',
   '/favicon.ico',
   '/manifest.json',
