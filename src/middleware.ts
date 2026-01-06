@@ -21,6 +21,8 @@ const publicRoutes = [
   '/api/auth',
   '/api/health',
   '/api/metrics',
+  '/api/demo/check',
+  '/api/demo/unlock',
   '/_next',
   '/favicon.ico',
   '/manifest.json',
