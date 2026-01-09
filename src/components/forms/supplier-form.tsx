@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,6 +34,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Building2, MapPin, User, Mail, Phone, Clock, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+  detectChanges,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -116,6 +122,13 @@ const PAYMENT_TERMS = [
   'LC',
 ];
 
+// Field config for change impact detection
+const SUPPLIER_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  leadTimeDays: { label: 'Lead Time (days)', valueType: 'number' },
+  status: { label: 'Status', valueType: 'string' },
+  paymentTerms: { label: 'Payment Terms', valueType: 'string' },
+};
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -128,6 +141,24 @@ export function SupplierForm({
 }: SupplierFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!supplier;
+
+  // Store original values for change impact detection
+  const originalValuesRef = useRef<Record<string, unknown> | null>(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState<SupplierFormData | null>(null);
+
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+      }
+    },
+    onError: () => {
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+      }
+    },
+  });
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -167,6 +198,12 @@ export function SupplierForm({
           category: supplier.category || '',
           status: supplier.status as 'active' | 'inactive' | 'pending',
         });
+        // Store original values for change impact
+        originalValuesRef.current = {
+          leadTimeDays: supplier.leadTimeDays,
+          status: supplier.status,
+          paymentTerms: supplier.paymentTerms,
+        };
       } else {
         form.reset({
           code: '',
@@ -183,11 +220,16 @@ export function SupplierForm({
           category: '',
           status: 'active',
         });
+        originalValuesRef.current = null;
       }
+      // Reset change impact state
+      changeImpact.reset();
+      setPendingSubmitData(null);
     }
-  }, [open, supplier, form]);
+  }, [open, supplier, form, changeImpact]);
 
-  const onSubmit = async (data: SupplierFormData) => {
+  // Perform the actual save operation
+  const performSave = async (data: SupplierFormData) => {
     setLoading(true);
 
     try {
@@ -201,7 +243,7 @@ export function SupplierForm({
         category: data.category || null,
       };
 
-      const url = isEditing ? `/api/suppliers/${supplier.id}` : '/api/suppliers';
+      const url = isEditing ? `/api/suppliers/${supplier!.id}` : '/api/suppliers';
       const method = isEditing ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -234,7 +276,34 @@ export function SupplierForm({
       toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
     } finally {
       setLoading(false);
+      setPendingSubmitData(null);
     }
+  };
+
+  // Handle submit with change impact check
+  const onSubmit = async (data: SupplierFormData) => {
+    // For new suppliers, just save directly
+    if (!isEditing || !supplier?.id || !originalValuesRef.current) {
+      performSave(data);
+      return;
+    }
+
+    // Detect changes in impactable fields
+    const changes = detectChanges(
+      originalValuesRef.current,
+      data as unknown as Record<string, unknown>,
+      SUPPLIER_IMPACT_FIELDS
+    );
+
+    // If no impactable fields changed, save directly
+    if (changes.length === 0) {
+      performSave(data);
+      return;
+    }
+
+    // Store pending data and check impact
+    setPendingSubmitData(data);
+    await changeImpact.checkImpact('supplier', supplier.id, changes);
   };
 
   return (
@@ -566,18 +635,28 @@ export function SupplierForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={loading}
+                disabled={loading || changeImpact.loading}
               >
                 Hủy
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={loading || changeImpact.loading}>
+                {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? 'Lưu thay đổi' : 'Tạo nhà cung cấp'}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
+
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={changeImpact.cancel}
+      />
     </Dialog>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,6 +41,12 @@ import {
 import { Loader2, Truck, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+  detectChanges,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -103,18 +109,37 @@ interface PurchaseOrderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order?: PurchaseOrder | null;
+  initialData?: Partial<PurchaseOrderFormData> | null;
   onSuccess?: (order: PurchaseOrder) => void;
 }
+
+// Field config for change impact
+const PO_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  status: { label: 'Status', valueType: 'string' },
+};
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function PurchaseOrderForm({ open, onOpenChange, order, onSuccess }: PurchaseOrderFormProps) {
+export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSuccess }: PurchaseOrderFormProps) {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const isEditing = !!order;
+
+  // Change Impact
+  const originalValuesRef = useRef<Record<string, unknown> | null>(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState<PurchaseOrderFormData | null>(null);
+
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) performSave(pendingSubmitData);
+    },
+    onError: () => {
+      if (pendingSubmitData) performSave(pendingSubmitData);
+    },
+  });
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -184,22 +209,26 @@ export function PurchaseOrderForm({ open, onOpenChange, order, onSuccess }: Purc
             unitPrice: line.unitPrice,
           })) || [],
         });
+        originalValuesRef.current = { status: order.status };
       } else {
         form.reset({
           poNumber: `PO-${Date.now().toString().slice(-6)}`,
-          supplierId: '',
-          orderDate: format(new Date(), 'yyyy-MM-dd'),
-          expectedDate: format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+          supplierId: initialData?.supplierId || '',
+          orderDate: initialData?.orderDate || format(new Date(), 'yyyy-MM-dd'),
+          expectedDate: initialData?.expectedDate || format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
           status: 'draft',
           currency: 'USD',
-          notes: '',
-          lines: [],
+          notes: initialData?.notes || '',
+          lines: initialData?.lines || [],
         });
+        originalValuesRef.current = null;
       }
+      changeImpact.reset();
+      setPendingSubmitData(null);
     }
-  }, [open, order, form]);
+  }, [open, order, form, initialData, changeImpact]);
 
-  const onSubmit = async (data: PurchaseOrderFormData) => {
+  const performSave = async (data: PurchaseOrderFormData) => {
     setLoading(true);
 
     try {
@@ -208,7 +237,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, onSuccess }: Purc
         notes: data.notes || null,
       };
 
-      const url = isEditing ? `/api/purchase-orders/${order.id}` : '/api/purchase-orders';
+      const url = isEditing ? `/api/purchase-orders/${order!.id}` : '/api/purchase-orders';
       const method = isEditing ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
@@ -240,7 +269,29 @@ export function PurchaseOrderForm({ open, onOpenChange, order, onSuccess }: Purc
       toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
     } finally {
       setLoading(false);
+      setPendingSubmitData(null);
     }
+  };
+
+  const onSubmit = async (data: PurchaseOrderFormData) => {
+    if (!isEditing || !order?.id || !originalValuesRef.current) {
+      performSave(data);
+      return;
+    }
+
+    const changes = detectChanges(
+      originalValuesRef.current,
+      data as unknown as Record<string, unknown>,
+      PO_IMPACT_FIELDS
+    );
+
+    if (changes.length === 0) {
+      performSave(data);
+      return;
+    }
+
+    setPendingSubmitData(data);
+    await changeImpact.checkImpact('purchaseOrder', order.id, changes);
   };
 
   const addLine = () => {
@@ -513,17 +564,27 @@ export function PurchaseOrderForm({ open, onOpenChange, order, onSuccess }: Purc
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading || changeImpact.loading}>
                 Hủy
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={loading || changeImpact.loading}>
+                {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? 'Lưu thay đổi' : 'Tạo PO'}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
+
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={changeImpact.cancel}
+      />
     </Dialog>
   );
 }

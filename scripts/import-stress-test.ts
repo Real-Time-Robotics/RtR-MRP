@@ -56,8 +56,11 @@ async function importSuppliers(sheet: XLSX.WorkSheet): Promise<void> {
 
   for (const row of data as Record<string, unknown>[]) {
     try {
+      if (processed === 0) console.log('[DEBUG] Supplier Row Keys:', Object.keys(row));
+
       const code = String(row['Supplier Code'] || row['Code'] || '').trim();
       if (!code) continue;
+      if (processed === 0) console.log('[DEBUG] First Supplier Code:', code);
 
       await prisma.supplier.upsert({
         where: { code },
@@ -128,50 +131,60 @@ async function importParts(sheet: XLSX.WorkSheet): Promise<void> {
       const rawCategory = String(row['Category'] || row['Type'] || 'General').trim();
       const category = categoryMap[rawCategory] || rawCategory.toLowerCase();
 
+      const planningData = {
+        minStockLevel: parseNumber(row['Min Stock'] || row['Safety Stock'], 0),
+        reorderPoint: parseNumber(row['Reorder Point'], 0),
+        safetyStock: parseNumber(row['Safety Stock'], 0),
+        maxStock: parseNumber(row['Max Stock'], null as unknown as number) || null,
+        leadTimeDays: parseNumber(row['Lead Time'] || row['Lead Time Days'], 14),
+        moq: parseNumber(row['MOQ'] || row['Min Order Qty'], 1),
+        orderMultiple: parseNumber(row['Order Multiple'], 1),
+      };
+
+      const costData = {
+        unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
+        standardCost: parseNumber(row['Standard Cost'] || row['Cost'], 0),
+      };
+
       await prisma.part.upsert({
         where: { partNumber },
         create: {
           partNumber,
           name: String(row['Name'] || row['Part Name'] || '').trim(),
           category,
-          subCategory: row['Sub-Category'] || row['SubCategory'] ? String(row['Sub-Category'] || row['SubCategory']).trim() : null,
+          // subCategory: row['Sub-Category'] ? String(row['Sub-Category']).trim() : null, // Removed as not in schema
           description: row['Description'] ? String(row['Description']).trim() : null,
           unit: String(row['Unit'] || row['UOM'] || 'pcs').trim(),
-          unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
-          weightKg: parseNumber(row['Weight'] || row['Weight (kg)'], null as unknown as number) || null,
-          minStockLevel: parseNumber(row['Min Stock'] || row['Safety Stock'], 0),
-          reorderPoint: parseNumber(row['Reorder Point'], 0),
-          safetyStock: parseNumber(row['Safety Stock'], 0),
-          maxStock: parseNumber(row['Max Stock'], null as unknown as number) || null,
-          leadTimeDays: parseNumber(row['Lead Time'] || row['Lead Time Days'], 14),
-          moq: parseNumber(row['MOQ'] || row['Min Order Qty'], 1),
-          orderMultiple: parseNumber(row['Order Multiple'], 1),
           isCritical: parseBoolean(row['Critical'] || row['Is Critical'], false),
-          ndaaCompliant: parseBoolean(row['NDAA'], true),
-          lotControl: parseBoolean(row['Lot Control'], false),
-          serialControl: parseBoolean(row['Serial Control'], false),
           status: String(row['Status'] || 'active').toLowerCase(),
+
+          planning: {
+            create: planningData
+          },
+          cost: {
+            create: costData
+          }
         },
         update: {
           name: String(row['Name'] || row['Part Name'] || '').trim(),
           category,
-          subCategory: row['Sub-Category'] || row['SubCategory'] ? String(row['Sub-Category'] || row['SubCategory']).trim() : null,
           description: row['Description'] ? String(row['Description']).trim() : null,
           unit: String(row['Unit'] || row['UOM'] || 'pcs').trim(),
-          unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
-          weightKg: parseNumber(row['Weight'] || row['Weight (kg)'], null as unknown as number) || null,
-          minStockLevel: parseNumber(row['Min Stock'] || row['Safety Stock'], 0),
-          reorderPoint: parseNumber(row['Reorder Point'], 0),
-          safetyStock: parseNumber(row['Safety Stock'], 0),
-          maxStock: parseNumber(row['Max Stock'], null as unknown as number) || null,
-          leadTimeDays: parseNumber(row['Lead Time'] || row['Lead Time Days'], 14),
-          moq: parseNumber(row['MOQ'] || row['Min Order Qty'], 1),
-          orderMultiple: parseNumber(row['Order Multiple'], 1),
           isCritical: parseBoolean(row['Critical'] || row['Is Critical'], false),
-          ndaaCompliant: parseBoolean(row['NDAA'], true),
-          lotControl: parseBoolean(row['Lot Control'], false),
-          serialControl: parseBoolean(row['Serial Control'], false),
           status: String(row['Status'] || 'active').toLowerCase(),
+
+          planning: {
+            upsert: {
+              create: planningData,
+              update: planningData
+            }
+          },
+          cost: {
+            upsert: {
+              create: costData,
+              update: costData
+            }
+          }
         },
       });
       processed++;
@@ -198,8 +211,17 @@ async function importCustomers(sheet: XLSX.WorkSheet): Promise<void> {
 
   for (const row of data as Record<string, unknown>[]) {
     try {
+      if (processed === 0) {
+        console.log('[DEBUG] Customer Row Keys:', Object.keys(row));
+        console.log('[DEBUG] Customer First Row:', row);
+      }
       const code = String(row['Customer Code'] || row['Code'] || '').trim();
-      if (!code) continue;
+      if (!code) {
+        if (processed === 0) console.log('[DEBUG] Customer Row Keys:', Object.keys(row));
+        if (processed === 0) console.log('[DEBUG] Customer First Row:', row);
+        continue;
+      }
+      if (processed === 0) console.log('[DEBUG] First Customer Code:', code);
 
       await prisma.customer.upsert({
         where: { code },
@@ -257,12 +279,27 @@ async function importSalesOrders(sheet: XLSX.WorkSheet): Promise<void> {
 
   for (const row of data as Record<string, unknown>[]) {
     try {
-      const orderNumber = String(row['Order Number'] || row['SO Number'] || '').trim();
-      if (!orderNumber) continue;
+      if (processed === 0 && errors === 0) console.log('[DEBUG] SalesOrder Row Keys:', Object.keys(row));
 
-      const customerCode = String(row['Customer Code'] || row['Customer'] || '').trim();
+      const orderNumber = String(row['Order Number'] || row['SO Number'] || '').trim();
+      if (!orderNumber) {
+        if (errors === 0) console.log('[DEBUG] First Row Keys:', Object.keys(row));
+        continue;
+      }
+
+      let customerCode = String(row['Customer Code'] || row['Customer'] || row['Customer ID'] || '').trim();
+
+      // Smart Lookup: Convert cust-X to KHxxxx
+      if (customerCode.toLowerCase().startsWith('cust-')) {
+        const num = customerCode.split('-')[1];
+        if (num) {
+          customerCode = `KH${num.padStart(4, '0')}`;
+        }
+      }
+
       const customerId = customerMap.get(customerCode);
       if (!customerId) {
+        if (errors < 3) console.log(`[DEBUG] Failed to find CustomerID for code: '${customerCode}' (Original: ${row['Customer ID']}).`);
         errors++;
         continue;
       }
@@ -338,9 +375,19 @@ async function importPurchaseOrders(sheet: XLSX.WorkSheet): Promise<void> {
       const poNumber = String(row['PO Number'] || row['Order Number'] || '').trim();
       if (!poNumber) continue;
 
-      const supplierCode = String(row['Supplier Code'] || row['Supplier'] || '').trim();
+      let supplierCode = String(row['Supplier Code'] || row['Supplier'] || row['Supplier ID'] || '').trim();
+
+      // Smart Lookup: Convert supp-X to NCCxxx
+      if (supplierCode.toLowerCase().startsWith('supp-')) {
+        const num = supplierCode.split('-')[1];
+        if (num) {
+          supplierCode = `NCC${num.padStart(3, '0')}`;
+        }
+      }
+
       const supplierId = supplierMap.get(supplierCode);
       if (!supplierId) {
+        if (errors < 3) console.log(`[DEBUG] Failed to find SupplierID for code: '${supplierCode}' (Original: ${row['Supplier ID']}).`);
         errors++;
         continue;
       }

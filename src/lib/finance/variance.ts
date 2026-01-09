@@ -30,12 +30,7 @@ export async function calculateMaterialPriceVariance(
     include: {
       part: {
         include: {
-          partCosts: {
-            where: {
-              costType: { category: "MATERIAL" },
-              expiryDate: null,
-            },
-          },
+          cost: true,
         },
       },
     },
@@ -46,7 +41,7 @@ export async function calculateMaterialPriceVariance(
   const details: VarianceDetail[] = [];
 
   for (const line of poLines) {
-    const standardPrice = line.part?.partCosts[0]?.standardCost || line.part?.unitCost || 0;
+    const standardPrice = line.part?.cost?.standardCost || line.part?.cost?.unitCost || 0;
     const actualPrice = line.unitPrice;
     const quantity = line.receivedQty;
 
@@ -111,7 +106,9 @@ export async function calculateMaterialUsageVariance(
             include: {
               bomLines: {
                 include: {
-                  part: true,
+                  part: {
+                    include: { cost: true }
+                  },
                 },
               },
             },
@@ -120,7 +117,9 @@ export async function calculateMaterialUsageVariance(
       },
       allocations: {
         include: {
-          part: true,
+          part: {
+            include: { cost: true }
+          },
         },
       },
     },
@@ -140,7 +139,7 @@ export async function calculateMaterialUsageVariance(
     let woStandard = 0;
     for (const bomLine of bom.bomLines) {
       const stdQty = bomLine.quantity * completedQty;
-      const stdPrice = bomLine.part.unitCost;
+      const stdPrice = bomLine.part.cost?.standardCost || bomLine.part.cost?.unitCost || 0;
       woStandard += stdQty * stdPrice;
     }
 
@@ -148,7 +147,8 @@ export async function calculateMaterialUsageVariance(
     let woActual = 0;
     for (const alloc of wo.allocations) {
       const issuedQty = alloc.issuedQty - alloc.returnedQty;
-      woActual += issuedQty * alloc.part.unitCost;
+      const unitCost = alloc.part.cost?.standardCost || alloc.part.cost?.unitCost || 0;
+      woActual += issuedQty * unitCost;
     }
 
     const variance = woStandard - woActual;

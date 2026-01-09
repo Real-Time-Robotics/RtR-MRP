@@ -45,7 +45,6 @@ export async function syncPendingOperations(
   onProgress?: SyncProgressCallback
 ): Promise<SyncResult[]> {
   if (isSyncing) {
-    console.log("Sync already in progress");
     return [];
   }
 

@@ -1,14 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Eye, CreditCard, Search } from "lucide-react";
 import { format } from "date-fns";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface Invoice {
   id: string;
@@ -77,6 +70,93 @@ export function InvoiceList({
 
   const entityLabel = type === "sales" ? "Customer" : "Supplier";
 
+  // Column definitions for DataTable
+  const columns: Column<Invoice>[] = useMemo(() => [
+    {
+      key: 'invoiceNumber',
+      header: 'Invoice #',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'entity',
+      header: entityLabel,
+      width: '150px',
+      render: (_, row) => row.customer?.name || row.supplier?.name || "-",
+    },
+    {
+      key: 'invoiceDate',
+      header: 'Date',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), "MMM d, yyyy"),
+    },
+    {
+      key: 'dueDate',
+      header: 'Due Date',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), "MMM d, yyyy"),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      sortable: true,
+      render: (value) => getStatusBadge(value),
+    },
+    {
+      key: 'totalAmount',
+      header: 'Amount',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+    },
+    {
+      key: 'balance',
+      header: 'Balance',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      render: (_, row) => {
+        const balance = row.totalAmount - row.paidAmount;
+        return `$${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      },
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '80px',
+      align: 'right',
+      render: (_, row) => {
+        const balance = row.totalAmount - row.paidAmount;
+        return (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(row.id)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            {balance > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRecordPayment(row.id)}
+              >
+                <CreditCard className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [entityLabel, onView, onRecordPayment]);
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -106,78 +186,25 @@ export function InvoiceList({
         </Select>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Invoice #</TableHead>
-              <TableHead>{entityLabel}</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInvoices.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No invoices found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredInvoices.map((invoice) => {
-                const balance = invoice.totalAmount - invoice.paidAmount;
-                return (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">
-                      {invoice.invoiceNumber}
-                    </TableCell>
-                    <TableCell>
-                      {invoice.customer?.name || invoice.supplier?.name || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.invoiceDate), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(invoice.dueDate), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                    <TableCell className="text-right">
-                      ${invoice.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onView(invoice.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {balance > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRecordPayment(invoice.id)}
-                          >
-                            <CreditCard className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={filteredInvoices}
+        columns={columns}
+        keyField="id"
+        emptyMessage="No invoices found"
+        pagination
+        pageSize={20}
+        searchable={false}
+        stickyHeader
+        excelMode={{
+          enabled: true,
+          showRowNumbers: true,
+          columnHeaderStyle: 'field-names',
+          gridBorders: true,
+          showFooter: true,
+          sheetName: 'Invoices',
+          compactMode: true,
+        }}
+      />
     </div>
   );
 }

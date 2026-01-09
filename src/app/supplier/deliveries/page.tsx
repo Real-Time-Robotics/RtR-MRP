@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { excelPortalStyles } from '@/components/ui-v2/excel';
 
 // =============================================================================
 // SUPPLIER DELIVERIES PAGE
@@ -360,37 +361,37 @@ function SupplierDeliveriesContent() {
                   )}
                 </div>
 
-                {/* Delivery Items (Expandable) */}
+                {/* Delivery Items (Expandable) - Excel Style */}
                 {selectedDelivery?.id === delivery.id && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-xs text-gray-500 uppercase">
-                          <th className="px-4 py-3 text-left">Mã SP</th>
-                          <th className="px-4 py-3 text-left">Tên sản phẩm</th>
-                          <th className="px-4 py-3 text-right">Đặt hàng</th>
-                          <th className="px-4 py-3 text-right">Đã giao</th>
-                          <th className="px-4 py-3 text-right">Trạng thái</th>
+                  <div className="border-t border-[#217346]/30 dark:border-[#70AD47]/30 bg-white dark:bg-slate-950">
+                    <table className={excelPortalStyles.table}>
+                      <thead className={excelPortalStyles.thead}>
+                        <tr>
+                          <th className={excelPortalStyles.th}>Mã SP</th>
+                          <th className={excelPortalStyles.th}>Tên sản phẩm</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Đặt hàng</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Đã giao</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Trạng thái</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {delivery.items.map((item, idx) => {
+                      <tbody className={excelPortalStyles.tbody}>
+                        {delivery?.items?.map((item, idx) => {
                           const fulfilled = item.deliveredQty >= item.orderedQty;
                           const partial = item.deliveredQty > 0 && item.deliveredQty < item.orderedQty;
 
                           return (
-                            <tr key={idx} className="border-t border-gray-100 dark:border-gray-800">
-                              <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{item.partCode}</td>
-                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.partName}</td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                            <tr key={idx} className={excelPortalStyles.tr}>
+                              <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdMono}`}>{item.partCode}</td>
+                              <td className={excelPortalStyles.td}>{item.partName}</td>
+                              <td className={excelPortalStyles.tdNumber}>
                                 {item.orderedQty.toLocaleString()} {item.unit}
                               </td>
-                              <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                              <td className={excelPortalStyles.tdNumber}>
                                 {item.deliveredQty.toLocaleString()} {item.unit}
                               </td>
-                              <td className="px-4 py-3 text-sm text-right">
+                              <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdRight}`}>
                                 {fulfilled ? (
-                                  <span className="text-green-600 flex items-center justify-end gap-1">
+                                  <span className="text-[#217346] dark:text-[#70AD47] flex items-center justify-end gap-1 font-medium">
                                     <CheckCircle2 className="w-4 h-4" /> Đủ
                                   </span>
                                 ) : partial ? (
@@ -398,7 +399,7 @@ function SupplierDeliveriesContent() {
                                     <AlertTriangle className="w-4 h-4" /> Thiếu {item.orderedQty - item.deliveredQty}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400">Chưa giao</span>
+                                  <span className="text-slate-400">Chưa giao</span>
                                 )}
                               </td>
                             </tr>

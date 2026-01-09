@@ -76,7 +76,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         where: { id },
         data: {
           revision: data.revision,
-          revisionDate: new Date(),
           updatedBy: session.user?.email || "system",
         },
       });

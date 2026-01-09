@@ -19,7 +19,11 @@ import { StockStatus } from "@/types";
 async function getAlerts() {
   const inventoryData = await prisma.inventory.findMany({
     include: {
-      part: true,
+      part: {
+        include: {
+          planning: true,
+        }
+      },
     },
   });
 
@@ -41,6 +45,8 @@ async function getAlerts() {
   inventoryData.forEach((inv) => {
     const existing = partMap.get(inv.partId);
     const newAvailable = inv.quantity - inv.reservedQty;
+    const minStockLevel = inv.part.planning?.minStockLevel || 0;
+    const reorderPoint = inv.part.planning?.reorderPoint || 0;
 
     if (existing) {
       existing.available += newAvailable;
@@ -55,10 +61,10 @@ async function getAlerts() {
         partNumber: inv.part.partNumber,
         name: inv.part.name,
         isCritical: inv.part.isCritical,
-        minStockLevel: inv.part.minStockLevel,
-        reorderPoint: inv.part.reorderPoint,
+        minStockLevel,
+        reorderPoint,
         available: newAvailable,
-        status: getStockStatus(newAvailable, inv.part.minStockLevel, inv.part.reorderPoint),
+        status: getStockStatus(newAvailable, minStockLevel, reorderPoint),
       });
     }
   });

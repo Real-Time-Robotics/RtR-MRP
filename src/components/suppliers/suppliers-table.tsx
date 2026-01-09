@@ -1,24 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Star, CheckCircle, XCircle, Building2 } from 'lucide-react';
+import { Star, CheckCircle, XCircle, Building2, AlertTriangle, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { SupplierFormDialog } from '@/components/suppliers/supplier-form-dialog';
+import { DeleteSupplierDialog, Supplier } from '@/components/forms/supplier-form';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, createSupplierActions } from '@/components/ui/action-dropdown';
-import { SupplierForm, DeleteSupplierDialog, Supplier } from '@/components/forms/supplier-form';
+import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
 // TYPES
@@ -44,13 +38,6 @@ function StatsCards({ suppliers }: { suppliers: Supplier[] }) {
     suppliers.length > 0
       ? Math.round(suppliers.reduce((sum, s) => sum + s.leadTimeDays, 0) / suppliers.length)
       : 0;
-  const avgRating =
-    suppliers.filter((s) => s.rating).length > 0
-      ? (
-          suppliers.filter((s) => s.rating).reduce((sum, s) => sum + (s.rating || 0), 0) /
-          suppliers.filter((s) => s.rating).length
-        ).toFixed(1)
-      : '-';
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -200,34 +187,125 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     }
   };
 
+
+  const { exportToExcel } = useDataExport();
+
   const handleExport = () => {
-    toast.info('Tính năng export đang được phát triển');
+    if (!suppliers || suppliers.length === 0) {
+      toast.warning('Không có dữ liệu để export');
+      return;
+    }
+
+    exportToExcel(suppliers, {
+      fileName: 'Suppliers_List',
+      sheetName: 'Suppliers'
+    });
+
+    toast.success('Đã xuất file Excel');
   };
 
   const handleImport = () => {
     toast.info('Tính năng import đang được phát triển');
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredSuppliers.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredSuppliers.map((s) => s.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
-
   // Get unique countries for filter
   const countries = Array.from(new Set(suppliers.map((s) => s.country))).sort();
+
+  // Column definitions for DataTable
+  const columns: Column<Supplier>[] = useMemo(() => [
+    {
+      key: 'code',
+      header: 'Mã NCC',
+      width: '100px',
+      sortable: true,
+      render: (value) => <span className="font-mono font-medium">{value}</span>,
+    },
+    {
+      key: 'name',
+      header: 'Tên nhà cung cấp',
+      width: '180px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'country',
+      header: 'Quốc gia',
+      width: '100px',
+      sortable: true,
+    },
+    {
+      key: 'rating',
+      header: 'Rating',
+      width: '80px',
+      align: 'center',
+      render: (value) => (
+        <div className="flex items-center justify-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={cn(
+                'h-3 w-3',
+                star <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'
+              )}
+            />
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'leadTimeDays',
+      header: 'Lead Time',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-xs">{value} ngày</span>,
+    },
+    {
+      key: 'ndaaCompliant',
+      header: 'NDAA',
+      width: '70px',
+      align: 'center',
+      render: (value) => (
+        value ? (
+          <CheckCircle className="h-3 w-3 text-green-500 mx-auto" />
+        ) : (
+          <XCircle className="h-3 w-3 text-red-500 mx-auto" />
+        )
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <Badge
+          variant={value === 'active' ? 'default' : 'secondary'}
+          className={cn(
+            value === 'active' && 'bg-green-100 text-green-700',
+            'text-[10px] px-1 py-0'
+          )}
+        >
+          {value === 'active' ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '50px',
+      render: (_, row) => (
+        <ActionDropdown
+          items={createSupplierActions(
+            row.id,
+            () => handleEdit(row),
+            () => handleDelete(row)
+          )}
+        />
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -285,132 +363,35 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             onClearFilters={() => setFilters({ status: 'all', country: 'all' })}
           />
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={
-                      filteredSuppliers.length > 0 &&
-                      selectedIds.size === filteredSuppliers.length
-                    }
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Mã</TableHead>
-                <TableHead>Tên nhà cung cấp</TableHead>
-                <TableHead>Quốc gia</TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead className="text-center">Lead Time</TableHead>
-                <TableHead className="text-center">Rating</TableHead>
-                <TableHead className="text-center">NDAA</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fetchState.loading && suppliers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      Đang tải...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredSuppliers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      {search || filters.status !== 'all' || filters.country !== 'all'
-                        ? 'Không tìm thấy nhà cung cấp phù hợp'
-                        : 'Chưa có nhà cung cấp nào'}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredSuppliers.map((supplier) => (
-                  <TableRow
-                    key={supplier.id}
-                    className={cn(selectedIds.has(supplier.id) && 'bg-muted/50')}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(supplier.id)}
-                        onCheckedChange={() => toggleSelect(supplier.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">
-                      {supplier.code}
-                    </TableCell>
-                    <TableCell className="font-medium">{supplier.name}</TableCell>
-                    <TableCell>{supplier.country}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {supplier.category || 'General'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {supplier.leadTimeDays} ngày
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {supplier.rating ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <span>{supplier.rating.toFixed(1)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {supplier.ndaaCompliant ? (
-                        <CheckCircle className="h-5 w-5 text-green-600 mx-auto" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500 mx-auto" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={
-                          supplier.status === 'active'
-                            ? 'default'
-                            : supplier.status === 'inactive'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                        className={cn(
-                          supplier.status === 'active' && 'bg-green-100 text-green-700',
-                          supplier.status === 'inactive' && 'bg-gray-100 text-gray-600'
-                        )}
-                      >
-                        {supplier.status === 'active'
-                          ? 'Hoạt động'
-                          : supplier.status === 'inactive'
-                          ? 'Ngưng'
-                          : 'Chờ duyệt'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <ActionDropdown
-                        items={createSupplierActions(
-                          supplier.id,
-                          () => handleEdit(supplier),
-                          () => handleDelete(supplier)
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={filteredSuppliers}
+            columns={columns}
+            keyField="id"
+            loading={fetchState.loading}
+            emptyMessage="Chưa có nhà cung cấp nào"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Suppliers',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 
       {/* Dialogs */}
-      <SupplierForm
+      <SupplierFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
         supplier={editingSupplier}

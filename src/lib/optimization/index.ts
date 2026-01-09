@@ -57,11 +57,6 @@ export function initializeOptimizations(options: {
     setupDefaultAlerts();
   }
 
-  console.log('[Optimization] Initialized with:', {
-    monitoringInterval,
-    slowQueryThreshold,
-    enableAlerts,
-  });
 }
 
 // =============================================================================

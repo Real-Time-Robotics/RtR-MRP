@@ -92,7 +92,7 @@ export function useServiceWorker(): ServiceWorkerState & {
       // Check for updates
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
-        
+
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
@@ -102,7 +102,6 @@ export function useServiceWorker(): ServiceWorkerState & {
         }
       });
 
-      console.log('[PWA] Service worker registered');
     } catch (error) {
       console.error('[PWA] Service worker registration failed:', error);
       setState((prev) => ({
@@ -121,7 +120,6 @@ export function useServiceWorker(): ServiceWorkerState & {
         isRegistered: false,
         registration: null,
       }));
-      console.log('[PWA] Service worker unregistered');
     }
   }, [state.registration]);
 
@@ -129,7 +127,6 @@ export function useServiceWorker(): ServiceWorkerState & {
   const update = useCallback(async () => {
     if (state.registration) {
       await state.registration.update();
-      console.log('[PWA] Service worker update check triggered');
     }
   }, [state.registration]);
 
@@ -148,8 +145,20 @@ export function useServiceWorker(): ServiceWorkerState & {
     }
   }, []);
 
-  // Auto-register on mount
+  // Auto-register on mount (or Force Unregister in Dev)
   useEffect(() => {
+    // FORCE UNREGISTER IN DEVELOPMENT to kill zombie workers
+    if (process.env.NODE_ENV === 'development') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      return;
+    }
+
     if ('serviceWorker' in navigator && !state.isRegistered) {
       register();
     }
@@ -188,7 +197,7 @@ export function useNetworkStatus(): NetworkState {
     // Update network info if available
     const updateNetworkInfo = () => {
       const connection = (navigator as any).connection;
-      
+
       if (connection) {
         setState((prev) => ({
           ...prev,
@@ -205,12 +214,10 @@ export function useNetworkStatus(): NetworkState {
     // Event listeners
     const handleOnline = () => {
       setState((prev) => ({ ...prev, isOnline: true }));
-      console.log('[PWA] Back online');
     };
 
     const handleOffline = () => {
       setState((prev) => ({ ...prev, isOnline: false }));
-      console.log('[PWA] Gone offline');
     };
 
     window.addEventListener('online', handleOnline);
@@ -225,7 +232,7 @@ export function useNetworkStatus(): NetworkState {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      
+
       if (connection) {
         connection.removeEventListener('change', updateNetworkInfo);
       }
@@ -245,8 +252,8 @@ export function useInstallPrompt(): InstallPromptState {
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
 
   // Check if iOS
-  const isIOS = typeof window !== 'undefined' && 
-    /iPad|iPhone|iPod/.test(navigator.userAgent) && 
+  const isIOS = typeof window !== 'undefined' &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent) &&
     !(window as any).MSStream;
 
   useEffect(() => {
@@ -255,7 +262,7 @@ export function useInstallPrompt(): InstallPromptState {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
         (window.navigator as any).standalone === true ||
         document.referrer.includes('android-app://');
-      
+
       setIsInstalled(isStandalone);
     };
 
@@ -266,7 +273,6 @@ export function useInstallPrompt(): InstallPromptState {
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
       setCanInstall(true);
-      console.log('[PWA] Install prompt available');
     };
 
     // Listen for app installed
@@ -274,7 +280,6 @@ export function useInstallPrompt(): InstallPromptState {
       setIsInstalled(true);
       setCanInstall(false);
       deferredPromptRef.current = null;
-      console.log('[PWA] App installed');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -295,15 +300,13 @@ export function useInstallPrompt(): InstallPromptState {
     try {
       await deferredPromptRef.current.prompt();
       const { outcome } = await deferredPromptRef.current.userChoice;
-      
-      console.log('[PWA] User choice:', outcome);
-      
+
       if (outcome === 'accepted') {
         setCanInstall(false);
         deferredPromptRef.current = null;
         return true;
       }
-      
+
       return false;
     } catch (error) {
       console.error('[PWA] Install prompt error:', error);
@@ -331,7 +334,7 @@ export function usePushNotifications() {
   useEffect(() => {
     const supported = 'Notification' in window && 'PushManager' in window;
     setIsSupported(supported);
-    
+
     if (supported) {
       setPermission(Notification.permission);
     }
@@ -359,15 +362,14 @@ export function usePushNotifications() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
 
       setSubscription(subscription);
-      console.log('[PWA] Push subscription created');
-      
+
       return subscription;
     } catch (error) {
       console.error('[PWA] Push subscription error:', error);
@@ -382,7 +384,6 @@ export function usePushNotifications() {
     try {
       await subscription.unsubscribe();
       setSubscription(null);
-      console.log('[PWA] Push unsubscribed');
       return true;
     } catch (error) {
       console.error('[PWA] Push unsubscribe error:', error);
@@ -438,7 +439,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
-  
+
   return outputArray;
 }
 

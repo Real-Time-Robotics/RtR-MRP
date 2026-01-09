@@ -136,7 +136,7 @@ export const defaultActionItems: CommandItem[] = [
     category: 'Actions',
     shortcut: '⌘N',
     keywords: ['new', 'create', 'add', 'part'],
-    action: () => console.log('Create part'),
+    action: () => {},
   },
   {
     id: 'action-new-order',
@@ -144,7 +144,7 @@ export const defaultActionItems: CommandItem[] = [
     icon: <Plus className="h-4 w-4" />,
     category: 'Actions',
     keywords: ['new', 'create', 'order', 'sales'],
-    action: () => console.log('Create order'),
+    action: () => {},
   },
   {
     id: 'action-new-wo',
@@ -152,7 +152,7 @@ export const defaultActionItems: CommandItem[] = [
     icon: <Plus className="h-4 w-4" />,
     category: 'Actions',
     keywords: ['new', 'create', 'work order', 'production'],
-    action: () => console.log('Create WO'),
+    action: () => {},
   },
   {
     id: 'action-settings',

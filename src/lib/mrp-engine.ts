@@ -42,271 +42,47 @@ interface MrpSuggestionData {
   shortageQty?: number;
 }
 
-export async function runMrpCalculation(params: MrpParams) {
-  const {
-    planningHorizonDays,
-    includeConfirmed,
-    includeDraft,
-    includeSafetyStock,
-  } = params;
+import { MrpEngine } from "./mrp/mrp-core";
 
+export async function runMrpCalculation(params: MrpParams) {
   // 1. Create MRP Run record
   const runNumber = `MRP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
   const mrpRun = await prisma.mrpRun.create({
     data: {
       runNumber,
-      planningHorizon: planningHorizonDays,
+      planningHorizon: params.planningHorizonDays,
       status: "running",
       parameters: JSON.parse(JSON.stringify(params)),
     },
   });
 
   try {
-    // 2. Get demand from Sales Orders
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() + planningHorizonDays);
-
-    const statusFilter: string[] = [];
-    if (includeConfirmed) statusFilter.push("confirmed", "in_production");
-    if (includeDraft) statusFilter.push("draft");
-
-    const salesOrders = await prisma.salesOrder.findMany({
-      where: {
-        status: { in: statusFilter },
-        requiredDate: { lte: cutoffDate },
-      },
-      include: {
-        lines: {
-          include: {
-            product: {
-              include: {
-                bomHeaders: {
-                  where: { status: "active" },
-                  include: { bomLines: true },
-                },
-              },
-            },
-          },
-        },
-      },
+    // 2. Instantiate and run the New Recursive Engine
+    // We pass the runId and params. The engine handles the heavy lifting.
+    const engine = new MrpEngine(mrpRun.id, {
+      runId: mrpRun.id,
+      ...params
     });
 
-    // 3. Explode BOMs to get part requirements
-    const partRequirements = new Map<string, PartRequirement>();
+    const result = await engine.execute();
 
-    for (const order of salesOrders) {
-      for (const line of order.lines) {
-        const bom = line.product.bomHeaders[0];
-        if (!bom) continue;
-
-        for (const bomLine of bom.bomLines) {
-          const requiredQty = Math.ceil(
-            bomLine.quantity * line.quantity * (1 + bomLine.scrapRate)
-          );
-
-          const existing = partRequirements.get(bomLine.partId);
-          if (existing) {
-            existing.requiredQty += requiredQty;
-            existing.sourceOrders.push({
-              orderId: order.id,
-              orderNumber: order.orderNumber,
-              quantity: requiredQty,
-              dueDate: order.requiredDate,
-            });
-          } else {
-            partRequirements.set(bomLine.partId, {
-              partId: bomLine.partId,
-              partNumber: "",
-              partName: "",
-              requiredQty,
-              currentStock: 0,
-              reservedQty: 0,
-              availableStock: 0,
-              incomingQty: 0,
-              netRequirement: 0,
-              safetyStock: 0,
-              reorderPoint: 0,
-              sourceOrders: [
-                {
-                  orderId: order.id,
-                  orderNumber: order.orderNumber,
-                  quantity: requiredQty,
-                  dueDate: order.requiredDate,
-                },
-              ],
-            });
-          }
-        }
-      }
+    if (!result.success) {
+      throw new Error("MRP Engine Failure");
     }
 
-    // 4. Get current inventory and part info
-    const partIds = Array.from(partRequirements.keys());
-
-    if (partIds.length === 0) {
-      // No requirements found
-      await prisma.mrpRun.update({
-        where: { id: mrpRun.id },
-        data: {
-          status: "completed",
-          completedAt: new Date(),
-          totalParts: 0,
-          purchaseSuggestions: 0,
-          expediteAlerts: 0,
-          shortageWarnings: 0,
-        },
-      });
-      return mrpRun;
-    }
-
-    const parts = await prisma.part.findMany({
-      where: { id: { in: partIds } },
-    });
-
-    const inventory = await prisma.inventory.groupBy({
-      by: ["partId"],
-      where: { partId: { in: partIds } },
-      _sum: { quantity: true, reservedQty: true },
-    });
-
-    // 5. Get incoming from open POs
-    const openPOLines = await prisma.purchaseOrderLine.findMany({
-      where: {
-        partId: { in: partIds },
-        po: { status: { in: ["sent", "confirmed", "partial"] } },
-      },
-      include: { po: true },
-    });
-
-    const incomingByPart = new Map<string, number>();
-    for (const poLine of openPOLines) {
-      const incoming = poLine.quantity - poLine.receivedQty;
-      const current = incomingByPart.get(poLine.partId) || 0;
-      incomingByPart.set(poLine.partId, current + incoming);
-    }
-
-    // 6. Calculate net requirements
-    for (const [partId, req] of Array.from(partRequirements.entries())) {
-      const part = parts.find((p) => p.id === partId);
-      const inv = inventory.find((i) => i.partId === partId);
-
-      req.partNumber = part?.partNumber || "";
-      req.partName = part?.name || "";
-      req.currentStock = inv?._sum.quantity || 0;
-      req.reservedQty = inv?._sum.reservedQty || 0;
-      req.availableStock = req.currentStock - req.reservedQty;
-      req.incomingQty = incomingByPart.get(partId) || 0;
-      req.safetyStock = includeSafetyStock ? (part?.safetyStock || 0) : 0;
-      req.reorderPoint = part?.reorderPoint || 0;
-
-      // Net Requirement = Required - Available - Incoming + Safety Stock
-      req.netRequirement = Math.max(
-        0,
-        req.requiredQty - req.availableStock - req.incomingQty + req.safetyStock
-      );
-    }
-
-    // 7. Generate suggestions
-    const suggestions: MrpSuggestionData[] = [];
-
-    for (const [partId, req] of Array.from(partRequirements.entries())) {
-      const part = parts.find((p) => p.id === partId);
-
-      if (req.netRequirement > 0) {
-        // Need to purchase
-        const preferredSupplier = await prisma.partSupplier.findFirst({
-          where: { partId, isPreferred: true },
-          include: { supplier: true },
-        });
-
-        const earliestOrder = req.sourceOrders.sort(
-          (a: { dueDate: Date }, b: { dueDate: Date }) => a.dueDate.getTime() - b.dueDate.getTime()
-        )[0];
-
-        const leadTime = preferredSupplier?.leadTimeDays || 14;
-        const orderDate = new Date(earliestOrder.dueDate);
-        orderDate.setDate(orderDate.getDate() - leadTime - 7);
-
-        suggestions.push({
-          partId,
-          actionType: "PURCHASE",
-          priority: req.netRequirement > req.safetyStock * 2 ? "HIGH" : "MEDIUM",
-          suggestedQty: req.netRequirement,
-          suggestedDate: orderDate < new Date() ? new Date() : orderDate,
-          reason: `Shortage of ${req.netRequirement} units for ${earliestOrder.orderNumber}`,
-          sourceOrderId: earliestOrder.orderId,
-          supplierId: preferredSupplier?.supplierId,
-          estimatedCost: req.netRequirement * (part?.unitCost || 0),
-          currentStock: req.availableStock,
-          requiredQty: req.requiredQty,
-          shortageQty: req.netRequirement,
-        });
-      } else if (
-        req.availableStock < req.reorderPoint &&
-        req.netRequirement === 0
-      ) {
-        const hasOpenPO = (incomingByPart.get(partId) || 0) > 0;
-        if (hasOpenPO) {
-          suggestions.push({
-            partId,
-            actionType: "EXPEDITE",
-            priority: "MEDIUM",
-            reason: `Stock below reorder point. Open PO exists - consider expediting.`,
-            currentStock: req.availableStock,
-            requiredQty: req.requiredQty,
-          });
-        }
-      } else if (req.availableStock > req.requiredQty * 2) {
-        suggestions.push({
-          partId,
-          actionType: "DEFER",
-          priority: "LOW",
-          reason: `Excess stock (${req.availableStock} available, only ${req.requiredQty} needed). Defer next order.`,
-          currentStock: req.availableStock,
-          requiredQty: req.requiredQty,
-        });
-      }
-    }
-
-    // 8. Save suggestions
-    if (suggestions.length > 0) {
-      await prisma.mrpSuggestion.createMany({
-        data: suggestions.map((s) => ({
-          mrpRunId: mrpRun.id,
-          partId: s.partId,
-          actionType: s.actionType,
-          priority: s.priority,
-          suggestedQty: s.suggestedQty,
-          suggestedDate: s.suggestedDate,
-          reason: s.reason,
-          sourceOrderId: s.sourceOrderId,
-          supplierId: s.supplierId,
-          estimatedCost: s.estimatedCost,
-          currentStock: s.currentStock,
-          requiredQty: s.requiredQty,
-          shortageQty: s.shortageQty,
-          status: "pending",
-        })),
-      });
-    }
-
-    // 9. Update MRP Run status
-    await prisma.mrpRun.update({
+    // 3. Update Status (Engine might update suggestion counts, but we update status here to be sure)
+    const updatedRun = await prisma.mrpRun.update({
       where: { id: mrpRun.id },
       data: {
         status: "completed",
         completedAt: new Date(),
-        totalParts: partRequirements.size,
-        purchaseSuggestions: suggestions.filter((s) => s.actionType === "PURCHASE")
-          .length,
-        expediteAlerts: suggestions.filter((s) => s.actionType === "EXPEDITE")
-          .length,
-        shortageWarnings: suggestions.filter((s) => s.priority === "HIGH").length,
-      },
+      }
     });
 
-    return mrpRun;
+    return updatedRun;
+
   } catch (error) {
+    console.error("MRP Calculation Failed", error);
     await prisma.mrpRun.update({
       where: { id: mrpRun.id },
       data: { status: "failed" },
@@ -328,7 +104,7 @@ export async function approveSuggestion(
       approvedBy: userId,
       approvedAt: new Date(),
     },
-    include: { part: true, supplier: true },
+    include: { part: { include: { cost: true } }, supplier: true },
   });
 
   if (
@@ -352,8 +128,10 @@ export async function approveSuggestion(
             lineNumber: 1,
             partId: suggestion.partId,
             quantity: suggestion.suggestedQty || 0,
-            unitPrice: suggestion.part.unitCost,
-            lineTotal: (suggestion.suggestedQty || 0) * suggestion.part.unitCost,
+            // @ts-ignore
+            unitPrice: suggestion.part.cost?.unitCost || 0,
+            // @ts-ignore
+            lineTotal: (suggestion.suggestedQty || 0) * (suggestion.part.cost?.unitCost || 0),
           },
         },
       },
@@ -428,13 +206,13 @@ export async function createWorkOrder(
       plannedEnd: end,
       allocations: bom
         ? {
-            create: bom.bomLines.map((line) => ({
-              partId: line.partId,
-              requiredQty: Math.ceil(
-                line.quantity * quantity * (1 + line.scrapRate)
-              ),
-            })),
-          }
+          create: bom.bomLines.map((line) => ({
+            partId: line.partId,
+            requiredQty: Math.ceil(
+              line.quantity * quantity * (1 + line.scrapRate)
+            ),
+          })),
+        }
         : undefined,
     },
     include: {

@@ -3,14 +3,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
-  FileText, Search, RefreshCw, Download, Eye, 
+  FileText, Search, RefreshCw, Download, Eye,
   CheckCircle, Clock, AlertTriangle, DollarSign, X,
   CreditCard, Building2, Calendar
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
+import {
+  CustomerPortalEngine,
   CustomerInvoice
 } from '@/lib/customer/customer-engine';
+import {
+  ExcelPortalTable,
+  excelPortalStyles,
+} from '@/components/ui-v2/excel';
 
 // =============================================================================
 // CUSTOMER INVOICES PAGE
@@ -163,22 +167,27 @@ export default function CustomerInvoicesPage() {
         </div>
       </div>
 
-      {/* Invoices Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
-            <tr className="text-left text-sm text-gray-500">
-              <th className="px-4 py-3 font-medium">Số hóa đơn</th>
-              <th className="px-4 py-3 font-medium">Đơn hàng</th>
-              <th className="px-4 py-3 font-medium">Ngày tạo</th>
-              <th className="px-4 py-3 font-medium">Hạn thanh toán</th>
-              <th className="px-4 py-3 font-medium text-right">Tổng tiền</th>
-              <th className="px-4 py-3 font-medium text-right">Còn nợ</th>
-              <th className="px-4 py-3 font-medium text-center">Trạng thái</th>
-              <th className="px-4 py-3 font-medium text-center">Thao tác</th>
+      {/* Invoices Table - Excel Style */}
+      <ExcelPortalTable
+        title="Danh sách hóa đơn"
+        subtitle={`${filteredInvoices.length} records`}
+        totalRows={filteredInvoices.length}
+        sheetName="Invoices"
+      >
+        <table className={excelPortalStyles.table}>
+          <thead className={excelPortalStyles.thead}>
+            <tr>
+              <th className={excelPortalStyles.th}>Số hóa đơn</th>
+              <th className={excelPortalStyles.th}>Đơn hàng</th>
+              <th className={excelPortalStyles.th}>Ngày tạo</th>
+              <th className={excelPortalStyles.th}>Hạn thanh toán</th>
+              <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Tổng tiền</th>
+              <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Còn nợ</th>
+              <th className={`${excelPortalStyles.th} ${excelPortalStyles.thCenter}`}>Trạng thái</th>
+              <th className={`${excelPortalStyles.th} ${excelPortalStyles.thCenter}`}>Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className={excelPortalStyles.tbody}>
             {isLoading ? (
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center">
@@ -194,27 +203,27 @@ export default function CustomerInvoicesPage() {
             ) : (
               filteredInvoices.map(invoice => {
                 const dueInfo = CustomerPortalEngine.getDaysUntilDue(invoice.dueDate);
-                
+
                 return (
-                  <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-4 py-3">
+                  <tr key={invoice.id} className={excelPortalStyles.tr}>
+                    <td className={excelPortalStyles.td}>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(invoice.status)}
                         <span className="font-medium">{invoice.invoiceNumber}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/customer/orders/${invoice.soId}`} className="text-emerald-600 hover:underline">
+                    <td className={excelPortalStyles.td}>
+                      <Link href={`/customer/orders/${invoice.soId}`} className="text-[#217346] dark:text-[#70AD47] hover:underline font-medium">
                         {invoice.soNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdMono} text-slate-500`}>
                       {new Date(invoice.invoiceDate).toLocaleDateString('vi-VN')}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={excelPortalStyles.td}>
                       <div className={`text-sm ${
                         dueInfo.status === 'OVERDUE' ? 'text-red-600' :
-                        dueInfo.status === 'DUE_SOON' ? 'text-yellow-600' : 'text-gray-500'
+                        dueInfo.status === 'DUE_SOON' ? 'text-yellow-600' : 'text-slate-500'
                       }`}>
                         {new Date(invoice.dueDate).toLocaleDateString('vi-VN')}
                         {dueInfo.status === 'OVERDUE' && (
@@ -225,40 +234,40 @@ export default function CustomerInvoicesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold">
+                    <td className={excelPortalStyles.tdCurrency}>
                       {CustomerPortalEngine.formatCurrency(invoice.total)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdRight}`}>
                       <span className={invoice.balance > 0 ? 'text-yellow-600 font-semibold' : 'text-green-600'}>
                         {CustomerPortalEngine.formatCurrency(invoice.balance)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdCenter}`}>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${CustomerPortalEngine.getInvoiceStatusColor(invoice.status)}`}>
                         {CustomerPortalEngine.getInvoiceStatusLabel(invoice.status)}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdCenter}`}>
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => setSelectedInvoice(invoice)}
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg"
+                          className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                           title="Xem chi tiết"
                         >
-                          <Eye className="w-4 h-4 text-gray-500" />
+                          <Eye className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                         </button>
                         <button
-                          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg"
+                          className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                           title="Tải xuống"
                         >
-                          <Download className="w-4 h-4 text-gray-500" />
+                          <Download className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                         </button>
                         {invoice.balance > 0 && (
                           <button
-                            className="p-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-emerald-600"
+                            className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                             title="Thanh toán"
                           >
-                            <CreditCard className="w-4 h-4" />
+                            <CreditCard className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                           </button>
                         )}
                       </div>
@@ -269,7 +278,7 @@ export default function CustomerInvoicesPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </ExcelPortalTable>
 
       {/* Payment Info */}
       <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-6">
@@ -356,7 +365,7 @@ export default function CustomerInvoicesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedInvoice.items.map(item => (
+                    {selectedInvoice?.items?.map(item => (
                       <tr key={item.id}>
                         <td className="py-2">{item.description}</td>
                         <td className="py-2 text-right">{item.quantity}</td>

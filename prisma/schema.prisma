@@ -102,95 +102,38 @@ model Supplier {
 }
 
 // ============ PARTS (Enhanced v2.0) ============
+// ============ PARTS (Normalized v3.0) ============
 model Part {
   id            String   @id @default(cuid())
   partNumber    String   @unique
   name          String
-  category      String
   description   String?
+  category      String
+  // unit is common enough to keep on main table
   unit          String   @default("pcs")
-  unitCost      Float
-  weightKg      Float?
-  isCritical    Boolean  @default(false)
-  minStockLevel Int      @default(0)
-  reorderPoint  Int      @default(0)
-  safetyStock   Int      @default(0)
-  shelfLifeDays Int?
+  
+  // Status & Lifecycle
   status        String   @default("active")
+  lifecycleStatus  LifecycleStatus @default(ACTIVE)
+  isCritical    Boolean  @default(false)
+  
+  // Images
+  imageUrl      String?
+  
+  // Quick Access / Denormalized
+  revision      String?   @default("A")
+  obsoleteDate  DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
+  // === Normalized Relations ===
+  planning      PartPlanning?
+  cost          PartCost?
+  specs         PartSpecs?
+  compliance    PartCompliance?
 
-  // === NEW: Physical Specifications ===
-  lengthMm      Float?
-  widthMm       Float?
-  heightMm      Float?
-  volumeCm3     Float?
-  color         String?
-  material      String?
-
-  // === NEW: Classification ===
-  subCategory   String?
-  partType      String?   // Component, Assembly, Raw Material
-
-  // === NEW: Procurement & Sourcing ===
-  makeOrBuy        MakeOrBuy       @default(BUY)
-  procurementType  ProcurementType @default(STOCK)
-  buyerCode        String?
-  moq              Int             @default(1)
-  orderMultiple    Int             @default(1)
-  standardPack     Int             @default(1)
-  leadTimeDays     Int             @default(14)
-
-  // === NEW: Compliance & Origin (CRITICAL for NDAA) ===
-  countryOfOrigin  String?
-  hsCode           String?
-  eccn             String?
-  ndaaCompliant    Boolean  @default(true)
-  itarControlled   Boolean  @default(false)
-
-  // === NEW: Quality & Traceability ===
-  lotControl          Boolean  @default(false)
-  serialControl       Boolean  @default(false)
-  inspectionRequired  Boolean  @default(true)
-  inspectionPlan      String?
-  aqlLevel            String?
-  certificateRequired Boolean  @default(false)
-  rohsCompliant       Boolean  @default(true)
-  reachCompliant      Boolean  @default(true)
-
-  // === NEW: Engineering & Documents ===
-  revision         String    @default("A")
-  revisionDate     DateTime?
-  drawingNumber    String?
-  drawingUrl       String?
-  datasheetUrl     String?
-  specDocument     String?
-  manufacturerPn   String?
-  manufacturer     String?
-  lifecycleStatus  LifecycleStatus @default(ACTIVE)
-  effectivityDate  DateTime?
-  obsoleteDate     DateTime?
-
-  // === NEW: Enhanced Costing ===
-  standardCost     Float?
-  averageCost      Float?
-  landedCost       Float?
-  freightPercent   Float?
-  dutyPercent      Float?
-  overheadPercent  Float?
-
-  // === NEW: Price Breaks ===
-  priceBreakQty1   Int?
-  priceBreakCost1  Float?
-  priceBreakQty2   Int?
-  priceBreakCost2  Float?
-  priceBreakQty3   Int?
-  priceBreakCost3  Float?
-
-  // === NEW: Inventory Planning ===
-  maxStock         Int?
-
-  // === NEW: Audit ===
+  // === Audit ===
   createdBy        String?
   updatedBy        String?
   tags             String[]  @default([])
@@ -209,15 +152,17 @@ model Part {
   ncrs                NCR[]
   lotTransactions     LotTransaction[]
 
-  // Financial relations
-  partCosts           PartCost[]
+  // Financial relations - kept for direct access if needed, or move to PartCost relations?
+  // Keeping these on Part for now to minimize refactor impact on other modules
+  // partCosts removed to avoid ambiguity with 'cost' field
+  costComponents      PartCostComponent[] // The legacy/component relation
   costRollup          PartCostRollup?
   purchaseInvoiceLines PurchaseInvoiceLine[]
   salesInvoiceLines   SalesInvoiceLine[]
   costVariances       CostVariance[]
   pickListLines       PickListLine[]
 
-  // Advanced MRP relations (Phase 13)
+  // Advanced MRP relations
   inventorySites      InventorySite[]
   transferOrderLines  TransferOrderLine[]
   plannedOrders       PlannedOrder[]
@@ -226,7 +171,7 @@ model Part {
   primarySubstitutes  PartSubstitute[]  @relation("PrimaryPart")
   substituteFor       PartSubstitute[]  @relation("SubstitutePart")
 
-  // === NEW: Enhanced Relations (v2.0) ===
+  // Enhanced Relations (v2.0)
   partAlternates      PartAlternate[]   @relation("PartAlternates")
   alternateFor        PartAlternate[]   @relation("AlternateFor")
   partDocuments       PartDocument[]
@@ -236,14 +181,135 @@ model Part {
 
   @@index([category])
   @@index([lifecycleStatus])
-  @@index([ndaaCompliant])
-  @@index([makeOrBuy])
-  @@index([countryOfOrigin])
-  // Additional performance indexes
-  @@index([category, status])
   @@index([status])
   @@index([isCritical])
   @@map("parts")
+}
+
+// === NEW: Part Planning Data (MRP relevant) ===
+model PartPlanning {
+  id              String   @id @default(cuid())
+  partId          String   @unique
+  part            Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  minStockLevel   Int      @default(0)
+  maxStock        Int?
+  reorderPoint    Int      @default(0)
+  safetyStock     Int      @default(0)
+  
+  leadTimeDays    Int      @default(14)
+  
+  makeOrBuy       MakeOrBuy       @default(BUY)
+  procurementType ProcurementType @default(STOCK)
+  
+  buyerCode       String?
+  plannerCode     String?
+  
+  moq             Int             @default(1)
+  orderMultiple   Int             @default(1)
+  standardPack    Int             @default(1)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([makeOrBuy])
+  @@map("part_planning")
+}
+
+// === NEW: Part Cost Data ===
+model PartCost {
+  id              String   @id @default(cuid())
+  partId          String   @unique
+  part            Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  // Standard Costing
+  unitCost        Float    // Current active cost
+  standardCost    Float?
+  averageCost     Float?
+  landedCost      Float?
+  
+  // Cost Components
+  freightPercent  Float?
+  dutyPercent     Float?
+  overheadPercent Float?
+
+  // Price Breaks
+  priceBreakQty1   Int?
+  priceBreakCost1  Float?
+  priceBreakQty2   Int?
+  priceBreakCost2  Float?
+  priceBreakQty3   Int?
+  priceBreakCost3  Float?
+
+  updatedAt       DateTime @updatedAt
+
+  @@map("part_costs")
+}
+
+// === NEW: Part Specifications (Engineering) ===
+model PartSpecs {
+  id              String   @id @default(cuid())
+  partId          String   @unique
+  part            Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  // Physical
+  weightKg        Float?
+  lengthMm        Float?
+  widthMm         Float?
+  heightMm        Float?
+  volumeCm3       Float?
+  
+  // Aesthetic / Material
+  color           String?
+  material        String?
+  finish          String?
+  
+  // Engineering
+  drawingNumber    String?
+  drawingUrl       String?
+  datasheetUrl     String?
+  specDocument     String?
+  
+  // Manufacturer
+  manufacturerPn   String?
+  manufacturer     String?
+
+  // Categorization
+  subCategory      String?
+  partType         String?
+
+  updatedAt       DateTime @updatedAt
+
+  @@map("part_specs")
+}
+
+// === NEW: Optimization for Compliance ===
+model PartCompliance {
+  id              String   @id @default(cuid())
+  partId          String   @unique
+  part            Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
+
+  countryOfOrigin  String?
+  hsCode           String?
+  eccn             String?
+  
+  ndaaCompliant    Boolean  @default(true)
+  itarControlled   Boolean  @default(false)
+  rohsCompliant       Boolean  @default(true)
+  reachCompliant      Boolean  @default(true)
+  
+  lotControl          Boolean  @default(false)
+  serialControl       Boolean  @default(false)
+  inspectionRequired  Boolean  @default(true)
+  certificateRequired Boolean  @default(false)
+  shelfLifeDays       Int?
+  aqlLevel            String?  @default("II")
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([ndaaCompliant])
+  @@index([itarControlled])
+  @@map("part_compliance")
 }
 
 model PartSupplier {
@@ -2494,7 +2560,7 @@ model CostType {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  partCosts       PartCost[]
+  partCosts       PartCostComponent[]
   workOrderCosts  WorkOrderCost[]
 
   @@map("cost_types")
@@ -2509,7 +2575,7 @@ enum CostCategory {
 }
 
 // Standard costs for parts
-model PartCost {
+model PartCostComponent {
   id               String    @id @default(cuid())
   partId           String
   part             Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
@@ -2534,7 +2600,7 @@ model PartCost {
 
   @@unique([partId, costTypeId, effectiveDate])
   @@index([partId])
-  @@map("part_costs")
+  @@map("part_cost_components")
 }
 
 // Rolled-up costs for assemblies

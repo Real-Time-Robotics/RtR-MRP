@@ -183,10 +183,6 @@ export async function measureTime<T>(
   const result = await fn();
   const duration = performance.now() - start;
 
-  if (label && config.enableProfiling) {
-    console.log(`[PERF] ${label}: ${duration.toFixed(2)}ms`);
-  }
-
   return { result, duration };
 }
 

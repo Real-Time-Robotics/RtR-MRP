@@ -1,25 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Truck } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
 import { PurchaseOrderForm, DeletePurchaseOrderDialog, PurchaseOrder } from '@/components/forms/purchase-order-form';
 import { POStatusBadge } from '@/components/purchasing/po-status-badge';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
 // TYPES
@@ -92,7 +84,40 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
+  const [initialFormData, setInitialFormData] = useState<any>(null);
   const [deletingOrder, setDeletingOrder] = useState<PurchaseOrder | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Check URL params for "Deep Link" actions (e.g., from AI Copilot)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create' && !formOpen) {
+      const partId = searchParams.get('partId');
+      const quantity = searchParams.get('quantity');
+      const supplierId = searchParams.get('supplierId');
+      const unitPrice = searchParams.get('unitPrice');
+      const notes = searchParams.get('notes');
+
+      const initialLines = partId ? [{
+        partId: partId,
+        quantity: quantity ? parseInt(quantity) : 1,
+        unitPrice: unitPrice ? parseFloat(unitPrice) : 0
+      }] : [];
+
+      setEditingOrder(null);
+      setInitialFormData({
+        supplierId: supplierId || '',
+        lines: initialLines,
+        notes: notes || '',
+      });
+      setFormOpen(true);
+
+      // Clear params to avoid loop / dirty URL
+      router.replace('/purchasing');
+    }
+  }, [searchParams, formOpen, router]);
 
   // Filters
   const [filters, setFilters] = useState<Record<string, string>>({
@@ -186,24 +211,6 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     toast.info('Tính năng import đang được phát triển');
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === orders.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(orders.map((o) => o.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
-
   // Create action items for each row
   const createPOActions = (order: PurchaseOrder): ActionDropdownItem[] => [
     {
@@ -224,6 +231,72 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       disabled: ['received', 'cancelled'].includes(order.status),
     },
   ];
+
+  // Column definitions for DataTable
+  const columns: Column<PurchaseOrder>[] = useMemo(() => [
+    {
+      key: 'poNumber',
+      header: 'PO #',
+      width: '120px',
+      sortable: true,
+      render: (value, row) => (
+        <Link href={`/purchasing/${row.id}`} className="font-mono font-medium text-primary hover:underline">
+          {value}
+        </Link>
+      ),
+    },
+    {
+      key: 'supplier',
+      header: 'Nhà cung cấp',
+      width: '150px',
+      sortable: true,
+      render: (value) => value?.name || '-',
+    },
+    {
+      key: 'orderDate',
+      header: 'Ngày đặt',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+    },
+    {
+      key: 'expectedDate',
+      header: 'Ngày dự kiến',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+    },
+    {
+      key: 'lines',
+      header: 'Items',
+      width: '70px',
+      align: 'center',
+      render: (value) => value?.length || 0,
+    },
+    {
+      key: 'totalAmount',
+      header: 'Giá trị',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => formatCurrency(value || 0),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '110px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <POStatusBadge status={value} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '50px',
+      render: (_, row) => <ActionDropdown items={createPOActions(row)} />,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -279,80 +352,30 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             onClearFilters={() => setFilters({ status: 'all' })}
           />
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={orders.length > 0 && selectedIds.size === orders.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>PO #</TableHead>
-                <TableHead>Nhà cung cấp</TableHead>
-                <TableHead>Ngày đặt</TableHead>
-                <TableHead>Ngày dự kiến</TableHead>
-                <TableHead className="text-center">Items</TableHead>
-                <TableHead className="text-right">Giá trị</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      Đang tải...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : orders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <p className="text-muted-foreground">Chưa có PO nào</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                orders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className={cn(selectedIds.has(order.id) && 'bg-muted/50')}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(order.id)}
-                        onCheckedChange={() => toggleSelect(order.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">
-                      <Link
-                        href={`/purchasing/${order.id}`}
-                        className="hover:underline text-primary"
-                      >
-                        {order.poNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{order.supplier?.name || '-'}</TableCell>
-                    <TableCell>{format(new Date(order.orderDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{format(new Date(order.expectedDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell className="text-center">{order.lines?.length || 0}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(order.totalAmount || 0)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <POStatusBadge status={order.status} />
-                    </TableCell>
-                    <TableCell>
-                      <ActionDropdown items={createPOActions(order)} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={orders}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="Chưa có PO nào"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Purchase Orders',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -361,6 +384,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
         open={formOpen}
         onOpenChange={setFormOpen}
         order={editingOrder}
+        initialData={initialFormData}
         onSuccess={handleFormSuccess}
       />
 

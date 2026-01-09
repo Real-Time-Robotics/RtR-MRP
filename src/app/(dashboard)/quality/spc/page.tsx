@@ -6,10 +6,10 @@
 // =============================================================================
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import { 
-  BarChart3, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  BarChart3,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   RefreshCw,
   Download,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { SPCEngine, ControlChart, ProcessCharacteristic, ChartType } from '@/lib/spc';
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 // Loading fallback
 function LoadingFallback() {
@@ -356,6 +357,74 @@ function SPCControlChartsPageContent() {
     return SPCEngine.detectShift(values, chart.cl, sigma);
   }, [chart]);
 
+  type DataPoint = ControlChart['dataPoints'][0];
+
+  const spcDataColumns: Column<DataPoint>[] = useMemo(() => [
+    {
+      key: 'sampleNumber',
+      header: '#',
+      width: '60px',
+      sortable: true,
+    },
+    {
+      key: 'timestamp',
+      header: 'Thời gian',
+      width: '120px',
+      render: (value) => new Date(value).toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit'
+      }),
+    },
+    {
+      key: 'primaryValue',
+      header: 'X̄',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value, row) => (
+        <span className={`font-mono ${
+          chart && (value > chart.ucl || value < chart.lcl)
+            ? 'text-red-600 font-bold'
+            : ''
+        }`}>
+          {value.toFixed(3)}
+        </span>
+      ),
+    },
+    {
+      key: 'secondaryValue',
+      header: chart?.chartType === 'XBAR_S' ? 'S' : 'R',
+      width: '90px',
+      align: 'right',
+      render: (value) => <span className="font-mono">{value.toFixed(3)}</span>,
+    },
+    {
+      key: 'values',
+      header: 'Giá trị',
+      width: '180px',
+      render: (value) => (
+        <span className="text-gray-600 dark:text-gray-400 font-mono text-xs">
+          [{value.map((v: number) => v.toFixed(2)).join(', ')}]
+        </span>
+      ),
+    },
+    {
+      key: 'isOutOfControl',
+      header: 'Trạng thái',
+      width: '90px',
+      align: 'center',
+      render: (value, row) => value ? (
+        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">OOC</span>
+      ) : row.violations.length > 0 ? (
+        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Warning</span>
+      ) : (
+        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">OK</span>
+      ),
+    },
+  ], [chart]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -532,68 +601,29 @@ function SPCControlChartsPageContent() {
           )}
 
           {/* Data Table */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Dữ liệu chi tiết (20 mẫu gần nhất)
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-2 px-3 font-medium text-gray-500">#</th>
-                    <th className="text-left py-2 px-3 font-medium text-gray-500">Thời gian</th>
-                    <th className="text-right py-2 px-3 font-medium text-gray-500">X̄</th>
-                    <th className="text-right py-2 px-3 font-medium text-gray-500">
-                      {chart.chartType === 'XBAR_S' ? 'S' : 'R'}
-                    </th>
-                    <th className="text-left py-2 px-3 font-medium text-gray-500">Giá trị</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-500">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chart.dataPoints.slice(-20).reverse().map((dp) => (
-                    <tr 
-                      key={dp.id}
-                      className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                        dp.isOutOfControl ? 'bg-red-50 dark:bg-red-900/20' : ''
-                      }`}
-                    >
-                      <td className="py-2 px-3">{dp.sampleNumber}</td>
-                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400">
-                        {new Date(dp.timestamp).toLocaleString('vi-VN', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          day: '2-digit',
-                          month: '2-digit'
-                        })}
-                      </td>
-                      <td className={`py-2 px-3 text-right font-mono ${
-                        dp.primaryValue > chart.ucl || dp.primaryValue < chart.lcl
-                          ? 'text-red-600 font-bold'
-                          : ''
-                      }`}>
-                        {dp.primaryValue.toFixed(3)}
-                      </td>
-                      <td className="py-2 px-3 text-right font-mono">
-                        {dp.secondaryValue.toFixed(3)}
-                      </td>
-                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400 font-mono text-xs">
-                        [{dp.values.map(v => v.toFixed(2)).join(', ')}]
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        {dp.isOutOfControl ? (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">OOC</span>
-                        ) : dp.violations.length > 0 ? (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Warning</span>
-                        ) : (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">OK</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Dữ liệu chi tiết (20 mẫu gần nhất)
+              </h3>
             </div>
+            <DataTable
+              data={chart.dataPoints.slice(-20).reverse()}
+              columns={spcDataColumns}
+              keyField="id"
+              emptyMessage="Không có dữ liệu"
+              searchable={false}
+              stickyHeader
+              excelMode={{
+                enabled: true,
+                showRowNumbers: false,
+                columnHeaderStyle: 'field-names',
+                gridBorders: true,
+                showFooter: true,
+                sheetName: 'SPC Data',
+                compactMode: true,
+              }}
+            />
           </div>
         </>
       )}

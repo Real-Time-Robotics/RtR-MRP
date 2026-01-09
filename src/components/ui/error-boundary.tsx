@@ -148,15 +148,6 @@ export function ErrorFallback({
             <Home className="mr-2 h-4 w-4" />
             Go Home
           </Button>
-          {isDev && (
-            <Button
-              variant="ghost"
-              onClick={() => console.log({ error, errorInfo })}
-            >
-              <Bug className="mr-2 h-4 w-4" />
-              Log Details
-            </Button>
-          )}
         </div>
       </div>
     );

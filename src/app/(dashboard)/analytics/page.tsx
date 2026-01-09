@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, Package, Users, ShoppingCart,
   DollarSign, AlertTriangle, CheckCircle, Clock, Truck, Factory,
@@ -13,6 +13,7 @@ import {
   Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ComposedChart, RadialBarChart, RadialBar
 } from 'recharts';
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 // Types
 interface DashboardMetrics {
@@ -306,6 +307,155 @@ export default function AnalyticsDashboard() {
     return value.toLocaleString();
   };
 
+  // Column definitions for tables
+  const topProductsColumns: Column<{ name: string; quantity: number; revenue: number }>[] = useMemo(() => [
+    {
+      key: 'rank',
+      header: '#',
+      width: '50px',
+      align: 'center',
+      render: (_, row, index) => (
+        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
+          index === 0 ? 'bg-yellow-100 text-yellow-700' :
+          index === 1 ? 'bg-gray-100 text-gray-700' :
+          index === 2 ? 'bg-orange-100 text-orange-700' :
+          'bg-gray-50 text-gray-500'
+        }`}>
+          {(index || 0) + 1}
+        </span>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Sản phẩm',
+      width: '150px',
+      sortable: true,
+      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
+    },
+    {
+      key: 'quantity',
+      header: 'SL',
+      width: '70px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'revenue',
+      header: 'Doanh thu',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="font-medium text-green-600">{formatCurrency(value)}</span>,
+    },
+  ], []);
+
+  const supplierPerformanceColumns: Column<{ name: string; onTime: number; quality: number; score: number }>[] = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Nhà cung cấp',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
+    },
+    {
+      key: 'onTime',
+      header: 'Đúng hạn',
+      width: '90px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          value >= 95 ? 'bg-green-100 text-green-700' :
+          value >= 90 ? 'bg-yellow-100 text-yellow-700' :
+          'bg-red-100 text-red-700'
+        }`}>
+          {value}%
+        </span>
+      ),
+    },
+    {
+      key: 'quality',
+      header: 'Chất lượng',
+      width: '90px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <span className={`px-2 py-1 rounded-full text-xs ${
+          value >= 98 ? 'bg-green-100 text-green-700' :
+          value >= 95 ? 'bg-yellow-100 text-yellow-700' :
+          'bg-red-100 text-red-700'
+        }`}>
+          {value}%
+        </span>
+      ),
+    },
+    {
+      key: 'score',
+      header: 'Điểm',
+      width: '120px',
+      align: 'right',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center justify-end">
+          <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
+            <div className="h-full rounded-full bg-blue-600" style={{ width: `${value}%` }} />
+          </div>
+          <span className="text-sm font-medium">{value}</span>
+        </div>
+      ),
+    },
+  ], []);
+
+  const topPartsColumns: Column<{ name: string; quantity: number; value: number }>[] = useMemo(() => [
+    {
+      key: 'rank',
+      header: '#',
+      width: '50px',
+      align: 'center',
+      render: (_, row, index) => <span className="text-sm font-medium text-gray-500">{(index || 0) + 1}</span>,
+    },
+    {
+      key: 'name',
+      header: 'Linh kiện',
+      width: '180px',
+      sortable: true,
+      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
+    },
+    {
+      key: 'quantity',
+      header: 'Số lượng',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-gray-600 dark:text-neutral-400">{formatNumber(value)}</span>,
+    },
+    {
+      key: 'value',
+      header: 'Giá trị',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="font-medium text-blue-600">{formatCurrency(value)}</span>,
+    },
+    {
+      key: 'percent',
+      header: '% Tổng',
+      width: '120px',
+      align: 'right',
+      render: (_, row) => {
+        const percent = (row.value / metrics.inventory.totalValue) * 100;
+        return (
+          <div className="flex items-center justify-end">
+            <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
+              <div className="h-full rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
+            </div>
+            <span className="text-sm text-gray-600 dark:text-neutral-400">{percent.toFixed(1)}%</span>
+          </div>
+        );
+      },
+    },
+  ], [metrics.inventory.totalValue]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
       {/* Header */}
@@ -559,91 +709,42 @@ export default function AnalyticsDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Top Products */}
               <ChartCard title="Top 5 Sản phẩm bán chạy">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-500 border-b">
-                        <th className="pb-3 font-medium">#</th>
-                        <th className="pb-3 font-medium">Sản phẩm</th>
-                        <th className="pb-3 font-medium text-right">SL</th>
-                        <th className="pb-3 font-medium text-right">Doanh thu</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {charts.topProducts.map((product, index) => (
-                        <tr key={index} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-3 text-sm">
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-                              index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                              index === 1 ? 'bg-gray-100 text-gray-700' :
-                              index === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-gray-50 text-gray-500'
-                            }`}>
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td className="py-3 font-medium text-gray-900">{product.name}</td>
-                          <td className="py-3 text-right text-gray-600">{product.quantity}</td>
-                          <td className="py-3 text-right font-medium text-green-600">
-                            {formatCurrency(product.revenue)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  data={charts.topProducts}
+                  columns={topProductsColumns}
+                  keyField="name"
+                  emptyMessage="No product data"
+                  searchable={false}
+                  excelMode={{
+                    enabled: true,
+                    showRowNumbers: false,
+                    columnHeaderStyle: 'field-names',
+                    gridBorders: true,
+                    showFooter: true,
+                    sheetName: 'Top Products',
+                    compactMode: true,
+                  }}
+                />
               </ChartCard>
 
               {/* Supplier Performance */}
               <ChartCard title="Hiệu suất nhà cung cấp">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-500 border-b">
-                        <th className="pb-3 font-medium">Nhà cung cấp</th>
-                        <th className="pb-3 font-medium text-center">Đúng hạn</th>
-                        <th className="pb-3 font-medium text-center">Chất lượng</th>
-                        <th className="pb-3 font-medium text-right">Điểm</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {charts.supplierPerformance.map((supplier, index) => (
-                        <tr key={index} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-3 font-medium text-gray-900">{supplier.name}</td>
-                          <td className="py-3 text-center">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              supplier.onTime >= 95 ? 'bg-green-100 text-green-700' :
-                              supplier.onTime >= 90 ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {supplier.onTime}%
-                            </span>
-                          </td>
-                          <td className="py-3 text-center">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              supplier.quality >= 98 ? 'bg-green-100 text-green-700' :
-                              supplier.quality >= 95 ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {supplier.quality}%
-                            </span>
-                          </td>
-                          <td className="py-3 text-right">
-                            <div className="flex items-center justify-end">
-                              <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                                <div
-                                  className="h-full rounded-full bg-blue-600"
-                                  style={{ width: `${supplier.score}%` }}
-                                />
-                              </div>
-                              <span className="text-sm font-medium">{supplier.score}</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable
+                  data={charts.supplierPerformance}
+                  columns={supplierPerformanceColumns}
+                  keyField="name"
+                  emptyMessage="No supplier data"
+                  searchable={false}
+                  excelMode={{
+                    enabled: true,
+                    showRowNumbers: false,
+                    columnHeaderStyle: 'field-names',
+                    gridBorders: true,
+                    showFooter: true,
+                    sheetName: 'Supplier Performance',
+                    compactMode: true,
+                  }}
+                />
               </ChartCard>
             </div>
 
@@ -772,44 +873,22 @@ export default function AnalyticsDashboard() {
 
             {/* Top Parts by Value */}
             <ChartCard title="Top 5 Linh kiện theo giá trị tồn kho">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-3 font-medium">#</th>
-                      <th className="pb-3 font-medium">Linh kiện</th>
-                      <th className="pb-3 font-medium text-right">Số lượng</th>
-                      <th className="pb-3 font-medium text-right">Giá trị</th>
-                      <th className="pb-3 font-medium text-right">% Tổng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {charts.topParts.map((part, index) => (
-                      <tr key={index} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-3 text-sm font-medium text-gray-500">{index + 1}</td>
-                        <td className="py-3 font-medium text-gray-900">{part.name}</td>
-                        <td className="py-3 text-right text-gray-600">{formatNumber(part.quantity)}</td>
-                        <td className="py-3 text-right font-medium text-blue-600">
-                          {formatCurrency(part.value)}
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="flex items-center justify-end">
-                            <div className="w-16 h-2 bg-gray-200 rounded-full mr-2">
-                              <div
-                                className="h-full rounded-full bg-blue-600"
-                                style={{ width: `${(part.value / metrics.inventory.totalValue) * 100}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-600">
-                              {((part.value / metrics.inventory.totalValue) * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                data={charts.topParts}
+                columns={topPartsColumns}
+                keyField="name"
+                emptyMessage="No parts data"
+                searchable={false}
+                excelMode={{
+                  enabled: true,
+                  showRowNumbers: false,
+                  columnHeaderStyle: 'field-names',
+                  gridBorders: true,
+                  showFooter: true,
+                  sheetName: 'Top Parts',
+                  compactMode: true,
+                }}
+              />
             </ChartCard>
           </div>
         )}

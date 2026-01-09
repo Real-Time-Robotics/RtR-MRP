@@ -563,9 +563,8 @@ Please provide a helpful, accurate, and safe response.`;
   // Audit logging
   private logAudit(entry: AuditLogEntry) {
     this.auditLogs.push(entry);
-    
+
     // In production, send to logging service
-    console.log('[AI Audit]', JSON.stringify(entry, null, 2));
   }
 
   // Get audit logs

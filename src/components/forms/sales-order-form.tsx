@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,6 +41,21 @@ import {
 import { Loader2, ShoppingCart, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+  detectChanges,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
+
+// =============================================================================
+// CHANGE IMPACT CONFIGURATION
+// =============================================================================
+
+const SO_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  status: { label: 'Trạng thái', valueType: 'string' },
+  priority: { label: 'Độ ưu tiên', valueType: 'string' },
+};
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -117,6 +132,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const isEditing = !!order;
+
+  // Change Impact state
+  const originalValuesRef = useRef<Record<string, unknown> | null>(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState<SalesOrderFormData | null>(null);
 
   const form = useForm<SalesOrderFormData>({
     resolver: zodResolver(salesOrderSchema),
@@ -202,9 +221,35 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
         });
       }
     }
+    // Store original values for Change Impact when editing
+    if (order) {
+      originalValuesRef.current = {
+        status: order.status,
+        priority: order.priority,
+      };
+    } else {
+      originalValuesRef.current = null;
+    }
   }, [open, order, form]);
 
-  const onSubmit = async (data: SalesOrderFormData) => {
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+    onError: () => {
+      // Even on error, proceed with save (impact check is informational)
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+  });
+
+  const performSave = async (data: SalesOrderFormData) => {
     setLoading(true);
 
     try {
@@ -247,6 +292,26 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
     } finally {
       setLoading(false);
     }
+  };
+
+  const onSubmit = async (data: SalesOrderFormData) => {
+    // Only check impact when editing and there are tracked changes
+    if (isEditing && order && originalValuesRef.current) {
+      const changes = detectChanges(
+        originalValuesRef.current,
+        { status: data.status, priority: data.priority },
+        SO_IMPACT_FIELDS
+      );
+
+      if (changes.length > 0) {
+        setPendingSubmitData(data);
+        changeImpact.checkImpact('salesOrder', order.id, changes);
+        return;
+      }
+    }
+
+    // No tracked changes or new record - save directly
+    performSave(data);
   };
 
   const addLine = () => {
@@ -547,6 +612,19 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
           </form>
         </Form>
       </DialogContent>
+
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={() => {
+          changeImpact.cancel();
+          setPendingSubmitData(null);
+        }}
+      />
     </Dialog>
   );
 }

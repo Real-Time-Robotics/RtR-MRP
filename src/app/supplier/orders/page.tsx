@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { excelPortalStyles } from '@/components/ui-v2/excel';
 
 // =============================================================================
 // SUPPLIER ORDERS PAGE
@@ -289,31 +290,31 @@ function SupplierOrdersContent() {
                   )}
                 </div>
 
-                {/* Order Items (Expandable) */}
+                {/* Order Items (Expandable) - Excel Style */}
                 {selectedOrder?.id === order.id && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-xs text-gray-500 uppercase">
-                          <th className="px-4 py-3 text-left">Mã SP</th>
-                          <th className="px-4 py-3 text-left">Tên sản phẩm</th>
-                          <th className="px-4 py-3 text-right">Số lượng</th>
-                          <th className="px-4 py-3 text-right">Đơn giá</th>
-                          <th className="px-4 py-3 text-right">Thành tiền</th>
+                  <div className="border-t border-[#217346]/30 dark:border-[#70AD47]/30 bg-white dark:bg-slate-950">
+                    <table className={excelPortalStyles.table}>
+                      <thead className={excelPortalStyles.thead}>
+                        <tr>
+                          <th className={excelPortalStyles.th}>Mã SP</th>
+                          <th className={excelPortalStyles.th}>Tên sản phẩm</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Số lượng</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Đơn giá</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Thành tiền</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {order.items.map((item, idx) => (
-                          <tr key={idx} className="border-t border-gray-100 dark:border-gray-800">
-                            <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{item.partCode}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.partName}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                      <tbody className={excelPortalStyles.tbody}>
+                        {order?.items?.map((item, idx) => (
+                          <tr key={idx} className={excelPortalStyles.tr}>
+                            <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdMono}`}>{item.partCode}</td>
+                            <td className={excelPortalStyles.td}>{item.partName}</td>
+                            <td className={excelPortalStyles.tdNumber}>
                               {item.quantity.toLocaleString()} {item.unit}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                            <td className={excelPortalStyles.tdNumber}>
                               {formatCurrency(item.unitPrice)}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                            <td className={excelPortalStyles.tdCurrency}>
                               {formatCurrency(item.quantity * item.unitPrice)}
                             </td>
                           </tr>

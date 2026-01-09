@@ -95,7 +95,7 @@ export default function MobilePickingPage() {
         }
         
         // Update local state
-        const updatedItems = selectedPick.items.map(item => 
+        const updatedItems = selectedPick?.items?.map(item => 
           item.id === selectedItem.id 
             ? { ...item, qtyPicked: item.qtyPicked + pickQty }
             : item
@@ -216,7 +216,7 @@ export default function MobilePickingPage() {
           
           {/* Pick Items */}
           <div className="flex-1 overflow-auto p-4 space-y-2">
-            {selectedPick.items.map((item) => {
+            {selectedPick?.items?.map((item) => {
               const remaining = item.qtyToPick - item.qtyPicked;
               const isComplete = remaining === 0;
               return (

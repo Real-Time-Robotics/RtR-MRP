@@ -149,7 +149,7 @@ export default function CapacityPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {data.workCenters.map((wc) => (
+            {data?.workCenters?.map((wc) => (
               <div
                 key={wc.id}
                 className="flex items-center gap-4 p-3 rounded-lg border"

@@ -22,10 +22,7 @@ export async function rollupPartCost(
   const part = await prisma.part.findUnique({
     where: { id: partId },
     include: {
-      partCosts: {
-        include: { costType: true },
-        where: { expiryDate: null }, // Current costs only
-      },
+      cost: true,
     },
   });
 
@@ -89,30 +86,22 @@ export async function rollupPartCost(
   }
 
   // Add part's own costs (direct costs)
-  for (const partCost of part.partCosts) {
-    const costValue = partCost.standardCost;
+  // Add part's own costs (direct costs)
+  if (part.cost) {
+    // For now, assume standardCost or unitCost is primarily MATERIAL for buy parts
+    // or direct material input for make parts not covered by children
+    const directCost = part.cost.standardCost || part.cost.unitCost || 0;
+    costs.materialCost += directCost;
 
-    switch (partCost.costType.category) {
-      case "MATERIAL":
-        costs.materialCost += costValue;
-        break;
-      case "LABOR":
-        costs.laborCost += costValue;
-        break;
-      case "OVERHEAD":
-        costs.overheadCost += costValue;
-        break;
-      case "SUBCONTRACT":
-        costs.subcontractCost += costValue;
-        break;
-      default:
-        costs.otherCost += costValue;
+    // Apply overhead if defined
+    if (part.cost.overheadPercent) {
+      costs.overheadCost += directCost * (part.cost.overheadPercent / 100);
     }
   }
 
-  // If no part costs, use unitCost as material cost
-  if (part.partCosts.length === 0 && part.unitCost > 0) {
-    costs.materialCost += part.unitCost;
+  // If no part costs, assume 0
+  if (!part.cost) {
+    costs.materialCost += 0;
   }
 
   // Calculate total

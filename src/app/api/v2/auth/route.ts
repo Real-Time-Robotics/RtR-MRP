@@ -203,9 +203,6 @@ async function handleChangePassword(user: { id?: string; email?: string | null }
     },
   });
 
-  // Log audit event
-  console.log(`[AUTH] Password changed for user: ${user.email}`);
-
   return NextResponse.json({
     success: true,
     message: 'Mật khẩu đã được thay đổi thành công',
@@ -332,8 +329,6 @@ async function handleVerifyMFA(user: { id?: string; email?: string | null }, bod
     data: { mfaEnabled: true },
   });
 
-  console.log(`[AUTH] MFA enabled for user: ${user.email}`);
-
   return NextResponse.json({
     success: true,
     message: 'Xác thực 2 bước đã được kích hoạt',
@@ -393,8 +388,6 @@ async function handleDisableMFA(user: { id?: string; email?: string | null }, bo
       mfaMethod: null,
     },
   });
-
-  console.log(`[AUTH] MFA disabled for user: ${user.email}`);
 
   return NextResponse.json({
     success: true,

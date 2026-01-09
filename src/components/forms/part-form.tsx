@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+  detectChanges,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
 import {
   Dialog,
   DialogContent,
@@ -143,12 +149,30 @@ const UNITS = ['EA', 'PCS', 'KG', 'G', 'M', 'CM', 'L', 'ML', 'BOX', 'SET', 'ROLL
 const COUNTRIES = ['Việt Nam', 'USA', 'China', 'Japan', 'South Korea', 'Taiwan', 'Germany', 'UK', 'Singapore', 'Other'];
 
 // =============================================================================
+// CHANGE IMPACT CONFIGURATION
+// =============================================================================
+
+const PART_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  unitCost: { label: 'Giá', valueType: 'currency' },
+  leadTimeDays: { label: 'Lead Time', valueType: 'number' },
+  lifecycleStatus: { label: 'Trạng thái', valueType: 'string' },
+  minStockLevel: { label: 'Min Stock Level', valueType: 'number' },
+  reorderPoint: { label: 'Reorder Point', valueType: 'number' },
+  makeOrBuy: { label: 'Make/Buy', valueType: 'string' },
+  moq: { label: 'MOQ', valueType: 'number' },
+};
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!part;
+
+  // Change Impact state
+  const originalValuesRef = useRef<Record<string, unknown> | null>(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState<PartFormData | null>(null);
 
   const form = useForm<PartFormData>({
     resolver: zodResolver(partSchema),
@@ -210,7 +234,19 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           manufacturerPn: part.manufacturerPn || '',
           lifecycleStatus: part.lifecycleStatus as PartFormData['lifecycleStatus'],
         });
+
+        // Store original values for Change Impact
+        originalValuesRef.current = {
+          unitCost: part.unitCost,
+          leadTimeDays: part.leadTimeDays,
+          lifecycleStatus: part.lifecycleStatus,
+          minStockLevel: part.minStockLevel,
+          reorderPoint: part.reorderPoint,
+          makeOrBuy: part.makeOrBuy,
+          moq: part.moq,
+        };
       } else {
+        originalValuesRef.current = null;
         form.reset({
           partNumber: '',
           name: '',
@@ -235,7 +271,24 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
     }
   }, [open, part, form]);
 
-  const onSubmit = async (data: PartFormData) => {
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+    onError: () => {
+      // Even on error, proceed with save (impact check is informational)
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+  });
+
+  const performSave = async (data: PartFormData) => {
     setLoading(true);
 
     try {
@@ -283,6 +336,36 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
     } finally {
       setLoading(false);
     }
+  };
+
+  const onSubmit = async (data: PartFormData) => {
+    // Only check impact when editing and there are tracked changes
+    if (isEditing && part && originalValuesRef.current) {
+      const newValues = {
+        unitCost: data.unitCost,
+        leadTimeDays: data.leadTimeDays,
+        lifecycleStatus: data.lifecycleStatus,
+        minStockLevel: data.minStockLevel,
+        reorderPoint: data.reorderPoint,
+        makeOrBuy: data.makeOrBuy,
+        moq: data.moq,
+      };
+
+      const changes = detectChanges(
+        originalValuesRef.current,
+        newValues,
+        PART_IMPACT_FIELDS
+      );
+
+      if (changes.length > 0) {
+        setPendingSubmitData(data);
+        changeImpact.checkImpact('part', part.id, changes);
+        return;
+      }
+    }
+
+    // No tracked changes or new record - save directly
+    performSave(data);
   };
 
   return (
@@ -834,6 +917,19 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           </form>
         </Form>
       </DialogContent>
+
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={() => {
+          changeImpact.cancel();
+          setPendingSubmitData(null);
+        }}
+      />
     </Dialog>
   );
 }

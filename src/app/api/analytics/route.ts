@@ -124,7 +124,7 @@ async function getInventoryMetrics(startDate: Date) {
       prisma.inventory.findMany({
         select: {
           quantity: true,
-          part: { select: { unitCost: true } }
+          part: { select: { cost: { select: { unitCost: true } } } }
         }
       }),
       prisma.inventory.count({
@@ -139,7 +139,7 @@ async function getInventoryMetrics(startDate: Date) {
 
     // Calculate total value
     const totalValue = inventoryItems.reduce((sum, item) => {
-      return sum + (Number(item.quantity) * Number(item.part?.unitCost || 0));
+      return sum + (Number(item.quantity) * Number(item.part?.cost?.unitCost || 0));
     }, 0);
 
     return {
@@ -404,13 +404,13 @@ async function getComplianceMetrics() {
       expiringSoonCerts
     ] = await Promise.all([
       prisma.part.count({
-        where: { ndaaCompliant: true }
+        where: { compliance: { ndaaCompliant: true } }
       }),
       prisma.part.count({
-        where: { itarControlled: true }
+        where: { compliance: { itarControlled: true } }
       }),
       prisma.part.count({
-        where: { rohsCompliant: true }
+        where: { compliance: { rohsCompliant: true } }
       }),
       prisma.partCertification.count({
         where: {
@@ -518,7 +518,7 @@ async function getInventoryByCategory() {
     const inventoryItems = await prisma.inventory.findMany({
       include: {
         part: {
-          select: { category: true, unitCost: true }
+          select: { category: true, cost: { select: { unitCost: true } } }
         }
       }
     });
@@ -530,7 +530,7 @@ async function getInventoryByCategory() {
       if (!categoryData[category]) {
         categoryData[category] = { value: 0, quantity: 0 };
       }
-      const unitCost = Number(item.part?.unitCost || 0);
+      const unitCost = Number(item.part?.cost?.unitCost || 0);
       categoryData[category].value += Number(item.quantity) * unitCost;
       categoryData[category].quantity += Number(item.quantity);
     });
@@ -613,7 +613,7 @@ async function getTopParts() {
     const inventoryItems = await prisma.inventory.findMany({
       include: {
         part: {
-          select: { name: true, partNumber: true, unitCost: true }
+          select: { name: true, partNumber: true, cost: { select: { unitCost: true } } }
         }
       }
     });
@@ -622,7 +622,7 @@ async function getTopParts() {
 
     inventoryItems.forEach(item => {
       const partId = item.partId;
-      const unitCost = Number(item.part?.unitCost || 0);
+      const unitCost = Number(item.part?.cost?.unitCost || 0);
 
       if (!partData[partId]) {
         partData[partId] = {

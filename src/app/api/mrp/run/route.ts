@@ -34,8 +34,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    console.log(`[MRP API] Running MRP for orders: ${orderIds.join(', ')}`);
-
     // TODO: Replace with real Prisma queries and calculation
     // 
     // Step 1: Get sales orders with items
@@ -240,8 +238,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
       ],
     };
-
-    console.log(`[MRP API] MRP run completed: ${mockResult.runId}`);
 
     return NextResponse.json({ success: true, data: mockResult });
   } catch (error) {

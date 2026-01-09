@@ -1,9 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+  detectChanges,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
 import {
   Dialog,
   DialogContent,
@@ -79,12 +85,26 @@ const CUSTOMER_TYPES = ['Enterprise', 'Government', 'SMB', 'Distributor', 'Retai
 const PAYMENT_TERMS = ['Net 30', 'Net 45', 'Net 60', 'Net 90', 'COD', 'Prepaid'];
 
 // =============================================================================
+// CHANGE IMPACT CONFIGURATION
+// =============================================================================
+
+const CUSTOMER_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  status: { label: 'Trạng thái', valueType: 'string' },
+  creditLimit: { label: 'Hạn mức tín dụng', valueType: 'currency' },
+  paymentTerms: { label: 'Điều khoản thanh toán', valueType: 'string' },
+};
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function CustomerForm({ open, onOpenChange, customer, onSuccess }: CustomerFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!customer;
+
+  // Change Impact state
+  const originalValuesRef = useRef<Record<string, unknown> | null>(null);
+  const [pendingSubmitData, setPendingSubmitData] = useState<CustomerFormData | null>(null);
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -119,13 +139,38 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
           creditLimit: customer.creditLimit,
           status: customer.status as 'active' | 'inactive' | 'pending',
         });
+
+        // Store original values for Change Impact
+        originalValuesRef.current = {
+          status: customer.status,
+          creditLimit: customer.creditLimit,
+          paymentTerms: customer.paymentTerms,
+        };
       } else {
+        originalValuesRef.current = null;
         form.reset();
       }
     }
   }, [open, customer, form]);
 
-  const onSubmit = async (data: CustomerFormData) => {
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+    onError: () => {
+      // Even on error, proceed with save (impact check is informational)
+      if (pendingSubmitData) {
+        performSave(pendingSubmitData);
+        setPendingSubmitData(null);
+      }
+    },
+  });
+
+  const performSave = async (data: CustomerFormData) => {
     setLoading(true);
     try {
       const cleanData = {
@@ -167,6 +212,32 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
     } finally {
       setLoading(false);
     }
+  };
+
+  const onSubmit = async (data: CustomerFormData) => {
+    // Only check impact when editing and there are tracked changes
+    if (isEditing && customer && originalValuesRef.current) {
+      const newValues = {
+        status: data.status,
+        creditLimit: data.creditLimit,
+        paymentTerms: data.paymentTerms,
+      };
+
+      const changes = detectChanges(
+        originalValuesRef.current,
+        newValues,
+        CUSTOMER_IMPACT_FIELDS
+      );
+
+      if (changes.length > 0) {
+        setPendingSubmitData(data);
+        changeImpact.checkImpact('customer', customer.id, changes);
+        return;
+      }
+    }
+
+    // No tracked changes or new record - save directly
+    performSave(data);
   };
 
   return (
@@ -404,6 +475,19 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
           </form>
         </Form>
       </DialogContent>
+
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={() => {
+          changeImpact.cancel();
+          setPendingSubmitData(null);
+        }}
+      />
     </Dialog>
   );
 }

@@ -585,7 +585,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
       {/* User Info */}
       <div className="p-4 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+          <div className="w-12 h-12 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-400 font-bold text-lg">
             {user.name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
@@ -736,10 +736,10 @@ export function ModernHeader({
 
           {/* Home Button */}
           <Link
-            href="/dashboard"
+            href="/home"
             className={cn(
               'hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-              pathname === '/dashboard' 
+              (pathname === '/home' || pathname === '/dashboard')
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             )}
@@ -799,7 +799,7 @@ export function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="flex items-center justify-center w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg shadow-blue-600/20 transition-all"
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -847,7 +847,7 @@ export function ModernHeader({
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-8 h-8 rounded-full border-2 border-gray-400 dark:border-gray-500 flex items-center justify-center text-gray-600 dark:text-gray-400 font-semibold text-sm">
                 {user.name.charAt(0)}
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />

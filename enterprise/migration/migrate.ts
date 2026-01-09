@@ -288,7 +288,7 @@ async function migrateParts(
 
     validRecords.push({
       partNumber: transformed.partNumber,
-      partName: partName,
+      name: partName,  // FIXED: Schema uses 'name' not 'partName'
       description: transformed.description || '',
       category: categoryMap[transformed.category] || 'COMPONENT',
       unit: transformed.unit || 'pcs',
@@ -502,26 +502,38 @@ async function migrateInventory(
       continue;
     }
 
+    // FIXED: Schema uses composite key [partId, warehouseId, lotNumber]
+    // and 'quantity' instead of 'onHand'
+    const warehouseId = lookupMaps.warehouses.get(transformed.warehouseCode?.toUpperCase?.() || 'MAIN')
+      || lookupMaps.warehouses.values().next().value; // Default to first warehouse
+
+    if (!warehouseId) {
+      tracker.recordError(0, 'No warehouse found. Create at least one warehouse first.', record);
+      continue;
+    }
+
+    const lotNumber = transformed.lotNumber || null;
+
     try {
       await prisma.inventory.upsert({
-        where: { partId },
+        where: {
+          partId_warehouseId_lotNumber: {
+            partId,
+            warehouseId,
+            lotNumber: lotNumber || '',
+          },
+        },
         create: {
           partId,
-          onHand: onHand,
-          onOrder: parseFloat(transformed.onOrder) || 0,
-          allocated: parseFloat(transformed.allocated) || 0,
-          available: onHand, // Will be recalculated
-          safetyStock: transformed.safetyStock || 0,
-          reorderPoint: transformed.reorderPoint || 0,
-          maxStock: transformed.maxStock || null,
-          warehouseLocation: transformed.warehouseLocation || transformed.locationCode || null,
-          binLocation: transformed.binLocation || null,
-          lotNumber: transformed.lotNumber || null,
+          warehouseId,
+          quantity: onHand,  // FIXED: Schema uses 'quantity' not 'onHand'
+          reservedQty: 0,
+          locationCode: transformed.warehouseLocation || transformed.locationCode || null,
+          lotNumber: lotNumber,
         },
         update: {
-          onHand: { increment: onHand },
-          warehouseLocation: transformed.warehouseLocation || transformed.locationCode || undefined,
-          binLocation: transformed.binLocation || undefined,
+          quantity: { increment: onHand },  // FIXED: Schema uses 'quantity'
+          locationCode: transformed.warehouseLocation || transformed.locationCode || undefined,
         },
       });
       tracker.recordInsert(1);

@@ -9,6 +9,7 @@ import {
   RefreshCw, HelpCircle, Shield,
   Package, ShoppingCart, Factory, Calculator, BarChart3
 } from 'lucide-react';
+import { ContextAnalysisCard } from './context-analysis-card';
 
 // Icon mapping for AI message sections
 const SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
@@ -67,9 +68,9 @@ function renderMessageContent(content: string, isUserMessage: boolean = false): 
       const sectionKey = currentSection.title.toLowerCase();
       const config = SECTION_ICONS[
         sectionKey.includes('tồn kho') || sectionKey.includes('inventory') ? 'inventory' :
-        sectionKey.includes('đơn hàng') || sectionKey.includes('order') ? 'orders' :
-        sectionKey.includes('sản xuất') || sectionKey.includes('production') ? 'production' :
-        sectionKey.includes('mrp') ? 'mrp' : 'analytics'
+          sectionKey.includes('đơn hàng') || sectionKey.includes('order') ? 'orders' :
+            sectionKey.includes('sản xuất') || sectionKey.includes('production') ? 'production' :
+              sectionKey.includes('mrp') ? 'mrp' : 'analytics'
       ];
 
       elements.push(
@@ -281,13 +282,13 @@ const ConfidenceIndicator = ({ confidence, language }: { confidence: number; lan
 };
 
 // Action button component
-const ActionButton = ({ 
-  action, 
-  language, 
-  onExecute 
-}: { 
-  action: AIAction; 
-  language: string; 
+const ActionButton = ({
+  action,
+  language,
+  onExecute
+}: {
+  action: AIAction;
+  language: string;
   onExecute: (action: AIAction) => void;
 }) => {
   const getRiskColor = () => {
@@ -331,7 +332,7 @@ export default function AIChatPanel({
   const [isMinimized, setIsMinimized] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -346,6 +347,8 @@ export default function AIChatPanel({
       inputRef.current?.focus();
     }
   }, [isOpen, isMinimized]);
+
+
 
   // Get suggestions for current module
   const currentSuggestions = QUICK_SUGGESTIONS[context.module] || QUICK_SUGGESTIONS.default;
@@ -412,7 +415,7 @@ export default function AIChatPanel({
         return [...filtered, {
           id: `msg_${Date.now()}`,
           role: 'assistant',
-          content: context.language === 'vi' 
+          content: context.language === 'vi'
             ? 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.'
             : 'Sorry, an error occurred. Please try again.',
           timestamp: new Date(),
@@ -423,6 +426,27 @@ export default function AIChatPanel({
       setIsLoading(false);
     }
   }, [context, messages, isLoading]);
+
+  // Listen for custom events from Context Card
+  // MOVED HERE primarily to access 'sendMessage' which is defined above
+  useEffect(() => {
+    const handleFillInput = (e: CustomEvent) => {
+      if (e.detail?.text) {
+        setInputValue(e.detail.text);
+        // Optionally auto-send immediate actions like "Analyze"
+        if (e.detail.autoSend) {
+          sendMessage(e.detail.text);
+        } else {
+          inputRef.current?.focus();
+        }
+      }
+    };
+
+    window.addEventListener('copilot:fill-input' as any, handleFillInput);
+    return () => {
+      window.removeEventListener('copilot:fill-input' as any, handleFillInput);
+    };
+  }, [sendMessage]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -441,7 +465,7 @@ export default function AIChatPanel({
 
   // Handle feedback
   const handleFeedback = (messageId: string, feedback: 'positive' | 'negative') => {
-    setMessages(prev => prev.map(m => 
+    setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, feedback } : m
     ));
     // TODO: Send feedback to API
@@ -452,7 +476,7 @@ export default function AIChatPanel({
     if (onActionExecute) {
       onActionExecute(action);
     }
-    
+
     // Add confirmation message
     setMessages(prev => [...prev, {
       id: `msg_${Date.now()}`,
@@ -478,36 +502,55 @@ export default function AIChatPanel({
       <div className="flex flex-col h-full">
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-neutral-900">
-          {/* Welcome message */}
-          {messages.length === 0 && (
+
+          {/* Context Analysis Card */}
+          {context.selectedItems && context.selectedItems.length > 0 && context.selectedItems[0]?.id && (
+            <div className="mb-4">
+              <ContextAnalysisCard
+                selectedItem={context.selectedItems[0]}
+                type={
+                  (context.selectedItems[0] as any)?.type ||
+                  (context.module === 'suppliers' ? 'supplier' :
+                    context.module === 'customers' ? 'customer' :
+                      'part')
+                }
+                partId={context.selectedItems[0].id}
+                partNumber={context.selectedItems[0].partNumber}
+                partName={context.selectedItems[0].name}
+              />
+            </div>
+          )}
+
+          {/* Welcome message - Only show if no context and no messages */}
+          {messages.length === 0 && (!context.selectedItems || context.selectedItems.length === 0) && (
             <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 mb-4">
-                <Sparkles className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 mb-3">
+                <Sparkles className="h-6 w-6 text-neutral-500" />
               </div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
                 {context.language === 'vi' ? 'Xin chào!' : 'Hello!'}
               </h4>
-              <p className="text-sm text-gray-600 dark:text-neutral-400 mb-4">
+              <p className="text-xs text-gray-500 dark:text-neutral-500 mb-4 px-8">
                 {context.language === 'vi'
-                  ? 'Tôi là AI Copilot, sẵn sàng hỗ trợ bạn với hệ thống MRP.'
-                  : 'I\'m your AI Copilot, ready to help you with the MRP system.'}
+                  ? 'Tôi là AI Copilot, sẵn sàng hỗ trợ bạn.'
+                  : 'I\'m your AI Copilot, ready to help.'}
               </p>
             </div>
           )}
 
-          {/* Quick suggestions */}
-          {showSuggestions && messages.length === 0 && (
+          {/* Quick suggestions - Only show if no context (or different suggestions for context?) */}
+          {/* For now, hide standard suggestions if context is active to focus on the item */}
+          {showSuggestions && messages.length === 0 && (!context.selectedItems || context.selectedItems.length === 0) && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-500 dark:text-neutral-400 flex items-center">
-                <Lightbulb className="h-3.5 w-3.5 mr-1" />
-                {context.language === 'vi' ? 'Gợi ý nhanh:' : 'Quick suggestions:'}
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center justify-center">
+                {context.language === 'vi' ? 'Gợi ý nhanh' : 'Quick suggestions'}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {currentSuggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => sendMessage(context.language === 'vi' ? suggestion.vi : suggestion.en)}
-                    className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-neutral-300 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-300 dark:hover:border-blue-700 hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
+                    className="px-3 py-1.5 text-xs bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-neutral-300 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
                   >
                     {context.language === 'vi' ? suggestion.vi : suggestion.en}
                   </button>
@@ -515,6 +558,8 @@ export default function AIChatPanel({
               </div>
             </div>
           )}
+
+          {/* Context-aware Hints: Removed to prevent loading confusion */}
 
           {/* Messages */}
           {messages.map((message) => (
@@ -524,20 +569,18 @@ export default function AIChatPanel({
             >
               <div className={`max-w-[85%] ${message.role === 'user' ? 'order-1' : 'order-2'}`}>
                 <div className={`flex items-start space-x-2 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
-                  }`}>
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
+                    }`}>
                     {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                   </div>
 
                   <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                    <div className={`px-4 py-2.5 rounded-2xl ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-sm'
-                        : 'bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 rounded-tl-sm shadow-sm'
-                    }`}>
+                    <div className={`px-4 py-2.5 rounded-2xl ${message.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-sm'
+                      : 'bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 text-gray-800 dark:text-neutral-200 rounded-tl-sm shadow-sm'
+                      }`}>
                       {message.isLoading ? (
                         <div className="flex items-center space-x-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -605,11 +648,9 @@ export default function AIChatPanel({
   // Standalone mode - full container with header
   return (
     <div
-      className={`fixed z-50 ${
-        position === 'right' ? 'right-4' : position === 'left' ? 'left-4' : 'bottom-4 left-1/2 -translate-x-1/2'
-      } bottom-4 flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 overflow-hidden transition-all duration-300 ${
-        isMinimized ? 'w-80 h-14' : 'w-96 h-[600px]'
-      }`}
+      className={`fixed z-50 ${position === 'right' ? 'right-4' : position === 'left' ? 'left-4' : 'bottom-4 left-1/2 -translate-x-1/2'
+        } bottom-4 flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 overflow-hidden transition-all duration-300 ${isMinimized ? 'w-80 h-14' : 'w-96 h-[600px]'
+        }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
@@ -652,7 +693,19 @@ export default function AIChatPanel({
       {!isMinimized && (
         <>
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-neutral-900">
+
+            {/* Context Analysis Card (Floating Mode) */}
+            {context.selectedItems && context.selectedItems.length > 0 && context.selectedItems[0]?.id && (
+              <div className="mb-4">
+                <ContextAnalysisCard
+                  partId={context.selectedItems[0].id}
+                  partName={context.selectedItems[0].name}
+                  partNumber={context.selectedItems[0].partNumber}
+                />
+              </div>
+            )}
+
             {/* Welcome message */}
             {messages.length === 0 && (
               <div className="text-center py-8">
@@ -663,7 +716,7 @@ export default function AIChatPanel({
                   {context.language === 'vi' ? 'Xin chào!' : 'Hello!'}
                 </h4>
                 <p className="text-sm text-gray-600 mb-4">
-                  {context.language === 'vi' 
+                  {context.language === 'vi'
                     ? 'Tôi là AI Copilot, sẵn sàng hỗ trợ bạn với hệ thống MRP.'
                     : 'I\'m your AI Copilot, ready to help you with the MRP system.'}
                 </p>
@@ -700,21 +753,19 @@ export default function AIChatPanel({
                 <div className={`max-w-[85%] ${message.role === 'user' ? 'order-1' : 'order-2'}`}>
                   {/* Avatar */}
                   <div className={`flex items-start space-x-2 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
-                    }`}>
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
+                      }`}>
                       {message.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                     </div>
-                    
+
                     <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
                       {/* Message bubble */}
-                      <div className={`px-4 py-2.5 rounded-2xl ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-tr-sm'
-                          : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
-                      }`}>
+                      <div className={`px-4 py-2.5 rounded-2xl ${message.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-tr-sm'
+                        : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm'
+                        }`}>
                         {message.isLoading ? (
                           <div className="flex items-center space-x-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -783,22 +834,20 @@ export default function AIChatPanel({
                             </button>
                             <button
                               onClick={() => handleFeedback(message.id, 'positive')}
-                              className={`p-1 transition-colors ${
-                                message.feedback === 'positive' 
-                                  ? 'text-green-500' 
-                                  : 'text-gray-400 hover:text-green-500'
-                              }`}
+                              className={`p-1 transition-colors ${message.feedback === 'positive'
+                                ? 'text-green-500'
+                                : 'text-gray-400 hover:text-green-500'
+                                }`}
                               title={context.language === 'vi' ? 'Hữu ích' : 'Helpful'}
                             >
                               <ThumbsUp className="h-3.5 w-3.5" />
                             </button>
                             <button
                               onClick={() => handleFeedback(message.id, 'negative')}
-                              className={`p-1 transition-colors ${
-                                message.feedback === 'negative' 
-                                  ? 'text-red-500' 
-                                  : 'text-gray-400 hover:text-red-500'
-                              }`}
+                              className={`p-1 transition-colors ${message.feedback === 'negative'
+                                ? 'text-red-500'
+                                : 'text-gray-400 hover:text-red-500'
+                                }`}
                               title={context.language === 'vi' ? 'Không hữu ích' : 'Not helpful'}
                             >
                               <ThumbsDown className="h-3.5 w-3.5" />
@@ -854,11 +903,11 @@ export default function AIChatPanel({
                 )}
               </button>
             </div>
-            
+
             {/* Powered by */}
             <p className="text-xs text-gray-400 text-center mt-2 flex items-center justify-center">
               <Shield className="h-3 w-3 mr-1" />
-              {context.language === 'vi' 
+              {context.language === 'vi'
                 ? 'Được bảo vệ bởi Safety Guardrails'
                 : 'Protected by Safety Guardrails'}
             </p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2, RefreshCw, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   generateDemandForecast,
   generateMockHistoricalData,
 } from "@/lib/ai/forecasting";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface Product {
   id: string;
@@ -102,6 +103,59 @@ export default function ForecastPage() {
   const selectedProductName =
     products.find((p) => p.id === selectedProduct)?.name || "Product";
 
+  const forecastColumns: Column<{
+    period: string;
+    forecast: number;
+    lowerBound: number;
+    upperBound: number;
+    confidence: number;
+    trend: string;
+  }>[] = useMemo(() => [
+    {
+      key: 'period',
+      header: 'Period',
+      width: '100px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'forecast',
+      header: 'Forecast',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-lg font-bold">{value}</span>,
+    },
+    {
+      key: 'range',
+      header: 'Range',
+      width: '120px',
+      align: 'right',
+      render: (_, row) => (
+        <span className="text-muted-foreground">
+          {row.lowerBound} - {row.upperBound}
+        </span>
+      ),
+    },
+    {
+      key: 'confidence',
+      header: 'Confidence',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <ConfidenceBadge confidence={value} />,
+    },
+    {
+      key: 'trend',
+      header: 'Trend',
+      width: '100px',
+      align: 'center',
+      render: (value) => (
+        <TrendIndicator trend={value as "increasing" | "stable" | "decreasing"} />
+      ),
+    },
+  ], []);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -177,39 +231,24 @@ export default function ForecastPage() {
         <CardHeader>
           <CardTitle>Forecast Summary</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-sm text-muted-foreground">
-                  <th className="text-left py-3 px-4">Period</th>
-                  <th className="text-right py-3 px-4">Forecast</th>
-                  <th className="text-right py-3 px-4">Range</th>
-                  <th className="text-center py-3 px-4">Confidence</th>
-                  <th className="text-center py-3 px-4">Trend</th>
-                </tr>
-              </thead>
-              <tbody>
-                {forecastResults.map((result) => (
-                  <tr key={result.period} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{result.period}</td>
-                    <td className="py-3 px-4 text-right text-lg font-bold">
-                      {result.forecast}
-                    </td>
-                    <td className="py-3 px-4 text-right text-muted-foreground">
-                      {result.lowerBound} - {result.upperBound}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <ConfidenceBadge confidence={result.confidence} />
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <TrendIndicator trend={result.trend as "increasing" | "stable" | "decreasing"} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <CardContent className="p-0">
+          <DataTable
+            data={forecastResults}
+            columns={forecastColumns}
+            keyField="period"
+            emptyMessage="No forecast data available"
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Forecast',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 

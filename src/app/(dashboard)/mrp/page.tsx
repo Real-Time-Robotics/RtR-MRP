@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Brain, Play, History, Loader2, AlertTriangle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface MrpRun {
   id: string;
@@ -37,6 +38,7 @@ export default function MrpPage() {
   const [runs, setRuns] = useState<MrpRun[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // MRP Parameters
   const [horizon, setHorizon] = useState("90");
@@ -44,12 +46,32 @@ export default function MrpPage() {
   const [includeDraft, setIncludeDraft] = useState(true);
   const [includeSafetyStock, setIncludeSafetyStock] = useState(true);
 
+  // Initial fetch
   useEffect(() => {
     fetchRuns();
   }, []);
 
-  const fetchRuns = async () => {
-    setLoading(true);
+  // Poll for status updates if any run is active
+  useEffect(() => {
+    const hasActiveRuns = runs.some(
+      (r) => r.status === "queued" || r.status === "running"
+    );
+
+    let intervalId: NodeJS.Timeout;
+
+    if (hasActiveRuns) {
+      intervalId = setInterval(() => {
+        fetchRuns(true); // silent fetch
+      }, 5000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [runs]);
+
+  const fetchRuns = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch("/api/mrp");
       const data = await res.json();
@@ -57,12 +79,13 @@ export default function MrpPage() {
     } catch (error) {
       console.error("Failed to fetch runs:", error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const runMrp = async () => {
     setRunning(true);
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/mrp", {
         method: "POST",
@@ -74,14 +97,108 @@ export default function MrpPage() {
           includeSafetyStock,
         }),
       });
+
       const data = await res.json();
-      router.push(`/mrp/${data.id}`);
-    } catch (error) {
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to run MRP");
+      }
+
+      // Don't redirect immediately. Just Add to list (or re-fetch) and let polling take over.
+      // Optimistic update or just fetch
+      await fetchRuns(true);
+
+    } catch (error: any) {
       console.error("Failed to run MRP:", error);
+      setErrorMsg(error.message || "Failed to start MRP calculation");
     } finally {
       setRunning(false);
     }
   };
+
+  // Column definitions for MRP Runs DataTable
+  const columns: Column<MrpRun>[] = useMemo(() => [
+    {
+      key: 'runNumber',
+      header: 'Run #',
+      width: '150px',
+      sortable: true,
+      render: (value) => <span className="font-mono">{value}</span>,
+    },
+    {
+      key: 'runDate',
+      header: 'Date',
+      width: '150px',
+      sortable: true,
+      render: (value) => format(new Date(value), "MMM dd, yyyy HH:mm"),
+    },
+    {
+      key: 'totalParts',
+      header: 'Parts',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => value || 0,
+    },
+    {
+      key: 'purchaseSuggestions',
+      header: 'Purchase',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => value || 0,
+    },
+    {
+      key: 'expediteAlerts',
+      header: 'Expedite',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => value || 0,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <Badge
+          variant={
+            value === "completed"
+              ? "default"
+              : value === "failed"
+                ? "destructive"
+                : "secondary"
+          }
+          className={
+            value === "running" || value === "queued"
+              ? "animate-pulse"
+              : ""
+          }
+        >
+          {value === "running" ? "Running..." :
+            value === "queued" ? "Queued" :
+              value}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '80px',
+      align: 'right',
+      render: (_, row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(`/mrp/${row.id}`)}
+        >
+          View
+        </Button>
+      ),
+    },
+  ], [router]);
 
   return (
     <div className="space-y-6">
@@ -107,10 +224,16 @@ export default function MrpPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5" />
-            Run MRP Calculation
+            Run MRP Calculation (Async)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {errorMsg && (
+            <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md text-sm font-medium">
+              {errorMsg}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label>Planning Horizon</Label>
@@ -168,12 +291,12 @@ export default function MrpPage() {
             {running ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Running MRP...
+                Queuing Job...
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-2" />
-                Run MRP Calculation
+                Queue MRP Calculation
               </>
             )}
           </Button>
@@ -188,69 +311,27 @@ export default function MrpPage() {
             Recent MRP Runs
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : runs.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No MRP runs yet. Run your first MRP calculation above.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-sm text-muted-foreground">
-                    <th className="text-left py-3 px-4">Run #</th>
-                    <th className="text-left py-3 px-4">Date</th>
-                    <th className="text-right py-3 px-4">Parts</th>
-                    <th className="text-right py-3 px-4">Purchase</th>
-                    <th className="text-right py-3 px-4">Expedite</th>
-                    <th className="text-center py-3 px-4">Status</th>
-                    <th className="text-right py-3 px-4"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run) => (
-                    <tr key={run.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-mono">{run.runNumber}</td>
-                      <td className="py-3 px-4">
-                        {format(new Date(run.runDate), "MMM dd, yyyy")}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {run.totalParts || 0}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {run.purchaseSuggestions || 0}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        {run.expediteAlerts || 0}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge
-                          variant={
-                            run.status === "completed" ? "default" : "secondary"
-                          }
-                        >
-                          {run.status}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => router.push(`/mrp/${run.id}`)}
-                        >
-                          View
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            data={runs}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="No MRP runs yet. Run your first MRP calculation above."
+            pagination
+            pageSize={10}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'MRP Runs',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

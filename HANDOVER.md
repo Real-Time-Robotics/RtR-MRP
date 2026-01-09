@@ -147,9 +147,11 @@ k6 run enterprise/capacity-test/capacity-test.js --env BASE_URL=http://localhost
 
 1. **Auth Secret:** Middleware uses `AUTH_SECRET || NEXTAUTH_SECRET` to match NextAuth v5 token signing
 
-2. **Schema Fields:**
-   - Parts: `partName` (not `name`)
-   - Inventory: `quantity` (not `onHand`)
+2. **Schema Fields (VERIFIED 2026-01-09):**
+   - Parts: `name` (NOT `partName`)
+   - Inventory: `quantity` (NOT `onHand`)
+   - Inventory has composite key: `[partId, warehouseId, lotNumber]`
+   - Warehouse model EXISTS and is required for Inventory
 
 3. **Enterprise Tools:** Standalone CLI tools, not part of web app build
 

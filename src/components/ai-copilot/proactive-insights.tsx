@@ -96,7 +96,7 @@ function generateInsights(module?: string): Insight[] {
       action: {
         label: 'Create POs',
         labelVi: 'Tạo PO',
-        onClick: () => console.log('Navigate to create PO'),
+        onClick: () => {},
       },
       timestamp: new Date(),
     },
@@ -118,7 +118,7 @@ function generateInsights(module?: string): Insight[] {
       action: {
         label: 'View Analysis',
         labelVi: 'Xem phân tích',
-        onClick: () => console.log('Navigate to analytics'),
+        onClick: () => {},
       },
       timestamp: new Date(),
     },
@@ -155,7 +155,7 @@ function generateInsights(module?: string): Insight[] {
       action: {
         label: 'Review NCRs',
         labelVi: 'Xem NCRs',
-        onClick: () => console.log('Navigate to NCR'),
+        onClick: () => {},
       },
       timestamp: new Date(),
     },
@@ -175,7 +175,7 @@ function generateInsights(module?: string): Insight[] {
       action: {
         label: 'View Details',
         labelVi: 'Xem chi tiết',
-        onClick: () => console.log('View bulk order analysis'),
+        onClick: () => {},
       },
       timestamp: new Date(),
     },

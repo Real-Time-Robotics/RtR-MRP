@@ -40,7 +40,7 @@ const queryPatterns: QueryPattern[] = [
     intent: 'low_stock_query',
     handler: async (matches, language) => {
       const startTime = Date.now();
-      
+
       const lowStockItems = await prisma.inventory.findMany({
         where: {
           quantity: { lte: 20 } // Below safety threshold
@@ -51,9 +51,9 @@ const queryPatterns: QueryPattern[] = [
               partNumber: true,
               name: true,
               category: true,
-              unitCost: true,
-              minStockLevel: true,
               unit: true,
+              cost: { select: { unitCost: true } },
+              planning: { select: { minStockLevel: true } },
             }
           },
           warehouse: {
@@ -69,7 +69,7 @@ const queryPatterns: QueryPattern[] = [
       return {
         success: true,
         query: 'SELECT * FROM inventory WHERE quantity <= min_stock',
-        naturalLanguage: language === 'vi' 
+        naturalLanguage: language === 'vi'
           ? 'Tìm các linh kiện có tồn kho thấp hơn mức tối thiểu'
           : 'Find parts with stock below minimum level',
         data: lowStockItems.map(item => ({
@@ -77,11 +77,11 @@ const queryPatterns: QueryPattern[] = [
           name: item.part?.name,
           category: item.part?.category,
           currentStock: item.quantity,
-          minStock: item.part?.minStockLevel || 20,
+          minStock: item.part?.planning?.minStockLevel || 20,
           unit: item.part?.unit || 'pcs',
           warehouse: item.warehouse?.name,
-          unitCost: item.part?.unitCost,
-          shortfall: Math.max(0, (item.part?.minStockLevel || 20) - Number(item.quantity)),
+          unitCost: item.part?.cost?.unitCost,
+          shortfall: Math.max(0, (item.part?.planning?.minStockLevel || 20) - Number(item.quantity)),
         })),
         metadata: {
           rowCount: lowStockItems.length,
@@ -98,7 +98,7 @@ const queryPatterns: QueryPattern[] = [
       };
     },
   },
-  
+
   {
     patterns: [
       /(?:total|tổng)\s*(?:inventory|tồn kho)\s*(?:value|giá trị)/i,
@@ -108,7 +108,7 @@ const queryPatterns: QueryPattern[] = [
     intent: 'inventory_value_query',
     handler: async (matches, language) => {
       const startTime = Date.now();
-      
+
       const inventoryItems = await prisma.inventory.findMany({
         include: {
           part: {
@@ -116,7 +116,7 @@ const queryPatterns: QueryPattern[] = [
               partNumber: true,
               name: true,
               category: true,
-              unitCost: true,
+              cost: { select: { unitCost: true } }
             }
           }
         }
@@ -129,7 +129,7 @@ const queryPatterns: QueryPattern[] = [
 
       inventoryItems.forEach(item => {
         const category = item.part?.category || 'Uncategorized';
-        const unitCost = Number(item.part?.unitCost || 0);
+        const unitCost = Number(item.part?.cost?.unitCost || 0);
         const quantity = Number(item.quantity);
         const value = quantity * unitCost;
 
@@ -196,7 +196,7 @@ const queryPatterns: QueryPattern[] = [
     intent: 'sales_summary_query',
     handler: async (matches, language) => {
       const startTime = Date.now();
-      
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -219,7 +219,7 @@ const queryPatterns: QueryPattern[] = [
 
       const thisMonthRevenue = thisMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
       const lastMonthRevenue = lastMonthOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
-      const changePercent = lastMonthRevenue > 0 
+      const changePercent = lastMonthRevenue > 0
         ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue * 100)
         : 0;
 
@@ -235,7 +235,7 @@ const queryPatterns: QueryPattern[] = [
           thisMonth: {
             revenue: Math.round(thisMonthRevenue),
             orderCount: thisMonthOrders.length,
-            avgOrderValue: thisMonthOrders.length > 0 
+            avgOrderValue: thisMonthOrders.length > 0
               ? Math.round(thisMonthRevenue / thisMonthOrders.length)
               : 0,
           },
@@ -438,7 +438,7 @@ const queryPatterns: QueryPattern[] = [
           status: wo.status,
           plannedStart: wo.plannedStart,
           plannedEnd: wo.plannedEnd,
-          progress: wo.quantity > 0 
+          progress: wo.quantity > 0
             ? Math.round((Number(wo.completedQty || 0) / Number(wo.quantity)) * 100)
             : 0,
         })),

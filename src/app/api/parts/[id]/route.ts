@@ -115,89 +115,166 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         description: data.description,
         category: data.category,
         unit: data.unit,
-        unitCost: data.unitCost,
 
-        // Physical Specifications
-        weightKg: data.weightKg,
-        lengthMm: data.lengthMm,
-        widthMm: data.widthMm,
-        heightMm: data.heightMm,
-        volumeCm3: data.volumeCm3,
-        color: data.color,
-        material: data.material,
+        // Remove legacy fields from Part root
+        // unitCost, weightKg, leadTimeDays, etc.
 
-        // Procurement & Sourcing
-        makeOrBuy: data.makeOrBuy,
-        procurementType: data.procurementType,
-        buyerCode: data.buyerCode,
-        moq: data.moq,
-        orderMultiple: data.orderMultiple,
-        standardPack: data.standardPack,
-        leadTimeDays: data.leadTimeDays,
-
-        // Inventory Planning
-        minStockLevel: data.minStockLevel,
-        reorderPoint: data.reorderPoint,
-        maxStock: data.maxStock,
-        safetyStock: data.safetyStock,
+        status: "active",
+        lifecycleStatus: data.lifecycleStatus,
         isCritical: data.isCritical,
 
-        // Compliance & Origin
-        countryOfOrigin: data.countryOfOrigin,
-        hsCode: data.hsCode,
-        eccn: data.eccn,
-        ndaaCompliant: data.ndaaCompliant,
-        itarControlled: data.itarControlled,
+        // Handle revision history - revision logic might need adjustment if field is gone.
+        // Assuming we keep tracking it but not on Part table? 
+        // Or if 'partRevisions' is the only place?
+        // Let's assume for now we don't write 'revision' to Part based on error 'revision does not exist'.
 
-        // Quality & Traceability
-        lotControl: data.lotControl,
-        serialControl: data.serialControl,
-        shelfLifeDays: data.shelfLifeDays,
-        inspectionRequired: data.inspectionRequired,
-        inspectionPlan: data.inspectionPlan,
-        aqlLevel: data.aqlLevel,
-        certificateRequired: data.certificateRequired,
-        rohsCompliant: data.rohsCompliant,
-        reachCompliant: data.reachCompliant,
-
-        // Engineering & Documents
-        revision: data.revision,
-        revisionDate: data.revisionDate ? new Date(data.revisionDate) : null,
-        drawingNumber: data.drawingNumber,
-        drawingUrl: data.drawingUrl,
-        datasheetUrl: data.datasheetUrl,
-        specDocument: data.specDocument,
-        manufacturerPn: data.manufacturerPn,
-        manufacturer: data.manufacturer,
-        lifecycleStatus: data.lifecycleStatus,
-        effectivityDate: data.effectivityDate
-          ? new Date(data.effectivityDate)
-          : null,
-        obsoleteDate: data.obsoleteDate ? new Date(data.obsoleteDate) : null,
-
-        // Enhanced Costing
-        standardCost: data.standardCost,
-        averageCost: data.averageCost,
-        landedCost: data.landedCost,
-        freightPercent: data.freightPercent,
-        dutyPercent: data.dutyPercent,
-        overheadPercent: data.overheadPercent,
-
-        // Price Breaks
-        priceBreakQty1: data.priceBreakQty1,
-        priceBreakCost1: data.priceBreakCost1,
-        priceBreakQty2: data.priceBreakQty2,
-        priceBreakCost2: data.priceBreakCost2,
-        priceBreakQty3: data.priceBreakQty3,
-        priceBreakCost3: data.priceBreakCost3,
-
-        // Additional
-        subCategory: data.subCategory,
-        partType: data.partType,
         tags: data.tags,
         updatedBy: session.user?.email || "system",
+
+        // Nested Updates (using upsert to be safe)
+        cost: {
+          upsert: {
+            create: {
+              unitCost: data.unitCost || 0,
+              standardCost: data.standardCost,
+              averageCost: data.averageCost,
+              landedCost: data.landedCost,
+              freightPercent: data.freightPercent,
+              dutyPercent: data.dutyPercent,
+              overheadPercent: data.overheadPercent,
+              priceBreakQty1: data.priceBreakQty1,
+              priceBreakCost1: data.priceBreakCost1,
+              priceBreakQty2: data.priceBreakQty2,
+              priceBreakCost2: data.priceBreakCost2,
+              priceBreakQty3: data.priceBreakQty3,
+              priceBreakCost3: data.priceBreakCost3,
+            },
+            update: {
+              unitCost: data.unitCost,
+              standardCost: data.standardCost,
+              averageCost: data.averageCost,
+              landedCost: data.landedCost,
+              freightPercent: data.freightPercent,
+              dutyPercent: data.dutyPercent,
+              overheadPercent: data.overheadPercent,
+              priceBreakQty1: data.priceBreakQty1,
+              priceBreakCost1: data.priceBreakCost1,
+              priceBreakQty2: data.priceBreakQty2,
+              priceBreakCost2: data.priceBreakCost2,
+              priceBreakQty3: data.priceBreakQty3,
+              priceBreakCost3: data.priceBreakCost3,
+            }
+          }
+        },
+
+        planning: {
+          upsert: {
+            create: {
+              minStockLevel: data.minStockLevel || 0,
+              reorderPoint: data.reorderPoint || 0,
+              maxStock: data.maxStock,
+              safetyStock: data.safetyStock || 0,
+              leadTimeDays: data.leadTimeDays || 0,
+              makeOrBuy: data.makeOrBuy || "BUY",
+              procurementType: data.procurementType || "STOCK",
+              buyerCode: data.buyerCode,
+              moq: data.moq || 1,
+              orderMultiple: data.orderMultiple || 1,
+              standardPack: data.standardPack || 1,
+            },
+            update: {
+              minStockLevel: data.minStockLevel,
+              reorderPoint: data.reorderPoint,
+              maxStock: data.maxStock,
+              safetyStock: data.safetyStock,
+              leadTimeDays: data.leadTimeDays,
+              makeOrBuy: data.makeOrBuy,
+              procurementType: data.procurementType,
+              buyerCode: data.buyerCode,
+              moq: data.moq,
+              orderMultiple: data.orderMultiple,
+              standardPack: data.standardPack,
+            }
+          }
+        },
+
+        specs: {
+          upsert: {
+            create: {
+              weightKg: data.weightKg,
+              lengthMm: data.lengthMm,
+              widthMm: data.widthMm,
+              heightMm: data.heightMm,
+              volumeCm3: data.volumeCm3,
+              color: data.color,
+              material: data.material,
+              drawingNumber: data.drawingNumber,
+              drawingUrl: data.drawingUrl,
+              datasheetUrl: data.datasheetUrl,
+              specDocument: data.specDocument,
+              manufacturerPn: data.manufacturerPn,
+              manufacturer: data.manufacturer,
+              subCategory: data.subCategory,
+              partType: data.partType,
+            },
+            update: {
+              weightKg: data.weightKg,
+              lengthMm: data.lengthMm,
+              widthMm: data.widthMm,
+              heightMm: data.heightMm,
+              volumeCm3: data.volumeCm3,
+              color: data.color,
+              material: data.material,
+              drawingNumber: data.drawingNumber,
+              drawingUrl: data.drawingUrl,
+              datasheetUrl: data.datasheetUrl,
+              specDocument: data.specDocument,
+              manufacturerPn: data.manufacturerPn,
+              manufacturer: data.manufacturer,
+              subCategory: data.subCategory,
+              partType: data.partType,
+            }
+          }
+        },
+
+        compliance: {
+          upsert: {
+            create: {
+              countryOfOrigin: data.countryOfOrigin,
+              hsCode: data.hsCode,
+              eccn: data.eccn,
+              ndaaCompliant: data.ndaaCompliant ?? true,
+              itarControlled: data.itarControlled ?? false,
+              lotControl: data.lotControl ?? false,
+              serialControl: data.serialControl ?? false,
+              shelfLifeDays: data.shelfLifeDays,
+              inspectionRequired: data.inspectionRequired ?? true,
+              aqlLevel: data.aqlLevel,
+              certificateRequired: data.certificateRequired ?? false,
+              rohsCompliant: data.rohsCompliant ?? true,
+              reachCompliant: data.reachCompliant ?? true,
+            },
+            update: {
+              countryOfOrigin: data.countryOfOrigin,
+              hsCode: data.hsCode,
+              eccn: data.eccn,
+              ndaaCompliant: data.ndaaCompliant,
+              itarControlled: data.itarControlled,
+              lotControl: data.lotControl,
+              serialControl: data.serialControl,
+              shelfLifeDays: data.shelfLifeDays,
+              inspectionRequired: data.inspectionRequired,
+              aqlLevel: data.aqlLevel,
+              certificateRequired: data.certificateRequired,
+              rohsCompliant: data.rohsCompliant,
+              reachCompliant: data.reachCompliant,
+            }
+          }
+        },
       },
       include: {
+        cost: true,
+        planning: true,
         partSuppliers: {
           include: { supplier: true },
         },

@@ -241,7 +241,6 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
 
   const handleDismiss = (id: string) => {
     // In a real app, this would remove the notification
-    console.log('Dismiss:', id);
   };
 
   return (

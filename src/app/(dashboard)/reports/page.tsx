@@ -316,7 +316,7 @@ export default function ReportsPage() {
                   {/* Simple Chart Visualization */}
                   {chart.type === 'BAR' && (
                     <div className="space-y-3">
-                      {chart.data.labels.map((label, idx) => {
+                      {chart?.data?.labels?.map((label, idx) => {
                         const value = chart.data.datasets[0].data[idx];
                         const maxValue = Math.max(...chart.data.datasets[0].data);
                         const percentage = (value / maxValue) * 100;
@@ -375,7 +375,7 @@ export default function ReportsPage() {
                         </svg>
                       </div>
                       <div className="ml-6 space-y-2">
-                        {chart.data.labels.map((label, idx) => {
+                        {chart?.data?.labels?.map((label, idx) => {
                           const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500'];
                           return (
                             <div key={label} className="flex items-center gap-2">

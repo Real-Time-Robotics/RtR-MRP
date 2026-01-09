@@ -1,24 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Users, Mail, Phone, CreditCard } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Users, Mail, Eye, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown } from '@/components/ui/action-dropdown';
-import { CustomerForm, DeleteCustomerDialog, Customer } from '@/components/forms/customer-form';
+import { CustomerFormDialog } from '@/components/customers/customer-form-dialog';
+import { DeleteCustomerDialog, Customer } from '@/components/forms/customer-form';
+import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Eye, Edit2, Trash2 } from 'lucide-react';
+import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
 // STATS
@@ -105,18 +98,6 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setFormOpen(true); };
   const handleDelete = (customer: Customer) => { setDeletingCustomer(customer); setDeleteOpen(true); };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === customers.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(customers.map((c) => c.id)));
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) newSelected.delete(id);
-    else newSelected.add(id);
-    setSelectedIds(newSelected);
-  };
-
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} khách hàng?`)) return;
@@ -127,6 +108,111 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
       setSelectedIds(new Set());
     } catch { toast.error('Có lỗi xảy ra khi xóa'); }
   };
+
+  const { exportToExcel } = useDataExport();
+
+  const handleExport = () => {
+    if (!customers || customers.length === 0) {
+      toast.warning('Không có dữ liệu để export');
+      return;
+    }
+
+    exportToExcel(customers, {
+      fileName: 'Customers_List',
+      sheetName: 'Customers'
+    });
+
+    toast.success('Đã xuất file Excel');
+  };
+
+  const handleImport = () => {
+    toast.info('Tính năng import đang được phát triển');
+  };
+
+  // Column definitions for DataTable
+  const columns: Column<Customer>[] = useMemo(() => [
+    {
+      key: 'code',
+      header: 'Mã',
+      width: '100px',
+      sortable: true,
+      render: (value) => <span className="font-mono font-medium">{value}</span>,
+    },
+    {
+      key: 'name',
+      header: 'Tên khách hàng',
+      width: '180px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'type',
+      header: 'Loại',
+      width: '100px',
+      render: (value) => (
+        <Badge variant="secondary" className="text-[10px] px-1 py-0">
+          {value || 'Other'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'contact',
+      header: 'Liên hệ',
+      width: '180px',
+      render: (_, row) => (
+        <div className="space-y-0.5">
+          {row.contactName && <div className="text-xs">{row.contactName}</div>}
+          {row.contactEmail && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Mail className="h-3 w-3" />
+              {row.contactEmail}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'creditLimit',
+      header: 'Hạn mức',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => value ? <span className="font-medium">${value.toLocaleString()}</span> : <span className="text-muted-foreground">-</span>,
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <Badge
+          variant={value === 'active' ? 'default' : 'secondary'}
+          className={cn(
+            value === 'active' && 'bg-green-100 text-green-700',
+            'text-[10px] px-1 py-0'
+          )}
+        >
+          {value === 'active' ? 'Hoạt động' : 'Ngưng'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '50px',
+      render: (_, row) => (
+        <ActionDropdown
+          items={[
+            { label: 'Xem chi tiết', icon: Eye, href: `/customers/${row.id}` },
+            { label: 'Chỉnh sửa', icon: Edit2, onClick: () => handleEdit(row), permission: 'orders:edit' },
+            { label: 'Xóa', icon: Trash2, onClick: () => handleDelete(row), variant: 'destructive', permission: 'orders:delete' },
+          ]}
+        />
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -149,6 +235,8 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             onAdd={handleAdd}
             onBulkDelete={handleBulkDelete}
             onRefresh={fetchCustomers}
+            onExport={handleExport}
+            onImport={handleImport}
             addPermission="orders:create"
             deletePermission="orders:delete"
             addLabel="Thêm khách hàng"
@@ -179,95 +267,34 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             onClearFilters={() => setFilters({ status: 'all', type: 'all' })}
           />
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox checked={customers.length > 0 && selectedIds.size === customers.length} onCheckedChange={toggleSelectAll} />
-                </TableHead>
-                <TableHead>Mã</TableHead>
-                <TableHead>Tên khách hàng</TableHead>
-                <TableHead>Loại</TableHead>
-                <TableHead>Liên hệ</TableHead>
-                <TableHead className="text-right">Hạn mức</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && customers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      Đang tải...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : customers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Chưa có khách hàng nào
-                  </TableCell>
-                </TableRow>
-              ) : (
-                customers.map((customer) => (
-                  <TableRow key={customer.id} className={cn(selectedIds.has(customer.id) && 'bg-muted/50')}>
-                    <TableCell>
-                      <Checkbox checked={selectedIds.has(customer.id)} onCheckedChange={() => toggleSelect(customer.id)} />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">{customer.code}</TableCell>
-                    <TableCell className="font-medium">{customer.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{customer.type || 'Other'}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {customer.contactName && (
-                          <div className="text-sm">{customer.contactName}</div>
-                        )}
-                        {customer.contactEmail && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="h-3 w-3" />
-                            {customer.contactEmail}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {customer.creditLimit ? (
-                        <span className="font-medium">${customer.creditLimit.toLocaleString()}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={customer.status === 'active' ? 'default' : 'secondary'}
-                        className={cn(customer.status === 'active' && 'bg-green-100 text-green-700')}
-                      >
-                        {customer.status === 'active' ? 'Hoạt động' : 'Ngưng'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <ActionDropdown
-                        items={[
-                          { label: 'Xem chi tiết', icon: Eye, href: `/customers/${customer.id}` },
-                          { label: 'Chỉnh sửa', icon: Edit2, onClick: () => handleEdit(customer), permission: 'orders:edit' },
-                          { label: 'Xóa', icon: Trash2, onClick: () => handleDelete(customer), variant: 'destructive', permission: 'orders:delete' },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={customers}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="Chưa có khách hàng nào"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Customers',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 
-      <CustomerForm open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={fetchCustomers} />
+      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={fetchCustomers} />
       <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={fetchCustomers} />
     </div>
   );

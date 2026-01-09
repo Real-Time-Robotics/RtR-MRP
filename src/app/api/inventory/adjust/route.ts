@@ -138,7 +138,6 @@ async function adjustHandler(
     }
   } catch {
     // Skip audit log if it fails
-    console.log('Could not create audit log');
   }
 
   return successResponse({

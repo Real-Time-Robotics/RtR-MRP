@@ -59,36 +59,36 @@ export async function GET(request: NextRequest) {
           : { partNumber: "asc" },
         include: includeRelations
           ? {
-              partSuppliers: {
-                include: { supplier: true },
-                orderBy: { isPreferred: "desc" },
-                take: 3, // Limit suppliers
-              },
-              partAlternates: {
-                include: { alternatePart: true },
-                where: { approved: true },
-                take: 3, // Limit alternates
-              },
-              partDocuments: {
-                take: 5, // Limit documents
-              },
-              partCertifications: {
-                where: {
-                  OR: [
-                    { expiryDate: null },
-                    { expiryDate: { gte: new Date() } },
-                  ],
-                },
-                take: 3, // Limit certifications
-              },
-            }
-          : {
-              partSuppliers: {
-                include: { supplier: true },
-                orderBy: { isPreferred: "desc" },
-                take: 1,
-              },
+            partSuppliers: {
+              include: { supplier: true },
+              orderBy: { isPreferred: "desc" },
+              take: 3, // Limit suppliers
             },
+            partAlternates: {
+              include: { alternatePart: true },
+              where: { approved: true },
+              take: 3, // Limit alternates
+            },
+            partDocuments: {
+              take: 5, // Limit documents
+            },
+            partCertifications: {
+              where: {
+                OR: [
+                  { expiryDate: null },
+                  { expiryDate: { gte: new Date() } },
+                ],
+              },
+              take: 3, // Limit certifications
+            },
+          }
+          : {
+            partSuppliers: {
+              include: { supplier: true },
+              orderBy: { isPreferred: "desc" },
+              take: 1,
+            },
+          },
       }),
     ]);
 
@@ -122,89 +122,113 @@ export async function POST(request: NextRequest) {
         description: data.description,
         category: data.category,
         unit: data.unit || "EA",
-        unitCost: data.unitCost || 0,
+        // unitCost moved to PartCost
 
-        // Physical Specifications
-        weightKg: data.weightKg,
-        lengthMm: data.lengthMm,
-        widthMm: data.widthMm,
-        heightMm: data.heightMm,
-        volumeCm3: data.volumeCm3,
-        color: data.color,
-        material: data.material,
+        // Move to PartSpecs
+        // weightKg, lengthMm, etc.
 
-        // Procurement & Sourcing
-        makeOrBuy: data.makeOrBuy || "BUY",
-        procurementType: data.procurementType || "STOCK",
-        buyerCode: data.buyerCode,
-        moq: data.moq || 1,
-        orderMultiple: data.orderMultiple || 1,
-        standardPack: data.standardPack || 1,
-        leadTimeDays: data.leadTimeDays || 0,
+        // Move to PartPlanning -> separate object/relation
+        // makeOrBuy, procurementType, etc.
 
-        // Inventory Planning
-        minStockLevel: data.minStockLevel || 0,
-        reorderPoint: data.reorderPoint || 0,
-        maxStock: data.maxStock,
-        safetyStock: data.safetyStock || 0,
-        isCritical: data.isCritical || false,
+        // Move to PartCompliance -> separate object/relation
+        // hsCode, etc.
 
-        // Compliance & Origin
-        countryOfOrigin: data.countryOfOrigin,
-        hsCode: data.hsCode,
-        eccn: data.eccn,
-        ndaaCompliant: data.ndaaCompliant ?? true,
-        itarControlled: data.itarControlled ?? false,
-
-        // Quality & Traceability
-        lotControl: data.lotControl ?? false,
-        serialControl: data.serialControl ?? false,
-        shelfLifeDays: data.shelfLifeDays,
-        inspectionRequired: data.inspectionRequired ?? true,
-        inspectionPlan: data.inspectionPlan,
-        aqlLevel: data.aqlLevel,
-        certificateRequired: data.certificateRequired ?? false,
-        rohsCompliant: data.rohsCompliant ?? true,
-        reachCompliant: data.reachCompliant ?? true,
-
-        // Engineering & Documents
-        revision: data.revision || "A",
-        revisionDate: data.revisionDate ? new Date(data.revisionDate) : null,
-        drawingNumber: data.drawingNumber,
-        drawingUrl: data.drawingUrl,
-        datasheetUrl: data.datasheetUrl,
-        specDocument: data.specDocument,
-        manufacturerPn: data.manufacturerPn,
-        manufacturer: data.manufacturer,
+        status: "active", // Explicitly set status to avoid legacy issues
         lifecycleStatus: data.lifecycleStatus || "ACTIVE",
-        effectivityDate: data.effectivityDate
-          ? new Date(data.effectivityDate)
-          : null,
-        obsoleteDate: data.obsoleteDate ? new Date(data.obsoleteDate) : null,
 
-        // Enhanced Costing
-        standardCost: data.standardCost,
-        averageCost: data.averageCost,
-        landedCost: data.landedCost,
-        freightPercent: data.freightPercent,
-        dutyPercent: data.dutyPercent,
-        overheadPercent: data.overheadPercent,
+        // Revision tracking
+        // revision: data.revision || "A", // Likely moved to PartRevision or kept on Part? Schema says kept on Part? Wait, checking schema...
+        // Revision tracking
+        revision: data.revision || "A",
 
-        // Price Breaks
-        priceBreakQty1: data.priceBreakQty1,
-        priceBreakCost1: data.priceBreakCost1,
-        priceBreakQty2: data.priceBreakQty2,
-        priceBreakCost2: data.priceBreakCost2,
-        priceBreakQty3: data.priceBreakQty3,
-        priceBreakCost3: data.priceBreakCost3,
-
-        // Additional
-        subCategory: data.subCategory,
-        partType: data.partType,
         tags: data.tags || [],
         createdBy: session.user?.email || "system",
+
+        // Nested Writes
+        cost: {
+          create: {
+            unitCost: data.unitCost || 0,
+            standardCost: data.standardCost,
+            averageCost: data.averageCost,
+            landedCost: data.landedCost,
+            freightPercent: data.freightPercent,
+            dutyPercent: data.dutyPercent,
+            overheadPercent: data.overheadPercent,
+
+            priceBreakQty1: data.priceBreakQty1,
+            priceBreakCost1: data.priceBreakCost1,
+            priceBreakQty2: data.priceBreakQty2,
+            priceBreakCost2: data.priceBreakCost2,
+            priceBreakQty3: data.priceBreakQty3,
+            priceBreakCost3: data.priceBreakCost3,
+          }
+        },
+
+        planning: {
+          create: {
+            minStockLevel: data.minStockLevel || 0,
+            reorderPoint: data.reorderPoint || 0,
+            maxStock: data.maxStock,
+            safetyStock: data.safetyStock || 0,
+            leadTimeDays: data.leadTimeDays || 0,
+            makeOrBuy: data.makeOrBuy || "BUY",
+            procurementType: data.procurementType || "STOCK",
+            buyerCode: data.buyerCode,
+            moq: data.moq || 1,
+            orderMultiple: data.orderMultiple || 1,
+            standardPack: data.standardPack || 1,
+          }
+        },
+
+        specs: {
+          create: {
+            weightKg: data.weightKg,
+            lengthMm: data.lengthMm,
+            widthMm: data.widthMm,
+            heightMm: data.heightMm,
+            volumeCm3: data.volumeCm3,
+            color: data.color,
+            material: data.material,
+            drawingNumber: data.drawingNumber,
+            drawingUrl: data.drawingUrl,
+            datasheetUrl: data.datasheetUrl,
+            specDocument: data.specDocument,
+            manufacturerPn: data.manufacturerPn,
+            manufacturer: data.manufacturer,
+            subCategory: data.subCategory,
+            partType: data.partType,
+          }
+        },
+
+        compliance: {
+          create: {
+            countryOfOrigin: data.countryOfOrigin,
+            hsCode: data.hsCode,
+            eccn: data.eccn,
+            ndaaCompliant: data.ndaaCompliant ?? true,
+            itarControlled: data.itarControlled ?? false,
+            lotControl: data.lotControl ?? false,
+            serialControl: data.serialControl ?? false,
+            shelfLifeDays: data.shelfLifeDays,
+            inspectionRequired: data.inspectionRequired ?? true,
+            // inspectionPlan: data.inspectionPlan, // Schema doesn't have this on PartCompliance?? Checking...
+            // Checking Schema again: PartCompliance lines 283+
+            // inspectionRequired Boolean
+            // certificateRequired Boolean
+            // Schema has 'inspectionPlans InspectionPlan[]' on Part (line 146).
+
+            aqlLevel: data.aqlLevel,
+            certificateRequired: data.certificateRequired ?? false,
+            rohsCompliant: data.rohsCompliant ?? true,
+            reachCompliant: data.reachCompliant ?? true,
+          }
+        },
       },
       include: {
+        cost: true,
+        planning: true,
+        specs: true,
+        compliance: true,
         partSuppliers: {
           include: { supplier: true },
         },

@@ -125,7 +125,6 @@ export class CircuitBreaker {
     }
 
     this.options.onStateChange?.(oldState, newState);
-    console.log(`[CircuitBreaker:${this.name}] ${oldState} -> ${newState}`);
   }
 
   getState(): CircuitState {
@@ -516,7 +515,6 @@ export class GracefulDegradation {
 
   private degrade(level: number): void {
     if (level > this.currentLevel) {
-      console.log(`[Degradation] Degrading to level ${level}: ${this.levels[level].name}`);
       this.currentLevel = level;
       this.levels[level].actions();
     }
@@ -524,7 +522,6 @@ export class GracefulDegradation {
 
   private recover(level: number): void {
     if (level < this.currentLevel) {
-      console.log(`[Degradation] Recovering to level ${level}`);
       this.currentLevel = level;
     }
   }

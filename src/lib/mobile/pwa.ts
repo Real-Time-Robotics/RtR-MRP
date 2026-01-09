@@ -47,7 +47,6 @@ export function initInstallPrompt(
   const handleAppInstalled = () => {
     isInstalled = true;
     deferredPrompt = null;
-    console.log("PWA installed successfully");
   };
 
   window.addEventListener("beforeinstallprompt", handleBeforeInstall);
@@ -62,7 +61,6 @@ export function initInstallPrompt(
 // Show install prompt
 export async function showInstallPrompt(): Promise<boolean> {
   if (!deferredPrompt) {
-    console.log("Install prompt not available");
     return false;
   }
 
@@ -90,7 +88,6 @@ export function getInstallStatus(): boolean {
 // Service worker registration
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) {
-    console.log("Service workers not supported");
     return null;
   }
 
@@ -99,8 +96,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: "/",
     });
 
-    console.log("Service worker registered:", registration.scope);
-
     // Check for updates on page load
     registration.addEventListener("updatefound", () => {
       const newWorker = registration.installing;
@@ -108,7 +103,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
         newWorker.addEventListener("statechange", () => {
           if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
             // New version available
-            console.log("New version available");
             dispatchUpdateEvent();
           }
         });

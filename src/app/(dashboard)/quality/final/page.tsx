@@ -1,22 +1,28 @@
 "use client";
 
+import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, CheckCircle, XCircle, Award } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
+
+interface FinalInspection {
+  id: string;
+  workOrderNumber: string;
+  productSku: string;
+  productName: string;
+  serialNumber: string;
+  inspectedBy: string;
+  status: string;
+  inspectionDate: string;
+  certificateIssued: boolean;
+}
 
 export default function FinalInspectionPage() {
   // Placeholder data - would come from API
-  const inspections = [
+  const inspections: FinalInspection[] = [
     {
       id: "1",
       workOrderNumber: "WO-2024-001",
@@ -62,6 +68,69 @@ export default function FinalInspectionPage() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  const columns: Column<FinalInspection>[] = useMemo(() => [
+    {
+      key: 'workOrderNumber',
+      header: 'Work Order',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'product',
+      header: 'Product',
+      width: '200px',
+      render: (_, row) => (
+        <div>
+          <div className="font-medium">{row.productSku}</div>
+          <div className="text-sm text-muted-foreground">{row.productName}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'serialNumber',
+      header: 'Serial Number',
+      width: '140px',
+      sortable: true,
+      render: (value) => <span className="font-mono">{value}</span>,
+    },
+    {
+      key: 'inspectedBy',
+      header: 'Inspector',
+      width: '120px',
+      sortable: true,
+    },
+    {
+      key: 'inspectionDate',
+      header: 'Date',
+      width: '100px',
+      sortable: true,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => getStatusBadge(value),
+    },
+    {
+      key: 'certificateIssued',
+      header: 'Certificate',
+      width: '100px',
+      align: 'center',
+      render: (value) => (
+        value ? (
+          <Badge className="bg-purple-100 text-purple-800">
+            <Award className="h-3 w-3 mr-1" />Issued
+          </Badge>
+        ) : (
+          <Badge variant="secondary">Pending</Badge>
+        )
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -129,46 +198,26 @@ export default function FinalInspectionPage() {
         <CardHeader>
           <CardTitle>Recent Final Inspections</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Work Order</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Serial Number</TableHead>
-                <TableHead>Inspector</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Certificate</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inspections.map((inspection) => (
-                <TableRow key={inspection.id}>
-                  <TableCell className="font-medium">{inspection.workOrderNumber}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{inspection.productSku}</div>
-                      <div className="text-sm text-muted-foreground">{inspection.productName}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono">{inspection.serialNumber}</TableCell>
-                  <TableCell>{inspection.inspectedBy}</TableCell>
-                  <TableCell>{inspection.inspectionDate}</TableCell>
-                  <TableCell>{getStatusBadge(inspection.status)}</TableCell>
-                  <TableCell>
-                    {inspection.certificateIssued ? (
-                      <Badge className="bg-purple-100 text-purple-800">
-                        <Award className="h-3 w-3 mr-1" />Issued
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Pending</Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={inspections}
+            columns={columns}
+            keyField="id"
+            emptyMessage="No inspections found"
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Final Inspections',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

@@ -112,11 +112,11 @@ const reportGenerationHandler: JobHandler<ReportData> = async (job, updateProgre
     case "sales":
       const salesWhere = dateRange
         ? {
-            orderDate: {
-              gte: new Date(dateRange.start),
-              lte: new Date(dateRange.end),
-            },
-          }
+          orderDate: {
+            gte: new Date(dateRange.start),
+            lte: new Date(dateRange.end),
+          },
+        }
         : {};
       data = await prisma.salesOrder.findMany({
         where: salesWhere,
@@ -132,11 +132,11 @@ const reportGenerationHandler: JobHandler<ReportData> = async (job, updateProgre
     case "production":
       const prodWhere = dateRange
         ? {
-            createdAt: {
-              gte: new Date(dateRange.start),
-              lte: new Date(dateRange.end),
-            },
-          }
+          createdAt: {
+            gte: new Date(dateRange.start),
+            lte: new Date(dateRange.end),
+          },
+        }
         : {};
       data = await prisma.workOrder.findMany({
         where: prodWhere,
@@ -224,7 +224,19 @@ const dataSyncHandler: JobHandler<DataSyncData> = async (job, updateProgress) =>
       if (item.partId && item._avg.unitPrice) {
         await prisma.part.update({
           where: { id: item.partId },
-          data: { averageCost: item._avg.unitPrice },
+          data: {
+            cost: {
+              upsert: {
+                create: {
+                  averageCost: item._avg.unitPrice,
+                  unitCost: item._avg.unitPrice, // Default if not exists
+                },
+                update: {
+                  averageCost: item._avg.unitPrice,
+                }
+              }
+            }
+          },
         });
       }
     }

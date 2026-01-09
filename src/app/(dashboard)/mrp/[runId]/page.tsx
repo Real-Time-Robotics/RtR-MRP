@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { MrpSummaryCards } from "@/components/mrp/mrp-summary-cards";
 import { SuggestionCard } from "@/components/mrp/suggestion-card";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 interface MrpRunData {
@@ -70,9 +71,20 @@ export default function MrpRunDetailPage() {
     }
   }, [runId]);
 
+  // Poll for updates if running
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let intervalId: NodeJS.Timeout;
+
+    if (data && (data.status === "running" || data.status === "queued")) {
+      intervalId = setInterval(() => {
+        fetchData();
+      }, 3000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [data, fetchData]);
 
   const handleApprove = async (id: string) => {
     await fetch(`/api/mrp/suggestions/${id}`, {
@@ -120,14 +132,51 @@ export default function MrpRunDetailPage() {
     );
   }
 
-  const filteredSuggestions = data.suggestions.filter((s) => {
+  // Show processing state
+  if (data.status === "queued" || data.status === "running") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={`MRP Run ${data.runNumber}`}
+          description={`Started on ${format(new Date(data.runDate), "MMM dd, yyyy 'at' HH:mm")}`}
+          backHref="/mrp"
+        />
+        <Card className="border-2 border-primary/20">
+          <CardContent className="flex flex-col items-center justify-center py-16 space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+              <div className="relative bg-background rounded-full p-4 border-2 border-primary">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-semibold tracking-tight">
+                {data.status === "queued" ? "MRP Job Queued" : "Calculation in Progress"}
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                The MRP engine is currently processing demand and inventory levels.
+                This page will automatically update when the calculation is complete.
+              </p>
+              <div className="pt-4">
+                <Badge variant="outline" className="animate-pulse">
+                  Status: {data.status.toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const filteredSuggestions = (data.suggestions || []).filter((s) => {
     if (actionFilter !== "all" && s.actionType !== actionFilter) return false;
     if (priorityFilter !== "all" && s.priority !== priorityFilter) return false;
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
     return true;
   });
 
-  const deferCount = data.suggestions.filter(
+  const deferCount = (data.suggestions || []).filter(
     (s) => s.actionType === "DEFER"
   ).length;
 

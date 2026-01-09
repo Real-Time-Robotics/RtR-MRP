@@ -1,14 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface AgingBucket {
   current: number;
@@ -40,6 +34,60 @@ export function AgingReport({ title, summary, details, entityLabel }: AgingRepor
   const formatCurrency = (value: number) => {
     return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
+
+  const columns: Column<AgingItem>[] = useMemo(() => [
+    {
+      key: 'entity',
+      header: entityLabel,
+      width: '200px',
+      render: (_, row) => (
+        <div>
+          <div className="font-medium">{row.entityCode}</div>
+          <div className="text-sm text-muted-foreground">{row.entityName}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'current',
+      header: 'Current',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => formatCurrency(value),
+    },
+    {
+      key: 'days30',
+      header: '1-30 Days',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-yellow-600">{formatCurrency(value)}</span>,
+    },
+    {
+      key: 'days60',
+      header: '31-60 Days',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-orange-600">{formatCurrency(value)}</span>,
+    },
+    {
+      key: 'days90Plus',
+      header: '90+ Days',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-red-600">{formatCurrency(value)}</span>,
+    },
+    {
+      key: 'total',
+      header: 'Total',
+      width: '100px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="font-medium">{formatCurrency(value)}</span>,
+    },
+  ], [entityLabel]);
 
   return (
     <Card>
@@ -80,57 +128,23 @@ export function AgingReport({ title, summary, details, entityLabel }: AgingRepor
         </div>
 
         {/* Detail Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{entityLabel}</TableHead>
-                <TableHead className="text-right">Current</TableHead>
-                <TableHead className="text-right">1-30 Days</TableHead>
-                <TableHead className="text-right">31-60 Days</TableHead>
-                <TableHead className="text-right">90+ Days</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No outstanding balances
-                  </TableCell>
-                </TableRow>
-              ) : (
-                details.map((item) => (
-                  <TableRow key={item.entityId}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{item.entityCode}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.entityName}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(item.current)}
-                    </TableCell>
-                    <TableCell className="text-right text-yellow-600">
-                      {formatCurrency(item.days30)}
-                    </TableCell>
-                    <TableCell className="text-right text-orange-600">
-                      {formatCurrency(item.days60)}
-                    </TableCell>
-                    <TableCell className="text-right text-red-600">
-                      {formatCurrency(item.days90Plus)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.total)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          data={details}
+          columns={columns}
+          keyField="entityId"
+          emptyMessage="No outstanding balances"
+          searchable={false}
+          stickyHeader
+          excelMode={{
+            enabled: true,
+            showRowNumbers: true,
+            columnHeaderStyle: 'field-names',
+            gridBorders: true,
+            showFooter: true,
+            sheetName: 'Aging Report',
+            compactMode: true,
+          }}
+        />
       </CardContent>
     </Card>
   );

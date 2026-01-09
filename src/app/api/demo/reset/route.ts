@@ -61,9 +61,6 @@ export async function POST() {
       });
     });
 
-    // Log the reset action
-    console.log(`[Demo Reset] Data reset by ${userEmail} at ${new Date().toISOString()}`);
-
     return NextResponse.json({
       success: true,
       message: 'Demo data has been reset successfully',

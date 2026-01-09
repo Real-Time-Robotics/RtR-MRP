@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useAIContextSync } from "@/hooks/use-ai-context-sync";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -224,6 +225,8 @@ export default function PartDetailPage() {
     }
     fetchPart();
   }, [params.id]);
+
+  useAIContextSync('part', part);
 
   if (loading) {
     return (

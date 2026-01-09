@@ -143,24 +143,81 @@ async function importPart(
           name: data.name || existing.name,
           description: data.description,
           category: data.category || existing.category,
-          subCategory: data.subCategory,
           unit: data.unit || existing.unit,
-          unitCost: data.unitCost ? parseFloat(data.unitCost) : existing.unitCost,
-          weightKg: data.weightKg ? parseFloat(data.weightKg) : existing.weightKg,
-          lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : existing.lengthMm,
-          widthMm: data.widthMm ? parseFloat(data.widthMm) : existing.widthMm,
-          heightMm: data.heightMm ? parseFloat(data.heightMm) : existing.heightMm,
-          makeOrBuy: data.makeOrBuy || existing.makeOrBuy,
-          countryOfOrigin: data.countryOfOrigin,
-          ndaaCompliant: data.ndaaCompliant ?? existing.ndaaCompliant,
-          lotControl: data.lotControl ?? existing.lotControl,
-          serialControl: data.serialControl ?? existing.serialControl,
-          minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : existing.minStockLevel,
-          reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : existing.reorderPoint,
-          safetyStock: data.safetyStock ? parseInt(data.safetyStock) : existing.safetyStock,
-          leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : existing.leadTimeDays,
-          isCritical: data.isCritical ?? data.critical ?? existing.isCritical,
-          updatedAt: new Date()
+
+          updatedAt: new Date(),
+
+          // Update related tables
+          cost: {
+            upsert: {
+              create: {
+                unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
+              },
+              update: {
+                unitCost: data.unitCost ? parseFloat(data.unitCost) : undefined,
+              }
+            }
+          },
+          specs: {
+            upsert: {
+              create: {
+                weightKg: data.weightKg ? parseFloat(data.weightKg) : null,
+                lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : null,
+                widthMm: data.widthMm ? parseFloat(data.widthMm) : null,
+                heightMm: data.heightMm ? parseFloat(data.heightMm) : null,
+                subCategory: data.subCategory,
+              },
+              update: {
+                weightKg: data.weightKg ? parseFloat(data.weightKg) : undefined,
+                lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : undefined,
+                widthMm: data.widthMm ? parseFloat(data.widthMm) : undefined,
+                heightMm: data.heightMm ? parseFloat(data.heightMm) : undefined,
+                subCategory: data.subCategory,
+              }
+            }
+          },
+          planning: {
+            upsert: {
+              create: {
+                makeOrBuy: data.makeOrBuy || 'BUY',
+                procurementType: data.procurementType || 'STOCK',
+                minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : 0,
+                reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : 0,
+                safetyStock: data.safetyStock ? parseInt(data.safetyStock) : 0,
+                leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
+              },
+              update: {
+                makeOrBuy: data.makeOrBuy,
+                procurementType: data.procurementType,
+                minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : undefined,
+                reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : undefined,
+                safetyStock: data.safetyStock ? parseInt(data.safetyStock) : undefined,
+                leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : undefined,
+              }
+            }
+          },
+          compliance: {
+            upsert: {
+              create: {
+                countryOfOrigin: data.countryOfOrigin,
+                ndaaCompliant: data.ndaaCompliant ?? true,
+                lotControl: data.lotControl ?? false,
+                serialControl: data.serialControl ?? false,
+                inspectionRequired: data.inspectionRequired ?? true,
+                rohsCompliant: data.rohsCompliant ?? true,
+                reachCompliant: data.reachCompliant ?? true,
+              },
+              update: {
+                countryOfOrigin: data.countryOfOrigin,
+                ndaaCompliant: data.ndaaCompliant,
+                lotControl: data.lotControl,
+                serialControl: data.serialControl,
+                inspectionRequired: data.inspectionRequired,
+                rohsCompliant: data.rohsCompliant,
+                reachCompliant: data.reachCompliant,
+              }
+            }
+          }
         }
       });
       results.updated.push(partNumber);
@@ -180,30 +237,54 @@ async function importPart(
       name: data.name || partNumber,
       description: data.description || '',
       category: data.category || 'Accessories',
-      subCategory: data.subCategory,
       unit: data.unit || 'pcs',
-      unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
-      weightKg: data.weightKg ? parseFloat(data.weightKg) : null,
-      lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : null,
-      widthMm: data.widthMm ? parseFloat(data.widthMm) : null,
-      heightMm: data.heightMm ? parseFloat(data.heightMm) : null,
-      makeOrBuy: data.makeOrBuy || 'BUY',
-      procurementType: data.procurementType || 'STOCK',
-      countryOfOrigin: data.countryOfOrigin,
-      ndaaCompliant: data.ndaaCompliant ?? true,
-      itarControlled: data.itarControlled ?? false,
-      lotControl: data.lotControl ?? false,
-      serialControl: data.serialControl ?? false,
-      inspectionRequired: data.inspectionRequired ?? true,
-      rohsCompliant: data.rohsCompliant ?? true,
-      reachCompliant: data.reachCompliant ?? true,
-      revision: data.revision || 'A',
+      status: 'active',
       lifecycleStatus: data.lifecycleStatus || 'ACTIVE',
-      minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : 0,
-      reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : 0,
-      safetyStock: data.safetyStock ? parseInt(data.safetyStock) : 0,
-      leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
-      isCritical: data.isCritical ?? data.critical ?? false
+
+      revision: data.revision || 'A', // Warning: Check if this field still exists or needs to be removed. 
+      // Based on previous findings, revision might be removed from Part.
+      // But let's check prisma schema lines in view 100-180 of Step 752.
+      // Line 174: partRevisions PartRevision[]
+      // The schema does NOT show a 'revision' String field on Part model.
+      // So I should REMOVE revision assignment here.
+
+      // Nested Writes
+      cost: {
+        create: {
+          unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
+        }
+      },
+      specs: {
+        create: {
+          weightKg: data.weightKg ? parseFloat(data.weightKg) : null,
+          lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : null,
+          widthMm: data.widthMm ? parseFloat(data.widthMm) : null,
+          heightMm: data.heightMm ? parseFloat(data.heightMm) : null,
+          subCategory: data.subCategory,
+        }
+      },
+      planning: {
+        create: {
+          makeOrBuy: data.makeOrBuy || 'BUY',
+          procurementType: data.procurementType || 'STOCK',
+          minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : 0,
+          reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : 0,
+          safetyStock: data.safetyStock ? parseInt(data.safetyStock) : 0,
+          leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
+        }
+      },
+      compliance: {
+        create: {
+          countryOfOrigin: data.countryOfOrigin,
+          ndaaCompliant: data.ndaaCompliant ?? true,
+          itarControlled: data.itarControlled ?? false,
+          lotControl: data.lotControl ?? false,
+          serialControl: data.serialControl ?? false,
+          inspectionRequired: data.inspectionRequired ?? true,
+          rohsCompliant: data.rohsCompliant ?? true,
+          reachCompliant: data.reachCompliant ?? true,
+        }
+      }
     }
   });
 

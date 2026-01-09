@@ -119,14 +119,14 @@ export default function SupplierDashboardPage() {
       </div>
 
       {/* Urgent Notifications */}
-      {data.notifications.filter(n => n.urgent).length > 0 && (
+      {data?.notifications?.filter(n => n.urgent).length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             <h3 className="font-semibold text-amber-800 dark:text-amber-200">Thông báo quan trọng</h3>
           </div>
           <div className="space-y-2">
-            {data.notifications.filter(n => n.urgent).map((notif) => (
+            {data?.notifications?.filter(n => n.urgent).map((notif) => (
               <div key={notif.id} className="flex items-center justify-between text-sm">
                 <span className="text-amber-700 dark:text-amber-300">{notif.message}</span>
                 <span className="text-amber-500 text-xs">{notif.time}</span>
@@ -301,7 +301,7 @@ export default function SupplierDashboardPage() {
           </div>
 
           <div className="space-y-4">
-            {data.notifications.map((notif) => (
+            {data?.notifications?.map((notif) => (
               <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                 <div className={cn(
                   'p-2 rounded-lg shrink-0',

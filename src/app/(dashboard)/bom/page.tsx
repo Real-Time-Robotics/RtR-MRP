@@ -1,48 +1,23 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Eye, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BOMHeader, BOMTableHeader, BOMNoProducts } from "@/components/bom/bom-content";
-import prisma from "@/lib/prisma";
+import { BOMHeader, BOMTableHeader } from "@/components/bom/bom-content";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
-async function getProducts() {
-  const products = await prisma.product.findMany({
-    where: { status: "active" },
-    include: {
-      bomHeaders: {
-        where: { status: "active" },
-        include: {
-          bomLines: true,
-        },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
-
-  return products.map((product) => {
-    const activeBom = product.bomHeaders[0];
-    const totalParts = activeBom?.bomLines.length || 0;
-
-    return {
-      id: product.id,
-      sku: product.sku,
-      name: product.name,
-      basePrice: product.basePrice || 0,
-      status: product.status,
-      bomVersion: activeBom?.version || "N/A",
-      totalParts,
-      hasBom: !!activeBom,
-    };
-  });
+interface ProductWithBOM {
+  id: string;
+  sku: string;
+  name: string;
+  basePrice: number;
+  status: string;
+  bomVersion: string;
+  totalParts: number;
+  hasBom: boolean;
 }
 
 function formatCurrency(amount: number) {
@@ -54,8 +29,92 @@ function formatCurrency(amount: number) {
   }).format(amount);
 }
 
-export default async function BOMPage() {
-  const products = await getProducts();
+export default function BOMPage() {
+  const [products, setProducts] = useState<ProductWithBOM[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await fetch("/api/bom/products");
+        const data = await res.json();
+        setProducts(data.data || []);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  // Column definitions for DataTable
+  const columns: Column<ProductWithBOM>[] = useMemo(() => [
+    {
+      key: 'sku',
+      header: 'SKU',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-mono font-medium">{value}</span>,
+    },
+    {
+      key: 'name',
+      header: 'Product Name',
+      width: '200px',
+      sortable: true,
+    },
+    {
+      key: 'bomVersion',
+      header: 'BOM Version',
+      width: '100px',
+      align: 'center',
+      render: (value, row) => (
+        row.hasBom ? (
+          <Badge variant="secondary">{value}</Badge>
+        ) : (
+          <Badge variant="outline">No BOM</Badge>
+        )
+      ),
+    },
+    {
+      key: 'totalParts',
+      header: 'Parts',
+      width: '80px',
+      align: 'center',
+      sortable: true,
+    },
+    {
+      key: 'basePrice',
+      header: 'Base Price',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => <span className="font-mono">{formatCurrency(value)}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: '150px',
+      align: 'right',
+      render: (_, row) => (
+        <div className="flex items-center justify-end gap-2">
+          <Link href={`/bom/${row.id}`}>
+            <Button variant="ghost" size="sm">
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </Link>
+          <Link href={`/bom/${row.id}/explode`}>
+            <Button variant="outline" size="sm">
+              Explode
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -63,66 +122,27 @@ export default async function BOMPage() {
 
       <Card>
         <BOMTableHeader />
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SKU</TableHead>
-                <TableHead>Product Name</TableHead>
-                <TableHead>BOM Version</TableHead>
-                <TableHead className="text-center">Parts</TableHead>
-                <TableHead className="text-right">Base Price</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <BOMNoProducts />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-mono font-medium">
-                      {product.sku}
-                    </TableCell>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>
-                      {product.hasBom ? (
-                        <Badge variant="secondary">{product.bomVersion}</Badge>
-                      ) : (
-                        <Badge variant="outline">No BOM</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {product.totalParts}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(product.basePrice)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/bom/${product.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </Link>
-                        <Link href={`/bom/${product.id}/explode`}>
-                          <Button variant="outline" size="sm">
-                            Explode
-                            <ArrowRight className="h-4 w-4 ml-1" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={products}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="No products found. Create a product first."
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'BOM Products',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

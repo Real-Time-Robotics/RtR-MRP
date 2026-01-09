@@ -227,7 +227,7 @@ export default function CustomerDeliveriesPage() {
               <div className="p-4">
                 <p className="text-sm font-medium mb-2">Danh sách hàng ({delivery.items.length})</p>
                 <div className="space-y-2">
-                  {delivery.items.map(item => (
+                  {delivery?.items?.map(item => (
                     <div key={item.id} className="flex items-center justify-between text-sm bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
                       <div className="flex items-center gap-3">
                         <Package className="w-5 h-5 text-gray-400" />

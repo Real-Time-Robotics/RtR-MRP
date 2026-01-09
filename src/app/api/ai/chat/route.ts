@@ -102,7 +102,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
 
     // Detect intent from message
     const detectedIntent = detectIntent(userMessage);
-    console.log('[AI Chat] Intent detected:', detectedIntent.intent, 'Confidence:', detectedIntent.confidence);
 
     // Handle help intent directly
     if (detectedIntent.intent === 'help') {
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     const queryResult = await queryExecutor.execute(detectedIntent);
 
     if (!queryResult.success) {
-      console.error('[AI Chat] Query execution failed:', queryResult.error);
+      // Query execution failed silently - will use fallback response
     }
 
     // Build prompt with context
@@ -147,15 +146,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     // Get AI provider and make request
     const aiProvider = getAIProvider();
     
-    // Listen for provider events (for logging)
-    aiProvider.on('providerAttempt', ({ provider }) => {
-      console.log(`[AI Chat] Trying provider: ${provider}`);
-    });
-    
-    aiProvider.on('providerFailed', ({ provider, error, willRetry }) => {
-      console.log(`[AI Chat] Provider ${provider} failed: ${error}. Will retry: ${willRetry}`);
-    });
-
     // Make the AI request
     const aiResponse = await aiProvider.chat({
       messages,
@@ -165,7 +155,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     });
 
     const totalLatency = Date.now() - startTime;
-    console.log(`[AI Chat] Response received from ${aiResponse.provider} in ${aiResponse.latency}ms (total: ${totalLatency}ms)`);
 
     return NextResponse.json({
       success: true,

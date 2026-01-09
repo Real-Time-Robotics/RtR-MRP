@@ -1,19 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
 import { SalesOrderForm, DeleteSalesOrderDialog, SalesOrder } from '@/components/forms/sales-order-form';
@@ -21,6 +11,7 @@ import { OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
 // TYPES
@@ -190,24 +181,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     toast.info('Tính năng import đang được phát triển');
   };
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === orders.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(orders.map((o) => o.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
-
   // Create action items for each row
   const createOrderActions = (order: SalesOrder): ActionDropdownItem[] => [
     {
@@ -228,6 +201,80 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       disabled: ['completed', 'cancelled'].includes(order.status),
     },
   ];
+
+  // Column definitions for DataTable
+  const columns: Column<SalesOrder>[] = useMemo(() => [
+    {
+      key: 'orderNumber',
+      header: 'Order #',
+      width: '120px',
+      sortable: true,
+      render: (value, row) => (
+        <Link href={`/orders/${row.id}`} className="font-mono font-medium text-primary hover:underline">
+          {value}
+        </Link>
+      ),
+    },
+    {
+      key: 'customer',
+      header: 'Khách hàng',
+      width: '150px',
+      sortable: true,
+      render: (value) => value?.name || '-',
+    },
+    {
+      key: 'orderDate',
+      header: 'Ngày đặt',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+    },
+    {
+      key: 'requiredDate',
+      header: 'Ngày yêu cầu',
+      width: '100px',
+      sortable: true,
+      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+    },
+    {
+      key: 'priority',
+      header: 'Ưu tiên',
+      width: '80px',
+      align: 'center',
+      render: (value) => (
+        <span className={cn(
+          'capitalize text-xs',
+          value === 'urgent' && 'text-red-600 font-medium',
+          value === 'high' && 'text-amber-600'
+        )}>
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'totalAmount',
+      header: 'Giá trị',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => formatCurrency(value || 0),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '110px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <OrderStatusBadge status={value} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '50px',
+      render: (_, row) => <ActionDropdown items={createOrderActions(row)} />,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -293,90 +340,30 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             onClearFilters={() => setFilters({ status: 'all', priority: 'all' })}
           />
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={orders.length > 0 && selectedIds.size === orders.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Order #</TableHead>
-                <TableHead>Khách hàng</TableHead>
-                <TableHead>Ngày đặt</TableHead>
-                <TableHead>Ngày yêu cầu</TableHead>
-                <TableHead>Ưu tiên</TableHead>
-                <TableHead className="text-right">Giá trị</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      Đang tải...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : orders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <p className="text-muted-foreground">Chưa có đơn hàng nào</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                orders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className={cn(selectedIds.has(order.id) && 'bg-muted/50')}
-                  >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(order.id)}
-                        onCheckedChange={() => toggleSelect(order.id)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="hover:underline text-primary"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{order.customer?.name || '-'}</TableCell>
-                    <TableCell>{format(new Date(order.orderDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>{format(new Date(order.requiredDate), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'capitalize',
-                          order.priority === 'urgent' && 'text-red-600 font-medium',
-                          order.priority === 'high' && 'text-amber-600'
-                        )}
-                      >
-                        {order.priority}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(order.totalAmount || 0)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <OrderStatusBadge status={order.status} />
-                    </TableCell>
-                    <TableCell>
-                      <ActionDropdown items={createOrderActions(order)} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={orders}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="Chưa có đơn hàng nào"
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Orders',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 

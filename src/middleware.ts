@@ -69,22 +69,23 @@ function getRequiredRoles(pathname: string): string[] | null {
   return null;
 }
 
+import { hasPermission } from './lib/roles';
+
+// ...
+
 function hasRole(userRole: string, requiredRoles: string[]): boolean {
-  const roleHierarchy: Record<string, number> = {
-    admin: 100,
-    manager: 80,
-    supervisor: 60,
-    planner: 50,
-    quality: 35,
-    operator: 40,
-    viewer: 20,
-    user: 10,
-  };
+  // Check if user has AT LEAST one of the required roles (or higher authority)
+  // Logic refactored to check against the minimum level required by the route.
+  // Actually, usually routes require *specific* minimal usage.
+  // The logic in original middleware was: 
+  // const minRequiredLevel = Math.min(...requiredRoles.map(r => roleHierarchy[r] || 100));
+  // return userLevel >= minRequiredLevel;
 
-  const userLevel = roleHierarchy[userRole] || 0;
-  const minRequiredLevel = Math.min(...requiredRoles.map(r => roleHierarchy[r] || 100));
+  // We will defer to the helper but since requiredRoles is an array, we find the "lowest" privilege needed?
+  // Or is it "Allows [admin, planner]" means "Planner OR Admin"? Yes.
+  // So we just need to satisfy one of them.
 
-  return userLevel >= minRequiredLevel;
+  return requiredRoles.some(role => hasPermission(userRole, role as any));
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {

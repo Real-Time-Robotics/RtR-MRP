@@ -26,6 +26,8 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
     const parts = await prisma.part.findMany({
       include: {
         inventory: true,
+        planning: true,
+        cost: true,
         partSuppliers: {
           include: { supplier: true },
           where: { isPreferred: true },
@@ -39,9 +41,12 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
         0
       );
 
-      if (totalStock < part.reorderPoint) {
-        const urgency = totalStock < part.safetyStock ? "HIGH" : "MEDIUM";
-        const shortage = part.reorderPoint - totalStock;
+      const reorderPoint = part.planning?.reorderPoint || 0;
+      const safetyStock = part.planning?.safetyStock || 0;
+
+      if (totalStock < reorderPoint) {
+        const urgency = totalStock < safetyStock ? "HIGH" : "MEDIUM";
+        const shortage = reorderPoint - totalStock;
         const supplier = part.partSuppliers[0]?.supplier;
 
         recommendations.push({
@@ -50,9 +55,9 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
           priority: urgency,
           category: "inventory",
           title: `Reorder ${part.partNumber}`,
-          description: `Stock at ${totalStock} units, below reorder point of ${part.reorderPoint}. Need to order ${shortage}+ units.`,
+          description: `Stock at ${totalStock} units, below reorder point of ${reorderPoint}. Need to order ${shortage}+ units.`,
           impact: "Prevents potential stock-out affecting production",
-          savingsEstimate: shortage * part.unitCost * 0.1,
+          savingsEstimate: shortage * (part.cost?.unitCost || 0) * 0.1,
           confidence: 0.92,
           partId: part.id,
           supplierId: supplier?.id,
@@ -61,9 +66,10 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
       }
 
       // Safety stock recommendation
+
       if (
-        totalStock > part.safetyStock &&
-        totalStock < part.safetyStock * 1.5 &&
+        totalStock > safetyStock &&
+        totalStock < safetyStock * 1.5 &&
         part.isCritical
       ) {
         recommendations.push({
@@ -72,7 +78,7 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
           priority: "MEDIUM",
           category: "inventory",
           title: `Increase safety stock for ${part.partNumber}`,
-          description: `Critical part with minimal buffer. Consider increasing safety stock from ${part.safetyStock} to ${Math.round(part.safetyStock * 1.5)} units.`,
+          description: `Critical part with minimal buffer. Consider increasing safety stock from ${safetyStock} to ${Math.round(safetyStock * 1.5)} units.`,
           impact: "Reduces risk of production delays",
           confidence: 0.78,
           partId: part.id,

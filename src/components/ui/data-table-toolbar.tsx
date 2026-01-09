@@ -70,6 +70,10 @@ interface DataTableToolbarProps {
 
   // Style
   className?: string;
+
+  // View Options
+  density?: 'default' | 'compact';
+  onDensityChange?: (density: 'default' | 'compact') => void;
 }
 
 interface FilterConfig {
@@ -104,6 +108,8 @@ export function DataTableToolbar({
   onClearFilters,
   customActions,
   className,
+  density,
+  onDensityChange,
 }: DataTableToolbarProps) {
   const { data: session } = useSession();
 
@@ -228,8 +234,41 @@ export function DataTableToolbar({
           {onAdd && can(addPermission) && (
             <Button size="sm" onClick={onAdd} className="h-9">
               <Plus className="h-4 w-4 mr-2" />
-              {addLabel}
             </Button>
+          )}
+
+          {/* Density Toggle */}
+          {onDensityChange && (
+            <div className="flex items-center border rounded-md overflow-hidden h-9 ml-2">
+              <button
+                onClick={() => onDensityChange('default')}
+                title="Comfortable"
+                className={cn(
+                  "px-2 h-full flex items-center justify-center transition-colors border-r",
+                  (!density || density === 'default')
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
+                    : "bg-white dark:bg-slate-950 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900"
+                )}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onDensityChange('compact')}
+                title="Compact"
+                className={cn(
+                  "px-2 h-full flex items-center justify-center transition-colors",
+                  density === 'compact'
+                    ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium"
+                    : "bg-white dark:bg-slate-950 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900"
+                )}
+              >
+                <div className="flex flex-col gap-[2px]">
+                  <div className="h-[1px] w-3 bg-current"></div>
+                  <div className="h-[1px] w-3 bg-current"></div>
+                  <div className="h-[1px] w-3 bg-current"></div>
+                </div>
+              </button>
+            </div>
           )}
         </div>
       </div>

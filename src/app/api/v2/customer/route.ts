@@ -431,8 +431,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const body = await request.json();
     const { action, ...data } = body;
 
-    console.log(`[Customer API] Action: ${action}`, data);
-
     switch (action) {
       // Create support ticket
       case 'create_ticket': {

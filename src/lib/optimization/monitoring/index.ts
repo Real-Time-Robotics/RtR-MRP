@@ -543,20 +543,17 @@ export function startMonitoring(intervalMs = 30000): void {
   if (monitoringInterval) return;
 
   setupDefaultAlerts();
-  
+
   monitoringInterval = setInterval(() => {
     collectSystemMetrics();
     alertManager.checkRules();
   }, intervalMs);
-
-  console.log(`[Monitoring] Started with ${intervalMs}ms interval`);
 }
 
 export function stopMonitoring(): void {
   if (monitoringInterval) {
     clearInterval(monitoringInterval);
     monitoringInterval = null;
-    console.log('[Monitoring] Stopped');
   }
 }
 

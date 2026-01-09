@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AlertTriangle, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface ShortageItem {
   id: string;
@@ -43,21 +44,94 @@ export default function ShortagesPage() {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case "critical":
-        return "destructive";
+        return <Badge variant="destructive">{priority}</Badge>;
       case "high":
-        return "default";
+        return <Badge variant="default">{priority}</Badge>;
       case "medium":
-        return "secondary";
+        return <Badge variant="secondary">{priority}</Badge>;
       default:
-        return "outline";
+        return <Badge variant="outline">{priority}</Badge>;
     }
   };
 
   const totalShortfall = shortages.reduce((sum, s) => sum + s.shortfallQty, 0);
   const criticalCount = shortages.filter((s) => s.priority === "critical").length;
+
+  const columns: Column<ShortageItem>[] = useMemo(() => [
+    {
+      key: 'part',
+      header: 'Part',
+      width: '200px',
+      render: (_, row) => (
+        <div>
+          <p className="font-medium">{row.partNumber}</p>
+          <p className="text-sm text-muted-foreground">{row.partName}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'currentStock',
+      header: 'Current',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'safetyStock',
+      header: 'Safety',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'requiredQty',
+      header: 'Required',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'shortfallQty',
+      header: 'Shortfall',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+      render: (value) => (
+        <span className="font-bold text-red-600">-{value}</span>
+      ),
+    },
+    {
+      key: 'earliestNeed',
+      header: 'Earliest Need',
+      width: '110px',
+      sortable: true,
+      render: (value) => format(new Date(value), "MMM dd, yyyy"),
+    },
+    {
+      key: 'supplier',
+      header: 'Supplier',
+      width: '150px',
+      render: (value, row) => value ? (
+        <div>
+          <p>{value}</p>
+          <p className="text-sm text-muted-foreground">{row.leadTimeDays} days lead time</p>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      width: '90px',
+      align: 'center',
+      sortable: true,
+      render: (value) => getPriorityBadge(value),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -116,77 +190,27 @@ export default function ShortagesPage() {
             Shortage Details
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : shortages.length === 0 ? (
-            <div className="text-center py-8">
-              <AlertTriangle className="h-12 w-12 mx-auto text-green-500 mb-4" />
-              <p className="text-lg font-medium">No Shortages Detected</p>
-              <p className="text-muted-foreground">
-                All parts have sufficient inventory to meet current demand
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-sm text-muted-foreground">
-                    <th className="text-left py-3 px-4">Part</th>
-                    <th className="text-right py-3 px-4">Current</th>
-                    <th className="text-right py-3 px-4">Safety</th>
-                    <th className="text-right py-3 px-4">Required</th>
-                    <th className="text-right py-3 px-4 text-red-600">Shortfall</th>
-                    <th className="text-left py-3 px-4">Earliest Need</th>
-                    <th className="text-left py-3 px-4">Supplier</th>
-                    <th className="text-center py-3 px-4">Priority</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shortages.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div>
-                          <p className="font-medium">{item.partNumber}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.partName}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right">{item.currentStock}</td>
-                      <td className="py-3 px-4 text-right">{item.safetyStock}</td>
-                      <td className="py-3 px-4 text-right">{item.requiredQty}</td>
-                      <td className="py-3 px-4 text-right font-bold text-red-600">
-                        -{item.shortfallQty}
-                      </td>
-                      <td className="py-3 px-4">
-                        {format(new Date(item.earliestNeed), "MMM dd, yyyy")}
-                      </td>
-                      <td className="py-3 px-4">
-                        {item.supplier ? (
-                          <div>
-                            <p>{item.supplier}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {item.leadTimeDays} days lead time
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge variant={getPriorityColor(item.priority)}>
-                          {item.priority}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            data={shortages}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="No shortages detected. All parts have sufficient inventory."
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Shortages',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

@@ -11,7 +11,10 @@ export type ExceptionType =
   | "PAST_DUE"
   | "SHORTAGE"
   | "EXCESS"
-  | "LEAD_TIME_VIOLATION";
+  | "SHORTAGE"
+  | "EXCESS"
+  | "LEAD_TIME_VIOLATION"
+  | "SAFETY_STOCK_VIOLATION";
 
 export type Severity = "INFO" | "WARNING" | "CRITICAL";
 
@@ -105,7 +108,7 @@ async function detectPastDuePurchaseOrders(): Promise<DetectedExceptionData[]> {
       if (openQty > 0) {
         const daysLate = Math.floor(
           (today.getTime() - (po.expectedDate?.getTime() || 0)) /
-            (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24)
         );
 
         exceptions.push({
@@ -138,6 +141,7 @@ async function detectShortages(): Promise<DetectedExceptionData[]> {
     },
     include: {
       inventory: true,
+      planning: true,
     },
   });
 
@@ -147,16 +151,24 @@ async function detectShortages(): Promise<DetectedExceptionData[]> {
       0
     );
 
-    if (totalOnHand < part.safetyStock) {
-      const shortage = part.safetyStock - totalOnHand;
+    // Check safety stock
+    const safetyStock = part.planning?.safetyStock || 0;
+    if (totalOnHand < safetyStock) {
+      const shortage = safetyStock - totalOnHand;
+      let severity: Severity = "INFO";
+      if (shortage / safetyStock >= 0.5) {
+        severity = "CRITICAL";
+      } else if (shortage / safetyStock > 0) {
+        severity = "WARNING";
+      }
 
       exceptions.push({
-        exceptionType: "SHORTAGE",
-        severity: totalOnHand <= 0 ? "CRITICAL" : "WARNING",
         entityType: "PART",
         entityId: part.id,
         partId: part.id,
-        message: `${part.partNumber} is ${shortage} units below safety stock (${part.safetyStock})`,
+        exceptionType: "SAFETY_STOCK_VIOLATION",
+        severity: severity,
+        message: `${part.partNumber} is ${shortage} units below safety stock (${safetyStock})`,
         quantity: shortage,
       });
     }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAIContextSync } from "@/hooks/use-ai-context-sync";
 import { Loader2, Play, Pause, CheckCircle, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface WorkOrderData {
   id: string;
@@ -73,6 +75,8 @@ export default function WorkOrderDetailPage() {
     fetchData();
   }, [fetchData]);
 
+  useAIContextSync('production', data);
+
   const handleAllocate = async () => {
     setAllocating(true);
     try {
@@ -121,11 +125,57 @@ export default function WorkOrderDetailPage() {
   const materialReadiness =
     data.allocations.length > 0
       ? Math.round(
-          (data.allocations.reduce((sum, a) => sum + a.allocatedQty, 0) /
-            data.allocations.reduce((sum, a) => sum + a.requiredQty, 0)) *
-            100
-        )
+        (data.allocations.reduce((sum, a) => sum + a.allocatedQty, 0) /
+          data.allocations.reduce((sum, a) => sum + a.requiredQty, 0)) *
+        100
+      )
       : 0;
+
+  const allocationColumns: Column<WorkOrderData['allocations'][0]>[] = useMemo(() => [
+    {
+      key: 'part',
+      header: 'Part',
+      width: '200px',
+      render: (_, row) => (
+        <div>
+          <p className="font-medium">{row.part.partNumber}</p>
+          <p className="text-sm text-muted-foreground">{row.part.name}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'requiredQty',
+      header: 'Required',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'allocatedQty',
+      header: 'Allocated',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'issuedQty',
+      header: 'Issued',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      align: 'center',
+      render: (_, row) => (
+        <Badge variant={row.allocatedQty >= row.requiredQty ? "default" : "secondary"}>
+          {row.allocatedQty >= row.requiredQty ? "Ready" : "Partial"}
+        </Badge>
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -311,52 +361,24 @@ export default function WorkOrderDetailPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {data.allocations.length === 0 ? (
-            <p className="text-center py-4 text-muted-foreground">
-              No materials allocated yet
-            </p>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-sm text-muted-foreground">
-                  <th className="text-left py-3 px-4">Part</th>
-                  <th className="text-right py-3 px-4">Required</th>
-                  <th className="text-right py-3 px-4">Allocated</th>
-                  <th className="text-right py-3 px-4">Issued</th>
-                  <th className="text-center py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.allocations.map((alloc) => (
-                  <tr key={alloc.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <p className="font-medium">{alloc.part.partNumber}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {alloc.part.name}
-                      </p>
-                    </td>
-                    <td className="py-3 px-4 text-right">{alloc.requiredQty}</td>
-                    <td className="py-3 px-4 text-right">{alloc.allocatedQty}</td>
-                    <td className="py-3 px-4 text-right">{alloc.issuedQty}</td>
-                    <td className="py-3 px-4 text-center">
-                      <Badge
-                        variant={
-                          alloc.allocatedQty >= alloc.requiredQty
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {alloc.allocatedQty >= alloc.requiredQty
-                          ? "Ready"
-                          : "Partial"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            data={data.allocations}
+            columns={allocationColumns}
+            keyField="id"
+            emptyMessage="No materials allocated yet"
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Material Checklist',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

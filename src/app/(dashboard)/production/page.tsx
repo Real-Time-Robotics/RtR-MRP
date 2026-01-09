@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Factory, Loader2, Calendar, Search } from "lucide-react";
+import { Plus, Factory, Calendar, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { useDebouncedCallback } from "use-debounce";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface WorkOrder {
   id: string;
@@ -105,6 +106,91 @@ export default function ProductionPage() {
     return required > 0 ? Math.round((allocated / required) * 100) : 0;
   };
 
+  const columns: Column<WorkOrder>[] = useMemo(() => [
+    {
+      key: 'woNumber',
+      header: 'WO #',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-mono">{value}</span>,
+    },
+    {
+      key: 'product',
+      header: 'Product',
+      width: '180px',
+      render: (value) => (
+        <div>
+          <p className="font-medium">{value?.name || "-"}</p>
+          <p className="text-sm text-muted-foreground">{value?.sku || "-"}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'quantity',
+      header: 'Qty',
+      width: '70px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'salesOrder',
+      header: 'Sales Order',
+      width: '150px',
+      render: (value) => value ? (
+        <div>
+          <p>{value.orderNumber}</p>
+          <p className="text-sm text-muted-foreground">{value.customer?.name || "-"}</p>
+        </div>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      key: 'plannedEnd',
+      header: 'Due',
+      width: '90px',
+      sortable: true,
+      render: (value) => value ? format(new Date(value), "MMM dd") : "-",
+    },
+    {
+      key: 'allocations',
+      header: 'Materials',
+      width: '100px',
+      align: 'center',
+      render: (value) => {
+        const readiness = getMaterialReadiness(value);
+        return (
+          <Badge variant={readiness === 100 ? "default" : "secondary"}>
+            {readiness}% ready
+          </Badge>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <WOStatusBadge status={value} />,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '70px',
+      align: 'right',
+      render: (_, row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(`/production/${row.id}`)}
+        >
+          View
+        </Button>
+      ),
+    },
+  ], [router]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -189,96 +275,29 @@ export default function ProductionPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {error ? (
-            <div className="text-center py-8 text-red-500">
-              Error: {error}
-            </div>
-          ) : loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : workOrders.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No work orders found
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-sm text-muted-foreground">
-                    <th className="text-left py-3 px-4">WO #</th>
-                    <th className="text-left py-3 px-4">Product</th>
-                    <th className="text-right py-3 px-4">Qty</th>
-                    <th className="text-left py-3 px-4">Sales Order</th>
-                    <th className="text-left py-3 px-4">Due</th>
-                    <th className="text-center py-3 px-4">Materials</th>
-                    <th className="text-center py-3 px-4">Status</th>
-                    <th className="text-right py-3 px-4"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workOrders.map((wo) => {
-                    const readiness = getMaterialReadiness(wo.allocations);
-                    return (
-                      <tr key={wo.id} className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-mono">{wo.woNumber}</td>
-                        <td className="py-3 px-4">
-                          <div>
-                            <p className="font-medium">{wo.product?.name || "-"}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {wo.product?.sku || "-"}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-right">{wo.quantity}</td>
-                        <td className="py-3 px-4">
-                          {wo.salesOrder ? (
-                            <div>
-                              <p>{wo.salesOrder.orderNumber}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {wo.salesOrder.customer?.name || "-"}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {wo.plannedEnd
-                            ? format(new Date(wo.plannedEnd), "MMM dd")
-                            : "-"}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge
-                            variant={readiness === 100 ? "default" : "secondary"}
-                          >
-                            {readiness}% ready
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <WOStatusBadge status={wo.status} />
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push(`/production/${wo.id}`)}
-                          >
-                            View
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            data={workOrders}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="No work orders found"
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Work Orders',
+              compactMode: true,
+            }}
+          />
 
           {/* Pagination */}
           {pagination && (
-            <div className="mt-4 pt-4 border-t">
+            <div className="p-4 border-t">
               <Pagination
                 pagination={pagination}
                 onPageChange={fetchPage}

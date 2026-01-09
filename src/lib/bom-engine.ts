@@ -23,7 +23,9 @@ export async function explodeBOM(
     include: {
       bomLines: {
         include: {
-          part: true,
+          part: {
+            include: { cost: true }
+          },
         },
         orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
       },
@@ -73,8 +75,8 @@ export async function explodeBOM(
       available: inv.available,
       shortage,
       unit: line.unit,
-      unitCost: line.part.unitCost,
-      totalCost: needed * line.part.unitCost,
+      unitCost: line.part.cost?.unitCost || 0,
+      totalCost: needed * (line.part.cost?.unitCost || 0),
       status: shortage > 0 ? "SHORTAGE" : "OK",
       moduleCode: line.moduleCode || undefined,
       moduleName: line.moduleName || undefined,

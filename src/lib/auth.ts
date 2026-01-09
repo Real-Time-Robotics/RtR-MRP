@@ -201,13 +201,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           // Reset failed attempts on successful login
           await resetFailedAttempts(user.id);
-          console.log(`[AUTH] Successful login: ${email}`);
 
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role,
+            role: (user.role as UserRole) || 'viewer',
           };
         } catch (error) {
           if (error instanceof Error && error.message === 'MFA_REQUIRED') {
@@ -226,7 +225,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.error('[AUTH] SignIn callback: Invalid user object');
         return false;
       }
-      console.log('[AUTH] SignIn callback: User validated', { id: user.id, email: user.email });
       return true;
     },
     async jwt({ token, user }) {
@@ -236,7 +234,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.email = user.email;
         token.name = user.name;
         token.role = (user as { role?: string }).role || 'viewer';
-        console.log('[AUTH] JWT callback: Token created', { id: token.id, email: token.email, role: token.role });
       }
       return token;
     },
@@ -246,7 +243,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string || null;
-        session.user.role = token.role as string || 'viewer';
+        session.user.role = (token.role as UserRole) || 'viewer';
       }
       return session;
     },
@@ -309,16 +306,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 // TYPE DECLARATIONS
 // =============================================================================
 
+// ... imports
+import { UserRole } from "./roles";
+
+// ... existing code ...
+
 declare module "next-auth" {
   interface User {
-    role?: string;
+    role?: UserRole;
   }
   interface Session {
     user: {
       id: string;
       email: string;
       name?: string | null;
-      role: string;
+      role: UserRole;
     };
   }
 }

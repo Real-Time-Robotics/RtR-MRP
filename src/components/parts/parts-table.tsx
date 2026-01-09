@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -11,24 +11,8 @@ import {
   Shield,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -37,9 +21,12 @@ import {
 } from '@/components/ui/tooltip';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
-import { PartForm, DeletePartDialog, Part } from '@/components/forms/part-form';
+import { DeletePartDialog, Part } from '@/components/forms/part-form';
+import { PartFormDialog } from '@/components/parts/part-form-dialog';
+import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
 // CONSTANTS
@@ -159,6 +146,10 @@ export function PartsTable() {
   const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [deletingPart, setDeletingPart] = useState<Part | null>(null);
 
+  // Inline editing state
+  const [editingCostId, setEditingCostId] = useState<string | null>(null);
+  const [editingCostValue, setEditingCostValue] = useState<string>('');
+
   // Filters
   const [filters, setFilters] = useState<Record<string, string>>({
     category: 'all',
@@ -230,50 +221,95 @@ export function PartsTable() {
     }
 
     try {
+      // Optimistic delete for bulk (harder to revert, but we can try)
+      // For safety on delete, we usually wait. 
+      // But let's speed up the UI feedback.
+      const idsToDelete = new Set(selectedIds);
+      setParts(prev => prev.filter(p => !idsToDelete.has(p.id)));
+      setSelectedIds(new Set());
+      toast.info(`Đang xóa ${idsToDelete.size} parts...`);
+
       const results = await Promise.all(
-        Array.from(selectedIds).map((id) =>
+        Array.from(idsToDelete).map((id) =>
           fetch(`/api/parts/${id}`, { method: 'DELETE' })
         )
       );
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa ${failedCount} parts`);
+        toast.error(`Không thể xóa ${failedCount} parts (Đã hoàn tác)`);
+        fetchParts(); // Revert/Refresh
       } else {
-        toast.success(`Đã xóa ${selectedIds.size} parts`);
+        toast.success(`Đã xóa ${idsToDelete.size} parts`);
       }
-
-      fetchParts();
-      setSelectedIds(new Set());
     } catch (error) {
       toast.error('Có lỗi xảy ra khi xóa');
+      fetchParts();
+    }
+  };
+
+  const { exportToExcel } = useDataExport();
+
+  // Inline Edit Handlers
+  const startEditingCost = (part: Part) => {
+    setEditingCostId(part.id);
+    setEditingCostValue(String(part.unitCost));
+  };
+
+  const saveCost = async (part: Part) => {
+    if (!editingCostId) return;
+
+    try {
+      const newCost = parseFloat(editingCostValue);
+      if (isNaN(newCost)) {
+        toast.error('Giá trị không hợp lệ');
+        return;
+      }
+
+      setParts(prev => prev.map(p => p.id === part.id ? { ...p, unitCost: newCost } : p));
+
+      const res = await fetch(`/api/parts/${part.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitCost: newCost }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update');
+
+      toast.success('Đã cập nhật đơn giá');
+      setEditingCostId(null);
+    } catch (error) {
+      toast.error('Không thể cập nhật đơn giá');
+      fetchParts();
+    }
+  };
+
+  const handleCostKeyDown = (e: React.KeyboardEvent, part: Part) => {
+    if (e.key === 'Enter') {
+      saveCost(part);
+    } else if (e.key === 'Escape') {
+      setEditingCostId(null);
     }
   };
 
   const handleExport = () => {
-    toast.info('Tính năng export đang được phát triển');
+    if (!parts || parts.length === 0) {
+      toast.warning('Không có dữ liệu để export');
+      return;
+    }
+
+    // Flatten data for better export structure if needed, or export as is
+    // For now, exporting the raw parts data which is already flat-ish
+    exportToExcel(parts, {
+      fileName: 'Parts_List',
+      sheetName: 'Parts Master'
+    });
+
+    toast.success('Đã xuất file Excel');
   };
 
   const handleImport = () => {
     toast.info('Tính năng import đang được phát triển');
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredParts.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredParts.map((p) => p.id)));
-    }
-  };
-
-  const toggleSelect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
   };
 
   // Get unique categories
@@ -297,6 +333,141 @@ export function PartsTable() {
       variant: 'destructive',
     },
   ];
+
+  // Column definitions for DataTable
+  const columns: Column<Part>[] = useMemo(() => [
+    {
+      key: 'partNumber',
+      header: 'Part #',
+      width: '130px',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-1">
+          <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline">
+            {value}
+          </Link>
+          {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
+        </div>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Name',
+      width: '180px',
+      sortable: true,
+      render: (value) => <div className="truncate max-w-[160px]">{value}</div>,
+    },
+    {
+      key: 'category',
+      header: 'Category',
+      width: '100px',
+      sortable: true,
+      render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value}</Badge>,
+    },
+    {
+      key: 'makeOrBuy',
+      header: 'Make/Buy',
+      width: '80px',
+      align: 'center',
+      render: (value) => (
+        <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
+          {value}
+        </Badge>
+      ),
+    },
+    {
+      key: 'revision',
+      header: 'Rev',
+      width: '60px',
+      align: 'center',
+      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value}</Badge>,
+    },
+    {
+      key: 'compliance',
+      header: 'Compliance',
+      width: '100px',
+      align: 'center',
+      render: (_, row) => (
+        <div className="flex items-center justify-center gap-1">
+          <Tooltip>
+            <TooltipTrigger>
+              {row.ndaaCompliant ? (
+                <CheckCircle className="h-3 w-3 text-green-500" />
+              ) : (
+                <XCircle className="h-3 w-3 text-red-500" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>NDAA: {row.ndaaCompliant ? 'Compliant' : 'Non-compliant'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              {row.itarControlled ? (
+                <Shield className="h-3 w-3 text-red-500" />
+              ) : (
+                <div className="h-3 w-3" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>ITAR: {row.itarControlled ? 'Controlled' : 'Not controlled'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger>
+              {row.rohsCompliant ? (
+                <CheckCircle className="h-3 w-3 text-green-500" />
+              ) : (
+                <XCircle className="h-3 w-3 text-yellow-500" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent>RoHS: {row.rohsCompliant ? 'Compliant' : 'Non-compliant'}</TooltipContent>
+          </Tooltip>
+        </div>
+      ),
+    },
+    {
+      key: 'unitCost',
+      header: 'Unit Cost',
+      width: '100px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value, row) => (
+        editingCostId === row.id ? (
+          <Input
+            autoFocus
+            className="h-6 w-20 text-right text-xs"
+            value={editingCostValue}
+            onChange={(e) => setEditingCostValue(e.target.value)}
+            onBlur={() => saveCost(row)}
+            onKeyDown={(e) => handleCostKeyDown(e, row)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span
+            className="cursor-pointer hover:text-primary"
+            onClick={(e) => { e.stopPropagation(); startEditingCost(row); }}
+          >
+            {formatCurrency(value)}
+          </span>
+        )
+      ),
+    },
+    {
+      key: 'lifecycleStatus',
+      header: 'Status',
+      width: '100px',
+      sortable: true,
+      render: (value) => (
+        <Badge className={cn(LIFECYCLE_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
+          {value}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '50px',
+      render: (_, row) => <ActionDropdown items={createPartActions(row)} />,
+    },
+  ], [editingCostId, editingCostValue]);
 
   return (
     <TooltipProvider>
@@ -369,144 +540,35 @@ export function PartsTable() {
               }
             />
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={
-                        filteredParts.length > 0 &&
-                        selectedIds.size === filteredParts.length
-                      }
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Part #</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Make/Buy</TableHead>
-                  <TableHead>Rev</TableHead>
-                  <TableHead className="text-center">Compliance</TableHead>
-                  <TableHead className="text-right">Unit Cost</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                        Đang tải...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredParts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
-                      <p className="text-muted-foreground">Không tìm thấy parts</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredParts.map((part) => (
-                    <TableRow
-                      key={part.id}
-                      className={cn(selectedIds.has(part.id) && 'bg-muted/50')}
-                    >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedIds.has(part.id)}
-                          onCheckedChange={() => toggleSelect(part.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono font-medium">
-                        <Link
-                          href={`/parts/${part.id}`}
-                          className="hover:underline text-primary"
-                        >
-                          {part.partNumber}
-                        </Link>
-                        {part.isCritical && (
-                          <AlertTriangle className="inline h-3 w-3 ml-1 text-orange-500" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-48 truncate">{part.name}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{part.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={MAKE_BUY_COLORS[part.makeOrBuy] || ''}>
-                          {part.makeOrBuy}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{part.revision}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-1">
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {part.ndaaCompliant ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-500" />
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              NDAA: {part.ndaaCompliant ? 'Compliant' : 'Non-compliant'}
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {part.itarControlled ? (
-                                <Shield className="h-4 w-4 text-red-500" />
-                              ) : (
-                                <div className="h-4 w-4" />
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              ITAR: {part.itarControlled ? 'Controlled' : 'Not controlled'}
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {part.rohsCompliant ? (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-yellow-500" />
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              RoHS: {part.rohsCompliant ? 'Compliant' : 'Non-compliant'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(part.unitCost)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={LIFECYCLE_COLORS[part.lifecycleStatus] || ''}>
-                          {part.lifecycleStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <ActionDropdown items={createPartActions(part)} />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <CardContent className="p-0">
+            <DataTable
+              data={filteredParts}
+              columns={columns}
+              keyField="id"
+              loading={loading}
+              emptyMessage="Không tìm thấy parts"
+              selectable
+              selectedKeys={selectedIds}
+              onSelectionChange={setSelectedIds}
+              pagination
+              pageSize={20}
+              searchable={false}
+              stickyHeader
+              excelMode={{
+                enabled: true,
+                showRowNumbers: true,
+                columnHeaderStyle: 'field-names',
+                gridBorders: true,
+                showFooter: true,
+                sheetName: 'Parts',
+                compactMode: true,
+              }}
+            />
           </CardContent>
         </Card>
 
         {/* Dialogs */}
-        <PartForm
+        <PartFormDialog
           open={formOpen}
           onOpenChange={setFormOpen}
           part={editingPart}

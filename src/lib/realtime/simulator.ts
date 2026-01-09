@@ -96,7 +96,6 @@ class EventSimulator {
       setInterval(() => this.emitRandomNotification(), notificationInterval)
     );
 
-    console.log('[EventSimulator] Started');
   }
 
   // Stop simulation
@@ -104,7 +103,6 @@ class EventSimulator {
     this.intervals.forEach(interval => clearInterval(interval));
     this.intervals = [];
     this.isRunning = false;
-    console.log('[EventSimulator] Stopped');
   }
 
   // Check if running

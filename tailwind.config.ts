@@ -76,6 +76,29 @@ const config: Config = {
   				indigo: '#6366F1',
   			},
 
+  			// Excel-like UI System Colors
+  			excel: {
+  				primary: 'var(--excel-primary)',
+  				'primary-hover': 'var(--excel-primary-hover)',
+  				'primary-dark': 'var(--excel-primary-dark)',
+  				'primary-light': 'var(--excel-primary-light)',
+  				'primary-lighter': 'var(--excel-primary-lighter)',
+  				'header-bg': 'var(--excel-header-bg)',
+  				'row-number-bg': 'var(--excel-row-number-bg)',
+  				'cell-bg': 'var(--excel-cell-bg)',
+  				border: 'var(--excel-border)',
+  				'border-light': 'var(--excel-border-light)',
+  				selection: 'var(--excel-selection)',
+  				'selection-border': 'var(--excel-selection-border)',
+  				'header-text': 'var(--excel-header-text)',
+  				'cell-text': 'var(--excel-cell-text)',
+  				'row-number-text': 'var(--excel-row-number-text)',
+  				// Static colors (for when CSS vars don't work)
+  				green: '#217346',
+  				'green-light': '#E2EFDA',
+  				'green-dark': '#70AD47',
+  			},
+
   			// Semantic colors (extended)
   			success: {
   				DEFAULT: 'hsl(var(--success))',

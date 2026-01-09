@@ -49,7 +49,7 @@ interface SidebarItem {
 // =============================================================================
 
 const quickNavItems: SidebarItem[] = [
-  { id: 'dashboard', label: 'Dashboard', labelVi: 'Tổng quan', icon: <LayoutDashboard className="w-4 h-4" />, href: '/dashboard', color: 'text-blue-500' },
+  { id: 'dashboard', label: 'Dashboard', labelVi: 'Tổng quan', icon: <LayoutDashboard className="w-4 h-4" />, href: '/home', color: 'text-blue-500' },
   { id: 'sales', label: 'Orders', labelVi: 'Đơn hàng', icon: <ShoppingCart className="w-4 h-4" />, href: '/orders', color: 'text-violet-500', badge: 5 },
   { id: 'inventory', label: 'Inventory', labelVi: 'Tồn kho', icon: <Package className="w-4 h-4" />, href: '/inventory', color: 'text-emerald-500' },
   { id: 'production', label: 'Production', labelVi: 'Sản xuất', icon: <Factory className="w-4 h-4" />, href: '/production', color: 'text-orange-500' },
@@ -133,7 +133,13 @@ export function MinimalistSidebar({
 }: MinimalistSidebarProps) {
   const pathname = usePathname();
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => {
+    // Special case: /home and /dashboard are the same
+    if (href === '/home') {
+      return pathname === '/home' || pathname === '/dashboard' || pathname.startsWith('/home/');
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
   return (
     <aside

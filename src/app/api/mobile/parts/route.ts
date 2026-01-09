@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
               warehouse: true,
             },
           },
+          planning: true,
         },
       });
 
@@ -45,8 +46,8 @@ export async function GET(request: NextRequest) {
           description: part.description,
           category: part.category,
           uom: part.unit,
-          safetyStock: part.safetyStock,
-          reorderPoint: part.reorderPoint,
+          safetyStock: part.planning?.safetyStock || 0,
+          reorderPoint: part.planning?.reorderPoint || 0,
           onHand,
           allocated,
           available: onHand - allocated,
@@ -65,18 +66,19 @@ export async function GET(request: NextRequest) {
     // Search parts
     const where = query
       ? {
-          OR: [
-            { partNumber: { contains: query, mode: "insensitive" as const } },
-            { name: { contains: query, mode: "insensitive" as const } },
-            { description: { contains: query, mode: "insensitive" as const } },
-          ],
-        }
+        OR: [
+          { partNumber: { contains: query, mode: "insensitive" as const } },
+          { name: { contains: query, mode: "insensitive" as const } },
+          { description: { contains: query, mode: "insensitive" as const } },
+        ],
+      }
       : {};
 
     const parts = await prisma.part.findMany({
       where,
       take: limit,
       orderBy: { partNumber: "asc" },
+      include: { planning: true },
     });
 
     return NextResponse.json({
@@ -87,8 +89,8 @@ export async function GET(request: NextRequest) {
         description: part.description,
         category: part.category,
         uom: part.unit,
-        safetyStock: part.safetyStock,
-        reorderPoint: part.reorderPoint,
+        safetyStock: part.planning?.safetyStock || 0,
+        reorderPoint: part.planning?.reorderPoint || 0,
       })),
     });
   } catch (error) {

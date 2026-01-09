@@ -208,9 +208,8 @@ function GeneralLedgerContent() {
     }
   };
 
-  const handleEditAccount = (account: GLAccount) => {
+  const handleEditAccount = (_account: GLAccount) => {
     // TODO: Implement account edit dialog
-    console.log("Edit account:", account);
   };
 
   const handleDeleteAccount = async (id: string) => {

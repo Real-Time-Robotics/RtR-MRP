@@ -403,15 +403,11 @@ export function InvalidatesCache(patterns: string[]) {
  * Preload commonly accessed data
  */
 export async function warmCache(tenantId: string): Promise<void> {
-  console.log(`[CACHE] Warming cache for tenant ${tenantId}`);
-  
   // Note: This function would preload reference data
   // Implementation depends on your data structure
   // Example:
   // const categories = await prisma.part.groupBy({ by: ['category'] });
   // await cacheSet(CacheKeys.categories(tenantId), categories, { ttl: CACHE_TTL.EXTENDED });
-  
-  console.log(`[CACHE] Cache warmed for tenant ${tenantId}`);
 }
 
 // =============================================================================

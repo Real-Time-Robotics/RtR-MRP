@@ -27,72 +27,50 @@ export async function GET(request: NextRequest) {
     const inventoryData = await prisma.inventory.findMany({
       where,
       include: {
-        part: true,
+        part: {
+          include: {
+            cost: true,
+            planning: true,
+          }
+        },
         warehouse: true,
       },
       orderBy: [{ part: { partNumber: 'asc' } }],
     });
 
-    // Group by part and calculate status
-    const partMap = new Map<
-      string,
-      {
-        partId: string;
-        partNumber: string;
-        name: string;
-        category: string;
-        unit: string;
-        unitCost: number;
-        isCritical: boolean;
-        minStockLevel: number;
-        reorderPoint: number;
-        quantity: number;
-        reserved: number;
-        available: number;
-        status: string;
-        warehouseId?: string;
-        warehouseName?: string;
-      }
-    >();
+    // Map to flat structure with status calculation
+    let result = inventoryData.map((inv) => {
+      const available = inv.quantity - inv.reservedQty;
+      // Handle potential nulls for optional relations
+      const unitCost = inv.part.cost?.unitCost || 0;
+      const minStockLevel = inv.part.planning?.minStockLevel || 0;
+      const reorderPoint = inv.part.planning?.reorderPoint || 0;
+      const safetyStock = inv.part.planning?.safetyStock || 0;
 
-    inventoryData.forEach((inv) => {
-      const existing = partMap.get(inv.partId);
-      if (existing) {
-        existing.quantity += inv.quantity;
-        existing.reserved += inv.reservedQty;
-        existing.available = existing.quantity - existing.reserved;
-        existing.status = getStockStatus(
-          existing.available,
-          existing.minStockLevel,
-          existing.reorderPoint
-        );
-      } else {
-        const available = inv.quantity - inv.reservedQty;
-        partMap.set(inv.partId, {
-          partId: inv.partId,
-          partNumber: inv.part.partNumber,
-          name: inv.part.name,
-          category: inv.part.category,
-          unit: inv.part.unit,
-          unitCost: inv.part.unitCost,
-          isCritical: inv.part.isCritical,
-          minStockLevel: inv.part.minStockLevel,
-          reorderPoint: inv.part.reorderPoint,
-          quantity: inv.quantity,
-          reserved: inv.reservedQty,
+      return {
+        id: inv.id, // Inventory ID
+        partId: inv.partId,
+        partNumber: inv.part.partNumber,
+        name: inv.part.name,
+        category: inv.part.category,
+        unit: inv.part.unit,
+        unitCost: unitCost,
+        isCritical: inv.part.isCritical,
+        minStockLevel: minStockLevel,
+        reorderPoint: reorderPoint,
+        safetyStock: safetyStock,
+        quantity: inv.quantity,
+        reserved: inv.reservedQty,
+        available,
+        status: getStockStatus(
           available,
-          status: getStockStatus(
-            available,
-            inv.part.minStockLevel,
-            inv.part.reorderPoint
-          ),
-          warehouseId: inv.warehouseId,
-          warehouseName: inv.warehouse.name,
-        });
-      }
+          minStockLevel,
+          reorderPoint
+        ),
+        warehouseId: inv.warehouseId,
+        warehouseName: inv.warehouse.name,
+      };
     });
-
-    let result = Array.from(partMap.values());
 
     // Filter by status if specified
     if (status) {

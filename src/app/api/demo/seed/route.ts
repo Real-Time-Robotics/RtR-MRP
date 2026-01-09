@@ -455,7 +455,11 @@ async function seedInventory(): Promise<SeedResult> {
     }
 
     // Get all parts
-    const parts = await prisma.part.findMany();
+    const parts = await prisma.part.findMany({
+      include: {
+        planning: true,
+      },
+    });
 
     for (const part of parts) {
       const existing = await prisma.inventory.findFirst({
@@ -466,8 +470,9 @@ async function seedInventory(): Promise<SeedResult> {
       });
 
       if (!existing) {
-        // Random quantity based on reorder point
-        const quantity = Math.floor(Math.random() * (part.minStockLevel * 2)) + part.reorderPoint;
+        const minStockLevel = part.planning?.minStockLevel || 0;
+        const reorderPoint = part.planning?.reorderPoint || 0;
+        const quantity = Math.floor(Math.random() * (minStockLevel * 2)) + reorderPoint;
 
         await prisma.inventory.create({
           data: {

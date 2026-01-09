@@ -7,11 +7,12 @@ import {
   Clock, RefreshCw, Eye, Package, CheckCircle, AlertTriangle,
   X, Factory
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
+import {
+  CustomerPortalEngine,
   SalesOrder,
-  SOStatus 
+  SOStatus
 } from '@/lib/customer/customer-engine';
+import { excelPortalStyles } from '@/components/ui-v2/excel';
 
 // =============================================================================
 // CUSTOMER ORDERS PAGE
@@ -249,62 +250,64 @@ export default function CustomerOrdersPage() {
                   </div>
                 )}
 
-                {/* Order Items */}
+                {/* Order Items - Excel Style */}
                 <div className="p-4">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-500 border-b border-gray-100 dark:border-gray-700">
-                        <th className="pb-2">Mã SP</th>
-                        <th className="pb-2">Tên sản phẩm</th>
-                        <th className="pb-2 text-right">SL đặt</th>
-                        <th className="pb-2 text-right">SL SX</th>
-                        <th className="pb-2 text-right">SL giao</th>
-                        <th className="pb-2 text-right">Đơn giá</th>
-                        <th className="pb-2 text-right">Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {order.items.map(item => (
-                        <tr key={item.id} className="border-b border-gray-50 dark:border-gray-700/50">
-                          <td className="py-2 font-mono text-xs">{item.productCode}</td>
-                          <td className="py-2">{item.productName}</td>
-                          <td className="py-2 text-right">{item.quantity}</td>
-                          <td className="py-2 text-right">
-                            <span className={item.producedQty >= item.quantity ? 'text-green-600' : 'text-gray-500'}>
-                              {item.producedQty}
-                            </span>
-                          </td>
-                          <td className="py-2 text-right">
-                            <span className={item.shippedQty >= item.quantity ? 'text-green-600' : 'text-gray-500'}>
-                              {item.shippedQty}
-                            </span>
-                          </td>
-                          <td className="py-2 text-right">{item.unitPrice.toLocaleString('vi-VN')}</td>
-                          <td className="py-2 text-right font-medium">{item.amount.toLocaleString('vi-VN')}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="text-sm">
-                      <tr>
-                        <td colSpan={6} className="pt-2 text-right text-gray-500">Tạm tính:</td>
-                        <td className="pt-2 text-right">{order.subtotal.toLocaleString('vi-VN')}</td>
-                      </tr>
-                      {order.discount > 0 && (
+                  <div className="border border-[#217346]/30 dark:border-[#70AD47]/30 rounded-lg overflow-hidden">
+                    <table className={excelPortalStyles.table}>
+                      <thead className={excelPortalStyles.thead}>
                         <tr>
-                          <td colSpan={6} className="text-right text-gray-500">Chiết khấu:</td>
-                          <td className="text-right text-red-500">-{order.discount.toLocaleString('vi-VN')}</td>
+                          <th className={excelPortalStyles.th}>Mã SP</th>
+                          <th className={excelPortalStyles.th}>Tên sản phẩm</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>SL đặt</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>SL SX</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>SL giao</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Đơn giá</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Thành tiền</th>
                         </tr>
-                      )}
-                      <tr>
-                        <td colSpan={6} className="text-right text-gray-500">VAT (10%):</td>
-                        <td className="text-right">{order.tax.toLocaleString('vi-VN')}</td>
-                      </tr>
-                      <tr className="font-semibold">
-                        <td colSpan={6} className="pt-1 text-right">Tổng cộng:</td>
-                        <td className="pt-1 text-right text-emerald-600">{order.total.toLocaleString('vi-VN')} ₫</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                      </thead>
+                      <tbody className={excelPortalStyles.tbody}>
+                        {order?.items?.map(item => (
+                          <tr key={item.id} className={excelPortalStyles.tr}>
+                            <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdMono}`}>{item.productCode}</td>
+                            <td className={excelPortalStyles.td}>{item.productName}</td>
+                            <td className={excelPortalStyles.tdNumber}>{item.quantity}</td>
+                            <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdRight}`}>
+                              <span className={item.producedQty >= item.quantity ? 'text-[#217346] dark:text-[#70AD47] font-medium' : 'text-slate-500'}>
+                                {item.producedQty}
+                              </span>
+                            </td>
+                            <td className={`${excelPortalStyles.td} ${excelPortalStyles.tdRight}`}>
+                              <span className={item.shippedQty >= item.quantity ? 'text-[#217346] dark:text-[#70AD47] font-medium' : 'text-slate-500'}>
+                                {item.shippedQty}
+                              </span>
+                            </td>
+                            <td className={excelPortalStyles.tdNumber}>{item.unitPrice.toLocaleString('vi-VN')}</td>
+                            <td className={excelPortalStyles.tdCurrency}>{item.amount.toLocaleString('vi-VN')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className={excelPortalStyles.tfoot}>
+                        <tr>
+                          <td colSpan={6} className={`${excelPortalStyles.tfootTd} text-right text-slate-500`}>Tạm tính:</td>
+                          <td className={`${excelPortalStyles.tfootTd} text-right`}>{order.subtotal.toLocaleString('vi-VN')}</td>
+                        </tr>
+                        {order.discount > 0 && (
+                          <tr>
+                            <td colSpan={6} className={`${excelPortalStyles.tfootTd} text-right text-slate-500`}>Chiết khấu:</td>
+                            <td className={`${excelPortalStyles.tfootTd} text-right text-red-500`}>-{order.discount.toLocaleString('vi-VN')}</td>
+                          </tr>
+                        )}
+                        <tr>
+                          <td colSpan={6} className={`${excelPortalStyles.tfootTd} text-right text-slate-500`}>VAT (10%):</td>
+                          <td className={`${excelPortalStyles.tfootTd} text-right`}>{order.tax.toLocaleString('vi-VN')}</td>
+                        </tr>
+                        <tr className="bg-[#E2EFDA]/50 dark:bg-[#217346]/20">
+                          <td colSpan={6} className={`${excelPortalStyles.tfootTd} text-right font-bold text-[#217346] dark:text-[#70AD47]`}>Tổng cộng:</td>
+                          <td className={`${excelPortalStyles.tfootTd} text-right font-bold text-[#217346] dark:text-[#70AD47]`}>{order.total.toLocaleString('vi-VN')} ₫</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
 
                   {/* Notes */}
                   {order.notes && (

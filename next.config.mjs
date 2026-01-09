@@ -9,9 +9,11 @@ const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
+  // COMPLETELY DISABLE PWA IN DEV MODE to prevent "bad-precaching-response" errors
   disable: process.env.NODE_ENV === "development",
   // Exclude build manifests from precaching to avoid 404 errors
-  buildExcludes: [/app-build-manifest\.json$/],
+  buildExcludes: [/app-build-manifest\.json$/, /middleware-manifest\.json$/, /_buildManifest\.js$/],
+  reloadOnOnline: false,
   // Fallback for offline pages
   fallbacks: {
     document: "/offline",
@@ -222,11 +224,11 @@ const nextConfig = {
           },
           ...(process.env.NODE_ENV === "production"
             ? [
-                {
-                  key: "Strict-Transport-Security",
-                  value: "max-age=31536000; includeSubDomains; preload",
-                },
-              ]
+              {
+                key: "Strict-Transport-Security",
+                value: "max-age=31536000; includeSubDomains; preload",
+              },
+            ]
             : []),
         ],
       },

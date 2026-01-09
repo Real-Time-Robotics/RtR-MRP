@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2, RefreshCw, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { TrendIndicator } from "@/components/ai/trend-indicator";
 import { compareSupplierLeadTimes } from "@/lib/ai/lead-time-predictor";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface Supplier {
   id: string;
@@ -72,6 +73,72 @@ export default function LeadTimePage() {
     }
   };
 
+  const leadTimeColumns: Column<{
+    supplierId: string;
+    supplierName: string;
+    statedDays: number;
+    predictedDays: number;
+    actualAvg: number;
+    trend: "faster" | "on_time" | "slower";
+    trendDays: number;
+  }>[] = useMemo(() => [
+    {
+      key: 'supplierName',
+      header: 'Supplier',
+      width: '180px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'statedDays',
+      header: 'Stated',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+      render: (value) => `${value}d`,
+    },
+    {
+      key: 'predictedDays',
+      header: 'Predicted',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="font-bold">{value}d</span>,
+    },
+    {
+      key: 'actualAvg',
+      header: 'Actual Avg',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+      render: (value) => <span className="text-muted-foreground">{value.toFixed(1)}d</span>,
+    },
+    {
+      key: 'variance',
+      header: 'Variance',
+      width: '100px',
+      align: 'center',
+      render: (_, row) => (
+        <TrendIndicator
+          trend={row.trend}
+          value={`${row.trendDays > 0 ? "+" : ""}${row.trendDays}d`}
+        />
+      ),
+    },
+    {
+      key: 'trend',
+      header: 'Status',
+      width: '90px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <Badge className={getTrendBadgeColor(value)}>
+          {value === "faster" ? "Faster" : value === "slower" ? "Slower" : "On Time"}
+        </Badge>
+      ),
+    },
+  ], []);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -134,58 +201,25 @@ export default function LeadTimePage() {
         <CardHeader>
           <CardTitle>Lead Time by Supplier</CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-sm text-muted-foreground">
-                    <th className="text-left py-3 px-4">Supplier</th>
-                    <th className="text-right py-3 px-4">Stated</th>
-                    <th className="text-right py-3 px-4">Predicted</th>
-                    <th className="text-right py-3 px-4">Actual Avg</th>
-                    <th className="text-center py-3 px-4">Variance</th>
-                    <th className="text-center py-3 px-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {predictions.map((pred) => (
-                    <tr key={pred.supplierId} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">
-                        {pred.supplierName}
-                      </td>
-                      <td className="py-3 px-4 text-right">{pred.statedDays}d</td>
-                      <td className="py-3 px-4 text-right font-bold">
-                        {pred.predictedDays}d
-                      </td>
-                      <td className="py-3 px-4 text-right text-muted-foreground">
-                        {pred.actualAvg.toFixed(1)}d
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <TrendIndicator
-                          trend={pred.trend}
-                          value={`${pred.trendDays > 0 ? "+" : ""}${pred.trendDays}d`}
-                        />
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge className={getTrendBadgeColor(pred.trend)}>
-                          {pred.trend === "faster"
-                            ? "Faster"
-                            : pred.trend === "slower"
-                              ? "Slower"
-                              : "On Time"}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <CardContent className="p-0">
+          <DataTable
+            data={predictions}
+            columns={leadTimeColumns}
+            keyField="supplierId"
+            loading={loading}
+            emptyMessage="No supplier data available"
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Lead Time',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 

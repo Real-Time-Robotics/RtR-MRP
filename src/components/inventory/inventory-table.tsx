@@ -1,32 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { Package, AlertTriangle, Settings } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Package, AlertTriangle, Settings, RefreshCw } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
-import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
-import { InventoryAdjustDialog } from '@/components/forms/inventory-adjust-dialog';
+import { SmartGrid } from '@/components/ui-v2/smart-grid';
+import { EditableCell } from '@/components/ui-v2/editable-cell';
+import { Column } from '@/components/ui-v2/data-table';
 import { StockStatusBadge } from '@/components/inventory/stock-status-badge';
 import { PermissionButton } from '@/components/ui/permission-button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { StockStatus } from '@/types';
+import Link from 'next/link';
+import {
+  ChangeImpactDialog,
+  useChangeImpact,
+} from '@/components/change-impact';
+import { FieldChange } from '@/lib/change-impact/types';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-interface InventoryItem {
+export interface InventoryItem {
+  id: string; // Inventory ID (or Part ID if distinct)
   partId: string;
   partNumber: string;
   name: string;
@@ -36,6 +34,7 @@ interface InventoryItem {
   isCritical: boolean;
   minStockLevel: number;
   reorderPoint: number;
+  safetyStock: number;
   quantity: number;
   reserved: number;
   available: number;
@@ -69,7 +68,7 @@ function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
   const okCount = inventory.filter((i) => i.status === 'OK').length;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold">{inventory.length}</div>
@@ -102,19 +101,44 @@ function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
 // MAIN COMPONENT
 // =============================================================================
 
+// Field labels for change impact
+const INVENTORY_FIELD_LABELS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
+  quantity: { label: 'Quantity', valueType: 'number' },
+  safetyStock: { label: 'Safety Stock', valueType: 'number' },
+  minStockLevel: { label: 'Min Stock Level', valueType: 'number' },
+  reorderPoint: { label: 'Reorder Point', valueType: 'number' },
+};
+
 export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   const [inventory, setInventory] = useState<InventoryItem[]>(initialData);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
 
-  // Dialog state
-  const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustingItem, setAdjustingItem] = useState<InventoryItem | null>(null);
+  // Change Impact state
+  const pendingUpdateRef = useRef<{
+    rowId: string;
+    field: string;
+    value: any;
+    oldValue: any;
+    item: InventoryItem;
+  } | null>(null);
 
-  // Filters
-  const [filters, setFilters] = useState<Record<string, string>>({
-    status: 'all',
-    category: 'all',
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      // Execute the pending update after confirmation
+      if (pendingUpdateRef.current) {
+        const { rowId, field, value, item } = pendingUpdateRef.current;
+        executeUpdate(rowId, field, value, item);
+        pendingUpdateRef.current = null;
+      }
+    },
+    onError: () => {
+      // Still allow update if impact check fails
+      if (pendingUpdateRef.current) {
+        const { rowId, field, value, item } = pendingUpdateRef.current;
+        executeUpdate(rowId, field, value, item);
+        pendingUpdateRef.current = null;
+      }
+    },
   });
 
   // Fetch inventory
@@ -125,21 +149,23 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       const result = await response.json();
 
       if (response.ok) {
-        // Transform data to match our interface
+        // Transform data
         const items: InventoryItem[] = (result.data || result || []).map((item: any) => ({
-          partId: item.partId || item.id,
+          id: item.id, // Inventory ID
+          partId: item.partId || item.part?.id,
           partNumber: item.partNumber || item.part?.partNumber,
           name: item.name || item.part?.name,
           category: item.category || item.part?.category,
           unit: item.unit || item.part?.unit,
           unitCost: item.unitCost || item.part?.unitCost || 0,
           isCritical: item.isCritical || item.part?.isCritical || false,
-          minStockLevel: item.minStockLevel || item.part?.minStockLevel || 0,
-          reorderPoint: item.reorderPoint || item.part?.reorderPoint || 0,
+          minStockLevel: item.minStockLevel || item.part?.planning?.minStockLevel || 0,
+          reorderPoint: item.reorderPoint || item.part?.planning?.reorderPoint || 0,
+          safetyStock: item.safetyStock || item.part?.planning?.safetyStock || 0,
           quantity: item.quantity || 0,
           reserved: item.reserved || item.reservedQty || 0,
-          available: item.available || (item.quantity - (item.reservedQty || 0)),
-          status: item.status || 'OK',
+          available: item.available ?? ((item.quantity || 0) - (item.reserved || item.reservedQty || 0)),
+          status: item.status || 'OK', // This status might be stale if we edit locally, could recalc
           warehouseId: item.warehouseId,
           warehouseName: item.warehouseName || item.warehouse?.name,
         }));
@@ -157,240 +183,240 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     fetchInventory();
   }, [fetchInventory]);
 
-  // Filter inventory
-  const filteredInventory = inventory.filter((item) => {
-    // Search filter
-    if (search) {
-      const searchLower = search.toLowerCase();
-      if (
-        !item.partNumber?.toLowerCase().includes(searchLower) &&
-        !item.name?.toLowerCase().includes(searchLower)
-      ) {
-        return false;
+  // Execute the actual update (called after impact confirmation)
+  const executeUpdate = async (rowId: string, field: string, value: any, item: InventoryItem) => {
+    const oldValue = (item as any)[field];
+
+    // Optimistic Update
+    setInventory(prev => prev.map(i => i.id === rowId ? { ...i, [field]: value } : i));
+
+    try {
+      if (field === 'quantity') {
+        // Update Inventory Record
+        await fetch(`/api/inventory/${rowId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity: Number(value) }),
+        });
+        toast.success(`Cập nhật số lượng: ${value}`);
+      } else if (['minStockLevel', 'reorderPoint', 'safetyStock'].includes(field)) {
+        // Update Part Planning
+        await fetch(`/api/parts/${item.partId}/planning`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [field]: Number(value) }),
+        });
+        toast.success(`Cập nhật định mức: ${value}`);
       }
+    } catch (error) {
+      console.error('Update failed', error);
+      toast.error('Cập nhật thất bại');
+      // Revert
+      setInventory(prev => prev.map(i => i.id === rowId ? { ...i, [field]: oldValue } : i));
     }
-
-    // Status filter
-    if (filters.status !== 'all') {
-      if (filters.status === 'critical' && item.status !== 'CRITICAL' && item.status !== 'OUT_OF_STOCK') {
-        return false;
-      }
-      if (filters.status === 'reorder' && item.status !== 'REORDER') {
-        return false;
-      }
-      if (filters.status === 'ok' && item.status !== 'OK') {
-        return false;
-      }
-    }
-
-    // Category filter
-    if (filters.category !== 'all' && item.category !== filters.category) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Handlers
-  const handleAdjust = (item?: InventoryItem) => {
-    setAdjustingItem(item || null);
-    setAdjustOpen(true);
   };
 
-  const handleAdjustSuccess = () => {
-    fetchInventory();
+  // Update Handler - with Change Impact check
+  const handleUpdate = async (rowId: string, field: string, value: any) => {
+    // Find item
+    const item = inventory.find(i => i.id === rowId);
+    if (!item) return;
+
+    const oldValue = (item as any)[field];
+
+    // Skip if value unchanged
+    if (oldValue === value || Number(oldValue) === Number(value)) {
+      return;
+    }
+
+    // Create change object for impact check
+    const fieldConfig = INVENTORY_FIELD_LABELS[field];
+    if (!fieldConfig) {
+      // Unknown field, just execute directly
+      executeUpdate(rowId, field, value, item);
+      return;
+    }
+
+    const changes: FieldChange[] = [{
+      field,
+      fieldLabel: fieldConfig.label,
+      oldValue,
+      newValue: value,
+      valueType: fieldConfig.valueType,
+    }];
+
+    // Store pending update
+    pendingUpdateRef.current = { rowId, field, value, oldValue, item };
+
+    // Check impact
+    await changeImpact.checkImpact('inventory', rowId, changes);
   };
 
-  const handleExport = () => {
-    toast.info('Tính năng export đang được phát triển');
-  };
-
-  // Get unique categories
-  const categories = Array.from(new Set(inventory.map((i) => i.category).filter(Boolean))).sort();
-
-  // Create action items for each row
-  const createInventoryActions = (item: InventoryItem): ActionDropdownItem[] => [
+  const columns: Column<InventoryItem>[] = useMemo(() => [
     {
-      label: 'Xem chi tiết',
-      href: `/inventory/${item.partId}`,
+      key: 'partNumber',
+      header: 'Part Number',
+      width: '120px',
+      sortable: true,
+      render: (value, row) => (
+        <div className="flex items-center gap-2">
+          <Link href={`/inventory/${row.id}`} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+            {value}
+          </Link>
+          {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
+        </div>
+      )
     },
     {
-      label: 'Điều chỉnh tồn kho',
-      onClick: () => handleAdjust(item),
-      permission: 'inventory:adjust',
+      key: 'quantity',
+      header: 'Quantity',
+      width: '100px',
+      align: 'right',
+      type: 'number',
+      sortable: true,
+      render: (value, row) => (
+        <EditableCell
+          value={value}
+          rowId={row.id}
+          columnId="quantity"
+          type="number"
+          onSave={(val) => handleUpdate(row.id, 'quantity', val)}
+          className="font-bold dark:text-white"
+        />
+      )
     },
     {
-      label: 'Chuyển kho',
-      onClick: () => handleAdjust(item),
-      permission: 'inventory:adjust',
+      key: 'available',
+      header: 'Available',
+      width: '100px',
+      align: 'right',
+      type: 'number',
     },
     {
-      label: 'Xem Part',
-      href: `/parts/${item.partId}`,
+      key: 'safetyStock',
+      header: 'Safety Stock',
+      width: '100px',
+      align: 'right',
+      type: 'number',
+      render: (value, row) => (
+        <EditableCell
+          value={value}
+          rowId={row.id}
+          columnId="safetyStock"
+          type="number"
+          onSave={(val) => handleUpdate(row.id, 'safetyStock', val)}
+          className="text-slate-500 dark:text-slate-400"
+        />
+      )
     },
-  ];
-
-  const criticalCount = inventory.filter(
-    (i) => i.status === 'CRITICAL' || i.status === 'OUT_OF_STOCK'
-  ).length;
-  const reorderCount = inventory.filter((i) => i.status === 'REORDER').length;
+    {
+      key: 'minStockLevel',
+      header: 'Min Stock',
+      width: '100px',
+      align: 'right',
+      type: 'number',
+      render: (value, row) => (
+        <EditableCell
+          value={value}
+          rowId={row.id}
+          columnId="minStockLevel"
+          type="number"
+          onSave={(val) => handleUpdate(row.id, 'minStockLevel', val)}
+          className="text-slate-500 dark:text-slate-400"
+        />
+      )
+    },
+    {
+      key: 'reorderPoint',
+      header: 'Reorder Pt',
+      width: '100px',
+      align: 'right',
+      type: 'number',
+      render: (value, row) => (
+        <EditableCell
+          value={value}
+          rowId={row.id}
+          columnId="reorderPoint"
+          type="number"
+          onSave={(val) => handleUpdate(row.id, 'reorderPoint', val)}
+          className="text-slate-500 dark:text-slate-400"
+        />
+      )
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '120px',
+      align: 'center',
+      render: (_, row) => <StockStatusBadge status={row.status} />
+    },
+    {
+      key: 'unitCost',
+      header: 'Cost',
+      width: '100px',
+      align: 'right',
+      render: (val) => formatCurrency(val)
+    }
+  ], [inventory]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col space-y-4">
+      {/* Header Area */}
+      <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="h-6 w-6" />
-            Quản lý Tồn kho
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Smart Inventory Grid
           </h1>
-          <p className="text-muted-foreground">
-            Theo dõi và điều chỉnh tồn kho theo thời gian thực
-          </p>
+          <p className="text-xs text-muted-foreground">Excel-mode enabled: Click cells to edit.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/inventory/alerts">
-            <Button variant={criticalCount > 0 ? 'destructive' : 'outline'}>
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              {criticalCount + reorderCount} Cảnh báo
-            </Button>
-          </Link>
-          <PermissionButton
-            permission="inventory:adjust"
-            onClick={() => handleAdjust()}
-          >
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => fetchInventory()}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+            Refresh
+          </Button>
+          <PermissionButton permission="inventory:adjust" size="sm">
             <Settings className="h-4 w-4 mr-2" />
-            Điều chỉnh
+            Adjust
           </PermissionButton>
         </div>
       </div>
 
-      {/* Stats */}
       <StatsCards inventory={inventory} />
 
-      {/* Table Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <DataTableToolbar
-            searchValue={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Tìm kiếm part number, tên..."
-            onExport={handleExport}
-            onRefresh={fetchInventory}
-            isLoading={loading}
-            filters={[
-              {
-                key: 'status',
-                label: 'Trạng thái',
-                options: [
-                  { value: 'critical', label: 'Critical / Hết hàng' },
-                  { value: 'reorder', label: 'Cần đặt hàng' },
-                  { value: 'ok', label: 'Đủ hàng' },
-                ],
-              },
-              {
-                key: 'category',
-                label: 'Danh mục',
-                options: categories.map((c) => ({ value: c, label: c })),
-              },
-            ]}
-            activeFilters={filters}
-            onFilterChange={(key, value) =>
-              setFilters((prev) => ({ ...prev, [key]: value }))
-            }
-            onClearFilters={() => setFilters({ status: 'all', category: 'all' })}
-          />
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Part #</TableHead>
-                <TableHead>Tên</TableHead>
-                <TableHead>Danh mục</TableHead>
-                <TableHead className="text-right">Tồn kho</TableHead>
-                <TableHead className="text-right">Đã đặt</TableHead>
-                <TableHead className="text-right">Khả dụng</TableHead>
-                <TableHead className="text-right">Đơn giá</TableHead>
-                <TableHead className="text-center">Trạng thái</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      Đang tải...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredInventory.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <p className="text-muted-foreground">Không có dữ liệu tồn kho</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredInventory.map((item) => (
-                  <TableRow
-                    key={item.partId}
-                    className={cn(
-                      (item.status === 'CRITICAL' || item.status === 'OUT_OF_STOCK') &&
-                        'bg-red-50 dark:bg-red-950/20'
-                    )}
-                  >
-                    <TableCell className="font-mono font-medium">
-                      <Link
-                        href={`/inventory/${item.partId}`}
-                        className="hover:underline text-primary"
-                      >
-                        {item.partNumber}
-                      </Link>
-                      {item.isCritical && (
-                        <AlertTriangle className="inline h-3 w-3 ml-1 text-orange-500" />
-                      )}
-                    </TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{item.reserved}</TableCell>
-                    <TableCell className="text-right font-medium">{item.available}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(item.unitCost)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <StockStatusBadge status={item.status} />
-                    </TableCell>
-                    <TableCell>
-                      <ActionDropdown items={createInventoryActions(item)} />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <SmartGrid
+          data={inventory}
+          columns={columns}
+          keyField="id"
+          loading={loading}
+          searchable
+          pagination
+          pageSize={20}
+          stickyHeader
+          excelMode={{
+            enabled: true,
+            showRowNumbers: true,
+            columnHeaderStyle: 'field-names',
+            gridBorders: true,
+            showFooter: true,
+            sheetName: 'Inventory',
+            compactMode: true,
+          }}
+        />
+      </div>
 
-      {/* Adjust Dialog */}
-      <InventoryAdjustDialog
-        open={adjustOpen}
-        onOpenChange={setAdjustOpen}
-        inventoryItem={
-          adjustingItem
-            ? {
-                partId: adjustingItem.partId,
-                partNumber: adjustingItem.partNumber,
-                name: adjustingItem.name,
-                warehouseId: adjustingItem.warehouseId || '',
-                warehouseName: adjustingItem.warehouseName || '',
-                quantity: adjustingItem.quantity,
-              }
-            : null
-        }
-        onSuccess={handleAdjustSuccess}
+      {/* Change Impact Dialog */}
+      <ChangeImpactDialog
+        open={changeImpact.showDialog}
+        onOpenChange={changeImpact.setShowDialog}
+        result={changeImpact.result}
+        loading={changeImpact.loading}
+        onConfirm={changeImpact.confirm}
+        onCancel={() => {
+          changeImpact.cancel();
+          pendingUpdateRef.current = null;
+        }}
       />
     </div>
   );

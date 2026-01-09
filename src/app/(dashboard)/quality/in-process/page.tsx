@@ -1,22 +1,28 @@
 "use client";
 
+import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, CheckCircle, XCircle, Clock } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
+
+interface Inspection {
+  id: string;
+  workOrderNumber: string;
+  partNumber: string;
+  partName: string;
+  operation: string;
+  quantity: number;
+  inspectedBy: string;
+  status: string;
+  inspectionDate: string;
+}
 
 export default function InProcessInspectionPage() {
   // Placeholder data - would come from API
-  const inspections = [
+  const inspections: Inspection[] = [
     {
       id: "1",
       workOrderNumber: "WO-2024-001",
@@ -64,6 +70,60 @@ export default function InProcessInspectionPage() {
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  const columns: Column<Inspection>[] = useMemo(() => [
+    {
+      key: 'workOrderNumber',
+      header: 'Work Order',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'part',
+      header: 'Part',
+      width: '200px',
+      render: (_, row) => (
+        <div>
+          <div className="font-medium">{row.partNumber}</div>
+          <div className="text-sm text-muted-foreground">{row.partName}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'operation',
+      header: 'Operation',
+      width: '100px',
+      sortable: true,
+    },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      width: '80px',
+      align: 'center',
+      sortable: true,
+    },
+    {
+      key: 'inspectedBy',
+      header: 'Inspector',
+      width: '120px',
+      sortable: true,
+    },
+    {
+      key: 'inspectionDate',
+      header: 'Date',
+      width: '100px',
+      sortable: true,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '110px',
+      align: 'center',
+      sortable: true,
+      render: (value) => getStatusBadge(value),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -131,38 +191,26 @@ export default function InProcessInspectionPage() {
         <CardHeader>
           <CardTitle>Recent In-Process Inspections</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Work Order</TableHead>
-                <TableHead>Part</TableHead>
-                <TableHead>Operation</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Inspector</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inspections.map((inspection) => (
-                <TableRow key={inspection.id}>
-                  <TableCell className="font-medium">{inspection.workOrderNumber}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{inspection.partNumber}</div>
-                      <div className="text-sm text-muted-foreground">{inspection.partName}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{inspection.operation}</TableCell>
-                  <TableCell>{inspection.quantity}</TableCell>
-                  <TableCell>{inspection.inspectedBy}</TableCell>
-                  <TableCell>{inspection.inspectionDate}</TableCell>
-                  <TableCell>{getStatusBadge(inspection.status)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={inspections}
+            columns={columns}
+            keyField="id"
+            emptyMessage="No inspections found"
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'In-Process Inspections',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

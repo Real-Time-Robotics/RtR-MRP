@@ -193,7 +193,7 @@ export default function ShopFloorPage() {
 
       {/* Work Center Status Grid */}
       <div className="grid grid-cols-3 gap-4">
-        {data.workCenters.map((wc) => (
+        {data?.workCenters?.map((wc) => (
           <Card
             key={wc.id}
             className={

@@ -22,7 +22,11 @@ async function getProductWithBOM(id: string) {
         include: {
           bomLines: {
             include: {
-              part: true,
+              part: {
+                include: {
+                  cost: true,
+                }
+              },
             },
             orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
           },
@@ -69,7 +73,9 @@ async function getProductWithBOM(id: string) {
     }
 
     const bomModule = moduleMap.get(code)!;
-    const lineCost = line.quantity * line.part.unitCost;
+    const unitCost = line.part.cost?.unitCost || 0;
+    const lineCost = line.quantity * unitCost;
+
     bomModule.lines.push({
       id: line.id,
       lineNumber: line.lineNumber,
@@ -77,7 +83,7 @@ async function getProductWithBOM(id: string) {
       name: line.part.name,
       quantity: line.quantity,
       unit: line.unit,
-      unitCost: line.part.unitCost,
+      unitCost: unitCost,
       isCritical: line.isCritical,
     });
     bomModule.totalCost += lineCost;

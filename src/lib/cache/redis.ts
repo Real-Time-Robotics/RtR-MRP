@@ -28,7 +28,7 @@ export function getRedis(): Redis {
     });
 
     redisInstance.on('connect', () => {
-      console.log('[REDIS] Connected');
+      // Connected to Redis
     });
 
     redisInstance.on('error', (err) => {
@@ -36,7 +36,7 @@ export function getRedis(): Redis {
     });
 
     redisInstance.on('close', () => {
-      console.log('[REDIS] Connection closed');
+      // Redis connection closed
     });
   }
 

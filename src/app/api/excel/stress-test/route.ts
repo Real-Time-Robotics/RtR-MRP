@@ -201,18 +201,40 @@ export async function POST(request: NextRequest) {
               category,
               description: row['Description'] ? String(row['Description']).trim() : null,
               unit: String(row['Unit'] || row['UOM'] || 'pcs').trim(),
-              unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
-              minStockLevel: parseNumber(row['Min Stock'] || row['Safety Stock'], 0),
-              safetyStock: parseNumber(row['Safety Stock'], 0),
-              leadTimeDays: parseNumber(row['Lead Time'] || row['Lead Time Days'], 14),
-              moq: parseNumber(row['MOQ'] || row['Min Order Qty'], 1),
-              isCritical: parseBoolean(row['Critical'], false),
-              ndaaCompliant: parseBoolean(row['NDAA'], true),
               status: 'active',
+              // Nested relations
+              cost: {
+                create: {
+                  unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
+                }
+              },
+              planning: {
+                create: {
+                  minStockLevel: parseNumber(row['Min Stock'] || row['Safety Stock'], 0),
+                  safetyStock: parseNumber(row['Safety Stock'], 0),
+                  leadTimeDays: parseNumber(row['Lead Time'] || row['Lead Time Days'], 14),
+                  moq: parseNumber(row['MOQ'] || row['Min Order Qty'], 1),
+                }
+              },
+              compliance: {
+                create: {
+                  ndaaCompliant: parseBoolean(row['NDAA'], true),
+                }
+              },
+              isCritical: parseBoolean(row['Critical'], false),
             },
             update: {
               name: String(row['Name'] || row['Part Name'] || '').trim(),
-              unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
+              cost: {
+                upsert: {
+                  create: {
+                    unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
+                  },
+                  update: {
+                    unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
+                  }
+                }
+              }
             },
           });
           processed++;

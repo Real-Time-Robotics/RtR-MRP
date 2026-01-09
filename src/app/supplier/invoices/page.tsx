@@ -18,6 +18,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { excelPortalStyles } from '@/components/ui-v2/excel';
 
 // =============================================================================
 // SUPPLIER INVOICES PAGE
@@ -328,58 +329,60 @@ function SupplierInvoicesContent() {
                   )}
                 </div>
 
-                {/* Invoice Items (Expandable) */}
+                {/* Invoice Items (Expandable) - Excel Style */}
                 {selectedInvoice?.id === invoice.id && (
-                  <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-xs text-gray-500 uppercase">
-                          <th className="px-4 py-3 text-left">Mô tả</th>
-                          <th className="px-4 py-3 text-right">Số lượng</th>
-                          <th className="px-4 py-3 text-right">Đơn giá</th>
-                          <th className="px-4 py-3 text-right">Thành tiền</th>
+                  <div className="border-t border-[#217346]/30 dark:border-[#70AD47]/30 bg-white dark:bg-slate-950">
+                    <table className={excelPortalStyles.table}>
+                      <thead className={excelPortalStyles.thead}>
+                        <tr>
+                          <th className={excelPortalStyles.th}>Mô tả</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Số lượng</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Đơn giá</th>
+                          <th className={`${excelPortalStyles.th} ${excelPortalStyles.thRight}`}>Thành tiền</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {invoice.items.map((item, idx) => (
-                          <tr key={idx} className="border-t border-gray-100 dark:border-gray-800">
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.description}</td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                      <tbody className={excelPortalStyles.tbody}>
+                        {invoice?.items?.map((item, idx) => (
+                          <tr key={idx} className={excelPortalStyles.tr}>
+                            <td className={excelPortalStyles.td}>{item.description}</td>
+                            <td className={excelPortalStyles.tdNumber}>
                               {item.quantity.toLocaleString()}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
+                            <td className={excelPortalStyles.tdNumber}>
                               {formatCurrency(item.unitPrice)}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                            <td className={excelPortalStyles.tdCurrency}>
                               {formatCurrency(item.amount)}
                             </td>
                           </tr>
                         ))}
-                        <tr className="border-t-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                          <td colSpan={3} className="px-4 py-3 text-sm text-right font-medium text-gray-600 dark:text-gray-400">
+                      </tbody>
+                      <tfoot className={excelPortalStyles.tfoot}>
+                        <tr>
+                          <td colSpan={3} className={`${excelPortalStyles.tfootTd} text-right text-slate-500`}>
                             Tạm tính
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          <td className={`${excelPortalStyles.tfootTd} text-right`}>
                             {formatCurrency(invoice.subtotal)}
                           </td>
                         </tr>
-                        <tr className="bg-white dark:bg-gray-800">
-                          <td colSpan={3} className="px-4 py-3 text-sm text-right font-medium text-gray-600 dark:text-gray-400">
+                        <tr>
+                          <td colSpan={3} className={`${excelPortalStyles.tfootTd} text-right text-slate-500`}>
                             VAT (10%)
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          <td className={`${excelPortalStyles.tfootTd} text-right`}>
                             {formatCurrency(invoice.tax)}
                           </td>
                         </tr>
-                        <tr className="bg-blue-50 dark:bg-blue-900/20">
-                          <td colSpan={3} className="px-4 py-3 text-sm text-right font-bold text-blue-900 dark:text-blue-100">
+                        <tr className="bg-[#E2EFDA]/50 dark:bg-[#217346]/20">
+                          <td colSpan={3} className={`${excelPortalStyles.tfootTd} text-right font-bold text-[#217346] dark:text-[#70AD47]`}>
                             Tổng cộng
                           </td>
-                          <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">
+                          <td className={`${excelPortalStyles.tfootTd} text-right font-bold text-[#217346] dark:text-[#70AD47]`}>
                             {formatCurrency(invoice.total)}
                           </td>
                         </tr>
-                      </tbody>
+                      </tfoot>
                     </table>
                   </div>
                 )}

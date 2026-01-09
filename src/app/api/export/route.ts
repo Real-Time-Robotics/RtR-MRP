@@ -45,8 +45,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    console.log(`[Export API] Exporting ${entity} as ${format}`);
-
     // Generate export
     const result = await exportData({
       format,
@@ -54,8 +52,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       title,
       filters,
     });
-
-    console.log(`[Export API] Generated ${result.filename} (${result.size} bytes)`);
 
     return NextResponse.json({
       success: true,

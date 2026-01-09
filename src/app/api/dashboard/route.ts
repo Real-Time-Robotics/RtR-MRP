@@ -66,16 +66,23 @@ export async function GET(request: NextRequest) {
         reservedQty: true,
         part: {
           select: {
-            minStockLevel: true,
-            reorderPoint: true,
+            planning: {
+              select: {
+                minStockLevel: true,
+                reorderPoint: true,
+              },
+            },
           },
         },
       },
     });
 
-    const partInventory = new Map<string, { quantity: number; reserved: number; part: { minStockLevel: number; reorderPoint: number } }>();
+    const partInventory = new Map<string, { quantity: number; reserved: number; minStockLevel: number; reorderPoint: number }>();
     inventoryData.forEach((inv) => {
       const existing = partInventory.get(inv.partId);
+      const minStockLevel = inv.part.planning?.minStockLevel || 0;
+      const reorderPoint = inv.part.planning?.reorderPoint || 0;
+
       if (existing) {
         existing.quantity += inv.quantity;
         existing.reserved += inv.reservedQty;
@@ -83,7 +90,8 @@ export async function GET(request: NextRequest) {
         partInventory.set(inv.partId, {
           quantity: inv.quantity,
           reserved: inv.reservedQty,
-          part: inv.part,
+          minStockLevel,
+          reorderPoint,
         });
       }
     });
@@ -95,8 +103,8 @@ export async function GET(request: NextRequest) {
       const available = inv.quantity - inv.reserved;
       const status = getStockStatus(
         available,
-        inv.part.minStockLevel,
-        inv.part.reorderPoint
+        inv.minStockLevel,
+        inv.reorderPoint
       );
 
       if (status === "CRITICAL" || status === "OUT_OF_STOCK") {

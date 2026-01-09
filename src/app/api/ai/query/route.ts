@@ -29,21 +29,13 @@ function checkRateLimit(userId: string): boolean {
 
 // Audit log function
 async function logQuery(
-  userId: string,
-  query: string,
-  result: any,
-  latencyMs: number
+  _userId: string,
+  _query: string,
+  _result: any,
+  _latencyMs: number
 ) {
   // In production, save to database or logging service
-  console.log('[NL Query Audit]', {
-    timestamp: new Date().toISOString(),
-    userId,
-    query: query.substring(0, 100),
-    success: result.success,
-    confidence: result.metadata?.confidence,
-    rowCount: result.metadata?.rowCount,
-    latencyMs,
-  });
+  // Audit logging disabled - implement database persistence as needed
 }
 
 // POST: Process natural language query

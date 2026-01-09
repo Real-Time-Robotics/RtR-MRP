@@ -7,6 +7,7 @@ export async function GET() {
     const parts = await prisma.part.findMany({
       include: {
         inventory: true,
+        planning: true,
         partSuppliers: {
           include: {
             supplier: true,
@@ -52,7 +53,7 @@ export async function GET() {
         (sum, inv) => sum + (inv.quantity - inv.reservedQty),
         0
       );
-      const safetyStock = part.safetyStock;
+      const safetyStock = part.planning?.safetyStock || 0;
 
       // Calculate total required from sales orders
       let totalRequired = 0;
@@ -81,8 +82,8 @@ export async function GET() {
         let priority = "low";
         const daysUntilNeed = earliestNeed
           ? Math.ceil(
-              (earliestNeed.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-            )
+            (earliestNeed.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          )
           : 999;
 
         const leadTimeDays = part.partSuppliers[0]?.leadTimeDays ?? 14;

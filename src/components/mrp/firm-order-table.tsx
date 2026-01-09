@@ -1,18 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Lock, Unlock, Edit, Trash2, Plus, Package } from "lucide-react";
 import { format } from "date-fns";
+import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface PlannedOrder {
   id: string;
@@ -101,6 +94,119 @@ export function FirmOrderTable({
   const firmCount = orders.filter((o) => o.isFirm).length;
   const plannedCount = orders.filter((o) => !o.isFirm).length;
 
+  // Column definitions for DataTable
+  const columns: Column<PlannedOrder>[] = useMemo(() => [
+    {
+      key: 'orderNumber',
+      header: 'Order #',
+      width: '100px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'part',
+      header: 'Part',
+      width: '150px',
+      render: (value, row) => (
+        <div>
+          <div>{value?.partNumber || row.partId}</div>
+          {value?.name && (
+            <div className="text-xs text-muted-foreground">{value.name}</div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'orderType',
+      header: 'Type',
+      width: '80px',
+      render: (value) => <Badge variant="outline">{value}</Badge>,
+    },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      width: '80px',
+      align: 'right',
+      sortable: true,
+    },
+    {
+      key: 'dueDate',
+      header: 'Due Date',
+      width: '110px',
+      sortable: true,
+      render: (value) => format(new Date(value), "MMM dd, yyyy"),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      width: '90px',
+      render: (value) => (
+        <Badge
+          className={
+            value === "PLANNED"
+              ? "bg-blue-100 text-blue-800"
+              : value === "FIRM"
+              ? "bg-amber-100 text-amber-800"
+              : "bg-gray-100 text-gray-800"
+          }
+        >
+          {value}
+        </Badge>
+      ),
+    },
+    {
+      key: 'isFirm',
+      header: 'Firm',
+      width: '60px',
+      align: 'center',
+      render: (value, row) => (
+        onFirm ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onFirm(row.id, !value)}
+            title={value ? "Unfirm order" : "Firm order"}
+          >
+            {value ? (
+              <Lock className="h-4 w-4 text-amber-600" />
+            ) : (
+              <Unlock className="h-4 w-4 text-muted-foreground" />
+            )}
+          </Button>
+        ) : (
+          value ? <Lock className="h-4 w-4 text-amber-600" /> : <Unlock className="h-4 w-4 text-muted-foreground" />
+        )
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: '80px',
+      render: (_, row) => (
+        <div className="flex gap-1">
+          {onEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEditOrder({ ...row })}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(row.id)}
+            >
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ], [onFirm, onEdit, onDelete]);
+
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -150,97 +256,26 @@ export function FirmOrderTable({
             </Button>
           )}
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Part</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Firm</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id} className={order.isFirm ? "bg-amber-50/50" : ""}>
-                  <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                  <TableCell>
-                    {order.part?.partNumber || order.partId}
-                    {order.part?.name && (
-                      <div className="text-xs text-muted-foreground">{order.part.name}</div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{order.orderType}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{order.quantity}</TableCell>
-                  <TableCell>{format(new Date(order.dueDate), "MMM dd, yyyy")}</TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        order.status === "PLANNED"
-                          ? "bg-blue-100 text-blue-800"
-                          : order.status === "FIRM"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-gray-100 text-gray-800"
-                      }
-                    >
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {onFirm && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onFirm(order.id, !order.isFirm)}
-                        title={order.isFirm ? "Unfirm order" : "Firm order"}
-                      >
-                        {order.isFirm ? (
-                          <Lock className="h-4 w-4 text-amber-600" />
-                        ) : (
-                          <Unlock className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {onEdit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditOrder({ ...order })}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {onDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(order.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {orders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No planned orders found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="p-0">
+          <DataTable
+            data={orders}
+            columns={columns}
+            keyField="id"
+            emptyMessage="No planned orders found"
+            pagination
+            pageSize={20}
+            searchable={false}
+            stickyHeader
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: 'field-names',
+              gridBorders: true,
+              showFooter: true,
+              sheetName: 'Firm Orders',
+              compactMode: true,
+            }}
+          />
         </CardContent>
       </Card>
 

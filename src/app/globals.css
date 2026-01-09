@@ -94,6 +94,38 @@
     --color-info-light: #EFF6FF;
     --color-info-dark: #2563EB;
 
+    /* =========================================================================
+       EXCEL-LIKE UI SYSTEM - CSS Variables
+       Microsoft Excel inspired color palette for familiar UX
+       ========================================================================= */
+
+    /* Excel Primary Green */
+    --excel-primary: #217346;
+    --excel-primary-hover: #1e6b3f;
+    --excel-primary-dark: #1a5c36;
+
+    /* Excel Light Backgrounds */
+    --excel-primary-light: #E2EFDA;
+    --excel-primary-lighter: #F5FAF5;
+    --excel-primary-lightest: #FAFCFA;
+
+    /* Excel UI Elements */
+    --excel-header-bg: #F0F0F0;
+    --excel-row-number-bg: #F8F9FA;
+    --excel-cell-bg: #FFFFFF;
+    --excel-border: #D6D6D6;
+    --excel-border-light: #E8E8E8;
+
+    /* Excel Selection */
+    --excel-selection: rgba(33, 115, 70, 0.12);
+    --excel-selection-border: #217346;
+    --excel-selection-active: rgba(33, 115, 70, 0.2);
+
+    /* Excel Text */
+    --excel-header-text: #333333;
+    --excel-cell-text: #1a1a1a;
+    --excel-row-number-text: #666666;
+
     /* Typography */
     --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
@@ -169,6 +201,22 @@
     /* Chart colors for dark mode - neutral */
     --chart-grid: #404040;           /* neutral-700 */
     --chart-text: #d4d4d4;           /* neutral-300 */
+
+    /* Excel-like UI - Dark Mode Overrides */
+    --excel-primary: #70AD47;
+    --excel-primary-hover: #5a9a3a;
+    --excel-primary-light: rgba(33, 115, 70, 0.2);
+    --excel-primary-lighter: rgba(33, 115, 70, 0.1);
+    --excel-header-bg: #1E2530;
+    --excel-row-number-bg: #252D38;
+    --excel-cell-bg: #0f172a;
+    --excel-border: #374151;
+    --excel-border-light: #2d3748;
+    --excel-selection: rgba(112, 173, 71, 0.2);
+    --excel-selection-border: #70AD47;
+    --excel-header-text: #e5e7eb;
+    --excel-cell-text: #f3f4f6;
+    --excel-row-number-text: #9ca3af;
   }
 }
 
