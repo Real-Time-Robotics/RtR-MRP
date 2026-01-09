@@ -192,7 +192,7 @@ model Part {
 
   // === Normalized Relations (Optional - for future migration) ===
   planning      PartPlanning?
-  cost          PartCost?
+  costs         PartCost[]
   specs         PartSpecs?
   compliance    PartCompliance?
 
@@ -279,10 +279,10 @@ model PartPlanning {
   @@map("part_planning")
 }
 
-// === NEW: Part Cost Data ===
+// === NEW: Part Cost Data (Legacy - kept for backward compatibility) ===
 model PartCost {
   id              String   @id @default(cuid())
-  partId          String   @unique
+  partId          String
   part            Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   // Standard Costing
@@ -290,7 +290,7 @@ model PartCost {
   standardCost    Float?
   averageCost     Float?
   landedCost      Float?
-  
+
   // Cost Components
   freightPercent  Float?
   dutyPercent     Float?
@@ -306,6 +306,7 @@ model PartCost {
 
   updatedAt       DateTime @updatedAt
 
+  @@index([partId])
   @@map("part_costs")
 }
 
