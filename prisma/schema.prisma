@@ -102,32 +102,95 @@ model Supplier {
 }
 
 // ============ PARTS (Enhanced v2.0) ============
-// ============ PARTS (Normalized v3.0) ============
 model Part {
   id            String   @id @default(cuid())
   partNumber    String   @unique
   name          String
-  description   String?
   category      String
-  // unit is common enough to keep on main table
+  description   String?
   unit          String   @default("pcs")
-  
-  // Status & Lifecycle
-  status        String   @default("active")
-  lifecycleStatus  LifecycleStatus @default(ACTIVE)
+  unitCost      Float    @default(0)
+  weightKg      Float?
   isCritical    Boolean  @default(false)
-  
-  // Images
-  imageUrl      String?
-  
-  // Quick Access / Denormalized
-  revision      String?   @default("A")
-  obsoleteDate  DateTime?
-
+  minStockLevel Int      @default(0)
+  reorderPoint  Int      @default(0)
+  safetyStock   Int      @default(0)
+  shelfLifeDays Int?
+  status        String   @default("active")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  
-  // === Normalized Relations ===
+
+  // === Physical Specifications ===
+  lengthMm      Float?
+  widthMm       Float?
+  heightMm      Float?
+  volumeCm3     Float?
+  color         String?
+  material      String?
+
+  // === Classification ===
+  subCategory   String?
+  partType      String?
+
+  // === Procurement & Sourcing ===
+  makeOrBuy        MakeOrBuy       @default(BUY)
+  procurementType  ProcurementType @default(STOCK)
+  buyerCode        String?
+  moq              Int             @default(1)
+  orderMultiple    Int             @default(1)
+  standardPack     Int             @default(1)
+  leadTimeDays     Int             @default(14)
+
+  // === Compliance & Origin (CRITICAL for NDAA) ===
+  countryOfOrigin  String?
+  hsCode           String?
+  eccn             String?
+  ndaaCompliant    Boolean  @default(true)
+  itarControlled   Boolean  @default(false)
+
+  // === Quality & Traceability ===
+  lotControl          Boolean  @default(false)
+  serialControl       Boolean  @default(false)
+  inspectionRequired  Boolean  @default(true)
+  inspectionPlan      String?
+  aqlLevel            String?
+  certificateRequired Boolean  @default(false)
+  rohsCompliant       Boolean  @default(true)
+  reachCompliant      Boolean  @default(true)
+
+  // === Engineering & Documents ===
+  revision         String    @default("A")
+  revisionDate     DateTime?
+  drawingNumber    String?
+  drawingUrl       String?
+  datasheetUrl     String?
+  specDocument     String?
+  manufacturerPn   String?
+  manufacturer     String?
+  lifecycleStatus  LifecycleStatus @default(ACTIVE)
+  effectivityDate  DateTime?
+  obsoleteDate     DateTime?
+
+  // === Enhanced Costing ===
+  standardCost     Float?
+  averageCost      Float?
+  landedCost       Float?
+  freightPercent   Float?
+  dutyPercent      Float?
+  overheadPercent  Float?
+
+  // === Price Breaks ===
+  priceBreakQty1   Int?
+  priceBreakCost1  Float?
+  priceBreakQty2   Int?
+  priceBreakCost2  Float?
+  priceBreakQty3   Int?
+  priceBreakCost3  Float?
+
+  // === Images ===
+  imageUrl      String?
+
+  // === Normalized Relations (Optional - for future migration) ===
   planning      PartPlanning?
   cost          PartCost?
   specs         PartSpecs?
