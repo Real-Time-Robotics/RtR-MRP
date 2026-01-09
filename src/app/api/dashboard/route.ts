@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getStockStatus } from "@/lib/bom-engine";
 import { auth } from "@/lib/auth";
-import { cache, cacheKeys, cacheTTL } from "@/lib/cache/redis";
-import { rateLimitMiddleware, rateLimitConfigs } from "@/lib/security/rate-limiter";
+// Note: Removed Redis rate limiting - middleware already handles this
+// Redis not available on Render free tier causes 10s timeout
 
 interface DashboardData {
   pendingOrders: number;
@@ -20,29 +20,12 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Rate limiting
-    const rateLimitResponse = await rateLimitMiddleware(request, rateLimitConfigs.dashboard);
-    if (rateLimitResponse) return rateLimitResponse;
+    // Rate limiting handled by middleware - no Redis call here
+    // This prevents 10s timeout when Redis is unavailable
 
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const cacheKey = cacheKeys.dashboardStats();
-
-    // Try to get from cache first
-    const cached = await cache.get<DashboardData>(cacheKey);
-    if (cached) {
-      return NextResponse.json({
-        ...cached,
-        cached: true,
-        took: Date.now() - startTime,
-      }, {
-        headers: {
-          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
-        },
-      });
     }
 
     // Get pending orders
@@ -136,8 +119,8 @@ export async function GET(request: NextRequest) {
       reorderAlerts,
     };
 
-    // Cache for 1 minute (dashboard refreshes frequently)
-    await cache.set(cacheKey, data, cacheTTL.MEDIUM);
+    // Note: Cache disabled - Redis not available on Render free tier
+    // Using HTTP Cache-Control headers instead for browser caching
 
     return NextResponse.json({
       ...data,
