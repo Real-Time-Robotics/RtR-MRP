@@ -180,10 +180,8 @@ async function importParts(sheet: XLSX.WorkSheet): Promise<void> {
             }
           },
           costs: {
-            upsert: {
-              create: costData,
-              update: costData
-            }
+            deleteMany: {},
+            create: costData
           }
         },
       });
