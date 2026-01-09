@@ -73,7 +73,7 @@ async function getProductWithBOM(id: string) {
     }
 
     const bomModule = moduleMap.get(code)!;
-    const unitCost = line.part.cost?.unitCost || 0;
+    const unitCost = line.part.costs?.[0]?.unitCost || 0;
     const lineCost = line.quantity * unitCost;
 
     bomModule.lines.push({

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     let result = inventoryData.map((inv) => {
       const available = inv.quantity - inv.reservedQty;
       // Handle potential nulls for optional relations
-      const unitCost = inv.part.cost?.unitCost || 0;
+      const unitCost = inv.part.costs?.[0]?.unitCost || 0;
       const minStockLevel = inv.part.planning?.minStockLevel || 0;
       const reorderPoint = inv.part.planning?.reorderPoint || 0;
       const safetyStock = inv.part.planning?.safetyStock || 0;

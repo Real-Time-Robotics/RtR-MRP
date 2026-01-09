@@ -86,22 +86,17 @@ export async function rollupPartCost(
   }
 
   // Add part's own costs (direct costs)
-  // Add part's own costs (direct costs)
-  if (part.cost) {
+  const partCost = part.costs?.[0]; // Get first cost record if exists
+  if (partCost) {
     // For now, assume standardCost or unitCost is primarily MATERIAL for buy parts
     // or direct material input for make parts not covered by children
-    const directCost = part.cost.standardCost || part.cost.unitCost || 0;
+    const directCost = partCost.standardCost || partCost.unitCost || 0;
     costs.materialCost += directCost;
 
     // Apply overhead if defined
-    if (part.cost.overheadPercent) {
-      costs.overheadCost += directCost * (part.cost.overheadPercent / 100);
+    if (partCost.overheadPercent) {
+      costs.overheadCost += directCost * (partCost.overheadPercent / 100);
     }
-  }
-
-  // If no part costs, assume 0
-  if (!part.cost) {
-    costs.materialCost += 0;
   }
 
   // Calculate total

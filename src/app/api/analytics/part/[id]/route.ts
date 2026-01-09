@@ -94,8 +94,8 @@ export async function GET(
                 coverageDays,
             },
             price: {
-                current: part.cost?.unitCost || 0,
-                lastPay: part.cost?.unitCost || 0, // Placeholder
+                current: part.costs?.[0]?.unitCost || 0,
+                lastPay: part.costs?.[0]?.unitCost || 0, // Placeholder
                 trend: 'stable',
             }
         };

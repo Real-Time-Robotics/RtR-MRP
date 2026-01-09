@@ -57,7 +57,7 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
           title: `Reorder ${part.partNumber}`,
           description: `Stock at ${totalStock} units, below reorder point of ${reorderPoint}. Need to order ${shortage}+ units.`,
           impact: "Prevents potential stock-out affecting production",
-          savingsEstimate: shortage * (part.cost?.unitCost || 0) * 0.1,
+          savingsEstimate: shortage * (part.costs?.[0]?.unitCost || 0) * 0.1,
           confidence: 0.92,
           partId: part.id,
           supplierId: supplier?.id,

@@ -129,9 +129,9 @@ export async function approveSuggestion(
             partId: suggestion.partId,
             quantity: suggestion.suggestedQty || 0,
             // @ts-ignore
-            unitPrice: suggestion.part.cost?.unitCost || 0,
+            unitPrice: suggestion.part.costs?.[0]?.unitCost || 0,
             // @ts-ignore
-            lineTotal: (suggestion.suggestedQty || 0) * (suggestion.part.cost?.unitCost || 0),
+            lineTotal: (suggestion.suggestedQty || 0) * (suggestion.part.costs?.[0]?.unitCost || 0),
           },
         },
       },

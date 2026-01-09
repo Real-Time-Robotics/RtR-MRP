@@ -161,7 +161,7 @@ async function importParts(sheet: XLSX.WorkSheet): Promise<void> {
           planning: {
             create: planningData
           },
-          cost: {
+          costs: {
             create: costData
           }
         },
@@ -179,7 +179,7 @@ async function importParts(sheet: XLSX.WorkSheet): Promise<void> {
               update: planningData
             }
           },
-          cost: {
+          costs: {
             upsert: {
               create: costData,
               update: costData

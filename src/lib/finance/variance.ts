@@ -139,7 +139,7 @@ export async function calculateMaterialUsageVariance(
     let woStandard = 0;
     for (const bomLine of bom.bomLines) {
       const stdQty = bomLine.quantity * completedQty;
-      const stdPrice = bomLine.part.cost?.standardCost || bomLine.part.cost?.unitCost || 0;
+      const stdPrice = bomLine.part.costs?.[0]?.standardCost || bomLine.part.costs?.[0]?.unitCost || 0;
       woStandard += stdQty * stdPrice;
     }
 
@@ -147,7 +147,7 @@ export async function calculateMaterialUsageVariance(
     let woActual = 0;
     for (const alloc of wo.allocations) {
       const issuedQty = alloc.issuedQty - alloc.returnedQty;
-      const unitCost = alloc.part.cost?.standardCost || alloc.part.cost?.unitCost || 0;
+      const unitCost = alloc.part.costs?.[0]?.standardCost || alloc.part.costs?.[0]?.unitCost || 0;
       woActual += issuedQty * unitCost;
     }
 

@@ -31,7 +31,7 @@ async function main() {
             name: 'Test Raw Material C',
             category: 'RAW_MATERIAL',
             status: 'active',
-            cost: { create: { unitCost: 5.0 } },
+            costs: { create: { unitCost: 5.0 } },
             planning: { create: { leadTimeDays: 5, safetyStock: 0 } },
             inventory: {
                 create: {
@@ -54,7 +54,7 @@ async function main() {
             name: 'Test Sub Assembly B',
             category: 'SUB_ASSEMBLY',
             status: 'active',
-            cost: { create: { unitCost: 20.0 } },
+            costs: { create: { unitCost: 20.0 } },
             planning: { create: { leadTimeDays: 3, safetyStock: 0 } },
             inventory: {
                 create: {
@@ -72,7 +72,7 @@ async function main() {
             name: 'Test Finished Product A',
             category: 'FINISHED_GOOD',
             status: 'active',
-            cost: { create: { unitCost: 150.0 } },
+            costs: { create: { unitCost: 150.0 } },
             planning: { create: { leadTimeDays: 2, safetyStock: 10 } }, // SS: 10
             inventory: {
                 create: {
