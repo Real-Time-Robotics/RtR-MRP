@@ -52,7 +52,7 @@ const queryPatterns: QueryPattern[] = [
               name: true,
               category: true,
               unit: true,
-              cost: { select: { unitCost: true } },
+              costs: { select: { unitCost: true } },
               planning: { select: { minStockLevel: true } },
             }
           },
@@ -80,7 +80,7 @@ const queryPatterns: QueryPattern[] = [
           minStock: item.part?.planning?.minStockLevel || 20,
           unit: item.part?.unit || 'pcs',
           warehouse: item.warehouse?.name,
-          unitCost: item.part?.cost?.unitCost,
+          unitCost: item.part?.costs?.[0]?.unitCost,
           shortfall: Math.max(0, (item.part?.planning?.minStockLevel || 20) - Number(item.quantity)),
         })),
         metadata: {
@@ -116,7 +116,7 @@ const queryPatterns: QueryPattern[] = [
               partNumber: true,
               name: true,
               category: true,
-              cost: { select: { unitCost: true } }
+              costs: { select: { unitCost: true } }
             }
           }
         }
@@ -129,7 +129,7 @@ const queryPatterns: QueryPattern[] = [
 
       inventoryItems.forEach(item => {
         const category = item.part?.category || 'Uncategorized';
-        const unitCost = Number(item.part?.cost?.unitCost || 0);
+        const unitCost = Number(item.part?.costs?.[0]?.unitCost || 0);
         const quantity = Number(item.quantity);
         const value = quantity * unitCost;
 

@@ -27,7 +27,7 @@ export async function generateRecommendations(): Promise<Recommendation[]> {
       include: {
         inventory: true,
         planning: true,
-        cost: true,
+        costs: true,
         partSuppliers: {
           include: { supplier: true },
           where: { isPreferred: true },

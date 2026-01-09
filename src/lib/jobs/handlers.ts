@@ -225,15 +225,11 @@ const dataSyncHandler: JobHandler<DataSyncData> = async (job, updateProgress) =>
         await prisma.part.update({
           where: { id: item.partId },
           data: {
-            cost: {
-              upsert: {
-                create: {
-                  averageCost: item._avg.unitPrice,
-                  unitCost: item._avg.unitPrice, // Default if not exists
-                },
-                update: {
-                  averageCost: item._avg.unitPrice,
-                }
+            costs: {
+              deleteMany: {},
+              create: {
+                averageCost: item._avg.unitPrice,
+                unitCost: item._avg.unitPrice,
               }
             }
           },

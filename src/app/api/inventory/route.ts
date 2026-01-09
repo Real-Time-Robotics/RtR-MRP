@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       include: {
         part: {
           include: {
-            cost: true,
+            costs: true,
             planning: true,
           }
         },

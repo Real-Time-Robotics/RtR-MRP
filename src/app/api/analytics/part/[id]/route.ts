@@ -22,7 +22,7 @@ export async function GET(
                 include: {
                     inventory: true,
                     planning: true,
-                    cost: true,
+                    costs: true,
                 }
             }),
             prisma.purchaseOrderLine.findMany({

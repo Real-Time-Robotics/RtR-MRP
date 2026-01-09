@@ -109,7 +109,7 @@ async function seedParts() {
                                 makeOrBuy: randomPick(['MAKE', 'BUY']) as any,
                             }
                         },
-                        cost: {
+                        costs: {
                             create: {
                                 unitCost: randomInt(1, 500) + Math.random(),
                                 standardCost: randomInt(1, 500) + Math.random(),

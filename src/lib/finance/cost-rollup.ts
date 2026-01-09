@@ -22,7 +22,7 @@ export async function rollupPartCost(
   const part = await prisma.part.findUnique({
     where: { id: partId },
     include: {
-      cost: true,
+      costs: true,
     },
   });
 

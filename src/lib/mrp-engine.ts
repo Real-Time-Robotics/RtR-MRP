@@ -104,7 +104,7 @@ export async function approveSuggestion(
       approvedBy: userId,
       approvedAt: new Date(),
     },
-    include: { part: { include: { cost: true } }, supplier: true },
+    include: { part: { include: { costs: true } }, supplier: true },
   });
 
   if (

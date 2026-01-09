@@ -131,39 +131,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         tags: data.tags,
         updatedBy: session.user?.email || "system",
 
-        // Nested Updates (using upsert to be safe)
-        cost: {
-          upsert: {
-            create: {
-              unitCost: data.unitCost || 0,
-              standardCost: data.standardCost,
-              averageCost: data.averageCost,
-              landedCost: data.landedCost,
-              freightPercent: data.freightPercent,
-              dutyPercent: data.dutyPercent,
-              overheadPercent: data.overheadPercent,
-              priceBreakQty1: data.priceBreakQty1,
-              priceBreakCost1: data.priceBreakCost1,
-              priceBreakQty2: data.priceBreakQty2,
-              priceBreakCost2: data.priceBreakCost2,
-              priceBreakQty3: data.priceBreakQty3,
-              priceBreakCost3: data.priceBreakCost3,
-            },
-            update: {
-              unitCost: data.unitCost,
-              standardCost: data.standardCost,
-              averageCost: data.averageCost,
-              landedCost: data.landedCost,
-              freightPercent: data.freightPercent,
-              dutyPercent: data.dutyPercent,
-              overheadPercent: data.overheadPercent,
-              priceBreakQty1: data.priceBreakQty1,
-              priceBreakCost1: data.priceBreakCost1,
-              priceBreakQty2: data.priceBreakQty2,
-              priceBreakCost2: data.priceBreakCost2,
-              priceBreakQty3: data.priceBreakQty3,
-              priceBreakCost3: data.priceBreakCost3,
-            }
+        // Nested Updates (using deleteMany + create for one-to-many)
+        costs: {
+          deleteMany: {},
+          create: {
+            unitCost: data.unitCost || 0,
+            standardCost: data.standardCost,
+            averageCost: data.averageCost,
+            landedCost: data.landedCost,
+            freightPercent: data.freightPercent,
+            dutyPercent: data.dutyPercent,
+            overheadPercent: data.overheadPercent,
+            priceBreakQty1: data.priceBreakQty1,
+            priceBreakCost1: data.priceBreakCost1,
+            priceBreakQty2: data.priceBreakQty2,
+            priceBreakCost2: data.priceBreakCost2,
+            priceBreakQty3: data.priceBreakQty3,
+            priceBreakCost3: data.priceBreakCost3,
           }
         },
 
@@ -273,7 +257,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         },
       },
       include: {
-        cost: true,
+        costs: true,
         planning: true,
         partSuppliers: {
           include: { supplier: true },

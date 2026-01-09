@@ -24,7 +24,7 @@ export async function explodeBOM(
       bomLines: {
         include: {
           part: {
-            include: { cost: true }
+            include: { costs: true }
           },
         },
         orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],

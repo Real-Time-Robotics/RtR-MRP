@@ -24,7 +24,7 @@ async function getProductWithBOM(id: string) {
             include: {
               part: {
                 include: {
-                  cost: true,
+                  costs: true,
                 }
               },
             },

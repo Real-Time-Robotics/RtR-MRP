@@ -30,7 +30,7 @@ export async function calculateMaterialPriceVariance(
     include: {
       part: {
         include: {
-          cost: true,
+          costs: true,
         },
       },
     },
@@ -41,7 +41,7 @@ export async function calculateMaterialPriceVariance(
   const details: VarianceDetail[] = [];
 
   for (const line of poLines) {
-    const standardPrice = line.part?.cost?.standardCost || line.part?.cost?.unitCost || 0;
+    const standardPrice = line.part?.costs?.[0]?.standardCost || line.part?.costs?.[0]?.unitCost || 0;
     const actualPrice = line.unitPrice;
     const quantity = line.receivedQty;
 
@@ -107,7 +107,7 @@ export async function calculateMaterialUsageVariance(
               bomLines: {
                 include: {
                   part: {
-                    include: { cost: true }
+                    include: { costs: true }
                   },
                 },
               },
@@ -118,7 +118,7 @@ export async function calculateMaterialUsageVariance(
       allocations: {
         include: {
           part: {
-            include: { cost: true }
+            include: { costs: true }
           },
         },
       },

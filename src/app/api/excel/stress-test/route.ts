@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
               unit: String(row['Unit'] || row['UOM'] || 'pcs').trim(),
               status: 'active',
               // Nested relations
-              cost: {
+              costs: {
                 create: {
                   unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
                 }
@@ -225,14 +225,10 @@ export async function POST(request: NextRequest) {
             },
             update: {
               name: String(row['Name'] || row['Part Name'] || '').trim(),
-              cost: {
-                upsert: {
-                  create: {
-                    unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
-                  },
-                  update: {
-                    unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
-                  }
+              costs: {
+                deleteMany: {},
+                create: {
+                  unitCost: parseNumber(row['Unit Cost'] || row['Cost'], 0),
                 }
               }
             },

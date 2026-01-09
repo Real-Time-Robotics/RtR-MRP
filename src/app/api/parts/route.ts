@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         createdBy: session.user?.email || "system",
 
         // Nested Writes
-        cost: {
+        costs: {
           create: {
             unitCost: data.unitCost || 0,
             standardCost: data.standardCost,
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        cost: true,
+        costs: true,
         planning: true,
         specs: true,
         compliance: true,

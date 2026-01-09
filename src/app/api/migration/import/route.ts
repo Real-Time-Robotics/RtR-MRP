@@ -148,14 +148,10 @@ async function importPart(
           updatedAt: new Date(),
 
           // Update related tables
-          cost: {
-            upsert: {
-              create: {
-                unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
-              },
-              update: {
-                unitCost: data.unitCost ? parseFloat(data.unitCost) : undefined,
-              }
+          costs: {
+            deleteMany: {},
+            create: {
+              unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
             }
           },
           specs: {
@@ -249,7 +245,7 @@ async function importPart(
       // So I should REMOVE revision assignment here.
 
       // Nested Writes
-      cost: {
+      costs: {
         create: {
           unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
         }

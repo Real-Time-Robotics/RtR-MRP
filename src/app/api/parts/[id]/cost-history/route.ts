@@ -67,16 +67,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       await prisma.part.update({
         where: { id },
         data: {
-          cost: {
-            upsert: {
-              create: {
-                unitCost: data.unitCost,
-                averageCost: data.unitCost,
-              },
-              update: {
-                unitCost: data.unitCost,
-                averageCost: data.unitCost,
-              },
+          costs: {
+            deleteMany: {},
+            create: {
+              unitCost: data.unitCost,
+              averageCost: data.unitCost,
             },
           },
           updatedBy: session.user?.email || "system",
