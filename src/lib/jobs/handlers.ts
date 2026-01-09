@@ -3,7 +3,7 @@
 
 import { jobQueue, JOB_NAMES, Job, JobHandler } from "./job-queue";
 import { warmAllCaches } from "@/lib/cache/cache-warmer";
-import { cache } from "@/lib/cache/redis";
+// Note: Redis cache disabled - not available on Render free tier
 import prisma from "@/lib/prisma";
 import { logger } from "@/lib/monitoring/logger";
 
@@ -241,8 +241,7 @@ const dataSyncHandler: JobHandler<DataSyncData> = async (job, updateProgress) =>
     updateProgress(80);
   }
 
-  // Invalidate related caches
-  await cache.deletePattern("mrp:*");
+  // Note: Cache invalidation disabled - Redis not available on Render free tier
 
   updateProgress(100);
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { cache, cacheKeys, cacheTTL } from '@/lib/cache/redis';
+// Note: Redis cache disabled - not available on Render free tier
+// Using HTTP Cache-Control headers for browser caching instead
 
 // =============================================================================
 // ANALYTICS DASHBOARD API
@@ -35,20 +36,7 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    // Check cache first
-    const cacheKey = `analytics:${period}`;
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return NextResponse.json({
-        ...cached,
-        cached: true,
-        took: Date.now() - startTime,
-      }, {
-        headers: {
-          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
-        },
-      });
-    }
+    // Note: Redis cache disabled - skip cache check
 
     // Fetch all metrics in parallel
     const [
@@ -87,8 +75,7 @@ export async function GET(request: NextRequest) {
       charts: chartData
     };
 
-    // Cache for 2 minutes
-    await cache.set(cacheKey, responseData, cacheTTL.MEDIUM);
+    // Note: Redis cache disabled - using HTTP cache headers instead
 
     return NextResponse.json({
       ...responseData,

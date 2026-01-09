@@ -1,9 +1,9 @@
 // src/app/api/cache/stats/route.ts
 // Cache statistics and management endpoint
+// Note: Redis cache disabled - not available on Render free tier
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { cache } from "@/lib/cache/redis";
 
 export async function GET() {
   try {
@@ -12,12 +12,16 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const stats = cache.getStats();
-
+    // Redis cache disabled - return placeholder stats
     return NextResponse.json({
       success: true,
       stats: {
-        ...stats,
+        hits: 0,
+        misses: 0,
+        hitRate: 0,
+        size: 0,
+        enabled: false,
+        message: "Redis cache disabled - not available on Render free tier",
         timestamp: new Date().toISOString(),
       },
     });
@@ -38,25 +42,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { action, pattern } = body;
-
-    if (action === "clear") {
-      if (pattern) {
-        await cache.deletePattern(pattern);
-      } else {
-        await cache.deletePattern("mrp:*");
-      }
-      cache.resetStats();
-      return NextResponse.json({ success: true, message: "Cache cleared" });
-    }
-
-    if (action === "resetStats") {
-      cache.resetStats();
-      return NextResponse.json({ success: true, message: "Stats reset" });
-    }
-
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    // Redis cache disabled - no-op
+    return NextResponse.json({
+      success: true,
+      message: "Cache management disabled - Redis not available on Render free tier"
+    });
   } catch (error) {
     console.error("Cache management error:", error);
     return NextResponse.json(

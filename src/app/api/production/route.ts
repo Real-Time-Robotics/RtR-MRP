@@ -12,21 +12,18 @@ import {
   paginatedError,
   PaginatedResponse,
 } from "@/lib/pagination";
-import { cache, cacheKeys, cacheTTL, cachePatterns } from "@/lib/cache/redis";
-import { rateLimitMiddleware, rateLimitConfigs } from "@/lib/security/rate-limiter";
+// Note: Redis cache/rate-limit disabled - not available on Render free tier
 
 // Allowed filters for work orders
 const ALLOWED_FILTERS = ["status", "priority", "productId"];
 const SEARCH_FIELDS = ["woNumber"];
 
-// GET - List work orders with pagination and caching
+// GET - List work orders with pagination
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Rate limiting for list endpoints
-    const rateLimitResponse = await rateLimitMiddleware(request, rateLimitConfigs.list);
-    if (rateLimitResponse) return rateLimitResponse;
+    // Rate limiting handled by middleware (in-memory)
 
     const session = await auth();
     if (!session) {
@@ -59,25 +56,7 @@ export async function GET(request: NextRequest) {
       ...searchQuery,
     };
 
-    // Build cache key from query parameters
-    const cacheKey = cacheKeys.workOrders({
-      page: params.page,
-      pageSize: params.pageSize,
-      sortBy: params.sortBy,
-      sortOrder: params.sortOrder,
-      search,
-      ...filters,
-    });
-
-    // Try to get from cache first
-    const cached = await cache.get<PaginatedResponse<{ id: string }>>(cacheKey);
-    if (cached) {
-      // Return cached response with updated timing
-      return paginatedSuccess({
-        ...cached,
-        meta: { took: Date.now() - startTime, cached: true },
-      });
-    }
+    // Note: Redis cache disabled - skip cache check
 
     // Get total count and paginated data in parallel
     const [totalCount, workOrders] = await Promise.all([
@@ -114,8 +93,7 @@ export async function GET(request: NextRequest) {
 
     const response = buildPaginatedResponse(workOrders, totalCount, params, startTime);
 
-    // Cache the response (short TTL for frequently changing data)
-    await cache.set(cacheKey, response, cacheTTL.SHORT);
+    // Note: Redis cache disabled - not available on Render free tier
 
     return paginatedSuccess(response);
   } catch (error) {
@@ -167,8 +145,7 @@ export async function POST(request: Request) {
       priority
     );
 
-    // Invalidate work orders cache after creation
-    await cache.deletePattern(cachePatterns.ALL_WORK_ORDERS);
+    // Note: Cache invalidation disabled - Redis not available on Render free tier
 
     return NextResponse.json({
       success: true,
