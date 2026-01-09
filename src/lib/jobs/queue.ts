@@ -1,21 +1,7 @@
-// @ts-nocheck
 // =============================================================================
-// RTR MRP - BACKGROUND JOBS (BullMQ)
-// Queue definitions and job handlers
-// NOTE: Install bullmq before using: npm install bullmq
+// RTR MRP - BACKGROUND JOBS
+// In-memory queue implementation (BullMQ disabled for Render compatibility)
 // =============================================================================
-
-import { Queue, Worker, Job, QueueEvents, JobsOptions } from 'bullmq';
-
-// =============================================================================
-// REDIS CONNECTION
-// =============================================================================
-
-const connection = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  maxRetriesPerRequest: null,
-};
 
 // =============================================================================
 // JOB DATA TYPES
@@ -31,7 +17,7 @@ export interface MRPJobData {
     includeDemand: boolean;
     includeSupply: boolean;
     includeWIP: boolean;
-    planningHorizon: number; // days
+    planningHorizon: number;
   };
 }
 
@@ -40,7 +26,7 @@ export interface ReportJobData {
   userId: string;
   reportType: 'inventory' | 'sales' | 'production' | 'quality' | 'mrp' | 'custom';
   reportName: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   format: 'pdf' | 'excel' | 'csv';
   emailTo?: string[];
 }
@@ -53,7 +39,7 @@ export interface NotificationJobData {
   title: string;
   message: string;
   link?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   channels: ('app' | 'email' | 'push')[];
 }
 
@@ -62,7 +48,7 @@ export interface ExportJobData {
   userId: string;
   exportType: 'parts' | 'inventory' | 'orders' | 'workorders' | 'all';
   format: 'excel' | 'csv' | 'json';
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   emailWhenDone?: boolean;
 }
 
@@ -70,7 +56,7 @@ export interface ImportJobData {
   tenantId: string;
   userId: string;
   importType: 'parts' | 'inventory' | 'orders' | 'bom';
-  fileKey: string;  // S3 key
+  fileKey: string;
   fileName: string;
   options: {
     updateExisting: boolean;
@@ -84,7 +70,7 @@ export interface EmailJobData {
   to: string | string[];
   subject: string;
   template: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   attachments?: Array<{
     filename: string;
     path?: string;
@@ -95,49 +81,108 @@ export interface EmailJobData {
 export interface ScheduledTaskData {
   tenantId: string;
   taskType: 'backup' | 'cleanup' | 'sync' | 'alert-check' | 'usage-report';
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
 }
 
 // =============================================================================
-// QUEUE DEFINITIONS
+// IN-MEMORY QUEUE IMPLEMENTATION
 // =============================================================================
 
-// Default job options
-const defaultJobOptions: JobsOptions = {
-  attempts: 3,
-  backoff: {
-    type: 'exponential',
-    delay: 5000,
-  },
-  removeOnComplete: {
-    age: 24 * 3600, // 24 hours
-    count: 1000,
-  },
-  removeOnFail: {
-    age: 7 * 24 * 3600, // 7 days
-  },
-};
+interface QueuedJob<T = unknown> {
+  id: string;
+  name: string;
+  data: T;
+  status: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed';
+  createdAt: Date;
+  processedOn?: Date;
+  finishedOn?: Date;
+  failedReason?: string;
+  returnvalue?: unknown;
+  attemptsMade: number;
+  progress: number;
+}
 
-// Queue instances
+class InMemoryQueue<T = unknown> {
+  private jobs: Map<string, QueuedJob<T>> = new Map();
+  private jobCounter = 0;
+  public name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  async add(jobName: string, data: T, opts?: { jobId?: string; priority?: number }) {
+    const id = opts?.jobId || `${this.name}-${++this.jobCounter}`;
+    const job: QueuedJob<T> = {
+      id,
+      name: jobName,
+      data,
+      status: 'waiting',
+      createdAt: new Date(),
+      attemptsMade: 0,
+      progress: 0,
+    };
+    this.jobs.set(id, job);
+    console.log(`[Queue:${this.name}] Job ${id} added (in-memory mode)`);
+    return job;
+  }
+
+  async addBulk(jobsData: Array<{ name: string; data: T; opts?: unknown }>) {
+    return Promise.all(jobsData.map(j => this.add(j.name, j.data)));
+  }
+
+  async getJob(id: string) {
+    return this.jobs.get(id) || null;
+  }
+
+  async getWaitingCount() {
+    return Array.from(this.jobs.values()).filter(j => j.status === 'waiting').length;
+  }
+
+  async getActiveCount() {
+    return Array.from(this.jobs.values()).filter(j => j.status === 'active').length;
+  }
+
+  async getCompletedCount() {
+    return Array.from(this.jobs.values()).filter(j => j.status === 'completed').length;
+  }
+
+  async getFailedCount() {
+    return Array.from(this.jobs.values()).filter(j => j.status === 'failed').length;
+  }
+
+  async getDelayedCount() {
+    return Array.from(this.jobs.values()).filter(j => j.status === 'delayed').length;
+  }
+
+  async close() {
+    // No-op for in-memory
+  }
+}
+
+// =============================================================================
+// QUEUE INSTANCES
+// =============================================================================
+
 export const queues = {
-  mrp: new Queue<MRPJobData>('mrp', { connection }),
-  reports: new Queue<ReportJobData>('reports', { connection }),
-  notifications: new Queue<NotificationJobData>('notifications', { connection }),
-  exports: new Queue<ExportJobData>('exports', { connection }),
-  imports: new Queue<ImportJobData>('imports', { connection }),
-  emails: new Queue<EmailJobData>('emails', { connection }),
-  scheduled: new Queue<ScheduledTaskData>('scheduled', { connection }),
+  mrp: new InMemoryQueue<MRPJobData>('mrp'),
+  reports: new InMemoryQueue<ReportJobData>('reports'),
+  notifications: new InMemoryQueue<NotificationJobData>('notifications'),
+  exports: new InMemoryQueue<ExportJobData>('exports'),
+  imports: new InMemoryQueue<ImportJobData>('imports'),
+  emails: new InMemoryQueue<EmailJobData>('emails'),
+  scheduled: new InMemoryQueue<ScheduledTaskData>('scheduled'),
 };
 
-// Queue events for monitoring
+// Fake queue events for compatibility
 export const queueEvents = {
-  mrp: new QueueEvents('mrp', { connection }),
-  reports: new QueueEvents('reports', { connection }),
-  notifications: new QueueEvents('notifications', { connection }),
-  exports: new QueueEvents('exports', { connection }),
-  imports: new QueueEvents('imports', { connection }),
-  emails: new QueueEvents('emails', { connection }),
-  scheduled: new QueueEvents('scheduled', { connection }),
+  mrp: { close: async () => {} },
+  reports: { close: async () => {} },
+  notifications: { close: async () => {} },
+  exports: { close: async () => {} },
+  imports: { close: async () => {} },
+  emails: { close: async () => {} },
+  scheduled: { close: async () => {} },
 };
 
 // =============================================================================
@@ -145,221 +190,101 @@ export const queueEvents = {
 // =============================================================================
 
 export const jobs = {
-  /**
-   * MRP Jobs
-   */
   mrp: {
-    /**
-     * Run MRP calculation
-     */
     run: async (data: MRPJobData) => {
       return queues.mrp.add('run-mrp', data, {
-        ...defaultJobOptions,
-        priority: 1, // High priority
         jobId: `mrp-${data.tenantId}-${Date.now()}`,
       });
     },
-    
-    /**
-     * Schedule recurring MRP run
-     */
-    scheduleRecurring: async (tenantId: string, cronExpression: string) => {
-      return queues.mrp.add(
-        'scheduled-mrp',
-        {
-          tenantId,
-          userId: 'system',
-          options: {
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            includeDemand: true,
-            includeSupply: true,
-            includeWIP: true,
-            planningHorizon: 30,
-          },
+    scheduleRecurring: async (tenantId: string, _cronExpression: string) => {
+      console.log(`[Queue:mrp] Recurring job scheduling not available in in-memory mode`);
+      return queues.mrp.add('scheduled-mrp', {
+        tenantId,
+        userId: 'system',
+        options: {
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          includeDemand: true,
+          includeSupply: true,
+          includeWIP: true,
+          planningHorizon: 30,
         },
-        {
-          ...defaultJobOptions,
-          repeat: { pattern: cronExpression },
-          jobId: `scheduled-mrp-${tenantId}`,
-        }
-      );
+      });
     },
   },
 
-  /**
-   * Report Jobs
-   */
   reports: {
-    /**
-     * Generate report
-     */
     generate: async (data: ReportJobData) => {
       return queues.reports.add('generate-report', data, {
-        ...defaultJobOptions,
-        priority: 2,
         jobId: `report-${data.tenantId}-${data.reportType}-${Date.now()}`,
       });
     },
-    
-    /**
-     * Schedule recurring report
-     */
-    scheduleRecurring: async (
-      data: ReportJobData,
-      cronExpression: string
-    ) => {
-      return queues.reports.add('scheduled-report', data, {
-        ...defaultJobOptions,
-        repeat: { pattern: cronExpression },
-        jobId: `scheduled-report-${data.tenantId}-${data.reportType}`,
-      });
+    scheduleRecurring: async (data: ReportJobData, _cronExpression: string) => {
+      console.log(`[Queue:reports] Recurring job scheduling not available in in-memory mode`);
+      return queues.reports.add('scheduled-report', data);
     },
   },
 
-  /**
-   * Notification Jobs
-   */
   notifications: {
-    /**
-     * Send notification to single user
-     */
     send: async (data: NotificationJobData) => {
-      return queues.notifications.add('send-notification', data, {
-        ...defaultJobOptions,
-        attempts: 2,
-        priority: 3,
-      });
+      return queues.notifications.add('send-notification', data);
     },
-    
-    /**
-     * Send notification to multiple users
-     */
     sendBulk: async (notifications: NotificationJobData[]) => {
       return queues.notifications.addBulk(
-        notifications.map(n => ({
-          name: 'send-notification',
-          data: n,
-          opts: { ...defaultJobOptions, attempts: 2 },
-        }))
+        notifications.map(n => ({ name: 'send-notification', data: n }))
       );
     },
-    
-    /**
-     * Send low stock alert
-     */
-    lowStockAlert: async (tenantId: string, parts: Array<{ partId: string; partNumber: string; quantity: number; minStock: number }>) => {
-      return queues.notifications.add(
-        'low-stock-alert',
-        {
-          tenantId,
-          type: 'warning',
-          title: 'Cảnh báo tồn kho thấp',
-          message: `${parts.length} mặt hàng cần bổ sung`,
-          channels: ['app', 'email'],
-          data: { parts },
-        },
-        { ...defaultJobOptions, priority: 1 }
-      );
+    lowStockAlert: async (
+      tenantId: string,
+      parts: Array<{ partId: string; partNumber: string; quantity: number; minStock: number }>
+    ) => {
+      return queues.notifications.add('low-stock-alert', {
+        tenantId,
+        type: 'warning',
+        title: 'Low stock alert',
+        message: `${parts.length} items need restocking`,
+        channels: ['app', 'email'],
+        data: { parts },
+      });
     },
   },
 
-  /**
-   * Export Jobs
-   */
   exports: {
-    /**
-     * Export data
-     */
     create: async (data: ExportJobData) => {
       return queues.exports.add('export-data', data, {
-        ...defaultJobOptions,
-        priority: 3,
         jobId: `export-${data.tenantId}-${data.exportType}-${Date.now()}`,
       });
     },
   },
 
-  /**
-   * Import Jobs
-   */
   imports: {
-    /**
-     * Import data from file
-     */
     create: async (data: ImportJobData) => {
       return queues.imports.add('import-data', data, {
-        ...defaultJobOptions,
-        priority: 2,
         jobId: `import-${data.tenantId}-${data.importType}-${Date.now()}`,
       });
     },
   },
 
-  /**
-   * Email Jobs
-   */
   emails: {
-    /**
-     * Send single email
-     */
     send: async (data: EmailJobData) => {
-      return queues.emails.add('send-email', data, {
-        ...defaultJobOptions,
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 10000 },
-      });
+      return queues.emails.add('send-email', data);
     },
-    
-    /**
-     * Send bulk emails
-     */
     sendBulk: async (emails: EmailJobData[]) => {
       return queues.emails.addBulk(
-        emails.map(e => ({
-          name: 'send-email',
-          data: e,
-          opts: { ...defaultJobOptions, attempts: 5 },
-        }))
+        emails.map(e => ({ name: 'send-email', data: e }))
       );
     },
   },
 
-  /**
-   * Scheduled Tasks
-   */
   scheduled: {
-    /**
-     * Run backup
-     */
     backup: async (tenantId: string) => {
-      return queues.scheduled.add(
-        'backup',
-        { tenantId, taskType: 'backup' },
-        { ...defaultJobOptions, priority: 5 }
-      );
+      return queues.scheduled.add('backup', { tenantId, taskType: 'backup' });
     },
-    
-    /**
-     * Cleanup old data
-     */
     cleanup: async (tenantId: string) => {
-      return queues.scheduled.add(
-        'cleanup',
-        { tenantId, taskType: 'cleanup' },
-        { ...defaultJobOptions, priority: 5 }
-      );
+      return queues.scheduled.add('cleanup', { tenantId, taskType: 'cleanup' });
     },
-    
-    /**
-     * Check and send alerts
-     */
     alertCheck: async (tenantId: string) => {
-      return queues.scheduled.add(
-        'alert-check',
-        { tenantId, taskType: 'alert-check' },
-        { ...defaultJobOptions, priority: 2 }
-      );
+      return queues.scheduled.add('alert-check', { tenantId, taskType: 'alert-check' });
     },
   },
 };
@@ -370,19 +295,16 @@ export const jobs = {
 
 export async function getJobStatus(queue: keyof typeof queues, jobId: string) {
   const job = await queues[queue].getJob(jobId);
-  
+
   if (!job) {
     return null;
   }
-  
-  const state = await job.getState();
-  const progress = job.progress;
-  
+
   return {
     id: job.id,
     name: job.name,
-    state,
-    progress,
+    state: job.status,
+    progress: job.progress,
     data: job.data,
     returnValue: job.returnvalue,
     failedReason: job.failedReason,
@@ -394,7 +316,7 @@ export async function getJobStatus(queue: keyof typeof queues, jobId: string) {
 
 export async function getQueueStats(queue: keyof typeof queues) {
   const q = queues[queue];
-  
+
   const [waiting, active, completed, failed, delayed] = await Promise.all([
     q.getWaitingCount(),
     q.getActiveCount(),
@@ -402,17 +324,17 @@ export async function getQueueStats(queue: keyof typeof queues) {
     q.getFailedCount(),
     q.getDelayedCount(),
   ]);
-  
+
   return { waiting, active, completed, failed, delayed };
 }
 
 export async function getAllQueueStats() {
-  const stats: Record<string, any> = {};
-  
+  const stats: Record<string, unknown> = {};
+
   for (const queueName of Object.keys(queues)) {
     stats[queueName] = await getQueueStats(queueName as keyof typeof queues);
   }
-  
+
   return stats;
 }
 

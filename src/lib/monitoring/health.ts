@@ -67,36 +67,22 @@ export async function checkDatabase(): Promise<HealthCheck> {
 
 /**
  * Check Redis connectivity
+ * Note: Redis disabled for Render compatibility - using in-memory cache
  */
 export async function checkRedis(): Promise<HealthCheck> {
   const start = Date.now();
-  
-  try {
-    // Check if Redis URL is configured
-    if (!process.env.REDIS_URL) {
-      return {
-        name: 'redis',
-        status: 'warn',
-        message: 'Redis not configured',
-        duration: Date.now() - start,
-      };
-    }
-    
-    // Redis check - would need ioredis installed
-    return {
-      name: 'redis',
-      status: 'warn',
-      message: 'Redis check skipped (ioredis not installed)',
-      duration: Date.now() - start,
-    };
-  } catch (error: any) {
-    return {
-      name: 'redis',
-      status: 'fail',
-      message: error.message || 'Redis connection failed',
-      duration: Date.now() - start,
-    };
-  }
+
+  // Redis intentionally disabled - using in-memory cache for Render compatibility
+  return {
+    name: 'redis',
+    status: 'pass',
+    message: 'Using in-memory cache (Redis disabled)',
+    duration: Date.now() - start,
+    details: {
+      mode: 'in-memory',
+      reason: 'Render free tier does not support Redis',
+    },
+  };
 }
 
 /**

@@ -1,13 +1,13 @@
 // src/lib/security/rate-limiter.ts
 // Rate limiting utility for RTR MRP System
+// Uses in-memory store (Redis disabled for Render compatibility)
 
-import { redis } from "@/lib/cache/redis";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/monitoring/logger";
 
 interface RateLimitConfig {
-  windowMs: number; // Time window in milliseconds
-  maxRequests: number; // Max requests per window
+  windowMs: number;
+  maxRequests: number;
   keyPrefix?: string;
 }
 
@@ -18,57 +18,79 @@ interface RateLimitResult {
   limit: number;
 }
 
+// In-memory rate limit store
+const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
+
+// Cleanup expired entries periodically
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    const entries = Array.from(rateLimitStore.entries());
+    for (const [key, record] of entries) {
+      if (now > record.resetAt) {
+        rateLimitStore.delete(key);
+      }
+    }
+  }, 60000);
+}
+
 export async function rateLimit(
   identifier: string,
   config: RateLimitConfig
 ): Promise<RateLimitResult> {
   const {
-    windowMs = 60000, // 1 minute default
-    maxRequests = 100, // 100 requests default
+    windowMs = 60000,
+    maxRequests = 100,
     keyPrefix = "rl",
   } = config;
 
   const key = `${keyPrefix}:${identifier}`;
   const now = Date.now();
-  const windowStart = now - windowMs;
 
   try {
-    // Use Redis sorted set for sliding window
-    const multi = redis.multi();
+    let record = rateLimitStore.get(key);
 
-    // Remove old entries
-    multi.zremrangebyscore(key, 0, windowStart);
+    // Create new window if doesn't exist or expired
+    if (!record || now > record.resetAt) {
+      record = { count: 1, resetAt: now + windowMs };
+      rateLimitStore.set(key, record);
 
-    // Add current request
-    multi.zadd(key, now, `${now}-${Math.random()}`);
+      return {
+        allowed: true,
+        remaining: maxRequests - 1,
+        resetTime: record.resetAt,
+        limit: maxRequests,
+      };
+    }
 
-    // Count requests in window
-    multi.zcard(key);
-
-    // Set expiry
-    multi.expire(key, Math.ceil(windowMs / 1000));
-
-    const results = await multi.exec();
-    const requestCount = (results?.[2]?.[1] as number) || 0;
-
-    const allowed = requestCount <= maxRequests;
-    const remaining = Math.max(0, maxRequests - requestCount);
-    const resetTime = now + windowMs;
+    // Increment count
+    record.count++;
+    const allowed = record.count <= maxRequests;
+    const remaining = Math.max(0, maxRequests - record.count);
 
     if (!allowed) {
       logger.security({
         type: 'rate_limited',
         ip: identifier,
-        details: `Request count: ${requestCount}/${maxRequests}`,
+        details: `Request count: ${record.count}/${maxRequests}`,
       });
     }
 
-    return { allowed, remaining, resetTime, limit: maxRequests };
+    return {
+      allowed,
+      remaining,
+      resetTime: record.resetAt,
+      limit: maxRequests,
+    };
   } catch (error) {
-    // On error, allow request but log
     const err = error as Error;
     logger.error("Rate limit check failed", { error: err.message, stack: err.stack });
-    return { allowed: true, remaining: maxRequests, resetTime: now + windowMs, limit: maxRequests };
+    return {
+      allowed: true,
+      remaining: maxRequests,
+      resetTime: now + windowMs,
+      limit: maxRequests,
+    };
   }
 }
 
@@ -77,7 +99,6 @@ export async function rateLimitMiddleware(
   req: NextRequest,
   config?: Partial<RateLimitConfig>
 ): Promise<NextResponse | null> {
-  // Get identifier (IP or user ID)
   const forwarded = req.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : req.headers.get("x-real-ip") || "unknown";
   const identifier = `ip:${ip}`;
@@ -112,28 +133,13 @@ export async function rateLimitMiddleware(
 
 // API route rate limiting configurations
 export const rateLimitConfigs = {
-  // General API endpoints
   api: { windowMs: 60000, maxRequests: 100 },
-
-  // Auth endpoints (stricter)
   auth: { windowMs: 60000, maxRequests: 10 },
-
-  // Login specifically (very strict)
   login: { windowMs: 300000, maxRequests: 5 },
-
-  // Export/heavy operations
   export: { windowMs: 60000, maxRequests: 5 },
-
-  // AI/ML endpoints
   ai: { windowMs: 60000, maxRequests: 20 },
-
-  // Dashboard (frequently polled)
   dashboard: { windowMs: 60000, maxRequests: 60 },
-
-  // List endpoints (paginated)
   list: { windowMs: 60000, maxRequests: 120 },
-
-  // Write operations
   write: { windowMs: 60000, maxRequests: 30 },
 };
 
@@ -144,8 +150,8 @@ export const rateLimitConfigs = {
 interface DegradationConfig {
   enabled: boolean;
   thresholds: {
-    warning: number; // % of rate limit used
-    critical: number; // % of rate limit used
+    warning: number;
+    critical: number;
   };
   actions: {
     warning: () => void;

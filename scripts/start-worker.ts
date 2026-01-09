@@ -1,18 +1,18 @@
-import { mrpWorker } from '../src/workers/mrp.worker';
+// =============================================================================
+// MRP Worker Startup Script
+// Note: Worker disabled - Redis/BullMQ not available on Render free tier
+// =============================================================================
 
 console.log('👷 MRP Worker Starting...');
 
-// Use the existing worker instance exported from the worker file
-const worker = mrpWorker;
-// Connection is already handled in mrp.worker.ts, but we keep the script simple
-console.log('👷 MRP Worker script loaded');
+// Worker is disabled in this build (no Redis)
+console.log('⚠️  MRP Worker is disabled (Redis not available)');
+console.log('ℹ️  MRP calculations run synchronously via /api/mrp');
+console.log('ℹ️  To enable worker mode, configure REDIS_URL environment variable');
 
-worker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed!`);
-});
+// Keep process alive for container health checks (if running in Docker)
+// In practice, this script should not be run on Render free tier
+// process.exit(0);
 
-worker.on('failed', (job, err) => {
-    console.error(`❌ Job ${job?.id} failed:`, err);
-});
-
-console.log('🚀 Worker is ready and listening for jobs!');
+// For development: just log and exit
+console.log('👷 Worker script exiting (no-op mode)');

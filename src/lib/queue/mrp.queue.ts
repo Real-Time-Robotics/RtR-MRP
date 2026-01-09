@@ -1,37 +1,77 @@
-import { Queue } from 'bullmq';
-import { connection } from '../redis';
+// =============================================================================
+// RTR MRP - MRP QUEUE
+// In-memory queue implementation (BullMQ disabled for Render compatibility)
+// =============================================================================
 
 export const MRP_QUEUE_NAME = 'mrp-calculation-queue';
 
 export interface MrpJobData {
-    runId?: string; // If existing run ID
-    planningHorizonDays: number;
-    includeConfirmed: boolean;
-    includeDraft: boolean;
-    includeSafetyStock: boolean;
-    userId?: string; // Who triggered it
+  runId?: string;
+  planningHorizonDays: number;
+  includeConfirmed: boolean;
+  includeDraft: boolean;
+  includeSafetyStock: boolean;
+  userId?: string;
 }
 
-// Create the Queue instance
-// We use the shared Redis connection settings
-export const mrpQueue = new Queue<MrpJobData>(MRP_QUEUE_NAME, {
-    connection,
-    defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-            type: 'exponential',
-            delay: 1000,
-        },
-        removeOnComplete: {
-            age: 24 * 3600, // Keep for 24 hours
-            count: 100,
-        },
-        removeOnFail: {
-            age: 7 * 24 * 3600, // Keep for 7 days
-        },
-    },
-});
+interface QueuedJob {
+  id: string;
+  data: MrpJobData;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  createdAt: Date;
+  completedAt?: Date;
+  error?: string;
+}
+
+// In-memory job queue
+const jobQueue: QueuedJob[] = [];
+let jobIdCounter = 0;
+
+// Fake Queue class for compatibility
+class InMemoryQueue {
+  name: string;
+
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  async add(jobName: string, data: MrpJobData) {
+    const job: QueuedJob = {
+      id: `job-${++jobIdCounter}`,
+      data,
+      status: 'pending',
+      createdAt: new Date(),
+    };
+    jobQueue.push(job);
+
+    console.log(`[MRP-Queue] Job ${job.id} added to queue (in-memory mode)`);
+
+    return {
+      id: job.id,
+      name: jobName,
+      data,
+    };
+  }
+
+  async getJobs(status?: string[]) {
+    if (!status) return jobQueue;
+    return jobQueue.filter(j => status.includes(j.status));
+  }
+
+  async getJob(id: string) {
+    return jobQueue.find(j => j.id === id);
+  }
+
+  async close() {
+    // No-op for in-memory
+  }
+}
+
+export const mrpQueue = new InMemoryQueue(MRP_QUEUE_NAME);
 
 export async function addMrpJob(data: MrpJobData) {
-    return mrpQueue.add('calculate-mrp', data);
+  return mrpQueue.add('calculate-mrp', data);
 }
+
+// Note: In production without Redis, MRP calculations run synchronously
+// The job queue is kept for API compatibility but jobs are not processed by workers
