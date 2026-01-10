@@ -1,213 +1,137 @@
-# RTR-MRP HANDOVER DOCUMENT
-> Last Updated: 2026-01-10 11:30
+# RTR-MRP HANDOVER
+> **Last Updated:** 2026-01-10 12:30
+> **Lệnh tiếp tục:** `Doc HANDOVER.md va tiep tuc cong viec`
 
 ---
 
-## PROJECT OVERVIEW
-
-**RTR-MRP** - Manufacturing Resource Planning System
-- **Tech Stack:** Next.js 15, React 19, Prisma ORM, PostgreSQL, TypeScript
-- **Repo:** https://github.com/nclamvn/rtr-mrp
-- **Production:** https://rtr-mrp.onrender.com
-- **Local Dev:** http://localhost:3001
-- **Path:** `/Users/mac/AnhQuocLuong/rtr-mrp`
-
----
-
-## CURRENT STATUS
+## TRẠNG THÁI HIỆN TẠI
 
 ```
-BUILD:        PASSING
-TESTS:        337 passed
-HEALTH SCORE: 85/100
-DEPLOY:       READY (Render auto-deploy on push)
-GIT:          Up to date with origin/main
-```
-
-### Latest Commits
-```
-8a21c41 - docs: Update HANDOVER.md with latest session progress
-446b020 - test: Add unit tests for validation, error-handler, and memory-cache
-780f55a - fix: Replace any types with proper types in error-handler
-3416f60 - feat: Apply validation to critical API routes
-4cb59f6 - feat: Add API validation infrastructure and type definitions
-a115ec2 - feat: Replace Redis with in-memory cache
+╔═══════════════════════════════════════════════════════════════════════════╗
+║  BUILD:     PASSING                                                       ║
+║  DEPLOY:    PUSHED (Render auto-deploy)                                   ║
+║  COMMIT:    9dc3555                                                       ║
+║  SITE:      https://rtr-mrp.onrender.com                                 ║
+║  REPO:      https://github.com/nclamvn/rtr-mrp                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## COMPLETED WORK (Recent Sessions)
+## VIỆC VỪA HOÀN THÀNH (Session 2026-01-10)
 
-### 1. Redis Removal (CRITICAL FIX)
-- **Problem:** Render deployment timeout due to Redis connection
-- **Solution:** Created `lib/cache/memory-cache.ts` with full functionality
-- **Status:** COMPLETED - No more connection timeouts
+### 5 Runtime Fixes đã deploy
 
-### 2. Validation Infrastructure
-- `lib/api/validation.ts` - API validation wrapper
-- `lib/validations/additional-schemas.ts` - 42+ Zod schemas
-- `lib/types/index.ts` - 50+ TypeScript interfaces
+| # | Module | Vấn đề | Fix | File |
+|---|--------|--------|-----|------|
+| 1 | **Suppliers** | Modal không scroll | `max-h-[70vh] overflow-y-auto` | `form-modal.tsx:114` |
+| 2 | **Production/new** | `x.map error` | Extract array từ `result.data` | `production/new/page.tsx` |
+| 3 | **Parts** | React error #185 | Null-safe defaults | `parts-table.tsx` |
+| 4 | **BOM** | Không có nút Create | Button + `/bom/new` page | `bom-content.tsx` |
+| 5 | **MRP View** | Loading vô hạn | Initial fetch + error UI | `mrp/[runId]/page.tsx` |
 
-### 3. Unit Tests
-| Test File | Tests | Coverage |
-|-----------|-------|----------|
-| validation-schemas.test.ts | 24 | Zod schemas |
-| error-handler.test.ts | ~25 | Error handling |
-| memory-cache.test.ts | ~45 | Cache, rate-limit, locks |
-
-### 4. Demo Mode System
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@demo.rtr-mrp.com | Admin@Demo2026! |
-| Manager | manager@demo.rtr-mrp.com | Manager@Demo2026! |
-| Operator | operator@demo.rtr-mrp.com | Operator@Demo2026! |
-| Viewer | viewer@demo.rtr-mrp.com | Viewer@Demo2026! |
-
-### 5. Enterprise Tools v1.2
-- Location: `/enterprise/`
-- Includes: Migration, Test Data Generator, K6 Capacity Test, Health Check
+### Commits hôm nay
+```
+9dc3555 - docs: Add Customer Verification Report
+d08eea9 - fix: Runtime fixes for 5 critical user-facing issues
+```
 
 ---
 
-## NEXT PRIORITIES (TASK QUEUE)
+## CẦN VERIFY TRÊN BROWSER
 
-### HIGH PRIORITY
+```
+□ /suppliers    → Modal scroll được, tab đúng thứ tự
+□ /parts        → Page load không crash
+□ /production/new → Tạo WO không lỗi x.map
+□ /bom          → Có nút "Create BOM"
+□ /mrp          → View results không loading vô hạn
+```
 
-1. **Excel-like UI System**
-   - Plan file: `/Users/mac/.claude/plans/glistening-snacking-dragonfly.md`
-   - Goal: Excel-like grid interface for data tables
-   - Components needed: data-table, smart-grid, domain tables
-
-2. **Add validation to remaining ~30 API routes**
-   - Use wrapper from `lib/api/validation.ts`
-   - Pattern: `withValidation(schema, handler)`
-
-### MEDIUM PRIORITY
-
-3. **Fix legacy Jest tests** (3 files using Jest syntax instead of Vitest)
-4. **Permission UI Components**
-   - permission-button.tsx
-   - action-dropdown.tsx
-   - demo-mode-banner.tsx
-
-### LOW PRIORITY
-
-5. Refactor @ts-nocheck files (68 files)
-6. Split large files (>800 LOC)
-7. Increase test coverage to 80%+
+**Chi tiết:** Xem `CUSTOMER_VERIFICATION_REPORT.md`
 
 ---
 
-## PROJECT STRUCTURE
+## CÔNG VIỆC TIẾP THEO
 
-```
-rtr-mrp/
-├── src/
-│   ├── app/
-│   │   ├── api/                    # API Routes
-│   │   │   ├── v2/                 # V2 API (auth, ai, alerts)
-│   │   │   ├── mrp/                # MRP routes (run, atp)
-│   │   │   ├── production/         # Production routes (oee)
-│   │   │   └── demo/               # Demo mode APIs
-│   │   └── (dashboard)/            # Protected pages
-│   ├── lib/
-│   │   ├── cache/memory-cache.ts   # In-memory cache (NOT Redis!)
-│   │   ├── api/validation.ts       # Validation wrapper
-│   │   ├── validations/            # Zod schemas
-│   │   ├── types/index.ts          # TypeScript types
-│   │   ├── error-handler.ts        # Error handling
-│   │   └── logger.ts               # Logging utility
-│   └── components/
-│       └── ui-v2/                  # UI components
-├── __tests__/                      # Test files
-├── enterprise/                     # Standalone CLI tools (excluded from build)
-├── prisma/schema.prisma            # Database schema (123 models)
-└── docs/                           # Documentation
-```
+### HIGH - Cần làm ngay
+1. **Verify 5 fixes** trên production browser
+2. **Thu feedback** từ khách hàng thật
+
+### MEDIUM - Tuần này
+3. Fix 3 Jest test files → Vitest
+4. Add component tests cho pages đã fix
+
+### LOW - Backlog
+5. Refactor @ts-nocheck (10 files)
+6. Validation cho ~30 API routes còn lại
+
+---
+
+## THÔNG TIN PROJECT
+
+| Item | Value |
+|------|-------|
+| **Stack** | Next.js 15, React 19, Prisma, PostgreSQL |
+| **Path** | `/Users/mac/AnhQuocLuong/rtr-mrp` |
+| **Local** | http://localhost:3001 |
+| **Tests** | 337 passed |
+| **Models** | 123 Prisma models |
 
 ---
 
 ## QUICK COMMANDS
 
 ```bash
-# Development
 cd /Users/mac/AnhQuocLuong/rtr-mrp
-npm run dev                    # Start dev server (port 3001)
 
-# Testing
-npm run test:run               # Run all tests
-npm run test:watch             # Watch mode
+npm run dev          # Dev server
+npm run build        # Build
+npm run test:run     # Tests
 
-# Build
-npm run build                  # Production build
-
-# Health check
-npm run build && npm run test:run
-
-# Git
-git status
-git push                       # Trigger Render auto-deploy
+git push             # Deploy to Render
 ```
+
+---
+
+## FILES QUAN TRỌNG
+
+| File | Mục đích |
+|------|----------|
+| `HANDOVER.md` | Trạng thái handover (file này) |
+| `CUSTOMER_VERIFICATION_REPORT.md` | Checklist test góc nhìn khách hàng |
+| `CLAUDE.md` | Cấu hình AI |
+| `prisma/schema.prisma` | Database schema |
 
 ---
 
 ## CRITICAL NOTES
 
-1. **NO REDIS** - Use `lib/cache/memory-cache.ts` for all caching
-2. **Vitest NOT Jest** - Import from 'vitest', use `vi.mock()` not `jest.mock()`
-3. **API locations**: Both `/api/v2/` (new) and `/api/` (legacy) exist
-4. **Build warnings** about "Dynamic server usage" are NORMAL
-5. **Auth Secret:** Uses `AUTH_SECRET || NEXTAUTH_SECRET`
+1. **NO REDIS** - Dùng `lib/cache/memory-cache.ts`
+2. **Vitest NOT Jest** - Import từ 'vitest'
+3. **API response** - Luôn check `result.data` cho paginated response
+4. **Build warnings** về "Dynamic server usage" là BÌNH THƯỜNG
 
 ---
 
-## SCHEMA INFO (Correct Version)
+## MINDSET
 
-Local schema is the **production-ready** version:
-- **Total Models:** 123
-- **Part.name** (NOT partName)
-- **Inventory.quantity** (NOT onHand)
-- **Inventory key:** Composite `[partId, warehouseId, lotNumber]`
-- **Warehouse model** EXISTS and is required
+```
+❌ CŨ: "Build pass, tests pass → Done"
+✅ MỚI: "Khách hàng làm được việc → Done"
+```
 
 ---
 
-## KEY FILES
+## KHI QUAY LẠI
 
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | AI configuration for Claude |
-| `HANDOVER.md` | This file - session handover |
-| `prisma/schema.prisma` | Database schema |
-| `src/lib/cache/memory-cache.ts` | Cache (replaces Redis) |
-| `src/lib/api/validation.ts` | API validation |
-| `vitest.config.ts` | Test configuration |
-
----
-
-## METRICS
-
-| Metric | Value |
-|--------|-------|
-| Total Tests | 337 |
-| Prisma Models | 123 |
-| API Routes | 151 |
-| Components | 198 |
-| Zod Schemas | 42+ |
-| Health Score | 85/100 |
-
----
-
-## HOW TO CONTINUE
-
-Start new session with:
 ```
 Doc HANDOVER.md va tiep tuc cong viec
 ```
 
-Or for specific task:
+Hoặc cụ thể:
 ```
-Doc HANDOVER.md, sau do implement [task name]
+Doc HANDOVER.md, verify 5 fixes tren browser
 ```
 
 ---
@@ -216,10 +140,10 @@ Doc HANDOVER.md, sau do implement [task name]
 
 | Date | Work Done |
 |------|-----------|
-| 2026-01-10 | Unit tests, build verification, handover doc update |
+| 2026-01-10 | **5 runtime fixes**, Customer Verification Report |
 | 2026-01-09 | Redis removal, validation infrastructure |
 | 2026-01-06 | Demo mode, Enterprise tools v1.2 |
 
 ---
 
-*RTR-MRP v1.0 | Ready for next session*
+*RTR-MRP v1.0 | Commit: 9dc3555*
