@@ -5,8 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from './logger';
-import { ZodError } from 'zod';
+import { ZodError, ZodIssue } from 'zod';
 import { Prisma } from '@prisma/client';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export type ErrorContext = Record<string, unknown>;
+export type RouteParams = Record<string, string | string[]>;
+
+interface ValidationDetail {
+  field: string;
+  message: string;
+}
 
 // =============================================================================
 // ERROR TYPES
@@ -16,14 +28,14 @@ export class AppError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
   public readonly isOperational: boolean;
-  public readonly context?: Record<string, any>;
+  public readonly context?: ErrorContext;
 
   constructor(
     message: string,
     statusCode: number = 500,
     code: string = 'INTERNAL_ERROR',
     isOperational: boolean = true,
-    context?: Record<string, any>
+    context?: ErrorContext
   ) {
     super(message);
     this.statusCode = statusCode;
@@ -41,7 +53,7 @@ export class AppError extends Error {
 
 // Common error classes
 export class ValidationError extends AppError {
-  constructor(message: string, context?: Record<string, any>) {
+  constructor(message: string, context?: ErrorContext) {
     super(message, 400, 'VALIDATION_ERROR', true, context);
   }
 }
@@ -89,7 +101,7 @@ interface ErrorResponse {
   success: false;
   error: string;
   code: string;
-  details?: any;
+  details?: ValidationDetail[] | ErrorContext;
 }
 
 export function handleError(error: unknown): NextResponse<ErrorResponse> {
@@ -272,14 +284,14 @@ export async function tryCatch<T>(
 
 type RouteHandler = (
   request: NextRequest,
-  context?: { params: any }
+  context?: { params: RouteParams }
 ) => Promise<NextResponse>;
 
 /**
  * Wraps API route with error handling
  */
 export function withErrorHandling(handler: RouteHandler): RouteHandler {
-  return async (request: NextRequest, context?: { params: any }) => {
+  return async (request: NextRequest, context?: { params: RouteParams }) => {
     try {
       return await handler(request, context);
     } catch (error) {
@@ -320,7 +332,7 @@ export function paginatedResponse<T>(
   total: number,
   page: number,
   pageSize: number,
-  extra?: Record<string, any>
+  extra?: Record<string, unknown>
 ): NextResponse {
   return NextResponse.json({
     success: true,
