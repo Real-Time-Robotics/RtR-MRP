@@ -67,10 +67,21 @@ export default function NewWorkOrderPage() {
       ]);
       const productsData = await productsRes.json();
       const ordersData = await ordersRes.json();
-      setProducts(productsData);
-      setSalesOrders(ordersData);
+
+      // Handle both array and paginated response formats
+      const productsArray = Array.isArray(productsData)
+        ? productsData
+        : (productsData?.data || []);
+      const ordersArray = Array.isArray(ordersData)
+        ? ordersData
+        : (ordersData?.data || []);
+
+      setProducts(productsArray);
+      setSalesOrders(ordersArray);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      setProducts([]);
+      setSalesOrders([]);
     }
   };
 

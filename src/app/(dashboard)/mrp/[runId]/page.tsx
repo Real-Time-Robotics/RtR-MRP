@@ -55,21 +55,46 @@ export default function MrpRunDetailPage() {
 
   const [data, setData] = useState<MrpRunData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("pending");
 
   const fetchData = useCallback(async () => {
     try {
+      setError(null);
       const res = await fetch(`/api/mrp/${runId}`);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch MRP run");
+      }
+
       const result = await res.json();
-      setData(result);
+
+      // Normalize the data structure
+      const normalizedData: MrpRunData = {
+        ...result,
+        suggestions: result.suggestions || [],
+        totalParts: result.totalParts ?? 0,
+        purchaseSuggestions: result.purchaseSuggestions ?? 0,
+        expediteAlerts: result.expediteAlerts ?? 0,
+        shortageWarnings: result.shortageWarnings ?? 0,
+      };
+
+      setData(normalizedData);
     } catch (error) {
       console.error("Failed to fetch MRP run:", error);
+      setError(error instanceof Error ? error.message : "Failed to load MRP run");
     } finally {
       setLoading(false);
     }
   }, [runId]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Poll for updates if running
   useEffect(() => {
@@ -117,6 +142,22 @@ export default function MrpRunDetailPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <div className="flex justify-center gap-4">
+          <Button variant="outline" onClick={fetchData}>
+            Try Again
+          </Button>
+          <Button variant="link" onClick={() => router.push("/mrp")}>
+            Back to MRP
+          </Button>
+        </div>
       </div>
     );
   }

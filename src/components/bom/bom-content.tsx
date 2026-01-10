@@ -2,7 +2,9 @@
 
 import { useLanguage } from "@/lib/i18n/language-context";
 import { CardHeader, CardTitle } from "@/components/ui/card";
-import { Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Package, Plus } from "lucide-react";
+import Link from "next/link";
 
 export function BOMHeader() {
   const { t } = useLanguage();
@@ -12,6 +14,12 @@ export function BOMHeader() {
         <h1 className="text-2xl font-bold tracking-tight">{t("bom.title")}</h1>
         <p className="text-muted-foreground">{t("bom.description")}</p>
       </div>
+      <Link href="/bom/new">
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Create BOM
+        </Button>
+      </Link>
     </div>
   );
 }

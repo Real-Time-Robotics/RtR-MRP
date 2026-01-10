@@ -47,7 +47,8 @@ const MAKE_BUY_COLORS: Record<string, string> = {
   BOTH: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
 };
 
-function formatCurrency(amount: number) {
+function formatCurrency(amount: number | null | undefined) {
+  if (amount == null || isNaN(amount)) return '$0.00';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -171,11 +172,27 @@ export function PartsTable() {
       const result = await response.json();
 
       if (response.ok) {
-        setParts(result.data || []);
+        // Ensure we have an array and each part has required fields with defaults
+        const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
+        const normalizedParts = partsArray.map((p: Part) => ({
+          ...p,
+          unitCost: p.unitCost ?? 0,
+          makeOrBuy: p.makeOrBuy ?? 'BUY',
+          lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+          ndaaCompliant: p.ndaaCompliant ?? false,
+          itarControlled: p.itarControlled ?? false,
+          rohsCompliant: p.rohsCompliant ?? false,
+          isCritical: p.isCritical ?? false,
+        }));
+        setParts(normalizedParts);
+      } else {
+        setParts([]);
+        toast.error('Không thể tải danh sách parts');
       }
     } catch (error) {
       console.error('Failed to fetch parts:', error);
       toast.error('Không thể tải danh sách parts');
+      setParts([]);
     } finally {
       setLoading(false);
     }
@@ -355,14 +372,14 @@ export function PartsTable() {
       header: 'Name',
       width: '180px',
       sortable: true,
-      render: (value) => <div className="truncate max-w-[160px]">{value}</div>,
+      render: (value) => <div className="truncate max-w-[160px]">{value || '-'}</div>,
     },
     {
       key: 'category',
       header: 'Category',
       width: '100px',
       sortable: true,
-      render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value}</Badge>,
+      render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value || '-'}</Badge>,
     },
     {
       key: 'makeOrBuy',
@@ -371,7 +388,7 @@ export function PartsTable() {
       align: 'center',
       render: (value) => (
         <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
-          {value}
+          {value || 'BUY'}
         </Badge>
       ),
     },
@@ -380,7 +397,7 @@ export function PartsTable() {
       header: 'Rev',
       width: '60px',
       align: 'center',
-      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value}</Badge>,
+      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value || 'A'}</Badge>,
     },
     {
       key: 'compliance',
@@ -456,8 +473,8 @@ export function PartsTable() {
       width: '100px',
       sortable: true,
       render: (value) => (
-        <Badge className={cn(LIFECYCLE_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
-          {value}
+        <Badge className={cn(LIFECYCLE_COLORS[value] || LIFECYCLE_COLORS['ACTIVE'], 'text-[10px] px-1 py-0')}>
+          {value || 'ACTIVE'}
         </Badge>
       ),
     },

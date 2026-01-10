@@ -111,7 +111,7 @@ export function FormModal({
                     )}
                 </DialogHeader>
 
-                <div className="py-4">
+                <div className="py-4 max-h-[70vh] overflow-y-auto">
                     {children}
                 </div>
 
