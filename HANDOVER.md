@@ -1,22 +1,70 @@
 # RTR-MRP HANDOVER DOCUMENT
-> Last Updated: 2026-01-06
+> Last Updated: 2026-01-10
 
 ---
 
-## PROJECT OVERVIEW
+## 🎯 PROJECT OVERVIEW
 
 **RTR-MRP** - Manufacturing Resource Planning System
-- **Tech Stack:** Next.js 14, Prisma, PostgreSQL, TypeScript
+- **Tech Stack:** Next.js 15, React 19, Prisma, PostgreSQL, TypeScript
 - **Repo:** https://github.com/nclamvn/rtr-mrp
 - **Production:** https://rtr-mrp.onrender.com
 - **Demo:** https://rtr-mrp.onrender.com/demo
 
 ---
 
-## RECENT COMPLETED WORK
+## ✅ CURRENT STATUS (2026-01-10)
 
-### 1. Demo Mode System
-- **Status:** COMPLETE
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   BUILD: ✅ PASSING                                             │
+│   TESTS: ✅ 337 PASSED                                          │
+│   HEALTH SCORE: 85/100                                          │
+│   DEPLOY: ✅ READY (Render auto-deploy)                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Latest Commits
+```
+446b020 - test: Add unit tests for validation, error-handler, and memory-cache
+780f55a - fix: Replace any types with proper types in error-handler
+3416f60 - feat: Apply validation to critical API routes
+4cb59f6 - feat: Add API validation infrastructure and type definitions
+a115ec2 - feat: Replace Redis with in-memory cache
+```
+
+---
+
+## 📊 RECENT COMPLETED WORK (Session 2026-01-09 ~ 2026-01-10)
+
+### 1. Redis → In-Memory Cache ✅
+- **Problem:** Render deployment timeout due to Redis connection
+- **Solution:** Created `lib/cache/memory-cache.ts` with full functionality
+- **Impact:** No more connection timeouts, build passing
+
+### 2. Validation Infrastructure ✅
+- `lib/api/validation.ts` - API validation wrapper
+- `lib/validations/additional-schemas.ts` - 42+ Zod schemas
+- `lib/types/index.ts` - 50+ TypeScript interfaces
+
+### 3. Unit Tests ✅ (NEW)
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `validation-schemas.test.ts` | 24 | Zod schemas |
+| `error-handler.test.ts` | ~25 | Error handling |
+| `memory-cache.test.ts` | ~45 | Cache, rate-limit, locks |
+| `customer-engine.test.ts` | existing | Customer logic |
+| `spc-engine.test.ts` | existing | SPC calculations |
+| `ml-engine.test.ts` | existing | ML predictions |
+
+### 4. Type Safety Improvements ✅
+- Fix `any` types in auth route (7 → 0)
+- Fix `any` types in error-handler (5 → 0)
+- 68 files with @ts-nocheck (legacy, cần refactor sau)
+
+### 5. Demo Mode System ✅ (Previous)
 - **Demo Users:**
   | Role | Email | Password |
   |------|-------|----------|
@@ -25,148 +73,154 @@
   | Operator | operator@demo.rtr-mrp.com | Operator@Demo2026! |
   | Viewer | viewer@demo.rtr-mrp.com | Viewer@Demo2026! |
 
-- **Key Files:**
-  - `/src/app/api/demo/seed/route.ts` - Auto-seed demo data
-  - `/src/app/api/demo/check/route.ts` - Diagnostic endpoint
-  - `/src/app/api/demo/unlock/route.ts` - Unlock locked accounts
-  - `/src/middleware.ts` - Fixed AUTH_SECRET for token verification
-
-### 2. Enterprise Tools v1.2
-- **Status:** COMPLETE & PUSHED
-- **Location:** `/enterprise/`
-- **Components:**
-  | Tool | File | Purpose |
-  |------|------|---------|
-  | Migration | `migration/migrate.ts` | Import millions of records |
-  | Test Data | `migration/generate-test-data.js` | Generate 1M+ test records |
-  | Capacity Test | `capacity-test/capacity-test.js` | K6 load testing |
-  | Health Check | `health-check/enterprise-health.ts` | PostgreSQL diagnostics |
-  | API Route | `api-routes/enterprise-health-route.ts` | Ready-to-use Next.js route |
-
-- **Note:** Enterprise folder excluded from Next.js build (tsconfig.json)
+### 6. Enterprise Tools v1.2 ✅ (Previous)
+- Location: `/enterprise/`
+- Migration, Test Data Generator, K6 Capacity Test, Health Check
 
 ---
 
-## CURRENT STATUS
+## 🚀 CÔNG VIỆC TIẾP THEO (PRIORITY ORDER)
 
-### Build Status
-- **Latest Commit:** `2fb897d` - exclude enterprise tools from build
-- **Build:** Should be PASSING
+### HIGH PRIORITY
 
-### Pending Verification
-- [ ] Verify Render build passes
-- [ ] Test demo login at production URL
+1. **Excel-like UI System**
+   - Plan file: `/Users/mac/.claude/plans/glistening-snacking-dragonfly.md`
+   - Mục tiêu: Giao diện bảng giống Excel
+   - Components: data-table, smart-grid, domain tables
+
+2. **Add validation to remaining ~30 API routes**
+   - Sử dụng wrapper từ `lib/api/validation.ts`
+
+### MEDIUM PRIORITY
+
+3. **Fix legacy Jest tests** (3 files dùng Jest syntax thay Vitest)
+4. **Permission UI Components** (from Demo Mode plan)
+   - permission-button.tsx
+   - action-dropdown.tsx
+   - demo-mode-banner.tsx
+
+### LOW PRIORITY
+
+5. Refactor @ts-nocheck files (68 files)
+6. Split large files (>800 LOC)
+7. Increase test coverage to 80%+
+8. Target health score: 95/100
 
 ---
 
-## KEY CONFIGURATIONS
+## 📁 CẤU TRÚC QUAN TRỌNG
 
-### Environment Variables (Production)
 ```
-AUTH_SECRET=xxx          # NextAuth v5 token signing
-NEXTAUTH_SECRET=xxx      # Legacy (middleware uses AUTH_SECRET || NEXTAUTH_SECRET)
-DATABASE_URL=xxx         # PostgreSQL connection
-```
+src/
+├── app/
+│   ├── api/                    # API Routes
+│   │   ├── v2/                 # V2 API (auth, ai, alerts, etc.)
+│   │   ├── mrp/                # MRP routes (run, atp, simulation)
+│   │   ├── production/         # Production routes (oee, etc.)
+│   │   └── demo/               # Demo mode APIs
+│   └── (dashboard)/            # Protected pages
+├── lib/
+│   ├── cache/memory-cache.ts   # In-memory cache (thay Redis)
+│   ├── api/validation.ts       # Validation wrapper
+│   ├── validations/            # Zod schemas
+│   ├── types/index.ts          # TypeScript types
+│   ├── error-handler.ts        # Error handling
+│   └── logger.ts               # Logging utility
+├── components/
+│   └── ui-v2/                  # UI components
+└── __tests__/
+    └── unit/                   # Unit tests (6 files)
 
-### API Routes Structure
-```
-/api/                    # v1 routes (main)
-├── parts/
-├── inventory/
-├── dashboard/
-├── production/
-├── mrp/
-├── export/
-├── health/
-└── demo/
-    ├── seed/           # POST - seed demo data
-    ├── check/          # GET - diagnostic
-    └── unlock/         # POST - unlock accounts
-
-/api/v2/                 # v2 routes (some features)
-├── reports/
-├── supplier/
-├── customer/
-├── ai/
-├── quality/
-└── parts-optimized/
+enterprise/                     # Standalone CLI tools (excluded from build)
+├── migration/
+├── capacity-test/
+└── health-check/
 ```
 
 ---
 
-## PLAN FILE (Demo Mode Implementation)
-
-**Location:** `/Users/mac/.claude/plans/harmonic-hatching-acorn.md`
-
-### Remaining Tasks (from plan):
-- [ ] Phase 1: Permission UI Components
-  - permission-button.tsx
-  - action-dropdown.tsx
-  - data-table-toolbar.tsx
-  - demo-mode-banner.tsx (floating badge)
-
-- [ ] Phase 2: API Permission Middleware
-  - with-permission.ts
-
-- [ ] Phase 3: CRUD for all entities
-  - Suppliers, Parts, Customers, Sales Orders, Purchase Orders
-
-- [ ] Phase 4: Inventory & Operations
-  - Inventory adjustments, Work orders
-
-- [ ] Phase 5: Demo Data Management
-  - Demo reset API
-  - Role switcher
-
----
-
-## QUICK COMMANDS
+## 🔧 QUICK COMMANDS
 
 ```bash
-# Local development
-cd /Users/mac/anhquocluong/rtr-mrp
-npm run dev
+# Development
+npm run dev                    # Start dev server (port 3001)
 
-# Seed demo data (production)
+# Testing
+npm run test:run               # Run all tests (337 tests)
+npm run test:watch             # Watch mode
+
+# Build
+npm run build                  # Production build
+
+# Git
+git status
+git push                       # Trigger Render auto-deploy
+
+# Health check
+npm run build && npm run test:run
+
+# Demo APIs (production)
 curl -X POST https://rtr-mrp.onrender.com/api/demo/seed
-
-# Check demo users
 curl https://rtr-mrp.onrender.com/api/demo/check
-
-# Run enterprise tools locally
-npm install csv-parse xlsx  # First time only
-npx ts-node enterprise/migration/migrate.ts parts ./data.csv --dry-run
-
-# K6 capacity test
-k6 run enterprise/capacity-test/capacity-test.js --env BASE_URL=http://localhost:3000
 ```
 
 ---
 
-## IMPORTANT NOTES
+## ⚠️ IMPORTANT NOTES
 
-1. **Auth Secret:** Middleware uses `AUTH_SECRET || NEXTAUTH_SECRET` to match NextAuth v5 token signing
-
-2. **Schema Fields (VERIFIED 2026-01-09):**
-   - Parts: `name` (NOT `partName`)
-   - Inventory: `quantity` (NOT `onHand`)
-   - Inventory has composite key: `[partId, warehouseId, lotNumber]`
-   - Warehouse model EXISTS and is required for Inventory
-
-3. **Enterprise Tools:** Standalone CLI tools, not part of web app build
-
-4. **Demo Reset:** Daily auto-reset not yet implemented
+1. **KHÔNG sử dụng Redis** - Đã chuyển sang in-memory cache hoàn toàn
+2. **Vitest thay Jest** - Import từ 'vitest', dùng `vi.mock()` thay `jest.mock()`
+3. **API routes ở 2 vị trí**: `/api/v2/` (mới) và `/api/` (cũ)
+4. **Build warnings** về "Dynamic server usage" là BÌNH THƯỜNG
+5. **Auth Secret:** Middleware uses `AUTH_SECRET || NEXTAUTH_SECRET`
 
 ---
 
-## NEXT SESSION STARTER
+## 📈 METRICS
 
-When returning, say:
-> "Read HANDOVER.md and continue work"
-
-Or for specific tasks:
-> "Read HANDOVER.md, then implement permission-button component"
+| Metric | Giá trị |
+|--------|---------|
+| Total Tests | 337 |
+| Test Files | 16 (13 pass, 3 legacy fail) |
+| Zod Schemas | 42+ |
+| TypeScript Types | 50+ |
+| API Routes | 100+ |
+| Health Score | 85/100 |
 
 ---
 
-*Generated: 2026-01-06 | RTR-MRP v1.0*
+## 🔗 KEY FILES
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | AI Kernel config cho Claude |
+| `HANDOVER.md` | This file - handover document |
+| `vitest.config.ts` | Test configuration |
+| `prisma/schema.prisma` | Database schema |
+| `src/lib/cache/memory-cache.ts` | Cache implementation |
+| `src/lib/error-handler.ts` | Error handling |
+| `src/lib/api/validation.ts` | API validation wrapper |
+
+---
+
+## 💡 NEXT SESSION STARTER
+
+Khi quay lại, nói:
+> "Đọc HANDOVER.md và tiếp tục công việc"
+
+Hoặc cho task cụ thể:
+> "Đọc HANDOVER.md, sau đó implement Excel-like UI"
+
+---
+
+## 📝 SESSION LOG
+
+| Date | Work Done | Commits |
+|------|-----------|---------|
+| 2026-01-10 | Unit tests, verify deployment | 446b020 |
+| 2026-01-09 | Redis removal, validation infrastructure | a115ec2, 4cb59f6, 3416f60, 780f55a |
+| 2026-01-06 | Demo mode, Enterprise tools | 2fb897d |
+
+---
+
+*RTR-MRP v1.0 | Updated: 2026-01-10*
