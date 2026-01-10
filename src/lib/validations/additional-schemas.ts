@@ -343,6 +343,153 @@ export const MRPRunSchema = z.object({
 });
 
 // =============================================================================
+// PART SCHEMAS
+// =============================================================================
+
+export const PartQuerySchema = BaseQuerySchema.extend({
+  category: z.enum(['FINISHED_GOOD', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL']).optional(),
+  lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']).optional(),
+  makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']).optional(),
+  ndaaCompliant: z.enum(['true', 'false']).optional(),
+  includeRelations: z.enum(['true', 'false']).optional(),
+});
+
+export const PartCreateSchema = z.object({
+  id: z.string().max(50).optional(),
+  partNumber: z.string().min(1).max(50),
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  category: z.enum(['FINISHED_GOOD', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL']),
+  unit: z.string().max(10).default('EA'),
+  revision: z.string().max(10).default('A'),
+  lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']).default('ACTIVE'),
+  tags: z.array(z.string().max(50)).optional(),
+  // Costs
+  unitCost: z.number().min(0).optional(),
+  standardCost: z.number().min(0).optional(),
+  averageCost: z.number().min(0).optional(),
+  landedCost: z.number().min(0).optional(),
+  freightPercent: z.number().min(0).optional(),
+  dutyPercent: z.number().min(0).optional(),
+  overheadPercent: z.number().min(0).optional(),
+  priceBreakQty1: z.number().min(0).optional(),
+  priceBreakCost1: z.number().min(0).optional(),
+  priceBreakQty2: z.number().min(0).optional(),
+  priceBreakCost2: z.number().min(0).optional(),
+  priceBreakQty3: z.number().min(0).optional(),
+  priceBreakCost3: z.number().min(0).optional(),
+  // Planning
+  minStockLevel: z.number().int().min(0).optional(),
+  reorderPoint: z.number().int().min(0).optional(),
+  maxStock: z.number().int().min(0).optional(),
+  safetyStock: z.number().int().min(0).optional(),
+  leadTimeDays: z.number().int().min(0).optional(),
+  makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']).default('BUY'),
+  procurementType: z.enum(['STOCK', 'ORDER', 'CONSIGNMENT']).optional(),
+  buyerCode: z.string().max(20).optional(),
+  moq: z.number().int().min(1).default(1),
+  orderMultiple: z.number().int().min(1).default(1),
+  standardPack: z.number().int().min(1).optional(),
+  // Specs
+  weightKg: z.number().min(0).optional(),
+  lengthMm: z.number().min(0).optional(),
+  widthMm: z.number().min(0).optional(),
+  heightMm: z.number().min(0).optional(),
+  volumeCm3: z.number().min(0).optional(),
+  color: z.string().max(50).optional(),
+  material: z.string().max(100).optional(),
+  drawingNumber: z.string().max(50).optional(),
+  drawingUrl: z.string().max(500).optional(),
+  datasheetUrl: z.string().max(500).optional(),
+  specDocument: z.string().max(500).optional(),
+  manufacturer: z.string().max(100).optional(),
+  manufacturerPn: z.string().max(100).optional(),
+  subCategory: z.string().max(50).optional(),
+  partType: z.string().max(50).optional(),
+  // Compliance
+  countryOfOrigin: z.string().max(50).optional(),
+  hsCode: z.string().max(20).optional(),
+  eccn: z.string().max(20).optional(),
+  ndaaCompliant: z.boolean().default(true),
+  itarControlled: z.boolean().default(false),
+  lotControl: z.boolean().default(false),
+  serialControl: z.boolean().default(false),
+  shelfLifeDays: z.number().int().min(0).optional(),
+  inspectionRequired: z.boolean().default(true),
+  aqlLevel: z.string().max(10).optional(),
+  certificateRequired: z.boolean().default(false),
+  rohsCompliant: z.boolean().default(true),
+  reachCompliant: z.boolean().default(true),
+});
+
+// =============================================================================
+// INVENTORY SCHEMAS
+// =============================================================================
+
+export const InventoryQuerySchema = BaseQuerySchema.extend({
+  partId: z.string().max(50).optional(),
+  warehouseId: z.string().max(50).optional(),
+  status: z.enum(['critical', 'reorder', 'ok', 'all']).optional(),
+});
+
+export const InventoryAdjustSchema = z.object({
+  partId: z.string().min(1).max(50),
+  warehouseId: z.string().min(1).max(50),
+  quantity: z.number(),
+  reason: z.enum(['RECEIPT', 'ISSUE', 'ADJUSTMENT', 'TRANSFER', 'SCRAP', 'COUNT']),
+  reference: z.string().max(100).optional(),
+  lotNumber: z.string().max(50).optional(),
+  notes: z.string().max(500).optional(),
+});
+
+// =============================================================================
+// SALES ORDER SCHEMAS
+// =============================================================================
+
+export const SalesOrderQuerySchema = BaseQuerySchema.extend({
+  customerId: z.string().max(50).optional(),
+  status: z.enum(['DRAFT', 'CONFIRMED', 'IN_PRODUCTION', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+}).merge(DateFilterSchema);
+
+export const SalesOrderCreateSchema = z.object({
+  customerId: z.string().min(1).max(50),
+  orderNumber: z.string().max(50).optional(),
+  orderDate: z.coerce.date().optional(),
+  requestedDate: z.coerce.date().optional(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).default('NORMAL'),
+  notes: z.string().max(2000).optional(),
+  lines: z.array(z.object({
+    partId: z.string().min(1).max(50),
+    quantity: z.number().int().min(1),
+    unitPrice: z.number().min(0).optional(),
+    requestedDate: z.coerce.date().optional(),
+  })).min(1),
+});
+
+// =============================================================================
+// WORK ORDER / PRODUCTION SCHEMAS
+// =============================================================================
+
+export const WorkOrderQuerySchema = BaseQuerySchema.extend({
+  partId: z.string().max(50).optional(),
+  status: z.enum(['PLANNED', 'RELEASED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ON_HOLD']).optional(),
+  workCenter: z.string().max(50).optional(),
+  priority: z.enum(['LOW', 'NORMAL', 'HIGH', 'URGENT']).optional(),
+}).merge(DateFilterSchema);
+
+export const WorkOrderCreateSchema = z.object({
+  productId: z.string().min(1).max(50),
+  quantity: z.number().int().min(1),
+  plannedStart: z.coerce.date().optional(),
+  plannedEnd: z.coerce.date().optional(),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  salesOrderId: z.string().max(50).optional(),
+  salesOrderLine: z.number().int().min(1).optional(),
+  notes: z.string().max(2000).optional(),
+});
+
+// =============================================================================
 // EXPORT ALL SCHEMAS
 // =============================================================================
 
@@ -416,6 +563,22 @@ export const AdditionalSchemas = {
   
   // MRP
   MRPRun: MRPRunSchema,
+
+  // Part
+  PartQuery: PartQuerySchema,
+  PartCreate: PartCreateSchema,
+
+  // Inventory
+  InventoryQuery: InventoryQuerySchema,
+  InventoryAdjust: InventoryAdjustSchema,
+
+  // Sales Order
+  SalesOrderQuery: SalesOrderQuerySchema,
+  SalesOrderCreate: SalesOrderCreateSchema,
+
+  // Work Order / Production
+  WorkOrderQuery: WorkOrderQuerySchema,
+  WorkOrderCreate: WorkOrderCreateSchema,
 };
 
 export default AdditionalSchemas;

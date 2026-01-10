@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { getStockStatus } from '@/lib/bom-engine';
+import { validateQuery } from '@/lib/api/validation';
+import { InventoryQuerySchema } from '@/lib/validations';
 
 // =============================================================================
 // GET - List inventory with aggregation
@@ -14,10 +16,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const partId = searchParams.get('partId');
-    const warehouseId = searchParams.get('warehouseId');
-    const status = searchParams.get('status');
+    // Validate query params
+    const queryResult = validateQuery(InventoryQuerySchema, request.nextUrl.searchParams);
+    if (!queryResult.success) {
+      return queryResult.response;
+    }
+    const { partId, warehouseId, status } = queryResult.data;
 
     // Build where clause
     const where: Record<string, unknown> = {};

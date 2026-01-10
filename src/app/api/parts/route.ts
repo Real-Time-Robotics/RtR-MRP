@@ -8,6 +8,8 @@ import {
   paginatedSuccess,
   paginatedError,
 } from "@/lib/pagination";
+import { validateQuery, validateBody } from "@/lib/api/validation";
+import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
 
 // Allowed filters for parts
 const ALLOWED_FILTERS = ["category", "lifecycleStatus", "makeOrBuy"];
@@ -23,15 +25,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Validate query params
+    const queryResult = validateQuery(PartQuerySchema, request.nextUrl.searchParams);
+    if (!queryResult.success) {
+      return queryResult.response;
+    }
+    const { category, lifecycleStatus, makeOrBuy, ndaaCompliant, includeRelations, search } = queryResult.data;
+
     // Parse pagination params
     const params = parsePaginationParams(request);
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category");
-    const lifecycleStatus = searchParams.get("lifecycleStatus");
-    const makeOrBuy = searchParams.get("makeOrBuy");
-    const ndaaCompliant = searchParams.get("ndaaCompliant");
-    const search = searchParams.get("search");
-    const includeRelations = searchParams.get("includeRelations") === "true";
 
     // Build where clause
     const where: Record<string, unknown> = {};
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (category) where.category = category;
     if (lifecycleStatus) where.lifecycleStatus = lifecycleStatus;
     if (makeOrBuy) where.makeOrBuy = makeOrBuy;
-    if (ndaaCompliant !== null && ndaaCompliant !== "") {
+    if (ndaaCompliant) {
       where.ndaaCompliant = ndaaCompliant === "true";
     }
     if (search) {
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest) {
         [field]: { contains: search, mode: "insensitive" as const },
       }));
     }
+
+    const shouldIncludeRelations = includeRelations === "true";
 
     // Get total count and paginated data in parallel
     const [totalCount, parts] = await Promise.all([
@@ -57,7 +61,7 @@ export async function GET(request: NextRequest) {
         orderBy: params.sortBy
           ? { [params.sortBy]: params.sortOrder }
           : { partNumber: "asc" },
-        include: includeRelations
+        include: shouldIncludeRelations
           ? {
             partSuppliers: {
               include: { supplier: true },
@@ -109,7 +113,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await request.json();
+    // Validate request body
+    const bodyResult = await validateBody(PartCreateSchema, request);
+    if (!bodyResult.success) {
+      return bodyResult.response;
+    }
+    const data = bodyResult.data;
 
     // Generate ID if not provided
     const id = data.id || `PRT-${Date.now()}`;

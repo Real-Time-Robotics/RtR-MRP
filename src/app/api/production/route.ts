@@ -12,6 +12,8 @@ import {
   paginatedError,
   PaginatedResponse,
 } from "@/lib/pagination";
+import { validateQuery, validateBody } from "@/lib/api/validation";
+import { WorkOrderQuerySchema, WorkOrderCreateSchema } from "@/lib/validations";
 // Note: Redis cache/rate-limit disabled - not available on Render free tier
 
 // Allowed filters for work orders
@@ -103,38 +105,19 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Create work order
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-
-    const {
-      productId,
-      quantity,
-      salesOrderId,
-      salesOrderLine,
-      plannedStart,
-      priority = "normal",
-    } = body;
-
-    // Validate required fields
-    if (!productId) {
-      return NextResponse.json(
-        { error: "productId is required", field: "productId" },
-        { status: 400 }
-      );
+    // Validate request body
+    const bodyResult = await validateBody(WorkOrderCreateSchema, request);
+    if (!bodyResult.success) {
+      return bodyResult.response;
     }
-
-    if (!quantity || quantity <= 0) {
-      return NextResponse.json(
-        { error: "quantity must be greater than 0", field: "quantity" },
-        { status: 400 }
-      );
-    }
+    const { productId, quantity, salesOrderId, salesOrderLine, plannedStart, priority } = bodyResult.data;
 
     const workOrder = await createWorkOrder(
       productId,
