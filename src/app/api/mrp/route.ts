@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { runMrpCalculation } from "@/lib/mrp-engine";
 
 // ============================================================================
-// MRP API - Optimized for Render (no Redis dependencies)
+// MRP API - FIXED: Now runs synchronously (no Redis/BullMQ queue)
+// Previously: Created "queued" record → Poll forever → Loading vô hạn
+// Now: Runs calculation immediately → Returns "completed" → Works!
 // ============================================================================
 
 // In-memory rate limit (simple, no Redis)
@@ -83,32 +86,34 @@ export async function POST(request: Request) {
       includeSafetyStock = true,
     } = body;
 
-    // Create the Run record with "queued" status
-    const runNumber = `MRP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    const mrpRun = await prisma.mrpRun.create({
-      data: {
-        runNumber,
-        planningHorizon: planningHorizonDays,
-        status: "queued",
-        parameters: {
-          planningHorizonDays,
-          includeConfirmed,
-          includeDraft,
-          includeSafetyStock,
+    // Run MRP calculation SYNCHRONOUSLY (no Redis/BullMQ queue)
+    // This replaces the old queued approach that caused infinite loading
+    console.log("[MRP API] Starting synchronous MRP calculation...");
+
+    const mrpRun = await runMrpCalculation({
+      planningHorizonDays,
+      includeConfirmed,
+      includeDraft,
+      includeSafetyStock,
+    });
+
+    console.log("[MRP API] MRP calculation completed:", mrpRun.id);
+
+    // Fetch the full run with suggestions count
+    const fullRun = await prisma.mrpRun.findUnique({
+      where: { id: mrpRun.id },
+      include: {
+        _count: {
+          select: { suggestions: true },
         },
-        createdBy: session.user?.email,
       },
     });
 
-    // Note: BullMQ queue disabled - Redis not available on Render free tier
-    // The actual MRP calculation should be triggered by a worker or run synchronously
-    // For now, we just create the record and let the client poll for updates
-
-    return NextResponse.json(mrpRun);
+    return NextResponse.json(fullRun);
   } catch (error) {
     console.error("MRP API error:", error);
     return NextResponse.json(
-      { error: "Failed to create MRP run" },
+      { error: "Failed to run MRP calculation" },
       { status: 500 }
     );
   }
