@@ -632,7 +632,7 @@ export default function AIChatPanel({
             </button>
           </div>
           <p className="text-[10px] text-gray-400 dark:text-neutral-500 text-center mt-2">
-            ⌘J · AI có thể mắc lỗi
+            ⌘J · {context.language === 'vi' ? 'AI có thể mắc lỗi' : 'AI can make mistakes'} · RTR AI v1.0
           </p>
         </div>
       </div>
@@ -891,7 +891,7 @@ export default function AIChatPanel({
               </button>
             </div>
             <p className="text-[10px] text-gray-400 dark:text-neutral-500 text-center mt-2">
-              ⌘J · {context.language === 'vi' ? 'AI có thể mắc lỗi' : 'AI can make mistakes'}
+              ⌘J · {context.language === 'vi' ? 'AI có thể mắc lỗi' : 'AI can make mistakes'} · RTR AI v1.0
             </p>
           </div>
         </>

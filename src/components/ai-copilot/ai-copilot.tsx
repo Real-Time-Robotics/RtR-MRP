@@ -403,12 +403,6 @@ export default function AICopilot({
             </div>
           )}
 
-          {/* Footer - Minimal */}
-          <div className="px-4 py-1.5 bg-gray-50/80 dark:bg-neutral-900/80 border-t border-gray-100 dark:border-neutral-800 text-center">
-            <p className="text-[10px] text-gray-400 dark:text-neutral-500">
-              RTR AI · v1.0
-            </p>
-          </div>
         </div>
       )}
     </>
