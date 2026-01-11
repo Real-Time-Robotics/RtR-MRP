@@ -336,12 +336,12 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
                 key: 'status',
                 label: 'Trạng thái',
                 options: [
-                  { value: 'draft', label: 'Draft' },
-                  { value: 'pending', label: 'Pending' },
-                  { value: 'confirmed', label: 'Confirmed' },
-                  { value: 'in_progress', label: 'In Progress' },
-                  { value: 'received', label: 'Received' },
-                  { value: 'cancelled', label: 'Cancelled' },
+                  { value: 'draft', label: 'Nháp' },
+                  { value: 'pending', label: 'Chờ xử lý' },
+                  { value: 'confirmed', label: 'Đã xác nhận' },
+                  { value: 'in_progress', label: 'Đang thực hiện' },
+                  { value: 'received', label: 'Đã nhận' },
+                  { value: 'cancelled', label: 'Đã hủy' },
                 ],
               },
             ]}

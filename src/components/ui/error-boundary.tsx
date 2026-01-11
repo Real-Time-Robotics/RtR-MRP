@@ -97,12 +97,12 @@ export function ErrorFallback({
       >
         <AlertTriangle className="h-5 w-5 text-destructive" />
         <span className="flex-1 text-sm text-destructive">
-          {error?.message || "Something went wrong"}
+          {error?.message || "Có lỗi xảy ra"}
         </span>
         {onRetry && (
           <Button size="sm" variant="outline" onClick={onRetry}>
             <RefreshCw className="mr-1 h-3 w-3" />
-            Retry
+            Thử lại
           </Button>
         )}
       </div>
@@ -120,10 +120,10 @@ export function ErrorFallback({
         <div className="rounded-full bg-destructive/10 p-4">
           <AlertTriangle className="h-12 w-12 text-destructive" />
         </div>
-        <h1 className="mt-6 text-2xl font-bold">Something went wrong</h1>
+        <h1 className="mt-6 text-2xl font-bold">Có lỗi xảy ra</h1>
         <p className="mt-2 max-w-md text-center text-muted-foreground">
-          We encountered an unexpected error. Please try again or contact support if the
-          problem persists.
+          Đã xảy ra lỗi không mong muốn. Vui lòng thử lại hoặc liên hệ hỗ trợ nếu
+          vấn đề vẫn tiếp diễn.
         </p>
 
         {showDetails && error && (
@@ -141,12 +141,12 @@ export function ErrorFallback({
           {onRetry && (
             <Button onClick={onRetry}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
+              Thử lại
             </Button>
           )}
           <Button variant="outline" onClick={() => window.location.href = "/"}>
             <Home className="mr-2 h-4 w-4" />
-            Go Home
+            Về trang chủ
           </Button>
         </div>
       </div>
@@ -159,12 +159,12 @@ export function ErrorFallback({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <AlertTriangle className="h-5 w-5" />
-          Error
+          Lỗi
         </CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          {error?.message || "An unexpected error occurred while loading this content."}
+          {error?.message || "Đã xảy ra lỗi không mong muốn khi tải nội dung này."}
         </p>
         {showDetails && isDev && errorInfo && (
           <pre className="mt-4 max-h-40 overflow-auto rounded bg-muted p-2 text-xs">
@@ -176,11 +176,11 @@ export function ErrorFallback({
         {onRetry && (
           <Button size="sm" onClick={onRetry}>
             <RefreshCw className="mr-1 h-3 w-3" />
-            Retry
+            Thử lại
           </Button>
         )}
         <Button size="sm" variant="ghost" onClick={() => window.location.reload()}>
-          Reload Page
+          Tải lại trang
         </Button>
       </CardFooter>
     </Card>
@@ -258,14 +258,14 @@ export function ApiError({
         <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
         <div className="flex-1">
           <h4 className="font-medium text-destructive">
-            {error.code || "Error"}
+            {error.code || "Lỗi"}
             {error.status && ` (${error.status})`}
           </h4>
           <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
         </div>
         {onRetry && (
           <Button size="sm" variant="outline" onClick={onRetry}>
-            Retry
+            Thử lại
           </Button>
         )}
       </div>

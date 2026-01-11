@@ -261,12 +261,12 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="DEVELOPMENT">Development</SelectItem>
-                                                    <SelectItem value="PROTOTYPE">Prototype</SelectItem>
-                                                    <SelectItem value="ACTIVE">Active</SelectItem>
-                                                    <SelectItem value="PHASE_OUT">Phase Out</SelectItem>
-                                                    <SelectItem value="OBSOLETE">Obsolete</SelectItem>
-                                                    <SelectItem value="EOL">End of Life</SelectItem>
+                                                    <SelectItem value="DEVELOPMENT">Phát triển</SelectItem>
+                                                    <SelectItem value="PROTOTYPE">Mẫu thử</SelectItem>
+                                                    <SelectItem value="ACTIVE">Hoạt động</SelectItem>
+                                                    <SelectItem value="PHASE_OUT">Ngừng dần</SelectItem>
+                                                    <SelectItem value="OBSOLETE">Lỗi thời</SelectItem>
+                                                    <SelectItem value="EOL">Hết vòng đời</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -519,9 +519,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="MAKE">Make</SelectItem>
-                                                    <SelectItem value="BUY">Buy</SelectItem>
-                                                    <SelectItem value="BOTH">Both</SelectItem>
+                                                    <SelectItem value="MAKE">Tự sản xuất</SelectItem>
+                                                    <SelectItem value="BUY">Mua</SelectItem>
+                                                    <SelectItem value="BOTH">Cả hai</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />

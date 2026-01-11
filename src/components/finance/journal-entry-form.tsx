@@ -124,13 +124,13 @@ export function JournalEntryForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>New Journal Entry</CardTitle>
+        <CardTitle>Phiếu ghi sổ mới</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Header Fields */}
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="entryDate">Entry Date *</Label>
+            <Label htmlFor="entryDate">Ngày nhập *</Label>
             <Input
               id="entryDate"
               type="date"
@@ -139,12 +139,12 @@ export function JournalEntryForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="reference">Reference</Label>
+            <Label htmlFor="reference">Mã tham chiếu</Label>
             <Input
               id="reference"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g., INV-001"
+              placeholder="VD: HĐ-001"
             />
           </div>
           <div className="flex items-end">
@@ -155,18 +155,18 @@ export function JournalEntryForm({
                 onChange={(e) => setAutoPost(e.target.checked)}
                 className="rounded"
               />
-              <span className="text-sm">Auto-post after saving</span>
+              <span className="text-sm">Tự động ghi sổ sau khi lưu</span>
             </label>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="description">Description *</Label>
+          <Label htmlFor="description">Mô tả *</Label>
           <Textarea
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter journal entry description..."
+            placeholder="Nhập mô tả cho phiếu ghi sổ..."
             rows={2}
           />
         </div>
@@ -174,9 +174,9 @@ export function JournalEntryForm({
         {/* Journal Lines */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label>Journal Lines</Label>
+            <Label>Dòng ghi sổ</Label>
             <Button variant="outline" size="sm" onClick={addLine}>
-              <Plus className="h-4 w-4 mr-1" /> Add Line
+              <Plus className="h-4 w-4 mr-1" /> Thêm dòng
             </Button>
           </div>
 
@@ -184,10 +184,10 @@ export function JournalEntryForm({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[250px]">Account</TableHead>
-                  <TableHead>Line Description</TableHead>
-                  <TableHead className="w-[150px] text-right">Debit</TableHead>
-                  <TableHead className="w-[150px] text-right">Credit</TableHead>
+                  <TableHead className="w-[250px]">Tài khoản</TableHead>
+                  <TableHead>Mô tả</TableHead>
+                  <TableHead className="w-[150px] text-right">Nợ</TableHead>
+                  <TableHead className="w-[150px] text-right">Có</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -200,7 +200,7 @@ export function JournalEntryForm({
                         onValueChange={(value) => updateLine(index, "accountId", value)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
+                          <SelectValue placeholder="Chọn tài khoản" />
                         </SelectTrigger>
                         <SelectContent>
                           {accounts.map((account) => (
@@ -215,7 +215,7 @@ export function JournalEntryForm({
                       <Input
                         value={line.description || ""}
                         onChange={(e) => updateLine(index, "description", e.target.value)}
-                        placeholder="Line description"
+                        placeholder="Mô tả dòng"
                       />
                     </TableCell>
                     <TableCell>
@@ -255,7 +255,7 @@ export function JournalEntryForm({
                 {/* Totals Row */}
                 <TableRow className="bg-muted/50">
                   <TableCell colSpan={2} className="font-medium text-right">
-                    Totals
+                    Tổng cộng
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     ${totalDebits.toFixed(2)}
@@ -273,7 +273,7 @@ export function JournalEntryForm({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Entry is not balanced. Difference: ${difference.toFixed(2)}
+                Phiếu không cân bằng. Chênh lệch: ${difference.toFixed(2)}
               </AlertDescription>
             </Alert>
           )}
@@ -282,10 +282,10 @@ export function JournalEntryForm({
         {/* Actions */}
         <div className="flex justify-end gap-4">
           <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            Hủy
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save Journal Entry"}
+            {isSubmitting ? "Đang lưu..." : "Lưu phiếu ghi sổ"}
           </Button>
         </div>
       </CardContent>

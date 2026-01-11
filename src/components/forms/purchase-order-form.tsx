@@ -404,12 +404,12 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="received">Received</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="draft">Nháp</SelectItem>
+                        <SelectItem value="pending">Chờ xử lý</SelectItem>
+                        <SelectItem value="confirmed">Đã xác nhận</SelectItem>
+                        <SelectItem value="in_progress">Đang thực hiện</SelectItem>
+                        <SelectItem value="received">Đã nhận</SelectItem>
+                        <SelectItem value="cancelled">Đã hủy</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

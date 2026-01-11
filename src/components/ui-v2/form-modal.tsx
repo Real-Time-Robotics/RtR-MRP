@@ -59,7 +59,7 @@ export function FormModal({
     title,
     description,
     children,
-    submitValidText = 'Save',
+    submitValidText = 'Lưu',
     isSubmitting = false,
     isInvalid = false,
     onSubmit,
@@ -126,7 +126,7 @@ export function FormModal({
                                 disabled={isSubmitting}
                                 className="dark:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                             >
-                                Cancel
+                                Hủy
                             </Button>
                             <Button
                                 onClick={onSubmit}
@@ -136,7 +136,7 @@ export function FormModal({
                                 {isSubmitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Saving...
+                                        Đang lưu...
                                     </>
                                 ) : (
                                     <>

@@ -436,10 +436,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="low">Thấp</SelectItem>
+                        <SelectItem value="normal">Bình thường</SelectItem>
+                        <SelectItem value="high">Cao</SelectItem>
+                        <SelectItem value="urgent">Khẩn cấp</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -462,12 +462,12 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="in_progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="draft">Nháp</SelectItem>
+                        <SelectItem value="pending">Chờ xử lý</SelectItem>
+                        <SelectItem value="confirmed">Đã xác nhận</SelectItem>
+                        <SelectItem value="in_progress">Đang thực hiện</SelectItem>
+                        <SelectItem value="completed">Hoàn thành</SelectItem>
+                        <SelectItem value="cancelled">Đã hủy</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

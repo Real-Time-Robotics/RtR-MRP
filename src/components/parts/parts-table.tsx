@@ -77,7 +77,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="pt-4">
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Total Parts</span>
+            <span className="text-xs text-muted-foreground">Tổng số</span>
           </div>
           <p className="text-2xl font-bold">{stats.total}</p>
         </CardContent>
@@ -86,7 +86,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="pt-4">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-xs text-muted-foreground">Active</span>
+            <span className="text-xs text-muted-foreground">Hoạt động</span>
           </div>
           <p className="text-2xl font-bold text-green-600">{stats.active}</p>
         </CardContent>
@@ -104,7 +104,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="pt-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-orange-500" />
-            <span className="text-xs text-muted-foreground">Critical</span>
+            <span className="text-xs text-muted-foreground">Quan trọng</span>
           </div>
           <p className="text-2xl font-bold text-orange-600">{stats.critical}</p>
         </CardContent>
@@ -113,7 +113,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="pt-4">
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 text-indigo-500" />
-            <span className="text-xs text-muted-foreground">Make</span>
+            <span className="text-xs text-muted-foreground">Tự sản xuất</span>
           </div>
           <p className="text-2xl font-bold text-indigo-600">{stats.make}</p>
         </CardContent>
@@ -122,7 +122,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="pt-4">
           <div className="flex items-center gap-2">
             <Package className="h-4 w-4 text-orange-500" />
-            <span className="text-xs text-muted-foreground">Buy</span>
+            <span className="text-xs text-muted-foreground">Mua</span>
           </div>
           <p className="text-2xl font-bold text-orange-600">{stats.buy}</p>
         </CardContent>
@@ -528,23 +528,23 @@ export function PartsTable() {
                 },
                 {
                   key: 'lifecycle',
-                  label: 'Lifecycle',
+                  label: 'Vòng đời',
                   options: [
-                    { value: 'DEVELOPMENT', label: 'Development' },
-                    { value: 'PROTOTYPE', label: 'Prototype' },
-                    { value: 'ACTIVE', label: 'Active' },
-                    { value: 'PHASE_OUT', label: 'Phase Out' },
-                    { value: 'OBSOLETE', label: 'Obsolete' },
-                    { value: 'EOL', label: 'End of Life' },
+                    { value: 'DEVELOPMENT', label: 'Phát triển' },
+                    { value: 'PROTOTYPE', label: 'Mẫu thử' },
+                    { value: 'ACTIVE', label: 'Hoạt động' },
+                    { value: 'PHASE_OUT', label: 'Ngừng dần' },
+                    { value: 'OBSOLETE', label: 'Lỗi thời' },
+                    { value: 'EOL', label: 'Hết vòng đời' },
                   ],
                 },
                 {
                   key: 'makeOrBuy',
-                  label: 'Make/Buy',
+                  label: 'Sản xuất/Mua',
                   options: [
-                    { value: 'MAKE', label: 'Make' },
-                    { value: 'BUY', label: 'Buy' },
-                    { value: 'BOTH', label: 'Both' },
+                    { value: 'MAKE', label: 'Tự sản xuất' },
+                    { value: 'BUY', label: 'Mua' },
+                    { value: 'BOTH', label: 'Cả hai' },
                   ],
                 },
               ]}

@@ -140,9 +140,9 @@ const TablePagination: React.FC<{
         {/* Info */}
         <div className="flex items-center gap-4">
           <span className="text-sm text-slate-600 dark:text-slate-400">
-            Showing <span className="font-medium text-slate-900 dark:text-slate-200">{startItem}</span> to{' '}
-            <span className="font-medium text-slate-900 dark:text-slate-200">{endItem}</span> of{' '}
-            <span className="font-medium text-slate-900 dark:text-slate-200">{formatNumber(totalItems)}</span> results
+            Hiển thị <span className="font-medium text-slate-900 dark:text-slate-200">{startItem}</span> đến{' '}
+            <span className="font-medium text-slate-900 dark:text-slate-200">{endItem}</span> của{' '}
+            <span className="font-medium text-slate-900 dark:text-slate-200">{formatNumber(totalItems)}</span> kết quả
           </span>
 
           {/* Page size select */}
@@ -153,7 +153,7 @@ const TablePagination: React.FC<{
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
-                {size} / page
+                {size} / trang
               </option>
             ))}
           </select>
@@ -228,7 +228,7 @@ function DataTable<T extends Record<string, any>>({
   columns,
   keyField = 'id',
   loading = false,
-  emptyMessage = 'No data available',
+  emptyMessage = 'Không có dữ liệu',
   selectable = false,
   selectedKeys = new Set(),
   onSelectionChange,
@@ -237,7 +237,7 @@ function DataTable<T extends Record<string, any>>({
   pageSize: initialPageSize = 10,
   pageSizeOptions = [10, 20, 50, 100],
   searchable = true,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = 'Tìm kiếm...',
   searchColumns,
   columnToggle = false,
   striped = false,

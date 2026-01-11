@@ -12,22 +12,22 @@ interface PassFailBadgeProps {
 
 const config = {
   PASS: {
-    label: "Pass",
+    label: "Đạt",
     className: "bg-green-100 text-green-800",
     icon: CheckCircle,
   },
   FAIL: {
-    label: "Fail",
+    label: "Không đạt",
     className: "bg-red-100 text-red-800",
     icon: XCircle,
   },
   CONDITIONAL: {
-    label: "Conditional",
+    label: "Có điều kiện",
     className: "bg-amber-100 text-amber-800",
     icon: AlertTriangle,
   },
   PENDING: {
-    label: "Pending",
+    label: "Chờ xử lý",
     className: "bg-gray-100 text-gray-800",
     icon: Clock,
   },

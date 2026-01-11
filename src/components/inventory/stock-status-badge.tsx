@@ -14,19 +14,19 @@ const statusConfig: Record<
   { label: string; className: string }
 > = {
   OK: {
-    label: "OK",
+    label: "Tốt",
     className: "bg-green-100 text-green-800 hover:bg-green-100",
   },
   REORDER: {
-    label: "Reorder",
+    label: "Cần đặt hàng",
     className: "bg-amber-100 text-amber-800 hover:bg-amber-100",
   },
   CRITICAL: {
-    label: "Critical",
+    label: "Cấp bách",
     className: "bg-red-100 text-red-800 hover:bg-red-100",
   },
   OUT_OF_STOCK: {
-    label: "Out of Stock",
+    label: "Hết hàng",
     className: "bg-red-100 text-red-800 hover:bg-red-100",
   },
 };

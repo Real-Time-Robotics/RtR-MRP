@@ -79,12 +79,12 @@ export function Pagination({
       <div className="text-sm text-muted-foreground">
         {totalItems > 0 ? (
           <>
-            Showing <span className="font-medium">{startItem}</span> to{" "}
-            <span className="font-medium">{endItem}</span> of{" "}
-            <span className="font-medium">{totalItems.toLocaleString()}</span> results
+            Hiển thị <span className="font-medium">{startItem}</span> đến{" "}
+            <span className="font-medium">{endItem}</span> của{" "}
+            <span className="font-medium">{totalItems.toLocaleString()}</span> kết quả
           </>
         ) : (
-          "No results"
+          "Không có kết quả"
         )}
       </div>
 
@@ -93,7 +93,7 @@ export function Pagination({
         {/* Page size selector */}
         {showPageSize && onPageSizeChange && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Show</span>
+            <span className="text-sm text-muted-foreground">Hiển thị</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}

@@ -63,7 +63,7 @@ export interface PageLoadingProps {
 }
 
 export const PageLoading: React.FC<PageLoadingProps> = ({
-  message = 'Loading...',
+  message = 'Đang tải...',
   className,
 }) => (
   <div
@@ -96,7 +96,7 @@ export interface InlineLoadingProps {
 }
 
 export const InlineLoading: React.FC<InlineLoadingProps> = ({
-  text = 'Loading',
+  text = 'Đang tải',
   className,
 }) => (
   <span className={cn('inline-flex items-center gap-2 text-slate-500', className)}>
@@ -227,9 +227,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 export const NoDataEmpty: React.FC<{ onRefresh?: () => void }> = ({ onRefresh }) => (
   <EmptyState
     icon={<Database className="h-6 w-6" />}
-    title="No data available"
-    description="There's no data to display at the moment."
-    action={onRefresh ? { label: 'Refresh', onClick: onRefresh, icon: <RefreshCw className="h-4 w-4" /> } : undefined}
+    title="Không có dữ liệu"
+    description="Hiện tại không có dữ liệu để hiển thị."
+    action={onRefresh ? { label: 'Làm mới', onClick: onRefresh, icon: <RefreshCw className="h-4 w-4" /> } : undefined}
   />
 );
 
@@ -239,44 +239,44 @@ export const NoResultsEmpty: React.FC<{ query?: string; onClear?: () => void }> 
 }) => (
   <EmptyState
     icon={<Search className="h-6 w-6" />}
-    title="No results found"
-    description={query ? `No results for "${query}". Try a different search term.` : 'Try adjusting your search or filters.'}
-    action={onClear ? { label: 'Clear search', onClick: onClear, icon: <RefreshCw className="h-4 w-4" /> } : undefined}
+    title="Không tìm thấy kết quả"
+    description={query ? `Không tìm thấy kết quả cho "${query}". Thử từ khóa khác.` : 'Thử điều chỉnh tìm kiếm hoặc bộ lọc.'}
+    action={onClear ? { label: 'Xóa tìm kiếm', onClick: onClear, icon: <RefreshCw className="h-4 w-4" /> } : undefined}
   />
 );
 
 export const NoPartsEmpty: React.FC<{ onAdd?: () => void }> = ({ onAdd }) => (
   <EmptyState
     icon={<Package className="h-6 w-6" />}
-    title="No parts yet"
-    description="Get started by adding your first part to the inventory."
-    action={onAdd ? { label: 'Add Part', onClick: onAdd } : undefined}
+    title="Chưa có sản phẩm"
+    description="Bắt đầu bằng cách thêm sản phẩm đầu tiên vào kho."
+    action={onAdd ? { label: 'Thêm sản phẩm', onClick: onAdd } : undefined}
   />
 );
 
 export const NoOrdersEmpty: React.FC<{ onAdd?: () => void }> = ({ onAdd }) => (
   <EmptyState
     icon={<ShoppingCart className="h-6 w-6" />}
-    title="No orders yet"
-    description="Create your first sales order to get started."
-    action={onAdd ? { label: 'Create Order', onClick: onAdd } : undefined}
+    title="Chưa có đơn hàng"
+    description="Tạo đơn hàng bán hàng đầu tiên để bắt đầu."
+    action={onAdd ? { label: 'Tạo đơn hàng', onClick: onAdd } : undefined}
   />
 );
 
 export const NoCustomersEmpty: React.FC<{ onAdd?: () => void }> = ({ onAdd }) => (
   <EmptyState
     icon={<Users className="h-6 w-6" />}
-    title="No customers yet"
-    description="Add your first customer to start selling."
-    action={onAdd ? { label: 'Add Customer', onClick: onAdd } : undefined}
+    title="Chưa có khách hàng"
+    description="Thêm khách hàng đầu tiên để bắt đầu bán hàng."
+    action={onAdd ? { label: 'Thêm khách hàng', onClick: onAdd } : undefined}
   />
 );
 
 export const NoReportsEmpty: React.FC = () => (
   <EmptyState
     icon={<BarChart3 className="h-6 w-6" />}
-    title="No reports available"
-    description="Reports will appear here once you have enough data."
+    title="Chưa có báo cáo"
+    description="Báo cáo sẽ xuất hiện ở đây khi bạn có đủ dữ liệu."
   />
 );
 
@@ -456,8 +456,8 @@ export interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  title = 'Something went wrong',
-  message = 'An unexpected error occurred. Please try again.',
+  title = 'Có lỗi xảy ra',
+  message = 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.',
   onRetry,
   className,
 }) => (
@@ -479,7 +479,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         onClick={onRetry}
         leftIcon={<RefreshCw className="h-4 w-4" />}
       >
-        Try again
+        Thử lại
       </Button>
     )}
   </div>

@@ -19,31 +19,31 @@ interface OrderStatusBadgeProps {
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: {
-    label: "Draft",
+    label: "Nháp",
     className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
   },
   confirmed: {
-    label: "Confirmed",
+    label: "Đã xác nhận",
     className: "bg-green-100 text-green-800 hover:bg-green-100",
   },
   in_production: {
-    label: "In Production",
+    label: "Đang sản xuất",
     className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
   },
   ready: {
-    label: "Ready",
+    label: "Sẵn sàng",
     className: "bg-purple-100 text-purple-800 hover:bg-purple-100",
   },
   shipped: {
-    label: "Shipped",
+    label: "Đã gửi hàng",
     className: "bg-indigo-100 text-indigo-800 hover:bg-indigo-100",
   },
   delivered: {
-    label: "Delivered",
+    label: "Đã giao hàng",
     className: "bg-green-100 text-green-800 hover:bg-green-100",
   },
   cancelled: {
-    label: "Cancelled",
+    label: "Đã hủy",
     className: "bg-red-100 text-red-800 hover:bg-red-100",
   },
 };
