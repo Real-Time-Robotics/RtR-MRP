@@ -147,6 +147,42 @@ export default function ReportsPage() {
     return colors[color] || colors.blue;
   };
 
+  const exportToPDF = () => {
+    if (!reportData) return;
+
+    // Create print-friendly content
+    const printContent = document.getElementById('report-content');
+    if (!printContent) return;
+
+    // Add print styles
+    const printStyles = `
+      @media print {
+        body * { visibility: hidden; }
+        #report-content, #report-content * { visibility: visible; }
+        #report-content { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none !important; }
+        @page { margin: 1cm; size: A4; }
+      }
+    `;
+
+    // Create style element
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'print-styles';
+    styleSheet.textContent = printStyles;
+    document.head.appendChild(styleSheet);
+
+    // Trigger print
+    window.print();
+
+    // Remove print styles after printing
+    setTimeout(() => {
+      const printStyleEl = document.getElementById('print-styles');
+      if (printStyleEl) {
+        printStyleEl.remove();
+      }
+    }, 1000);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -240,13 +276,13 @@ export default function ReportsPage() {
           </div>
         ) : (
           /* Report View */
-          <div className="space-y-6">
+          <div id="report-content" className="space-y-6">
             {/* Back Button & Title */}
             <div className="flex items-center justify-between">
               <div>
                 <button
                   onClick={() => setReportData(null)}
-                  className="text-sm text-blue-600 hover:text-blue-700 mb-2 flex items-center gap-1"
+                  className="text-sm text-blue-600 hover:text-blue-700 mb-2 flex items-center gap-1 no-print"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Quay lại danh sách
@@ -256,8 +292,11 @@ export default function ReportsPage() {
                 </h2>
                 <p className="text-sm text-gray-500">{reportData.subtitle}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+              <div className="flex items-center gap-2 no-print">
+                <button
+                  onClick={exportToPDF}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
                   <Download className="w-4 h-4" />
                   Xuất PDF
                 </button>

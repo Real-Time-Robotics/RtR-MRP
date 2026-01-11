@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -138,9 +139,11 @@ export default function FinalInspectionPage() {
         title="Final Inspection"
         description="Quality inspections before product shipment"
         actions={
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Inspection
+          <Button asChild>
+            <Link href="/quality/final/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Inspection
+            </Link>
           </Button>
         }
       />

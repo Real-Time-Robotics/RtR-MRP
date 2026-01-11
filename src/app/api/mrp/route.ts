@@ -12,6 +12,29 @@ import { runMrpCalculation } from "@/lib/mrp-engine";
 // In-memory rate limit (simple, no Redis)
 const mrpRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
+// Auto-cleanup stuck runs (runs older than 10 minutes in running/queued status)
+async function cleanupStuckRuns() {
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+    const result = await prisma.mrpRun.updateMany({
+      where: {
+        status: { in: ['running', 'queued'] },
+        runDate: { lt: tenMinutesAgo },
+      },
+      data: {
+        status: 'failed',
+      },
+    });
+
+    if (result.count > 0) {
+      console.log(`[MRP Cleanup] Marked ${result.count} stuck runs as failed`);
+    }
+  } catch (error) {
+    console.error('[MRP Cleanup] Error:', error);
+  }
+}
+
 function checkMrpRateLimit(userId: string): { allowed: boolean; remaining: number } {
   const now = Date.now();
   const windowMs = 3600 * 1000; // 1 hour
@@ -39,6 +62,9 @@ export async function GET() {
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Auto-cleanup stuck runs on every request
+    await cleanupStuckRuns();
 
     const runs = await prisma.mrpRun.findMany({
       orderBy: { runDate: "desc" },

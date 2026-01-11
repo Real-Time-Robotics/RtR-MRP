@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Package, AlertTriangle, Settings, RefreshCw } from 'lucide-react';
+import { Package, AlertTriangle, Settings, RefreshCw, Plus, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SmartGrid } from '@/components/ui-v2/smart-grid';
@@ -13,6 +13,23 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { StockStatus } from '@/types';
 import Link from 'next/link';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ChangeImpactDialog,
   useChangeImpact,
@@ -112,6 +129,14 @@ const INVENTORY_FIELD_LABELS: Record<string, { label: string; valueType: FieldCh
 export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   const [inventory, setInventory] = useState<InventoryItem[]>(initialData);
   const [loading, setLoading] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [adjustData, setAdjustData] = useState({
+    partId: '',
+    adjustmentType: 'ADD',
+    quantity: '',
+    reason: '',
+  });
+  const [adjusting, setAdjusting] = useState(false);
 
   // Change Impact state
   const pendingUpdateRef = useRef<{
@@ -182,6 +207,44 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
+
+  const submitAdjustment = async () => {
+    if (!adjustData.partId || !adjustData.quantity) {
+      toast.error('Vui lòng chọn part và nhập số lượng');
+      return;
+    }
+
+    setAdjusting(true);
+    try {
+      const quantity = parseInt(adjustData.quantity);
+      const adjustedQty = adjustData.adjustmentType === 'SUBTRACT' ? -quantity : quantity;
+
+      const res = await fetch('/api/inventory/adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partId: adjustData.partId,
+          quantity: adjustedQty,
+          reason: adjustData.reason || 'Manual adjustment',
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Điều chỉnh tồn kho thành công');
+        setAdjustDialogOpen(false);
+        setAdjustData({ partId: '', adjustmentType: 'ADD', quantity: '', reason: '' });
+        fetchInventory();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Điều chỉnh thất bại');
+      }
+    } catch (error) {
+      console.error('Adjustment failed:', error);
+      toast.error('Điều chỉnh thất bại');
+    } finally {
+      setAdjusting(false);
+    }
+  };
 
   // Execute the actual update (called after impact confirmation)
   const executeUpdate = async (rowId: string, field: string, value: any, item: InventoryItem) => {
@@ -375,7 +438,11 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
             Refresh
           </Button>
-          <PermissionButton permission="inventory:adjust" size="sm">
+          <PermissionButton
+            permission="inventory:adjust"
+            size="sm"
+            onClick={() => setAdjustDialogOpen(true)}
+          >
             <Settings className="h-4 w-4 mr-2" />
             Adjust
           </PermissionButton>
@@ -418,6 +485,110 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
           pendingUpdateRef.current = null;
         }}
       />
+
+      {/* Adjust Inventory Dialog */}
+      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
+            <DialogDescription>
+              Thêm hoặc bớt số lượng tồn kho cho một part
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Chọn Part *</Label>
+              <Select
+                value={adjustData.partId}
+                onValueChange={(value) =>
+                  setAdjustData({ ...adjustData, partId: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn part cần điều chỉnh" />
+                </SelectTrigger>
+                <SelectContent>
+                  {inventory.map((item) => (
+                    <SelectItem key={item.partId} value={item.partId}>
+                      {item.partNumber} - {item.name} (Hiện có: {item.quantity})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Loại điều chỉnh</Label>
+                <Select
+                  value={adjustData.adjustmentType}
+                  onValueChange={(value) =>
+                    setAdjustData({ ...adjustData, adjustmentType: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ADD">
+                      <span className="flex items-center gap-2">
+                        <Plus className="h-4 w-4 text-green-600" />
+                        Thêm vào
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="SUBTRACT">
+                      <span className="flex items-center gap-2">
+                        <Minus className="h-4 w-4 text-red-600" />
+                        Trừ đi
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="adjustQty">Số lượng *</Label>
+                <Input
+                  id="adjustQty"
+                  type="number"
+                  min="1"
+                  value={adjustData.quantity}
+                  onChange={(e) =>
+                    setAdjustData({ ...adjustData, quantity: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Lý do điều chỉnh</Label>
+              <Textarea
+                id="reason"
+                value={adjustData.reason}
+                onChange={(e) =>
+                  setAdjustData({ ...adjustData, reason: e.target.value })
+                }
+                placeholder="Nhập lý do điều chỉnh..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setAdjustDialogOpen(false)}
+                disabled={adjusting}
+              >
+                Hủy
+              </Button>
+              <Button onClick={submitAdjustment} disabled={adjusting}>
+                {adjusting ? 'Đang xử lý...' : 'Xác nhận'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

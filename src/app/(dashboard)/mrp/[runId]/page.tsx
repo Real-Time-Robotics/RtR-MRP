@@ -210,6 +210,44 @@ export default function MrpRunDetailPage() {
     );
   }
 
+  // Show failed state
+  if (data.status === "failed") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={`MRP Run ${data.runNumber}`}
+          description={`Started on ${format(new Date(data.runDate), "MMM dd, yyyy 'at' HH:mm")}`}
+          backHref="/mrp"
+        />
+        <Card className="border-2 border-red-200 dark:border-red-800">
+          <CardContent className="flex flex-col items-center justify-center py-16 space-y-6">
+            <div className="bg-red-100 dark:bg-red-900/30 rounded-full p-4">
+              <svg className="h-12 w-12 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-semibold tracking-tight text-red-600">
+                Tính toán thất bại
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                MRP calculation đã gặp lỗi trong quá trình xử lý. Vui lòng thử chạy lại.
+              </p>
+              <div className="pt-4">
+                <Badge variant="destructive">
+                  Status: FAILED
+                </Badge>
+              </div>
+            </div>
+            <Button onClick={() => router.push("/mrp")}>
+              Quay lại MRP
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const filteredSuggestions = (data.suggestions || []).filter((s) => {
     if (actionFilter !== "all" && s.actionType !== actionFilter) return false;
     if (priorityFilter !== "all" && s.priority !== priorityFilter) return false;

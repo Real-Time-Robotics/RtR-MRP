@@ -16,6 +16,7 @@ import { InvoiceList, AgingReport } from "@/components/finance";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -371,6 +372,9 @@ function InvoicingContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Ghi nhận thanh toán cho hóa đơn
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="p-3 bg-muted rounded-lg">
@@ -468,6 +472,9 @@ function InvoicingContent() {
             <DialogTitle>
               {tab === "sales" ? "Tạo hóa đơn bán hàng" : "Tạo hóa đơn mua hàng"}
             </DialogTitle>
+            <DialogDescription>
+              Nhập thông tin để tạo hóa đơn mới
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">

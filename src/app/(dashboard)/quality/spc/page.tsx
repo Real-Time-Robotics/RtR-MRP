@@ -295,6 +295,27 @@ function SPCControlChartsPageContent() {
   const [loading, setLoading] = useState(true);
   const [chartLoading, setChartLoading] = useState(false);
 
+  const exportToPDF = () => {
+    const printStyles = `
+      @media print {
+        body * { visibility: hidden; }
+        #spc-content, #spc-content * { visibility: visible; }
+        #spc-content { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none !important; }
+        @page { margin: 1cm; size: A4 landscape; }
+      }
+    `;
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'print-styles';
+    styleSheet.textContent = printStyles;
+    document.head.appendChild(styleSheet);
+    window.print();
+    setTimeout(() => {
+      const el = document.getElementById('print-styles');
+      if (el) el.remove();
+    }, 1000);
+  };
+
   useEffect(() => {
     fetchCharacteristics();
   }, []);
@@ -434,14 +455,14 @@ function SPCControlChartsPageContent() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div id="spc-content" className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Biểu đồ Kiểm soát SPC</h1>
           <p className="text-gray-500 dark:text-gray-400">Theo dõi quá trình sản xuất theo thời gian thực</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 no-print">
           <button
             onClick={() => selectedChar && fetchChart(selectedChar)}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -449,7 +470,10 @@ function SPCControlChartsPageContent() {
             <RefreshCw className={`h-4 w-4 ${chartLoading ? 'animate-spin' : ''}`} />
             Làm mới
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={exportToPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <Download className="h-4 w-4" />
             Xuất PDF
           </button>
