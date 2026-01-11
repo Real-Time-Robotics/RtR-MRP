@@ -842,6 +842,50 @@ export function ModernHeader({
                 </span>
               )}
             </button>
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    {language === 'vi' ? 'Thông báo' : 'Notifications'}
+                  </h3>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {unreadCount} {language === 'vi' ? 'chưa đọc' : 'unread'}
+                  </span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <Bell className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {language === 'vi' ? 'Không có thông báo' : 'No notifications'}
+                      </p>
+                    </div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className={`px-4 py-3 border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer ${
+                          !notification.read ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${notification.read ? 'bg-gray-300' : 'bg-blue-500'}`} />
+                          <p className="text-sm text-gray-700 dark:text-gray-300 flex-1">
+                            {notification.title}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                  <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline w-full text-center">
+                    {language === 'vi' ? 'Xem tất cả' : 'View all'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* User Menu */}
