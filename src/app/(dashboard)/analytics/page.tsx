@@ -284,19 +284,6 @@ export default function AnalyticsDashboard() {
     }, 1000);
   }, [dateRange]);
 
-  if (isLoading || !data) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const { metrics, charts } = data;
-
   const formatCurrency = (value: number) => {
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
@@ -307,7 +294,7 @@ export default function AnalyticsDashboard() {
     return value.toLocaleString();
   };
 
-  // Column definitions for tables
+  // Column definitions for tables - MUST be before any early returns to satisfy Rules of Hooks
   const topProductsColumns: Column<{ name: string; quantity: number; revenue: number }>[] = useMemo(() => [
     {
       key: 'rank',
@@ -406,6 +393,9 @@ export default function AnalyticsDashboard() {
     },
   ], []);
 
+  // Use optional chaining for metrics since data might be null during loading
+  const inventoryTotalValue = data?.metrics?.inventory?.totalValue || 1;
+
   const topPartsColumns: Column<{ name: string; quantity: number; value: number }>[] = useMemo(() => [
     {
       key: 'rank',
@@ -443,7 +433,7 @@ export default function AnalyticsDashboard() {
       width: '120px',
       align: 'right',
       render: (_, row) => {
-        const percent = (row.value / metrics.inventory.totalValue) * 100;
+        const percent = (row.value / inventoryTotalValue) * 100;
         return (
           <div className="flex items-center justify-end">
             <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
@@ -454,7 +444,21 @@ export default function AnalyticsDashboard() {
         );
       },
     },
-  ], [metrics.inventory.totalValue]);
+  ], [inventoryTotalValue]);
+
+  // Early return for loading state - MUST be after all hooks
+  if (isLoading || !data) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { metrics, charts } = data;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
