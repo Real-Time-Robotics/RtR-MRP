@@ -403,13 +403,10 @@ export default function AICopilot({
             </div>
           )}
 
-          {/* Footer */}
-          <div className="px-4 py-2 bg-gray-50 dark:bg-neutral-900 border-t border-gray-200 dark:border-neutral-700 text-center">
-            <p className="text-xs text-gray-400 flex items-center justify-center">
-              <Zap className="h-3 w-3 mr-1" />
-              {language === 'vi'
-                ? 'Powered by RTR AI Copilot v1.0'
-                : 'Powered by RTR AI Copilot v1.0'}
+          {/* Footer - Minimal */}
+          <div className="px-4 py-1.5 bg-gray-50/80 dark:bg-neutral-900/80 border-t border-gray-100 dark:border-neutral-800 text-center">
+            <p className="text-[10px] text-gray-400 dark:text-neutral-500">
+              RTR AI · v1.0
             </p>
           </div>
         </div>

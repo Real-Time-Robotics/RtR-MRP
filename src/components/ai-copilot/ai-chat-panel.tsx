@@ -606,39 +606,33 @@ export default function AIChatPanel({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
-          <div className="flex items-center space-x-2">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={context.language === 'vi' ? 'Hỏi AI Copilot...' : 'Ask AI Copilot...'}
-                className="w-full h-10 px-4 py-2 pr-10 border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 text-gray-900 dark:text-white rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder-gray-400 dark:placeholder-neutral-500"
-                rows={1}
-                disabled={isLoading}
-              />
-            </div>
+        {/* Input Area - Modern Minimal Design */}
+        <div className="p-3 bg-white dark:bg-neutral-800 border-t border-gray-100 dark:border-neutral-700/50">
+          <div className="flex items-center gap-2 p-1 bg-gray-50 dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-700 focus-within:border-blue-400 dark:focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 transition-all">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={context.language === 'vi' ? 'Nhập tin nhắn...' : 'Message...'}
+              className="flex-1 h-9 px-3 py-2 bg-transparent text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-neutral-500 resize-none focus:outline-none"
+              rows={1}
+              disabled={isLoading}
+            />
             <button
               onClick={() => sendMessage(inputValue)}
               disabled={!inputValue.trim() || isLoading}
-              className="h-10 w-10 shrink-0 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="h-8 w-8 shrink-0 mr-1 flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-4 w-4" />
               )}
             </button>
           </div>
-
-          <p className="text-xs text-gray-400 dark:text-neutral-500 text-center mt-2 flex items-center justify-center">
-            <Shield className="h-3 w-3 mr-1" />
-            {context.language === 'vi'
-              ? 'Được bảo vệ bởi Safety Guardrails'
-              : 'Protected by Safety Guardrails'}
+          <p className="text-[10px] text-gray-400 dark:text-neutral-500 text-center mt-2">
+            ⌘J · AI có thể mắc lỗi
           </p>
         </div>
       </div>
@@ -871,45 +865,33 @@ export default function AIChatPanel({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="p-4 bg-white border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder={context.language === 'vi' ? 'Hỏi AI Copilot...' : 'Ask AI Copilot...'}
-                  className="w-full h-10 px-4 py-2 pr-10 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  rows={1}
-                  disabled={isLoading}
-                />
-                {inputValue.length > 0 && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                    {inputValue.length}/1000
-                  </span>
-                )}
-              </div>
+          {/* Input Area - Modern Minimal Design */}
+          <div className="p-3 bg-white dark:bg-neutral-800 border-t border-gray-100 dark:border-neutral-700/50">
+            <div className="flex items-center gap-2 p-1 bg-gray-50 dark:bg-neutral-900 rounded-2xl border border-gray-200 dark:border-neutral-700 focus-within:border-blue-400 dark:focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/30 transition-all">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={context.language === 'vi' ? 'Nhập tin nhắn...' : 'Message...'}
+                className="flex-1 h-9 px-3 py-2 bg-transparent text-gray-900 dark:text-white text-sm placeholder-gray-400 dark:placeholder-neutral-500 resize-none focus:outline-none"
+                rows={1}
+                disabled={isLoading}
+              />
               <button
                 onClick={() => sendMessage(inputValue)}
                 disabled={!inputValue.trim() || isLoading}
-                className="h-10 w-10 shrink-0 flex items-center justify-center bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-8 w-8 shrink-0 mr-1 flex items-center justify-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
               >
                 {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 )}
               </button>
             </div>
-
-            {/* Powered by */}
-            <p className="text-xs text-gray-400 text-center mt-2 flex items-center justify-center">
-              <Shield className="h-3 w-3 mr-1" />
-              {context.language === 'vi'
-                ? 'Được bảo vệ bởi Safety Guardrails'
-                : 'Protected by Safety Guardrails'}
+            <p className="text-[10px] text-gray-400 dark:text-neutral-500 text-center mt-2">
+              ⌘J · {context.language === 'vi' ? 'AI có thể mắc lỗi' : 'AI can make mistakes'}
             </p>
           </div>
         </>
