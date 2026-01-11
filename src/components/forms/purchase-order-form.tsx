@@ -226,7 +226,9 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
       changeImpact.reset();
       setPendingSubmitData(null);
     }
-  }, [open, order, form, initialData, changeImpact]);
+  // Note: Only depend on stable values, not changeImpact object (causes infinite loop)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, order, form, initialData]);
 
   const performSave = async (data: PurchaseOrderFormData) => {
     setLoading(true);

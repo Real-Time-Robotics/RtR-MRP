@@ -1,0 +1,841 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Về trang chủ" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+        - link "Tổng quan" [ref=e8] [cursor=pointer]:
+          - /url: /home
+          - img [ref=e9]
+          - generic [ref=e12]: Tổng quan
+        - navigation [ref=e13]:
+          - button "Vận hành" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Vận hành
+            - img [ref=e19]
+          - button "Sản xuất" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Sản xuất
+            - img [ref=e26]
+          - button "Chất lượng" [ref=e29] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Chất lượng
+            - img [ref=e33]
+          - button "Phân tích" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e40]: Phân tích
+            - img [ref=e41]
+        - button "Tìm kiếm... K" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Tìm kiếm...
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - text: K
+        - button [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+        - button [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+        - button [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+        - button [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+        - button "A" [ref=e67] [cursor=pointer]:
+          - generic [ref=e68]: A
+          - img [ref=e69]
+    - generic [ref=e71]:
+      - complementary [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: MRP
+            - generic [ref=e77]: "-AI"
+          - button "Collapse" [ref=e79] [cursor=pointer]:
+            - img [ref=e80]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - link "Tổng quan" [ref=e85] [cursor=pointer]:
+              - /url: /home
+              - img [ref=e87]
+              - generic [ref=e92]: Tổng quan
+            - link "Đơn hàng 5" [ref=e93] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e95]
+              - generic [ref=e99]: Đơn hàng
+              - generic [ref=e100]: "5"
+            - link "Tồn kho" [ref=e101] [cursor=pointer]:
+              - /url: /inventory
+              - img [ref=e103]
+              - generic [ref=e107]: Tồn kho
+            - link "Sản xuất" [ref=e108] [cursor=pointer]:
+              - /url: /production
+              - img [ref=e110]
+              - generic [ref=e112]: Sản xuất
+            - link "MRP" [ref=e113] [cursor=pointer]:
+              - /url: /mrp
+              - img [ref=e115]
+              - generic [ref=e117]: MRP
+            - link "Chất lượng" [ref=e118] [cursor=pointer]:
+              - /url: /quality
+              - img [ref=e120]
+              - generic [ref=e124]: Chất lượng
+          - generic [ref=e126]: Công cụ
+          - generic [ref=e127]:
+            - link "Vật tư" [ref=e128] [cursor=pointer]:
+              - /url: /parts
+              - img [ref=e130]
+              - generic [ref=e134]: Vật tư
+            - link "BOM" [ref=e135] [cursor=pointer]:
+              - /url: /bom
+              - img [ref=e137]
+              - generic [ref=e141]: BOM
+            - link "NCC" [ref=e142] [cursor=pointer]:
+              - /url: /suppliers
+              - img [ref=e144]
+              - generic [ref=e148]: NCC
+          - generic [ref=e150]:
+            - link "Mobile" [ref=e151] [cursor=pointer]:
+              - /url: /mobile
+              - img [ref=e153]
+              - generic [ref=e155]: Mobile
+            - link "Cảnh báo" [ref=e156] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e158]
+              - generic [ref=e160]: Cảnh báo
+        - generic [ref=e161]:
+          - link "AI Insights" [ref=e162] [cursor=pointer]:
+            - /url: /ai/insights
+            - img [ref=e163]
+            - generic [ref=e166]: AI Insights
+          - link "Cài đặt" [ref=e167] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e168]
+            - generic [ref=e171]: Cài đặt
+      - main [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - heading "Parts Master" [level=1] [ref=e176]:
+                - img [ref=e177]
+                - text: Parts Master
+              - paragraph [ref=e181]: Quản lý danh sách parts với AS9100/ITAR compliance
+            - generic [ref=e182]:
+              - generic [ref=e184]:
+                - generic [ref=e185]:
+                  - img [ref=e186]
+                  - generic [ref=e190]: Total Parts
+                - paragraph [ref=e191]: "23"
+              - generic [ref=e193]:
+                - generic [ref=e194]:
+                  - img [ref=e195]
+                  - generic [ref=e198]: Active
+                - paragraph [ref=e199]: "23"
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - img [ref=e203]
+                  - generic [ref=e205]: NDAA
+                - paragraph [ref=e206]: "23"
+              - generic [ref=e208]:
+                - generic [ref=e209]:
+                  - img [ref=e210]
+                  - generic [ref=e212]: Critical
+                - paragraph [ref=e213]: "11"
+              - generic [ref=e215]:
+                - generic [ref=e216]:
+                  - img [ref=e217]
+                  - generic [ref=e221]: Make
+                - paragraph [ref=e222]: "0"
+              - generic [ref=e224]:
+                - generic [ref=e225]:
+                  - img [ref=e226]
+                  - generic [ref=e230]: Buy
+                - paragraph [ref=e231]: "23"
+            - generic [ref=e232]:
+              - generic [ref=e234]:
+                - generic [ref=e235]:
+                  - generic [ref=e236]:
+                    - generic [ref=e237]:
+                      - img [ref=e238]
+                      - textbox "Tìm kiếm part number, tên, manufacturer..." [ref=e241]
+                    - button [ref=e242] [cursor=pointer]:
+                      - img [ref=e243]
+                  - generic [ref=e248]:
+                    - button "Import" [ref=e249] [cursor=pointer]:
+                      - img [ref=e250]
+                      - text: Import
+                    - button "Export" [ref=e253] [cursor=pointer]:
+                      - img [ref=e254]
+                      - text: Export
+                    - button [ref=e257] [cursor=pointer]:
+                      - img [ref=e258]
+                - generic [ref=e259]:
+                  - combobox [ref=e260] [cursor=pointer]:
+                    - generic: Tất cả Danh mục
+                    - img [ref=e261]
+                  - combobox [ref=e263] [cursor=pointer]:
+                    - generic: Tất cả Lifecycle
+                    - img [ref=e264]
+                  - combobox [ref=e266] [cursor=pointer]:
+                    - generic: Tất cả Make/Buy
+                    - img [ref=e267]
+              - generic [ref=e270]:
+                - generic [ref=e271]:
+                  - img [ref=e272]
+                  - generic [ref=e276]: Parts
+                  - generic [ref=e277]: 23 records
+                - table [ref=e279]:
+                  - rowgroup [ref=e280]:
+                    - 'row "# Part # Name Category Make/Buy Rev Compliance Unit Cost Status" [ref=e281]':
+                      - columnheader "#" [ref=e282]
+                      - columnheader [ref=e283]:
+                        - checkbox [ref=e284]
+                      - 'columnheader "Part #" [ref=e285] [cursor=pointer]':
+                        - generic [ref=e286]:
+                          - generic [ref=e287]: "Part #"
+                          - img [ref=e288]
+                      - columnheader "Name" [ref=e291] [cursor=pointer]:
+                        - generic [ref=e292]:
+                          - generic [ref=e293]: Name
+                          - img [ref=e294]
+                      - columnheader "Category" [ref=e297] [cursor=pointer]:
+                        - generic [ref=e298]:
+                          - generic [ref=e299]: Category
+                          - img [ref=e300]
+                      - columnheader "Make/Buy" [ref=e303]:
+                        - generic [ref=e305]: Make/Buy
+                      - columnheader "Rev" [ref=e306]:
+                        - generic [ref=e308]: Rev
+                      - columnheader "Compliance" [ref=e309]:
+                        - generic [ref=e311]: Compliance
+                      - columnheader "Unit Cost" [ref=e312] [cursor=pointer]:
+                        - generic [ref=e313]:
+                          - generic [ref=e314]: Unit Cost
+                          - img [ref=e315]
+                      - columnheader "Status" [ref=e318] [cursor=pointer]:
+                        - generic [ref=e319]:
+                          - generic [ref=e320]: Status
+                          - img [ref=e321]
+                      - columnheader [ref=e324]
+                  - rowgroup [ref=e325]:
+                    - row "1 CP-001 Bo mạch điều khiển v2.0 Linh kiện BUY A $150,000.00 ACTIVE Open menu" [ref=e326]:
+                      - cell "1" [ref=e327]
+                      - cell [ref=e328]:
+                        - checkbox [ref=e329]
+                      - cell "CP-001" [ref=e330]:
+                        - generic [ref=e331]:
+                          - link "CP-001" [ref=e332] [cursor=pointer]:
+                            - /url: /parts/cmk1yxi1e000b11hdvvzh3k6y
+                          - img [ref=e333]
+                      - cell "Bo mạch điều khiển v2.0" [ref=e335]:
+                        - generic [ref=e336]: Bo mạch điều khiển v2.0
+                      - cell "Linh kiện" [ref=e337]:
+                        - generic [ref=e338]: Linh kiện
+                      - cell "BUY" [ref=e339]:
+                        - generic [ref=e340]: BUY
+                      - cell "A" [ref=e341]:
+                        - generic [ref=e342]: A
+                      - cell [ref=e343]:
+                        - generic [ref=e344]:
+                          - button [ref=e345] [cursor=pointer]:
+                            - img [ref=e346]
+                          - button [ref=e349] [cursor=pointer]
+                          - button [ref=e351] [cursor=pointer]:
+                            - img [ref=e352]
+                      - cell "$150,000.00" [ref=e355]
+                      - cell "ACTIVE" [ref=e356]:
+                        - generic [ref=e357]: ACTIVE
+                      - cell "Open menu" [ref=e358]:
+                        - button "Open menu" [ref=e359] [cursor=pointer]:
+                          - img [ref=e360]
+                          - generic [ref=e364]: Open menu
+                    - row "2 CP-002 Motor DC 24V Linh kiện BUY A $85,000.00 ACTIVE Open menu" [ref=e365]:
+                      - cell "2" [ref=e366]
+                      - cell [ref=e367]:
+                        - checkbox [ref=e368]
+                      - cell "CP-002" [ref=e369]:
+                        - link "CP-002" [ref=e371] [cursor=pointer]:
+                          - /url: /parts/cmk1yxi1l000c11hdknfup88r
+                      - cell "Motor DC 24V" [ref=e372]:
+                        - generic [ref=e373]: Motor DC 24V
+                      - cell "Linh kiện" [ref=e374]:
+                        - generic [ref=e375]: Linh kiện
+                      - cell "BUY" [ref=e376]:
+                        - generic [ref=e377]: BUY
+                      - cell "A" [ref=e378]:
+                        - generic [ref=e379]: A
+                      - cell [ref=e380]:
+                        - generic [ref=e381]:
+                          - button [ref=e382] [cursor=pointer]:
+                            - img [ref=e383]
+                          - button [ref=e386] [cursor=pointer]
+                          - button [ref=e388] [cursor=pointer]:
+                            - img [ref=e389]
+                      - cell "$85,000.00" [ref=e392]
+                      - cell "ACTIVE" [ref=e393]:
+                        - generic [ref=e394]: ACTIVE
+                      - cell "Open menu" [ref=e395]:
+                        - button "Open menu" [ref=e396] [cursor=pointer]:
+                          - img [ref=e397]
+                          - generic [ref=e401]: Open menu
+                    - row "3 FG-001 Sản phẩm A hoàn chỉnh Thành phẩm BUY A $450,000.00 ACTIVE Open menu" [ref=e402]:
+                      - cell "3" [ref=e403]
+                      - cell [ref=e404]:
+                        - checkbox [ref=e405]
+                      - cell "FG-001" [ref=e406]:
+                        - link "FG-001" [ref=e408] [cursor=pointer]:
+                          - /url: /parts/cmk1yxi1y000e11hdrriaefmx
+                      - cell "Sản phẩm A hoàn chỉnh" [ref=e409]:
+                        - generic [ref=e410]: Sản phẩm A hoàn chỉnh
+                      - cell "Thành phẩm" [ref=e411]:
+                        - generic [ref=e412]: Thành phẩm
+                      - cell "BUY" [ref=e413]:
+                        - generic [ref=e414]: BUY
+                      - cell "A" [ref=e415]:
+                        - generic [ref=e416]: A
+                      - cell [ref=e417]:
+                        - generic [ref=e418]:
+                          - button [ref=e419] [cursor=pointer]:
+                            - img [ref=e420]
+                          - button [ref=e423] [cursor=pointer]
+                          - button [ref=e425] [cursor=pointer]:
+                            - img [ref=e426]
+                      - cell "$450,000.00" [ref=e429]
+                      - cell "ACTIVE" [ref=e430]:
+                        - generic [ref=e431]: ACTIVE
+                      - cell "Open menu" [ref=e432]:
+                        - button "Open menu" [ref=e433] [cursor=pointer]:
+                          - img [ref=e434]
+                          - generic [ref=e438]: Open menu
+                    - row "4 FG-002 Sản phẩm B Premium Thành phẩm BUY A $680,000.00 ACTIVE Open menu" [ref=e439]:
+                      - cell "4" [ref=e440]
+                      - cell [ref=e441]:
+                        - checkbox [ref=e442]
+                      - cell "FG-002" [ref=e443]:
+                        - link "FG-002" [ref=e445] [cursor=pointer]:
+                          - /url: /parts/cmk1yxi25000f11hdqo9xl7kp
+                      - cell "Sản phẩm B Premium" [ref=e446]:
+                        - generic [ref=e447]: Sản phẩm B Premium
+                      - cell "Thành phẩm" [ref=e448]:
+                        - generic [ref=e449]: Thành phẩm
+                      - cell "BUY" [ref=e450]:
+                        - generic [ref=e451]: BUY
+                      - cell "A" [ref=e452]:
+                        - generic [ref=e453]: A
+                      - cell [ref=e454]:
+                        - generic [ref=e455]:
+                          - button [ref=e456] [cursor=pointer]:
+                            - img [ref=e457]
+                          - button [ref=e460] [cursor=pointer]
+                          - button [ref=e462] [cursor=pointer]:
+                            - img [ref=e463]
+                      - cell "$680,000.00" [ref=e466]
+                      - cell "ACTIVE" [ref=e467]:
+                        - generic [ref=e468]: ACTIVE
+                      - cell "Open menu" [ref=e469]:
+                        - button "Open menu" [ref=e470] [cursor=pointer]:
+                          - img [ref=e471]
+                          - generic [ref=e475]: Open menu
+                    - row "5 PK-001 Thùng carton 40x30x20 Bao bì BUY A $12,000.00 ACTIVE Open menu" [ref=e476]:
+                      - cell "5" [ref=e477]
+                      - cell [ref=e478]:
+                        - checkbox [ref=e479]
+                      - cell "PK-001" [ref=e480]:
+                        - link "PK-001" [ref=e482] [cursor=pointer]:
+                          - /url: /parts/cmk1yxi1r000d11hd1nxcsihu
+                      - cell "Thùng carton 40x30x20" [ref=e483]:
+                        - generic [ref=e484]: Thùng carton 40x30x20
+                      - cell "Bao bì" [ref=e485]:
+                        - generic [ref=e486]: Bao bì
+                      - cell "BUY" [ref=e487]:
+                        - generic [ref=e488]: BUY
+                      - cell "A" [ref=e489]:
+                        - generic [ref=e490]: A
+                      - cell [ref=e491]:
+                        - generic [ref=e492]:
+                          - button [ref=e493] [cursor=pointer]:
+                            - img [ref=e494]
+                          - button [ref=e497] [cursor=pointer]
+                          - button [ref=e499] [cursor=pointer]:
+                            - img [ref=e500]
+                      - cell "$12,000.00" [ref=e503]
+                      - cell "ACTIVE" [ref=e504]:
+                        - generic [ref=e505]: ACTIVE
+                      - cell "Open menu" [ref=e506]:
+                        - button "Open menu" [ref=e507] [cursor=pointer]:
+                          - img [ref=e508]
+                          - generic [ref=e512]: Open menu
+                    - row "6 PRT-AF-001 Main Frame Carbon Fiber X8 Airframe BUY A $1,250.00 ACTIVE Open menu" [ref=e513]:
+                      - cell "6" [ref=e514]
+                      - cell [ref=e515]:
+                        - checkbox [ref=e516]
+                      - cell "PRT-AF-001" [ref=e517]:
+                        - generic [ref=e518]:
+                          - link "PRT-AF-001" [ref=e519] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dxd001veswcsdsw0uk6
+                          - img [ref=e520]
+                      - cell "Main Frame Carbon Fiber X8" [ref=e522]:
+                        - generic [ref=e523]: Main Frame Carbon Fiber X8
+                      - cell "Airframe" [ref=e524]:
+                        - generic [ref=e525]: Airframe
+                      - cell "BUY" [ref=e526]:
+                        - generic [ref=e527]: BUY
+                      - cell "A" [ref=e528]:
+                        - generic [ref=e529]: A
+                      - cell [ref=e530]:
+                        - generic [ref=e531]:
+                          - button [ref=e532] [cursor=pointer]:
+                            - img [ref=e533]
+                          - button [ref=e536] [cursor=pointer]
+                          - button [ref=e538] [cursor=pointer]:
+                            - img [ref=e539]
+                      - cell "$1,250.00" [ref=e542]
+                      - cell "ACTIVE" [ref=e543]:
+                        - generic [ref=e544]: ACTIVE
+                      - cell "Open menu" [ref=e545]:
+                        - button "Open menu" [ref=e546] [cursor=pointer]:
+                          - img [ref=e547]
+                          - generic [ref=e551]: Open menu
+                    - row "7 PRT-AF-002 Motor Arm Assembly Airframe BUY A $180.00 ACTIVE Open menu" [ref=e552]:
+                      - cell "7" [ref=e553]
+                      - cell [ref=e554]:
+                        - checkbox [ref=e555]
+                      - cell "PRT-AF-002" [ref=e556]:
+                        - link "PRT-AF-002" [ref=e558] [cursor=pointer]:
+                          - /url: /parts/cmk1e8dxe001weswc19ftmst9
+                      - cell "Motor Arm Assembly" [ref=e559]:
+                        - generic [ref=e560]: Motor Arm Assembly
+                      - cell "Airframe" [ref=e561]:
+                        - generic [ref=e562]: Airframe
+                      - cell "BUY" [ref=e563]:
+                        - generic [ref=e564]: BUY
+                      - cell "A" [ref=e565]:
+                        - generic [ref=e566]: A
+                      - cell [ref=e567]:
+                        - generic [ref=e568]:
+                          - button [ref=e569] [cursor=pointer]:
+                            - img [ref=e570]
+                          - button [ref=e573] [cursor=pointer]
+                          - button [ref=e575] [cursor=pointer]:
+                            - img [ref=e576]
+                      - cell "$180.00" [ref=e579]
+                      - cell "ACTIVE" [ref=e580]:
+                        - generic [ref=e581]: ACTIVE
+                      - cell "Open menu" [ref=e582]:
+                        - button "Open menu" [ref=e583] [cursor=pointer]:
+                          - img [ref=e584]
+                          - generic [ref=e588]: Open menu
+                    - row "8 PRT-AF-003 Landing Gear Set Airframe BUY A $450.00 ACTIVE Open menu" [ref=e589]:
+                      - cell "8" [ref=e590]
+                      - cell [ref=e591]:
+                        - checkbox [ref=e592]
+                      - cell "PRT-AF-003" [ref=e593]:
+                        - link "PRT-AF-003" [ref=e595] [cursor=pointer]:
+                          - /url: /parts/cmk1e8dxe001xeswcwu6zt1ap
+                      - cell "Landing Gear Set" [ref=e596]:
+                        - generic [ref=e597]: Landing Gear Set
+                      - cell "Airframe" [ref=e598]:
+                        - generic [ref=e599]: Airframe
+                      - cell "BUY" [ref=e600]:
+                        - generic [ref=e601]: BUY
+                      - cell "A" [ref=e602]:
+                        - generic [ref=e603]: A
+                      - cell [ref=e604]:
+                        - generic [ref=e605]:
+                          - button [ref=e606] [cursor=pointer]:
+                            - img [ref=e607]
+                          - button [ref=e610] [cursor=pointer]
+                          - button [ref=e612] [cursor=pointer]:
+                            - img [ref=e613]
+                      - cell "$450.00" [ref=e616]
+                      - cell "ACTIVE" [ref=e617]:
+                        - generic [ref=e618]: ACTIVE
+                      - cell "Open menu" [ref=e619]:
+                        - button "Open menu" [ref=e620] [cursor=pointer]:
+                          - img [ref=e621]
+                          - generic [ref=e625]: Open menu
+                    - row "9 PRT-AI-001 NVIDIA Jetson Orin NX 16GB AI Computing BUY A $699.00 ACTIVE Open menu" [ref=e626]:
+                      - cell "9" [ref=e627]
+                      - cell [ref=e628]:
+                        - checkbox [ref=e629]
+                      - cell "PRT-AI-001" [ref=e630]:
+                        - generic [ref=e631]:
+                          - link "PRT-AI-001" [ref=e632] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dv2001peswcylayfodo
+                          - img [ref=e633]
+                      - cell "NVIDIA Jetson Orin NX 16GB" [ref=e635]:
+                        - generic [ref=e636]: NVIDIA Jetson Orin NX 16GB
+                      - cell "AI Computing" [ref=e637]:
+                        - generic [ref=e638]: AI Computing
+                      - cell "BUY" [ref=e639]:
+                        - generic [ref=e640]: BUY
+                      - cell "A" [ref=e641]:
+                        - generic [ref=e642]: A
+                      - cell [ref=e643]:
+                        - generic [ref=e644]:
+                          - button [ref=e645] [cursor=pointer]:
+                            - img [ref=e646]
+                          - button [ref=e649] [cursor=pointer]
+                          - button [ref=e651] [cursor=pointer]:
+                            - img [ref=e652]
+                      - cell "$699.00" [ref=e655]
+                      - cell "ACTIVE" [ref=e656]:
+                        - generic [ref=e657]: ACTIVE
+                      - cell "Open menu" [ref=e658]:
+                        - button "Open menu" [ref=e659] [cursor=pointer]:
+                          - img [ref=e660]
+                          - generic [ref=e664]: Open menu
+                    - row "10 PRT-AI-002 Jetson Orin Carrier Board AI Computing BUY A $249.00 ACTIVE Open menu" [ref=e665]:
+                      - cell "10" [ref=e666]
+                      - cell [ref=e667]:
+                        - checkbox [ref=e668]
+                      - cell "PRT-AI-002" [ref=e669]:
+                        - link "PRT-AI-002" [ref=e671] [cursor=pointer]:
+                          - /url: /parts/cmk1e8dv3001qeswc77cfenxu
+                      - cell "Jetson Orin Carrier Board" [ref=e672]:
+                        - generic [ref=e673]: Jetson Orin Carrier Board
+                      - cell "AI Computing" [ref=e674]:
+                        - generic [ref=e675]: AI Computing
+                      - cell "BUY" [ref=e676]:
+                        - generic [ref=e677]: BUY
+                      - cell "A" [ref=e678]:
+                        - generic [ref=e679]: A
+                      - cell [ref=e680]:
+                        - generic [ref=e681]:
+                          - button [ref=e682] [cursor=pointer]:
+                            - img [ref=e683]
+                          - button [ref=e686] [cursor=pointer]
+                          - button [ref=e688] [cursor=pointer]:
+                            - img [ref=e689]
+                      - cell "$249.00" [ref=e692]
+                      - cell "ACTIVE" [ref=e693]:
+                        - generic [ref=e694]: ACTIVE
+                      - cell "Open menu" [ref=e695]:
+                        - button "Open menu" [ref=e696] [cursor=pointer]:
+                          - img [ref=e697]
+                          - generic [ref=e701]: Open menu
+                    - row "11 PRT-BAT-001 Tattu 22000mAh 6S 25C Smart Battery Power BUY A $899.00 ACTIVE Open menu" [ref=e702]:
+                      - cell "11" [ref=e703]
+                      - cell [ref=e704]:
+                        - checkbox [ref=e705]
+                      - cell "PRT-BAT-001" [ref=e706]:
+                        - generic [ref=e707]:
+                          - link "PRT-BAT-001" [ref=e708] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dv0001neswct6ubsedj
+                          - img [ref=e709]
+                      - cell "Tattu 22000mAh 6S 25C Smart Battery" [ref=e711]:
+                        - generic [ref=e712]: Tattu 22000mAh 6S 25C Smart Battery
+                      - cell "Power" [ref=e713]:
+                        - generic [ref=e714]: Power
+                      - cell "BUY" [ref=e715]:
+                        - generic [ref=e716]: BUY
+                      - cell "A" [ref=e717]:
+                        - generic [ref=e718]: A
+                      - cell [ref=e719]:
+                        - generic [ref=e720]:
+                          - button [ref=e721] [cursor=pointer]:
+                            - img [ref=e722]
+                          - button [ref=e725] [cursor=pointer]
+                          - button [ref=e727] [cursor=pointer]:
+                            - img [ref=e728]
+                      - cell "$899.00" [ref=e731]
+                      - cell "ACTIVE" [ref=e732]:
+                        - generic [ref=e733]: ACTIVE
+                      - cell "Open menu" [ref=e734]:
+                        - button "Open menu" [ref=e735] [cursor=pointer]:
+                          - img [ref=e736]
+                          - generic [ref=e740]: Open menu
+                    - row "12 PRT-CAM-001 Sony IMX477 Camera Module Sensors BUY A $89.00 ACTIVE Open menu" [ref=e741]:
+                      - cell "12" [ref=e742]
+                      - cell [ref=e743]:
+                        - checkbox [ref=e744]
+                      - cell "PRT-CAM-001" [ref=e745]:
+                        - link "PRT-CAM-001" [ref=e747] [cursor=pointer]:
+                          - /url: /parts/cmk1e8dv4001reswcu8xts92j
+                      - cell "Sony IMX477 Camera Module" [ref=e748]:
+                        - generic [ref=e749]: Sony IMX477 Camera Module
+                      - cell "Sensors" [ref=e750]:
+                        - generic [ref=e751]: Sensors
+                      - cell "BUY" [ref=e752]:
+                        - generic [ref=e753]: BUY
+                      - cell "A" [ref=e754]:
+                        - generic [ref=e755]: A
+                      - cell [ref=e756]:
+                        - generic [ref=e757]:
+                          - button [ref=e758] [cursor=pointer]:
+                            - img [ref=e759]
+                          - button [ref=e762] [cursor=pointer]
+                          - button [ref=e764] [cursor=pointer]:
+                            - img [ref=e765]
+                      - cell "$89.00" [ref=e768]
+                      - cell "ACTIVE" [ref=e769]:
+                        - generic [ref=e770]: ACTIVE
+                      - cell "Open menu" [ref=e771]:
+                        - button "Open menu" [ref=e772] [cursor=pointer]:
+                          - img [ref=e773]
+                          - generic [ref=e777]: Open menu
+                    - row "13 PRT-CAM-002 FLIR Boson 640 Thermal Core Sensors BUY A $3,995.00 ACTIVE Open menu" [ref=e778]:
+                      - cell "13" [ref=e779]
+                      - cell [ref=e780]:
+                        - checkbox [ref=e781]
+                      - cell "PRT-CAM-002" [ref=e782]:
+                        - generic [ref=e783]:
+                          - link "PRT-CAM-002" [ref=e784] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dv9001seswcctm016ug
+                          - img [ref=e785]
+                      - cell "FLIR Boson 640 Thermal Core" [ref=e787]:
+                        - generic [ref=e788]: FLIR Boson 640 Thermal Core
+                      - cell "Sensors" [ref=e789]:
+                        - generic [ref=e790]: Sensors
+                      - cell "BUY" [ref=e791]:
+                        - generic [ref=e792]: BUY
+                      - cell "A" [ref=e793]:
+                        - generic [ref=e794]: A
+                      - cell [ref=e795]:
+                        - generic [ref=e796]:
+                          - button [ref=e797] [cursor=pointer]:
+                            - img [ref=e798]
+                          - button [ref=e801] [cursor=pointer]
+                          - button [ref=e803] [cursor=pointer]:
+                            - img [ref=e804]
+                      - cell "$3,995.00" [ref=e807]
+                      - cell "ACTIVE" [ref=e808]:
+                        - generic [ref=e809]: ACTIVE
+                      - cell "Open menu" [ref=e810]:
+                        - button "Open menu" [ref=e811] [cursor=pointer]:
+                          - img [ref=e812]
+                          - generic [ref=e816]: Open menu
+                    - row "14 PRT-ESC-001 Castle Creations Phoenix Edge 120HV Propulsion BUY A $275.00 ACTIVE Open menu" [ref=e817]:
+                      - cell "14" [ref=e818]
+                      - cell [ref=e819]:
+                        - checkbox [ref=e820]
+                      - cell "PRT-ESC-001" [ref=e821]:
+                        - generic [ref=e822]:
+                          - link "PRT-ESC-001" [ref=e823] [cursor=pointer]:
+                            - /url: /parts/cmk1e8duy001keswc6tdhqu17
+                          - img [ref=e824]
+                      - cell "Castle Creations Phoenix Edge 120HV" [ref=e826]:
+                        - generic [ref=e827]: Castle Creations Phoenix Edge 120HV
+                      - cell "Propulsion" [ref=e828]:
+                        - generic [ref=e829]: Propulsion
+                      - cell "BUY" [ref=e830]:
+                        - generic [ref=e831]: BUY
+                      - cell "A" [ref=e832]:
+                        - generic [ref=e833]: A
+                      - cell [ref=e834]:
+                        - generic [ref=e835]:
+                          - button [ref=e836] [cursor=pointer]:
+                            - img [ref=e837]
+                          - button [ref=e840] [cursor=pointer]
+                          - button [ref=e842] [cursor=pointer]:
+                            - img [ref=e843]
+                      - cell "$275.00" [ref=e846]
+                      - cell "ACTIVE" [ref=e847]:
+                        - generic [ref=e848]: ACTIVE
+                      - cell "Open menu" [ref=e849]:
+                        - button "Open menu" [ref=e850] [cursor=pointer]:
+                          - img [ref=e851]
+                          - generic [ref=e855]: Open menu
+                    - row "15 PRT-FC-001 Pixhawk 6X Flight Controller Flight Control BUY A $499.00 ACTIVE Open menu" [ref=e856]:
+                      - cell "15" [ref=e857]
+                      - cell [ref=e858]:
+                        - checkbox [ref=e859]
+                      - cell "PRT-FC-001" [ref=e860]:
+                        - generic [ref=e861]:
+                          - link "PRT-FC-001" [ref=e862] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dxa001teswcc252v82q
+                          - img [ref=e863]
+                      - cell "Pixhawk 6X Flight Controller" [ref=e865]:
+                        - generic [ref=e866]: Pixhawk 6X Flight Controller
+                      - cell "Flight Control" [ref=e867]:
+                        - generic [ref=e868]: Flight Control
+                      - cell "BUY" [ref=e869]:
+                        - generic [ref=e870]: BUY
+                      - cell "A" [ref=e871]:
+                        - generic [ref=e872]: A
+                      - cell [ref=e873]:
+                        - generic [ref=e874]:
+                          - button [ref=e875] [cursor=pointer]:
+                            - img [ref=e876]
+                          - button [ref=e879] [cursor=pointer]
+                          - button [ref=e881] [cursor=pointer]:
+                            - img [ref=e882]
+                      - cell "$499.00" [ref=e885]
+                      - cell "ACTIVE" [ref=e886]:
+                        - generic [ref=e887]: ACTIVE
+                      - cell "Open menu" [ref=e888]:
+                        - button "Open menu" [ref=e889] [cursor=pointer]:
+                          - img [ref=e890]
+                          - generic [ref=e894]: Open menu
+                    - row "16 PRT-GPS-001 Here3+ RTK GPS Module Flight Control BUY A $349.00 ACTIVE Open menu" [ref=e895]:
+                      - cell "16" [ref=e896]
+                      - cell [ref=e897]:
+                        - checkbox [ref=e898]
+                      - cell "PRT-GPS-001" [ref=e899]:
+                        - generic [ref=e900]:
+                          - link "PRT-GPS-001" [ref=e901] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dxb001ueswc0ofd33xd
+                          - img [ref=e902]
+                      - cell "Here3+ RTK GPS Module" [ref=e904]:
+                        - generic [ref=e905]: Here3+ RTK GPS Module
+                      - cell "Flight Control" [ref=e906]:
+                        - generic [ref=e907]: Flight Control
+                      - cell "BUY" [ref=e908]:
+                        - generic [ref=e909]: BUY
+                      - cell "A" [ref=e910]:
+                        - generic [ref=e911]: A
+                      - cell [ref=e912]:
+                        - generic [ref=e913]:
+                          - button [ref=e914] [cursor=pointer]:
+                            - img [ref=e915]
+                          - button [ref=e918] [cursor=pointer]
+                          - button [ref=e920] [cursor=pointer]:
+                            - img [ref=e921]
+                      - cell "$349.00" [ref=e924]
+                      - cell "ACTIVE" [ref=e925]:
+                        - generic [ref=e926]: ACTIVE
+                      - cell "Open menu" [ref=e927]:
+                        - button "Open menu" [ref=e928] [cursor=pointer]:
+                          - img [ref=e929]
+                          - generic [ref=e933]: Open menu
+                    - row "17 PRT-MT-001 KDE7215XF-135 Brushless Motor Propulsion BUY A $389.00 ACTIVE Open menu" [ref=e934]:
+                      - cell "17" [ref=e935]
+                      - cell [ref=e936]:
+                        - checkbox [ref=e937]
+                      - cell "PRT-MT-001" [ref=e938]:
+                        - generic [ref=e939]:
+                          - link "PRT-MT-001" [ref=e940] [cursor=pointer]:
+                            - /url: /parts/cmk1e8dux001jeswc1eanmi75
+                          - img [ref=e941]
+                      - cell "KDE7215XF-135 Brushless Motor" [ref=e943]:
+                        - generic [ref=e944]: KDE7215XF-135 Brushless Motor
+                      - cell "Propulsion" [ref=e945]:
+                        - generic [ref=e946]: Propulsion
+                      - cell "BUY" [ref=e947]:
+                        - generic [ref=e948]: BUY
+                      - cell "A" [ref=e949]:
+                        - generic [ref=e950]: A
+                      - cell [ref=e951]:
+                        - generic [ref=e952]:
+                          - button [ref=e953] [cursor=pointer]:
+                            - img [ref=e954]
+                          - button [ref=e957] [cursor=pointer]
+                          - button [ref=e959] [cursor=pointer]:
+                            - img [ref=e960]
+                      - cell "$389.00" [ref=e963]
+                      - cell "ACTIVE" [ref=e964]:
+                        - generic [ref=e965]: ACTIVE
+                      - cell "Open menu" [ref=e966]:
+                        - button "Open menu" [ref=e967] [cursor=pointer]:
+                          - img [ref=e968]
+                          - generic [ref=e972]: Open menu
+                    - row "18 PRT-PROP-001 KDE-CF305-DP Propeller CW Propulsion BUY A $185.00 ACTIVE Open menu" [ref=e973]:
+                      - cell "18" [ref=e974]
+                      - cell [ref=e975]:
+                        - checkbox [ref=e976]
+                      - cell "PRT-PROP-001" [ref=e977]:
+                        - link "PRT-PROP-001" [ref=e979] [cursor=pointer]:
+                          - /url: /parts/cmk1e8duy001leswc69ut2bn8
+                      - cell "KDE-CF305-DP Propeller CW" [ref=e980]:
+                        - generic [ref=e981]: KDE-CF305-DP Propeller CW
+                      - cell "Propulsion" [ref=e982]:
+                        - generic [ref=e983]: Propulsion
+                      - cell "BUY" [ref=e984]:
+                        - generic [ref=e985]: BUY
+                      - cell "A" [ref=e986]:
+                        - generic [ref=e987]: A
+                      - cell [ref=e988]:
+                        - generic [ref=e989]:
+                          - button [ref=e990] [cursor=pointer]:
+                            - img [ref=e991]
+                          - button [ref=e994] [cursor=pointer]
+                          - button [ref=e996] [cursor=pointer]:
+                            - img [ref=e997]
+                      - cell "$185.00" [ref=e1000]
+                      - cell "ACTIVE" [ref=e1001]:
+                        - generic [ref=e1002]: ACTIVE
+                      - cell "Open menu" [ref=e1003]:
+                        - button "Open menu" [ref=e1004] [cursor=pointer]:
+                          - img [ref=e1005]
+                          - generic [ref=e1009]: Open menu
+                    - row "19 PRT-PROP-002 KDE-CF305-DP Propeller CCW Propulsion BUY A $185.00 ACTIVE Open menu" [ref=e1010]:
+                      - cell "19" [ref=e1011]
+                      - cell [ref=e1012]:
+                        - checkbox [ref=e1013]
+                      - cell "PRT-PROP-002" [ref=e1014]:
+                        - link "PRT-PROP-002" [ref=e1016] [cursor=pointer]:
+                          - /url: /parts/cmk1e8duz001meswcaperianw
+                      - cell "KDE-CF305-DP Propeller CCW" [ref=e1017]:
+                        - generic [ref=e1018]: KDE-CF305-DP Propeller CCW
+                      - cell "Propulsion" [ref=e1019]:
+                        - generic [ref=e1020]: Propulsion
+                      - cell "BUY" [ref=e1021]:
+                        - generic [ref=e1022]: BUY
+                      - cell "A" [ref=e1023]:
+                        - generic [ref=e1024]: A
+                      - cell [ref=e1025]:
+                        - generic [ref=e1026]:
+                          - button [ref=e1027] [cursor=pointer]:
+                            - img [ref=e1028]
+                          - button [ref=e1031] [cursor=pointer]
+                          - button [ref=e1033] [cursor=pointer]:
+                            - img [ref=e1034]
+                      - cell "$185.00" [ref=e1037]
+                      - cell "ACTIVE" [ref=e1038]:
+                        - generic [ref=e1039]: ACTIVE
+                      - cell "Open menu" [ref=e1040]:
+                        - button "Open menu" [ref=e1041] [cursor=pointer]:
+                          - img [ref=e1042]
+                          - generic [ref=e1046]: Open menu
+                    - row "20 PRT-PWR-001 Power Distribution Board 12S Power BUY A $145.00 ACTIVE Open menu" [ref=e1047]:
+                      - cell "20" [ref=e1048]
+                      - cell [ref=e1049]:
+                        - checkbox [ref=e1050]
+                      - cell "PRT-PWR-001" [ref=e1051]:
+                        - link "PRT-PWR-001" [ref=e1053] [cursor=pointer]:
+                          - /url: /parts/cmk1e8dv1001oeswc2h0cxx2f
+                      - cell "Power Distribution Board 12S" [ref=e1054]:
+                        - generic [ref=e1055]: Power Distribution Board 12S
+                      - cell "Power" [ref=e1056]:
+                        - generic [ref=e1057]: Power
+                      - cell "BUY" [ref=e1058]:
+                        - generic [ref=e1059]: BUY
+                      - cell "A" [ref=e1060]:
+                        - generic [ref=e1061]: A
+                      - cell [ref=e1062]:
+                        - generic [ref=e1063]:
+                          - button [ref=e1064] [cursor=pointer]:
+                            - img [ref=e1065]
+                          - button [ref=e1068] [cursor=pointer]
+                          - button [ref=e1070] [cursor=pointer]:
+                            - img [ref=e1071]
+                      - cell "$145.00" [ref=e1074]
+                      - cell "ACTIVE" [ref=e1075]:
+                        - generic [ref=e1076]: ACTIVE
+                      - cell "Open menu" [ref=e1077]:
+                        - button "Open menu" [ref=e1078] [cursor=pointer]:
+                          - img [ref=e1079]
+                          - generic [ref=e1083]: Open menu
+                - generic [ref=e1084]:
+                  - generic [ref=e1085]: 23 rows
+                  - generic [ref=e1086]: Parts
+                - generic [ref=e1087]:
+                  - button [disabled] [ref=e1088]:
+                    - img [ref=e1089]
+                  - generic [ref=e1091]: Page 1 of 2
+                  - button [ref=e1092] [cursor=pointer]:
+                    - img [ref=e1093]
+          - button "5" [ref=e1096] [cursor=pointer]:
+            - img [ref=e1097]
+            - generic [ref=e1100]: "5"
+          - button "Demo Admin" [ref=e1102] [cursor=pointer]:
+            - img [ref=e1103]
+            - generic [ref=e1106]: Demo
+            - generic [ref=e1107]: Admin
+            - img [ref=e1108]
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - alert [ref=e1110]
+```

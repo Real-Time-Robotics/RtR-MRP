@@ -1,0 +1,143 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Về trang chủ" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+        - link "Tổng quan" [ref=e8] [cursor=pointer]:
+          - /url: /home
+          - img [ref=e9]
+          - generic [ref=e12]: Tổng quan
+        - navigation [ref=e13]:
+          - button "Vận hành" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Vận hành
+            - img [ref=e19]
+          - button "Sản xuất" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Sản xuất
+            - img [ref=e26]
+          - button "Chất lượng" [ref=e29] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Chất lượng
+            - img [ref=e33]
+          - button "Phân tích" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e40]: Phân tích
+            - img [ref=e41]
+        - button "Tìm kiếm... K" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Tìm kiếm...
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - text: K
+        - button [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+        - button [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+        - button [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+        - button [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+        - button "A" [ref=e67] [cursor=pointer]:
+          - generic [ref=e68]: A
+          - img [ref=e69]
+    - generic [ref=e71]:
+      - complementary [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: MRP
+            - generic [ref=e77]: "-AI"
+          - button "Collapse" [ref=e79] [cursor=pointer]:
+            - img [ref=e80]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - link "Tổng quan" [ref=e85] [cursor=pointer]:
+              - /url: /home
+              - img [ref=e87]
+              - generic [ref=e92]: Tổng quan
+            - link "Đơn hàng 5" [ref=e93] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e95]
+              - generic [ref=e99]: Đơn hàng
+              - generic [ref=e100]: "5"
+            - link "Tồn kho" [ref=e101] [cursor=pointer]:
+              - /url: /inventory
+              - img [ref=e103]
+              - generic [ref=e107]: Tồn kho
+            - link "Sản xuất" [ref=e108] [cursor=pointer]:
+              - /url: /production
+              - img [ref=e110]
+              - generic [ref=e112]: Sản xuất
+            - link "MRP" [ref=e113] [cursor=pointer]:
+              - /url: /mrp
+              - img [ref=e115]
+              - generic [ref=e117]: MRP
+            - link "Chất lượng" [ref=e118] [cursor=pointer]:
+              - /url: /quality
+              - img [ref=e120]
+              - generic [ref=e124]: Chất lượng
+          - generic [ref=e126]: Công cụ
+          - generic [ref=e127]:
+            - link "Vật tư" [ref=e128] [cursor=pointer]:
+              - /url: /parts
+              - img [ref=e130]
+              - generic [ref=e134]: Vật tư
+            - link "BOM" [ref=e135] [cursor=pointer]:
+              - /url: /bom
+              - img [ref=e137]
+              - generic [ref=e141]: BOM
+            - link "NCC" [ref=e142] [cursor=pointer]:
+              - /url: /suppliers
+              - img [ref=e144]
+              - generic [ref=e148]: NCC
+          - generic [ref=e150]:
+            - link "Mobile" [ref=e151] [cursor=pointer]:
+              - /url: /mobile
+              - img [ref=e153]
+              - generic [ref=e155]: Mobile
+            - link "Cảnh báo" [ref=e156] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e158]
+              - generic [ref=e160]: Cảnh báo
+        - generic [ref=e161]:
+          - link "AI Insights" [ref=e162] [cursor=pointer]:
+            - /url: /ai/insights
+            - img [ref=e163]
+            - generic [ref=e166]: AI Insights
+          - link "Cài đặt" [ref=e167] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e168]
+            - generic [ref=e171]: Cài đặt
+      - main [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e176]:
+              - button [ref=e177] [cursor=pointer]:
+                - img [ref=e178]
+              - generic [ref=e180]:
+                - heading "MRP Run MRP-2026-221936" [level=1] [ref=e181]
+                - paragraph [ref=e182]: Started on Jan 11, 2026 at 21:37
+            - generic [ref=e184]:
+              - img [ref=e188]
+              - generic [ref=e190]:
+                - heading "MRP Job Queued" [level=2] [ref=e191]
+                - paragraph [ref=e192]: The MRP engine is currently processing demand and inventory levels. This page will automatically update when the calculation is complete.
+                - generic [ref=e194]: "Status: QUEUED"
+          - button "5" [ref=e196] [cursor=pointer]:
+            - img [ref=e197]
+            - generic [ref=e200]: "5"
+          - button "Demo Admin" [ref=e202] [cursor=pointer]:
+            - img [ref=e203]
+            - generic [ref=e206]: Demo
+            - generic [ref=e207]: Admin
+            - img [ref=e208]
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - alert [ref=e210]
+```

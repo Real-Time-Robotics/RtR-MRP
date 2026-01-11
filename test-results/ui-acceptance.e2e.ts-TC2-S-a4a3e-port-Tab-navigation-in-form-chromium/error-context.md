@@ -1,0 +1,454 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Về trang chủ" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+        - link "Tổng quan" [ref=e8] [cursor=pointer]:
+          - /url: /home
+          - img [ref=e9]
+          - generic [ref=e12]: Tổng quan
+        - navigation [ref=e13]:
+          - button "Vận hành" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Vận hành
+            - img [ref=e19]
+          - button "Sản xuất" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Sản xuất
+            - img [ref=e26]
+          - button "Chất lượng" [ref=e29] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Chất lượng
+            - img [ref=e33]
+          - button "Phân tích" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e40]: Phân tích
+            - img [ref=e41]
+        - button "Tìm kiếm... K" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Tìm kiếm...
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - text: K
+        - button [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+        - button [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+        - button [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+        - button [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+        - button "A" [ref=e67] [cursor=pointer]:
+          - generic [ref=e68]: A
+          - img [ref=e69]
+    - generic [ref=e71]:
+      - complementary [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: MRP
+            - generic [ref=e77]: "-AI"
+          - button "Collapse" [ref=e79] [cursor=pointer]:
+            - img [ref=e80]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - link "Tổng quan" [ref=e85] [cursor=pointer]:
+              - /url: /home
+              - img [ref=e87]
+              - generic [ref=e92]: Tổng quan
+            - link "Đơn hàng 5" [ref=e93] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e95]
+              - generic [ref=e99]: Đơn hàng
+              - generic [ref=e100]: "5"
+            - link "Tồn kho" [ref=e101] [cursor=pointer]:
+              - /url: /inventory
+              - img [ref=e103]
+              - generic [ref=e107]: Tồn kho
+            - link "Sản xuất" [ref=e108] [cursor=pointer]:
+              - /url: /production
+              - img [ref=e110]
+              - generic [ref=e112]: Sản xuất
+            - link "MRP" [ref=e113] [cursor=pointer]:
+              - /url: /mrp
+              - img [ref=e115]
+              - generic [ref=e117]: MRP
+            - link "Chất lượng" [ref=e118] [cursor=pointer]:
+              - /url: /quality
+              - img [ref=e120]
+              - generic [ref=e124]: Chất lượng
+          - generic [ref=e126]: Công cụ
+          - generic [ref=e127]:
+            - link "Vật tư" [ref=e128] [cursor=pointer]:
+              - /url: /parts
+              - img [ref=e130]
+              - generic [ref=e134]: Vật tư
+            - link "BOM" [ref=e135] [cursor=pointer]:
+              - /url: /bom
+              - img [ref=e137]
+              - generic [ref=e141]: BOM
+            - link "NCC" [ref=e142] [cursor=pointer]:
+              - /url: /suppliers
+              - img [ref=e144]
+              - generic [ref=e148]: NCC
+          - generic [ref=e150]:
+            - link "Mobile" [ref=e151] [cursor=pointer]:
+              - /url: /mobile
+              - img [ref=e153]
+              - generic [ref=e155]: Mobile
+            - link "Cảnh báo" [ref=e156] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e158]
+              - generic [ref=e160]: Cảnh báo
+        - generic [ref=e161]:
+          - link "AI Insights" [ref=e162] [cursor=pointer]:
+            - /url: /ai/insights
+            - img [ref=e163]
+            - generic [ref=e166]: AI Insights
+          - link "Cài đặt" [ref=e167] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e168]
+            - generic [ref=e171]: Cài đặt
+      - main [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - heading "Quản lý Nhà cung cấp" [level=1] [ref=e176]:
+                - img [ref=e177]
+                - text: Quản lý Nhà cung cấp
+              - paragraph [ref=e181]: Quản lý danh sách nhà cung cấp và thông tin liên hệ
+            - generic [ref=e182]:
+              - generic [ref=e184]:
+                - generic [ref=e185]: "10"
+                - paragraph [ref=e186]: Tổng nhà cung cấp
+              - generic [ref=e188]:
+                - generic [ref=e189]: "10"
+                - paragraph [ref=e190]: Đang hoạt động
+              - generic [ref=e192]:
+                - generic [ref=e193]: "10"
+                - paragraph [ref=e194]: NDAA Compliant
+              - generic [ref=e196]:
+                - generic [ref=e197]: 18 ngày
+                - paragraph [ref=e198]: Lead Time TB
+            - generic [ref=e199]:
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - generic [ref=e203]:
+                    - generic [ref=e204]:
+                      - img [ref=e205]
+                      - textbox "Tìm kiếm nhà cung cấp..." [ref=e208]
+                    - button [ref=e209] [cursor=pointer]:
+                      - img [ref=e210]
+                  - generic [ref=e215]:
+                    - button "Import" [ref=e216] [cursor=pointer]:
+                      - img [ref=e217]
+                      - text: Import
+                    - button "Export" [ref=e220] [cursor=pointer]:
+                      - img [ref=e221]
+                      - text: Export
+                    - button [ref=e224] [cursor=pointer]:
+                      - img [ref=e225]
+                - generic [ref=e226]:
+                  - combobox [ref=e227] [cursor=pointer]:
+                    - generic: Tất cả Trạng thái
+                    - img [ref=e228]
+                  - combobox [ref=e230] [cursor=pointer]:
+                    - generic: Tất cả Quốc gia
+                    - img [ref=e231]
+              - generic [ref=e234]:
+                - generic [ref=e235]:
+                  - img [ref=e236]
+                  - generic [ref=e240]: Suppliers
+                  - generic [ref=e241]: 10 records
+                - table [ref=e243]:
+                  - rowgroup [ref=e244]:
+                    - row "# Mã NCC Tên nhà cung cấp Quốc gia Rating Lead Time NDAA Trạng thái" [ref=e245]:
+                      - columnheader "#" [ref=e246]
+                      - columnheader [ref=e247]:
+                        - checkbox [ref=e248]
+                      - columnheader "Mã NCC" [ref=e249] [cursor=pointer]:
+                        - generic [ref=e250]:
+                          - generic [ref=e251]: Mã NCC
+                          - img [ref=e252]
+                      - columnheader "Tên nhà cung cấp" [ref=e255] [cursor=pointer]:
+                        - generic [ref=e256]:
+                          - generic [ref=e257]: Tên nhà cung cấp
+                          - img [ref=e258]
+                      - columnheader "Quốc gia" [ref=e261] [cursor=pointer]:
+                        - generic [ref=e262]:
+                          - generic [ref=e263]: Quốc gia
+                          - img [ref=e264]
+                      - columnheader "Rating" [ref=e267]:
+                        - generic [ref=e269]: Rating
+                      - columnheader "Lead Time" [ref=e270] [cursor=pointer]:
+                        - generic [ref=e271]:
+                          - generic [ref=e272]: Lead Time
+                          - img [ref=e273]
+                      - columnheader "NDAA" [ref=e276]:
+                        - generic [ref=e278]: NDAA
+                      - columnheader "Trạng thái" [ref=e279] [cursor=pointer]:
+                        - generic [ref=e280]:
+                          - generic [ref=e281]: Trạng thái
+                          - img [ref=e282]
+                      - columnheader [ref=e285]
+                  - rowgroup [ref=e286]:
+                    - row "1 SUP-002 Castle Creations USA 10 ngày Active Open menu" [ref=e287]:
+                      - cell "1" [ref=e288]
+                      - cell [ref=e289]:
+                        - checkbox [ref=e290]
+                      - cell "SUP-002" [ref=e291]
+                      - cell "Castle Creations" [ref=e292]
+                      - cell "USA" [ref=e293]
+                      - cell [ref=e294]:
+                        - generic [ref=e295]:
+                          - img [ref=e296]
+                          - img [ref=e298]
+                          - img [ref=e300]
+                          - img [ref=e302]
+                          - img [ref=e304]
+                      - cell "10 ngày" [ref=e306]:
+                        - generic [ref=e307]: 10 ngày
+                      - cell [ref=e308]:
+                        - img [ref=e309]
+                      - cell "Active" [ref=e312]:
+                        - generic [ref=e313]: Active
+                      - cell "Open menu" [ref=e314]:
+                        - button "Open menu" [ref=e315] [cursor=pointer]:
+                          - img [ref=e316]
+                          - generic [ref=e320]: Open menu
+                    - row "2 SUP-20 Cong ty X China 15 ngày Active Open menu" [ref=e321]:
+                      - cell "2" [ref=e322]
+                      - cell [ref=e323]:
+                        - checkbox [ref=e324]
+                      - cell "SUP-20" [ref=e325]
+                      - cell "Cong ty X" [ref=e326]
+                      - cell "China" [ref=e327]
+                      - cell [ref=e328]:
+                        - generic [ref=e329]:
+                          - img [ref=e330]
+                          - img [ref=e332]
+                          - img [ref=e334]
+                          - img [ref=e336]
+                          - img [ref=e338]
+                      - cell "15 ngày" [ref=e340]:
+                        - generic [ref=e341]: 15 ngày
+                      - cell [ref=e342]:
+                        - img [ref=e343]
+                      - cell "Active" [ref=e346]:
+                        - generic [ref=e347]: Active
+                      - cell "Open menu" [ref=e348]:
+                        - button "Open menu" [ref=e349] [cursor=pointer]:
+                          - img [ref=e350]
+                          - generic [ref=e354]: Open menu
+                    - row "3 SUP-007 Holybro USA 14 ngày Active Open menu" [ref=e355]:
+                      - cell "3" [ref=e356]
+                      - cell [ref=e357]:
+                        - checkbox [ref=e358]
+                      - cell "SUP-007" [ref=e359]
+                      - cell "Holybro" [ref=e360]
+                      - cell "USA" [ref=e361]
+                      - cell [ref=e362]:
+                        - generic [ref=e363]:
+                          - img [ref=e364]
+                          - img [ref=e366]
+                          - img [ref=e368]
+                          - img [ref=e370]
+                          - img [ref=e372]
+                      - cell "14 ngày" [ref=e374]:
+                        - generic [ref=e375]: 14 ngày
+                      - cell [ref=e376]:
+                        - img [ref=e377]
+                      - cell "Active" [ref=e380]:
+                        - generic [ref=e381]: Active
+                      - cell "Open menu" [ref=e382]:
+                        - button "Open menu" [ref=e383] [cursor=pointer]:
+                          - img [ref=e384]
+                          - generic [ref=e388]: Open menu
+                    - row "4 SUP-001 KDE Direct USA 14 ngày Active Open menu" [ref=e389]:
+                      - cell "4" [ref=e390]
+                      - cell [ref=e391]:
+                        - checkbox [ref=e392]
+                      - cell "SUP-001" [ref=e393]
+                      - cell "KDE Direct" [ref=e394]
+                      - cell "USA" [ref=e395]
+                      - cell [ref=e396]:
+                        - generic [ref=e397]:
+                          - img [ref=e398]
+                          - img [ref=e400]
+                          - img [ref=e402]
+                          - img [ref=e404]
+                          - img [ref=e406]
+                      - cell "14 ngày" [ref=e408]:
+                        - generic [ref=e409]: 14 ngày
+                      - cell [ref=e410]:
+                        - img [ref=e411]
+                      - cell "Active" [ref=e414]:
+                        - generic [ref=e415]: Active
+                      - cell "Open menu" [ref=e416]:
+                        - button "Open menu" [ref=e417] [cursor=pointer]:
+                          - img [ref=e418]
+                          - generic [ref=e422]: Open menu
+                    - row "5 SUP-004 NVIDIA USA 28 ngày Active Open menu" [ref=e423]:
+                      - cell "5" [ref=e424]
+                      - cell [ref=e425]:
+                        - checkbox [ref=e426]
+                      - cell "SUP-004" [ref=e427]
+                      - cell "NVIDIA" [ref=e428]
+                      - cell "USA" [ref=e429]
+                      - cell [ref=e430]:
+                        - generic [ref=e431]:
+                          - img [ref=e432]
+                          - img [ref=e434]
+                          - img [ref=e436]
+                          - img [ref=e438]
+                          - img [ref=e440]
+                      - cell "28 ngày" [ref=e442]:
+                        - generic [ref=e443]: 28 ngày
+                      - cell [ref=e444]:
+                        - img [ref=e445]
+                      - cell "Active" [ref=e448]:
+                        - generic [ref=e449]: Active
+                      - cell "Open menu" [ref=e450]:
+                        - button "Open menu" [ref=e451] [cursor=pointer]:
+                          - img [ref=e452]
+                          - generic [ref=e456]: Open menu
+                    - row "6 SUP-008 Panasonic Energy Japan 25 ngày Active Open menu" [ref=e457]:
+                      - cell "6" [ref=e458]
+                      - cell [ref=e459]:
+                        - checkbox [ref=e460]
+                      - cell "SUP-008" [ref=e461]
+                      - cell "Panasonic Energy" [ref=e462]
+                      - cell "Japan" [ref=e463]
+                      - cell [ref=e464]:
+                        - generic [ref=e465]:
+                          - img [ref=e466]
+                          - img [ref=e468]
+                          - img [ref=e470]
+                          - img [ref=e472]
+                          - img [ref=e474]
+                      - cell "25 ngày" [ref=e476]:
+                        - generic [ref=e477]: 25 ngày
+                      - cell [ref=e478]:
+                        - img [ref=e479]
+                      - cell "Active" [ref=e482]:
+                        - generic [ref=e483]: Active
+                      - cell "Open menu" [ref=e484]:
+                        - button "Open menu" [ref=e485] [cursor=pointer]:
+                          - img [ref=e486]
+                          - generic [ref=e490]: Open menu
+                    - row "7 SUP-005 Sony Semiconductor Japan 30 ngày Active Open menu" [ref=e491]:
+                      - cell "7" [ref=e492]
+                      - cell [ref=e493]:
+                        - checkbox [ref=e494]
+                      - cell "SUP-005" [ref=e495]
+                      - cell "Sony Semiconductor" [ref=e496]
+                      - cell "Japan" [ref=e497]
+                      - cell [ref=e498]:
+                        - generic [ref=e499]:
+                          - img [ref=e500]
+                          - img [ref=e502]
+                          - img [ref=e504]
+                          - img [ref=e506]
+                          - img [ref=e508]
+                      - cell "30 ngày" [ref=e510]:
+                        - generic [ref=e511]: 30 ngày
+                      - cell [ref=e512]:
+                        - img [ref=e513]
+                      - cell "Active" [ref=e516]:
+                        - generic [ref=e517]: Active
+                      - cell "Open menu" [ref=e518]:
+                        - button "Open menu" [ref=e519] [cursor=pointer]:
+                          - img [ref=e520]
+                          - generic [ref=e524]: Open menu
+                    - row "8 SUP-003 Tattu/Gensace USA 7 ngày Active Open menu" [ref=e525]:
+                      - cell "8" [ref=e526]
+                      - cell [ref=e527]:
+                        - checkbox [ref=e528]
+                      - cell "SUP-003" [ref=e529]
+                      - cell "Tattu/Gensace" [ref=e530]
+                      - cell "USA" [ref=e531]
+                      - cell [ref=e532]:
+                        - generic [ref=e533]:
+                          - img [ref=e534]
+                          - img [ref=e536]
+                          - img [ref=e538]
+                          - img [ref=e540]
+                          - img [ref=e542]
+                      - cell "7 ngày" [ref=e544]:
+                        - generic [ref=e545]: 7 ngày
+                      - cell [ref=e546]:
+                        - img [ref=e547]
+                      - cell "Active" [ref=e550]:
+                        - generic [ref=e551]: Active
+                      - cell "Open menu" [ref=e552]:
+                        - button "Open menu" [ref=e553] [cursor=pointer]:
+                          - img [ref=e554]
+                          - generic [ref=e558]: Open menu
+                    - row "9 SUP-006 Teledyne FLIR USA 21 ngày Active Open menu" [ref=e559]:
+                      - cell "9" [ref=e560]
+                      - cell [ref=e561]:
+                        - checkbox [ref=e562]
+                      - cell "SUP-006" [ref=e563]
+                      - cell "Teledyne FLIR" [ref=e564]
+                      - cell "USA" [ref=e565]
+                      - cell [ref=e566]:
+                        - generic [ref=e567]:
+                          - img [ref=e568]
+                          - img [ref=e570]
+                          - img [ref=e572]
+                          - img [ref=e574]
+                          - img [ref=e576]
+                      - cell "21 ngày" [ref=e578]:
+                        - generic [ref=e579]: 21 ngày
+                      - cell [ref=e580]:
+                        - img [ref=e581]
+                      - cell "Active" [ref=e584]:
+                        - generic [ref=e585]: Active
+                      - cell "Open menu" [ref=e586]:
+                        - button "Open menu" [ref=e587] [cursor=pointer]:
+                          - img [ref=e588]
+                          - generic [ref=e592]: Open menu
+                    - row "10 TEST-SUP-001 Test QA Taiwan 14 ngày Active Open menu" [ref=e593]:
+                      - cell "10" [ref=e594]
+                      - cell [ref=e595]:
+                        - checkbox [ref=e596]
+                      - cell "TEST-SUP-001" [ref=e597]
+                      - cell "Test QA" [ref=e598]
+                      - cell "Taiwan" [ref=e599]
+                      - cell [ref=e600]:
+                        - generic [ref=e601]:
+                          - img [ref=e602]
+                          - img [ref=e604]
+                          - img [ref=e606]
+                          - img [ref=e608]
+                          - img [ref=e610]
+                      - cell "14 ngày" [ref=e612]:
+                        - generic [ref=e613]: 14 ngày
+                      - cell [ref=e614]:
+                        - img [ref=e615]
+                      - cell "Active" [ref=e618]:
+                        - generic [ref=e619]: Active
+                      - cell "Open menu" [ref=e620]:
+                        - button "Open menu" [ref=e621] [cursor=pointer]:
+                          - img [ref=e622]
+                          - generic [ref=e626]: Open menu
+                - generic [ref=e627]:
+                  - generic [ref=e628]: 10 rows
+                  - generic [ref=e629]: Suppliers
+          - button "5" [ref=e631] [cursor=pointer]:
+            - img [ref=e632]
+            - generic [ref=e635]: "5"
+          - button "Demo Admin" [ref=e637] [cursor=pointer]:
+            - img [ref=e638]
+            - generic [ref=e641]: Demo
+            - generic [ref=e642]: Admin
+            - img [ref=e643]
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - alert [ref=e645]
+```

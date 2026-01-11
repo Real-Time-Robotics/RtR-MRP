@@ -207,7 +207,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
             changeImpact.reset();
             setPendingSubmitData(null);
         }
-    }, [open, part, form, changeImpact]);
+    // Note: Only depend on changeImpact.reset (stable callback), not the whole object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, part, form]);
 
     return (
         <>

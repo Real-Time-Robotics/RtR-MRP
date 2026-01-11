@@ -226,7 +226,9 @@ export function SupplierForm({
       changeImpact.reset();
       setPendingSubmitData(null);
     }
-  }, [open, supplier, form, changeImpact]);
+  // Note: Only depend on stable values, not changeImpact object (causes infinite loop)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, supplier, form]);
 
   // Perform the actual save operation
   const performSave = async (data: SupplierFormData) => {

@@ -1,0 +1,253 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Về trang chủ" [ref=e5] [cursor=pointer]:
+          - /url: /
+          - img [ref=e6]
+        - link "Tổng quan" [ref=e8] [cursor=pointer]:
+          - /url: /home
+          - img [ref=e9]
+          - generic [ref=e12]: Tổng quan
+        - navigation [ref=e13]:
+          - button "Vận hành" [ref=e15] [cursor=pointer]:
+            - img [ref=e16]
+            - generic [ref=e18]: Vận hành
+            - img [ref=e19]
+          - button "Sản xuất" [ref=e22] [cursor=pointer]:
+            - img [ref=e23]
+            - generic [ref=e25]: Sản xuất
+            - img [ref=e26]
+          - button "Chất lượng" [ref=e29] [cursor=pointer]:
+            - img [ref=e30]
+            - generic [ref=e32]: Chất lượng
+            - img [ref=e33]
+          - button "Phân tích" [ref=e36] [cursor=pointer]:
+            - img [ref=e37]
+            - generic [ref=e40]: Phân tích
+            - img [ref=e41]
+        - button "Tìm kiếm... K" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Tìm kiếm...
+          - generic [ref=e48]:
+            - img [ref=e49]
+            - text: K
+        - button [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+        - button [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+        - button [ref=e58] [cursor=pointer]:
+          - img [ref=e59]
+        - button [ref=e62] [cursor=pointer]:
+          - img [ref=e63]
+        - button "A" [ref=e67] [cursor=pointer]:
+          - generic [ref=e68]: A
+          - img [ref=e69]
+    - generic [ref=e71]:
+      - complementary [ref=e73]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]: MRP
+            - generic [ref=e77]: "-AI"
+          - button "Collapse" [ref=e79] [cursor=pointer]:
+            - img [ref=e80]
+        - generic [ref=e83]:
+          - generic [ref=e84]:
+            - link "Tổng quan" [ref=e85] [cursor=pointer]:
+              - /url: /home
+              - img [ref=e87]
+              - generic [ref=e92]: Tổng quan
+            - link "Đơn hàng 5" [ref=e93] [cursor=pointer]:
+              - /url: /orders
+              - img [ref=e95]
+              - generic [ref=e99]: Đơn hàng
+              - generic [ref=e100]: "5"
+            - link "Tồn kho" [ref=e101] [cursor=pointer]:
+              - /url: /inventory
+              - img [ref=e103]
+              - generic [ref=e107]: Tồn kho
+            - link "Sản xuất" [ref=e108] [cursor=pointer]:
+              - /url: /production
+              - img [ref=e110]
+              - generic [ref=e112]: Sản xuất
+            - link "MRP" [ref=e113] [cursor=pointer]:
+              - /url: /mrp
+              - img [ref=e115]
+              - generic [ref=e117]: MRP
+            - link "Chất lượng" [ref=e118] [cursor=pointer]:
+              - /url: /quality
+              - img [ref=e120]
+              - generic [ref=e124]: Chất lượng
+          - generic [ref=e126]: Công cụ
+          - generic [ref=e127]:
+            - link "Vật tư" [ref=e128] [cursor=pointer]:
+              - /url: /parts
+              - img [ref=e130]
+              - generic [ref=e134]: Vật tư
+            - link "BOM" [ref=e135] [cursor=pointer]:
+              - /url: /bom
+              - img [ref=e137]
+              - generic [ref=e141]: BOM
+            - link "NCC" [ref=e142] [cursor=pointer]:
+              - /url: /suppliers
+              - img [ref=e144]
+              - generic [ref=e148]: NCC
+          - generic [ref=e150]:
+            - link "Mobile" [ref=e151] [cursor=pointer]:
+              - /url: /mobile
+              - img [ref=e153]
+              - generic [ref=e155]: Mobile
+            - link "Cảnh báo" [ref=e156] [cursor=pointer]:
+              - /url: /alerts
+              - img [ref=e158]
+              - generic [ref=e160]: Cảnh báo
+        - generic [ref=e161]:
+          - link "AI Insights" [ref=e162] [cursor=pointer]:
+            - /url: /ai/insights
+            - img [ref=e163]
+            - generic [ref=e166]: AI Insights
+          - link "Cài đặt" [ref=e167] [cursor=pointer]:
+            - /url: /settings
+            - img [ref=e168]
+            - generic [ref=e171]: Cài đặt
+      - main [ref=e172]:
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e177]:
+              - heading "Quality Management" [level=1] [ref=e178]
+              - paragraph [ref=e179]: Inspection, NCR, CAPA, and Traceability
+            - generic [ref=e180]:
+              - generic [ref=e182]:
+                - generic [ref=e183]:
+                  - paragraph [ref=e184]: First Pass Yield
+                  - paragraph [ref=e185]: 100%
+                - img [ref=e187]
+              - generic [ref=e191]:
+                - generic [ref=e192]:
+                  - paragraph [ref=e193]: Pending Inspections
+                  - paragraph [ref=e194]: "0"
+                - img [ref=e196]
+              - generic [ref=e201]:
+                - generic [ref=e202]:
+                  - paragraph [ref=e203]: Open NCRs
+                  - paragraph [ref=e204]: "17"
+                - img [ref=e206]
+              - generic [ref=e209]:
+                - generic [ref=e210]:
+                  - paragraph [ref=e211]: Open CAPAs
+                  - paragraph [ref=e212]: "0"
+                - img [ref=e214]
+            - generic [ref=e216]:
+              - heading "Quick Actions" [level=3] [ref=e218]
+              - generic [ref=e220]:
+                - link "New Receiving Inspection" [ref=e221] [cursor=pointer]:
+                  - /url: /quality/receiving/new
+                  - img [ref=e222]
+                  - text: New Receiving Inspection
+                - link "New In-Process Inspection" [ref=e225] [cursor=pointer]:
+                  - /url: /quality/in-process
+                  - img [ref=e226]
+                  - text: New In-Process Inspection
+                - link "New Final Inspection" [ref=e237] [cursor=pointer]:
+                  - /url: /quality/final
+                  - img [ref=e238]
+                  - text: New Final Inspection
+                - link "Create NCR" [ref=e241] [cursor=pointer]:
+                  - /url: /quality/ncr/new
+                  - img [ref=e242]
+                  - text: Create NCR
+                - link "Lot Lookup" [ref=e244] [cursor=pointer]:
+                  - /url: /quality/traceability
+                  - img [ref=e245]
+                  - text: Lot Lookup
+                - link "Generate CoC" [ref=e248] [cursor=pointer]:
+                  - /url: /quality/certificates
+                  - img [ref=e249]
+                  - text: Generate CoC
+            - generic [ref=e252]:
+              - generic [ref=e253]:
+                - generic [ref=e254]:
+                  - heading "Pending Inspections" [level=3] [ref=e255]:
+                    - img [ref=e256]
+                    - text: Pending Inspections
+                  - link "View All" [ref=e260] [cursor=pointer]:
+                    - /url: /quality/receiving
+                - generic [ref=e262]:
+                  - img [ref=e263]
+                  - paragraph [ref=e267]: No pending inspections
+              - generic [ref=e268]:
+                - heading "Inspection Summary" [level=3] [ref=e270]:
+                  - img [ref=e271]
+                  - text: Inspection Summary
+                - generic [ref=e275]:
+                  - link "Receiving Inspection Incoming material quality 0 pending" [ref=e276] [cursor=pointer]:
+                    - /url: /quality/receiving
+                    - generic [ref=e277]:
+                      - img [ref=e279]
+                      - generic [ref=e282]:
+                        - paragraph [ref=e283]: Receiving Inspection
+                        - paragraph [ref=e284]: Incoming material quality
+                    - generic [ref=e285]:
+                      - paragraph [ref=e286]: "0"
+                      - paragraph [ref=e287]: pending
+                  - link "In-Process Inspection Production quality checks 0 pending" [ref=e288] [cursor=pointer]:
+                    - /url: /quality/in-process
+                    - generic [ref=e289]:
+                      - img [ref=e291]
+                      - generic [ref=e302]:
+                        - paragraph [ref=e303]: In-Process Inspection
+                        - paragraph [ref=e304]: Production quality checks
+                    - generic [ref=e305]:
+                      - paragraph [ref=e306]: "0"
+                      - paragraph [ref=e307]: pending
+                  - link "Final Inspection Finished goods verification 0 pending" [ref=e308] [cursor=pointer]:
+                    - /url: /quality/final
+                    - generic [ref=e309]:
+                      - img [ref=e311]
+                      - generic [ref=e314]:
+                        - paragraph [ref=e315]: Final Inspection
+                        - paragraph [ref=e316]: Finished goods verification
+                    - generic [ref=e317]:
+                      - paragraph [ref=e318]: "0"
+                      - paragraph [ref=e319]: pending
+            - generic [ref=e320]:
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - heading "Non-Conformance Reports" [level=3] [ref=e323]:
+                    - img [ref=e324]
+                    - text: Non-Conformance Reports
+                  - link "View All" [ref=e326] [cursor=pointer]:
+                    - /url: /quality/ncr
+                - generic [ref=e328]:
+                  - paragraph [ref=e329]: "17"
+                  - paragraph [ref=e330]: Open NCRs
+                  - link "Create NCR" [ref=e331] [cursor=pointer]:
+                    - /url: /quality/ncr/new
+              - generic [ref=e332]:
+                - generic [ref=e333]:
+                  - heading "Corrective Actions" [level=3] [ref=e334]:
+                    - img [ref=e335]
+                    - text: Corrective Actions
+                  - link "View All" [ref=e337] [cursor=pointer]:
+                    - /url: /quality/capa
+                - generic [ref=e339]:
+                  - paragraph [ref=e340]: "0"
+                  - paragraph [ref=e341]: Open CAPAs
+                  - link "Create CAPA" [ref=e342] [cursor=pointer]:
+                    - /url: /quality/capa/new
+          - button "5" [ref=e344] [cursor=pointer]:
+            - img [ref=e345]
+            - generic [ref=e348]: "5"
+          - button "Demo Admin" [ref=e350] [cursor=pointer]:
+            - img [ref=e351]
+            - generic [ref=e354]: Demo
+            - generic [ref=e355]: Admin
+            - img [ref=e356]
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - alert [ref=e358]
+```
