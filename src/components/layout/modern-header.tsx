@@ -552,7 +552,7 @@ function CommandPalette({ isOpen, onClose, language }: CommandPaletteProps) {
             </span>
           </div>
           <span className="flex items-center gap-1">
-            <Command className="w-3 h-3" />K to open
+            ⌘K / Ctrl+K to open
           </span>
         </div>
       </div>
@@ -791,7 +791,10 @@ export function ModernHeader({
             <Search className="w-4 h-4" />
             <span className="text-sm">{language === 'vi' ? 'Tìm kiếm...' : 'Search...'}</span>
             <kbd className="ml-auto hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-xs">
-              <Command className="w-3 h-3" />K
+              ⌘K
+            </kbd>
+            <kbd className="ml-1 hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-xs text-gray-400">
+              Ctrl+K
             </kbd>
           </button>
 

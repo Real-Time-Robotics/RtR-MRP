@@ -105,11 +105,11 @@ export default function AICopilot({
     };
   };
 
-  // Keyboard shortcut to toggle copilot
+  // Keyboard shortcut to toggle copilot (Cmd+J on macOS, Ctrl+J on Windows)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + K to toggle
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      // Ctrl/Cmd + J to toggle (changed from K to avoid conflict with Command Palette)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
         e.preventDefault();
         setIsOpen(prev => !prev);
       }
@@ -143,7 +143,7 @@ export default function AICopilot({
           <button
             onClick={() => { setIsOpen(true); setActiveMode('chat'); }}
             className="relative p-2 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-            title={language === 'vi' ? 'AI Copilot (Ctrl+K)' : 'AI Copilot (Ctrl+K)'}
+            title={language === 'vi' ? 'AI Copilot (⌘J / Ctrl+J)' : 'AI Copilot (⌘J / Ctrl+J)'}
           >
             <Bot className="h-5 w-5" />
             {/* Insights badge */}
