@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAIContextSync } from '@/hooks/use-ai-context-sync';
-import { ArrowLeft, Building2, Phone, Mail, MapPin, Star, Package, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, MapPin, Star, Package, ShoppingBag, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { toast } from 'sonner';
+import { ConversationPanel } from '@/components/conversations';
 
 interface SupplierDetail {
     id: string;
@@ -176,12 +177,16 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                 {/* Right Column: Tabs (Products, Orders) */}
                 <div className="space-y-6 col-span-2">
                     <Tabs defaultValue="products">
-                        <TabsList className="grid w-full grid-cols-2">
+                        <TabsList className="grid w-full grid-cols-3">
                             <TabsTrigger value="products">
                                 Products ({supplier._count.partSuppliers})
                             </TabsTrigger>
                             <TabsTrigger value="orders">
                                 Orders ({supplier._count.purchaseOrders})
+                            </TabsTrigger>
+                            <TabsTrigger value="discussions">
+                                <MessageSquare className="h-4 w-4 mr-1" />
+                                Discussions
                             </TabsTrigger>
                         </TabsList>
 
@@ -241,6 +246,15 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                     </Table>
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        <TabsContent value="discussions" className="mt-4">
+                            <ConversationPanel
+                                contextType="SUPPLIER"
+                                contextId={supplier.id}
+                                contextTitle={`${supplier.code} - ${supplier.name}`}
+                                className="h-[500px]"
+                            />
                         </TabsContent>
                     </Tabs>
                 </div>

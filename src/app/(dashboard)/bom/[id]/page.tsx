@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import { BomTree } from "@/components/bom/bom-tree";
+import { BomDiscussions } from "@/components/bom/bom-discussions";
 import prisma from "@/lib/prisma";
 
 interface BOMDetailPageProps {
@@ -184,6 +185,7 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
         <TabsList>
           <TabsTrigger value="structure">Structure</TabsTrigger>
           <TabsTrigger value="cost">Cost Analysis</TabsTrigger>
+          <TabsTrigger value="discussions">Discussions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="structure" className="mt-4">
@@ -242,6 +244,13 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="discussions" className="mt-4">
+          <BomDiscussions
+            bomId={product.id}
+            bomTitle={`BOM ${product.sku} - ${product.name}`}
+          />
         </TabsContent>
       </Tabs>
     </div>

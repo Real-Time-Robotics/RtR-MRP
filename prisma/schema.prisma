@@ -859,6 +859,11 @@ model User {
   itarAccessLogs      ITARAccessLog[]
   mobileDevices       MobileDevice[]
 
+  // Contextual Chat relations
+  createdThreads       ConversationThread[] @relation("ThreadCreator")
+  sentMessages         Message[]            @relation("MessageSender")
+  threadParticipations ThreadParticipant[]
+
   // Multi-tenancy
   tenantId            String?
   tenant              Tenant?   @relation(fields: [tenantId], references: [id])
@@ -4601,13 +4606,13 @@ model TenantWebhook {
 
 model TenantUsageLog {
   id              String    @id @default(cuid())
-  
+
   tenantId        String
-  
+
   // Usage period
   periodStart     DateTime
   periodEnd       DateTime
-  
+
   // Metrics
   apiCalls        Int       @default(0)
   storageBytes    BigInt    @default(0)
@@ -4615,13 +4620,191 @@ model TenantUsageLog {
   partsCount      Int       @default(0)
   ordersCount     Int       @default(0)
   reportsGenerated Int      @default(0)
-  
+
   // Compute usage (for MRP runs, etc.)
   computeMinutes  Int       @default(0)
-  
+
   createdAt       DateTime  @default(now())
-  
+
   @@index([tenantId])
   @@index([periodStart])
   @@unique([tenantId, periodStart, periodEnd])
+}
+
+// =============================================================================
+// CONTEXTUAL CHAT - PHASE 1 MVP
+// =============================================================================
+
+// Context types - các loại record có thể gắn thread
+enum ContextType {
+  WORK_ORDER
+  BOM
+  PART
+  INVENTORY
+  QC_REPORT
+  MRP_RUN
+  PURCHASE_ORDER
+  SUPPLIER
+  CUSTOMER
+  SALES_ORDER
+  GENERAL
+}
+
+// Thread status
+enum ThreadStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  ARCHIVED
+}
+
+// Priority levels
+enum ThreadPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Mention type
+enum MentionType {
+  USER
+  ROLE
+}
+
+// =============================================================================
+// CONVERSATION THREAD
+// =============================================================================
+
+model ConversationThread {
+  id              String         @id @default(cuid())
+
+  // CONTEXT - Bắt buộc
+  contextType     ContextType
+  contextId       String                    // ID của record liên quan
+  contextTitle    String?                   // Cache title để hiển thị nhanh
+
+  // Thread info
+  title           String?                   // Tiêu đề thread (optional)
+  status          ThreadStatus   @default(OPEN)
+  priority        ThreadPriority @default(NORMAL)
+
+  // Creator
+  createdById     String
+  createdBy       User           @relation("ThreadCreator", fields: [createdById], references: [id])
+
+  // Relations
+  messages        Message[]
+  participants    ThreadParticipant[]
+
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  lastMessageAt   DateTime?                 // Cache để sort
+  resolvedAt      DateTime?
+  resolvedById    String?
+
+  // Indexes
+  @@index([contextType, contextId])
+  @@index([status])
+  @@index([createdById])
+  @@index([lastMessageAt])
+
+  @@map("conversation_threads")
+}
+
+// =============================================================================
+// MESSAGE
+// =============================================================================
+
+model Message {
+  id              String         @id @default(cuid())
+
+  // Thread reference
+  threadId        String
+  thread          ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // Sender
+  senderId        String
+  sender          User           @relation("MessageSender", fields: [senderId], references: [id])
+
+  // Content
+  content         String         @db.Text    // Text content
+  isSystemMessage Boolean        @default(false)  // Auto-generated messages
+
+  // Edit tracking
+  isEdited        Boolean        @default(false)
+  editedAt        DateTime?
+
+  // Relations
+  mentions        Mention[]
+
+  // Timestamps
+  createdAt       DateTime       @default(now())
+
+  // Indexes
+  @@index([threadId])
+  @@index([senderId])
+  @@index([createdAt])
+
+  @@map("messages")
+}
+
+// =============================================================================
+// THREAD PARTICIPANT
+// =============================================================================
+
+model ThreadParticipant {
+  id              String         @id @default(cuid())
+
+  threadId        String
+  thread          ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+
+  // Participation info
+  role            String?                   // Role khi join (QA, Planner, etc.)
+  joinedAt        DateTime       @default(now())
+
+  // Read tracking
+  lastReadAt      DateTime?
+  lastReadMessageId String?
+
+  // Notifications
+  isMuted         Boolean        @default(false)
+
+  @@unique([threadId, userId])
+  @@index([userId])
+
+  @@map("thread_participants")
+}
+
+// =============================================================================
+// MENTION
+// =============================================================================
+
+model Mention {
+  id              String         @id @default(cuid())
+
+  messageId       String
+  message         Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Mention target
+  mentionType     MentionType
+  userId          String?                   // If mentioning specific user
+  roleName        String?                   // If mentioning role (@planner)
+
+  // Acknowledgment
+  isRead          Boolean        @default(false)
+  readAt          DateTime?
+
+  createdAt       DateTime       @default(now())
+
+  @@index([messageId])
+  @@index([userId])
+  @@index([roleName])
+
+  @@map("mentions")
 }
