@@ -51,43 +51,58 @@ async function main() {
   });
   console.log("Created admin user");
 
-  // Create demo user for customer trials
-  const demoPassword = "DemoMRP@2026!";
-  console.log(`Creating demo user with email: demo@rtr-mrp.com`);
-  const hashedDemoPassword = await bcrypt.hash(demoPassword, 12);
-  await prisma.user.create({
-    data: {
-      email: "demo@rtr-mrp.com",
-      name: "Demo User",
-      password: hashedDemoPassword,
-      role: "admin", // Full access for demo
-      status: "active",
-    },
-  });
-  console.log("Created demo user");
+  // =============================================================================
+  // DEMO USER ISOLATION (Gate 5.1 requirement)
+  // Production mode MUST NOT create demo users
+  // =============================================================================
+  const SEED_MODE = process.env.SEED_MODE || 'testbed';
+  const IS_PRODUCTION = SEED_MODE === 'production' || process.env.NODE_ENV === 'production';
 
-  // Create role-based demo users for demo mode role testing
-  console.log("Creating role-based demo users...");
-  const demoRoleUsers = [
-    { email: "admin@demo.rtr-mrp.com", name: "Demo Admin", password: "Admin@Demo2026!", role: "admin" },
-    { email: "manager@demo.rtr-mrp.com", name: "Demo Manager", password: "Manager@Demo2026!", role: "manager" },
-    { email: "operator@demo.rtr-mrp.com", name: "Demo Operator", password: "Operator@Demo2026!", role: "operator" },
-    { email: "viewer@demo.rtr-mrp.com", name: "Demo Viewer", password: "Viewer@Demo2026!", role: "viewer" },
-  ];
-  for (const user of demoRoleUsers) {
-    const hashedPwd = await bcrypt.hash(user.password, 12);
+  if (IS_PRODUCTION) {
+    console.log('⚠️  PRODUCTION MODE: Demo users DISABLED');
+    console.log('   SEED_MODE:', SEED_MODE);
+    console.log('   NODE_ENV:', process.env.NODE_ENV);
+  } else {
+    console.log('🧪 TESTBED MODE: Creating demo users...');
+
+    // Create demo user for customer trials
+    const demoPassword = "DemoMRP@2026!";
+    console.log(`Creating demo user with email: demo@rtr-mrp.com`);
+    const hashedDemoPassword = await bcrypt.hash(demoPassword, 12);
     await prisma.user.create({
       data: {
-        email: user.email,
-        name: user.name,
-        password: hashedPwd,
-        role: user.role,
+        email: "demo@rtr-mrp.com",
+        name: "Demo User",
+        password: hashedDemoPassword,
+        role: "admin", // Full access for demo
         status: "active",
       },
     });
-    console.log(`  Created ${user.role}: ${user.email}`);
+    console.log("Created demo user");
+
+    // Create role-based demo users for demo mode role testing
+    console.log("Creating role-based demo users...");
+    const demoRoleUsers = [
+      { email: "admin@demo.rtr-mrp.com", name: "Demo Admin", password: "Admin@Demo2026!", role: "admin" },
+      { email: "manager@demo.rtr-mrp.com", name: "Demo Manager", password: "Manager@Demo2026!", role: "manager" },
+      { email: "operator@demo.rtr-mrp.com", name: "Demo Operator", password: "Operator@Demo2026!", role: "operator" },
+      { email: "viewer@demo.rtr-mrp.com", name: "Demo Viewer", password: "Viewer@Demo2026!", role: "viewer" },
+    ];
+    for (const user of demoRoleUsers) {
+      const hashedPwd = await bcrypt.hash(user.password, 12);
+      await prisma.user.create({
+        data: {
+          email: user.email,
+          name: user.name,
+          password: hashedPwd,
+          role: user.role,
+          status: "active",
+        },
+      });
+      console.log(`  Created ${user.role}: ${user.email}`);
+    }
+    console.log("Role-based demo users created");
   }
-  console.log("Role-based demo users created");
 
   // Create GL Accounts (Chart of Accounts)
   const glAccounts = await Promise.all([

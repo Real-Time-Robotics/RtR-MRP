@@ -1,11 +1,12 @@
 // =============================================================================
 // RTR MRP - NEXT.JS MIDDLEWARE
-// Route protection, security headers, rate limiting
+// Route protection, security headers, rate limiting, request ID tracking
 // =============================================================================
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { v4 as uuidv4 } from 'uuid';
 
 // =============================================================================
 // CONFIGURATION
@@ -171,6 +172,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
 
+  // Generate or preserve request ID (Gate 5.3 requirement)
+  const requestId = request.headers.get('x-request-id') ?? uuidv4();
+
+  // Create new headers with requestId
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-request-id', requestId);
+
   // Rate limiting for API routes
   if (isApiRoute(pathname) && !checkRateLimit(ip)) {
     return new NextResponse(
@@ -184,7 +192,10 @@ export async function middleware(request: NextRequest) {
 
   // Allow public routes
   if (isPublicRoute(pathname)) {
-    const response = NextResponse.next();
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.headers.set('x-request-id', requestId);
     return addSecurityHeaders(response);
   }
 
@@ -246,7 +257,12 @@ export async function middleware(request: NextRequest) {
   }
 
   // Continue with request
-  const response = NextResponse.next();
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+
+  // Add requestId to response headers
+  response.headers.set('x-request-id', requestId);
 
   // Add user info to request headers for API routes
   if (isApiRoute(pathname)) {

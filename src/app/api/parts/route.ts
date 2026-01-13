@@ -10,6 +10,7 @@ import {
 } from "@/lib/pagination";
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
+import { logApi } from "@/lib/audit/audit-logger";
 
 // Allowed filters for parts
 const ALLOWED_FILTERS = ["category", "lifecycleStatus", "makeOrBuy"];
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
     // Validate query params
     const queryResult = validateQuery(PartQuerySchema, request.nextUrl.searchParams);
     if (!queryResult.success) {
+      // Log validation error for Gate 5.3 evidence
+      logApi(request, 400, session.user?.id, 'Validation error');
       return queryResult.response;
     }
     const { category, lifecycleStatus, makeOrBuy, ndaaCompliant, includeRelations, search } = queryResult.data;

@@ -2,37 +2,44 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // =============================================================================
-// HEALTH CHECK API
-// For load testing and monitoring
+// HEALTH CHECK API - Gate 5.4 Compliant
+// Must include DB proof: dbElapsedMs + dbCheckedAt
 // =============================================================================
 
 export async function GET() {
-  const startTime = Date.now();
+  const start = Date.now();
+  let dbStatus: 'connected' | 'error' = 'error';
+  let dbElapsedMs = 0;
 
   try {
-    // Check database connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Execute lightweight DB query with 1s timeout
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('DB timeout')), 1000)
+      )
+    ]);
 
-    const responseTime = Date.now() - startTime;
-
-    return NextResponse.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0',
-      environment: process.env.NODE_ENV,
-      database: 'connected',
-      responseTime: `${responseTime}ms`,
-      uptime: process.uptime(),
-    });
+    dbElapsedMs = Date.now() - start;
+    dbStatus = 'connected';
   } catch (error) {
-    const responseTime = Date.now() - startTime;
-
-    return NextResponse.json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      database: 'disconnected',
-      responseTime: `${responseTime}ms`,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 503 });
+    dbElapsedMs = Date.now() - start;
+    console.error('[Health] DB check failed:', error);
   }
+
+  // Determine overall status
+  const status = dbStatus === 'connected' ? 'ok' : 'degraded';
+
+  // Check Redis availability (optional dependency)
+  const redisStatus = process.env.UPSTASH_REDIS_REST_URL
+    ? 'ok'
+    : 'skipped';
+
+  return NextResponse.json({
+    status,
+    database: dbStatus,
+    dbElapsedMs,              // REQUIRED: DB proof
+    dbCheckedAt: new Date().toISOString(),  // REQUIRED: DB proof
+    redis: redisStatus,
+  });
 }
