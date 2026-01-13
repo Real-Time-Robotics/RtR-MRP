@@ -4,6 +4,8 @@ import { auth } from '@/lib/auth';
 import { getStockStatus } from '@/lib/bom-engine';
 import { validateQuery } from '@/lib/api/validation';
 import { InventoryQuerySchema } from '@/lib/validations';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { logApi } from '@/lib/audit/audit-logger';
 
 // =============================================================================
 // GET - List inventory with aggregation
@@ -14,6 +16,28 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limiting (Gate 5.2)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user?.id);
+    if (!rateLimit.success) {
+      const requestId = request.headers.get('x-request-id') || 'unknown';
+      console.log(JSON.stringify({
+        event: 'rate_limit_hit',
+        requestId,
+        identifier: session.user?.id || 'unknown',
+        endpoint: '/api/inventory',
+      }));
+
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfter || 60),
+          },
+        }
+      );
     }
 
     // Validate query params

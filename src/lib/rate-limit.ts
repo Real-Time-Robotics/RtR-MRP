@@ -1,97 +1,84 @@
 // =============================================================================
-// RTR MRP - RATE LIMITER
-// In-memory rate limiting (Redis disabled for Render compatibility)
+// RTR MRP - RATE LIMITER (Gate 5.2)
+// Upstash Redis-based rate limiting for heavy endpoints
 // =============================================================================
 
-interface RateLimitConfig {
-  uniqueId: string;
-  limit: number;
-  windowSeconds: number;
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+// Initialize Redis client (only if credentials available)
+let redis: Redis | null = null;
+let heavyEndpointLimiter: Ratelimit | null = null;
+
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+
+  // Heavy endpoint limiter: 60 requests per minute
+  heavyEndpointLimiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(60, '1 m'),
+    analytics: true,
+    prefix: 'ratelimit:heavy',
+  });
 }
 
-interface RateLimitResult {
+/**
+ * Extract identifier for rate limiting
+ * Priority: userId (if authenticated) -> IP from x-forwarded-for
+ */
+export function getRateLimitIdentifier(
+  request: Request,
+  userId?: string
+): string {
+  if (userId) {
+    return `user:${userId}`;
+  }
+
+  // Extract IP from x-forwarded-for (Render sets this)
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    // Take first IP before comma
+    const firstIp = forwardedFor.split(',')[0]?.trim();
+    if (firstIp) {
+      return `ip:${firstIp}`;
+    }
+  }
+
+  return 'ip:unknown';
+}
+
+/**
+ * Check rate limit for heavy endpoints
+ * Returns { success, limit, remaining, reset, retryAfter }
+ */
+export async function checkHeavyEndpointLimit(
+  request: Request,
+  userId?: string
+): Promise<{
   success: boolean;
   limit: number;
   remaining: number;
   reset: number;
-}
-
-// In-memory store for rate limiting
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-
-// Cleanup expired entries periodically
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    const entries = Array.from(rateLimitStore.entries());
-    for (const [key, record] of entries) {
-      if (now > record.resetAt) {
-        rateLimitStore.delete(key);
-      }
-    }
-  }, 60000); // Cleanup every minute
-}
-
-export class RateLimiter {
-  /**
-   * Check if the action is allowed for the given ID.
-   * Uses in-memory fixed window counter.
-   */
-  static async check(config: RateLimitConfig): Promise<RateLimitResult> {
-    const { uniqueId, limit, windowSeconds } = config;
-    const key = `ratelimit:${uniqueId}`;
-    const now = Date.now();
-    const windowMs = windowSeconds * 1000;
-
-    let record = rateLimitStore.get(key);
-
-    // Create new window if doesn't exist or expired
-    if (!record || now > record.resetAt) {
-      record = { count: 1, resetAt: now + windowMs };
-      rateLimitStore.set(key, record);
-
-      return {
-        success: true,
-        limit,
-        remaining: limit - 1,
-        reset: Math.floor(record.resetAt / 1000),
-      };
-    }
-
-    // Increment count
-    record.count++;
-    const remaining = Math.max(0, limit - record.count);
-    const ttl = Math.floor((record.resetAt - now) / 1000);
-
-    return {
-      success: record.count <= limit,
-      limit,
-      remaining,
-      reset: Math.floor(Date.now() / 1000) + ttl,
-    };
+  retryAfter?: number;
+}> {
+  // If Upstash not configured, allow all requests
+  if (!heavyEndpointLimiter) {
+    return { success: true, limit: 60, remaining: 60, reset: 0 };
   }
 
-  /**
-   * Reset rate limit for a specific ID
-   */
-  static async reset(uniqueId: string): Promise<void> {
-    const key = `ratelimit:${uniqueId}`;
-    rateLimitStore.delete(key);
-  }
+  const identifier = getRateLimitIdentifier(request, userId);
+  const result = await heavyEndpointLimiter.limit(identifier);
 
-  /**
-   * Get current usage for a specific ID
-   */
-  static async getUsage(uniqueId: string): Promise<{ count: number; resetAt: number } | null> {
-    const key = `ratelimit:${uniqueId}`;
-    const record = rateLimitStore.get(key);
-
-    if (!record || Date.now() > record.resetAt) {
-      return null;
-    }
-
-    return record;
-  }
+  return {
+    success: result.success,
+    limit: result.limit,
+    remaining: result.remaining,
+    reset: result.reset,
+    retryAfter: result.success ? undefined : Math.ceil((result.reset - Date.now()) / 1000),
+  };
 }
 
-export default RateLimiter;
+export { heavyEndpointLimiter };
