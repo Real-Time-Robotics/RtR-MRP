@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAIContextSync } from "@/hooks/use-ai-context-sync";
 import Link from "next/link";
+import { PartFormDialog } from "@/components/parts/part-form-dialog";
 import {
   ArrowLeft,
   Edit2,
@@ -208,23 +209,25 @@ export default function PartDetailPage() {
   const params = useParams();
   const [part, setPart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const fetchPart = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/parts/${params.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPart(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch part:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
 
   useEffect(() => {
-    async function fetchPart() {
-      try {
-        const res = await fetch(`/api/parts/${params.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setPart(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch part:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchPart();
-  }, [params.id]);
+  }, [fetchPart]);
 
   useAIContextSync('part', part);
 
@@ -281,12 +284,10 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/parts/${part.id}/edit`}>
-            <Button>
-              <Edit2 className="h-4 w-4 mr-2" />
-              Edit Part
-            </Button>
-          </Link>
+          <Button onClick={() => setEditDialogOpen(true)}>
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit Part
+          </Button>
         </div>
       </div>
 
@@ -1049,6 +1050,16 @@ export default function PartDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Part Dialog */}
+      <PartFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        part={part}
+        onSuccess={() => {
+          fetchPart(); // Refetch data after successful edit
+        }}
+      />
     </div>
   );
 }

@@ -36,6 +36,7 @@ import {
     PartFormData,
     defaultPartValues,
     CATEGORIES,
+    CATEGORY_LABELS,
     UNITS,
     COUNTRIES
 } from './part-form-schema';
@@ -313,12 +314,14 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
-                                                        <SelectValue />
+                                                        <SelectValue placeholder="Chọn danh mục">
+                                                            {field.value ? CATEGORY_LABELS[field.value] || field.value : 'Chọn danh mục'}
+                                                        </SelectValue>
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
                                                     {CATEGORIES.map((cat) => (
-                                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                        <SelectItem key={cat} value={cat}>{CATEGORY_LABELS[cat] || cat}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>

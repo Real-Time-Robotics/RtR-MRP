@@ -116,17 +116,35 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         category: data.category,
         unit: data.unit,
 
-        // Remove legacy fields from Part root
-        // unitCost, weightKg, leadTimeDays, etc.
+        // ROOT LEVEL FIELDS - Keep in sync with nested relations for backwards compatibility
+        unitCost: data.unitCost ?? 0,
+        weightKg: data.weightKg,
+        lengthMm: data.lengthMm,
+        widthMm: data.widthMm,
+        heightMm: data.heightMm,
+        volumeCm3: data.volumeCm3,
+        color: data.color,
+        material: data.material,
+        leadTimeDays: data.leadTimeDays ?? 14,
+        minStockLevel: data.minStockLevel ?? 0,
+        reorderPoint: data.reorderPoint ?? 0,
+        safetyStock: data.safetyStock ?? 0,
+        makeOrBuy: data.makeOrBuy ?? "BUY",
+        procurementType: data.procurementType ?? "STOCK",
+        moq: data.moq ?? 1,
+        orderMultiple: data.orderMultiple ?? 1,
+        manufacturer: data.manufacturer,
+        manufacturerPn: data.manufacturerPn,
+        countryOfOrigin: data.countryOfOrigin,
+        ndaaCompliant: data.ndaaCompliant ?? true,
+        itarControlled: data.itarControlled ?? false,
+        rohsCompliant: data.rohsCompliant ?? true,
+        reachCompliant: data.reachCompliant ?? true,
+        revision: data.revision ?? "A",
 
         status: "active",
         lifecycleStatus: data.lifecycleStatus,
         isCritical: data.isCritical,
-
-        // Handle revision history - revision logic might need adjustment if field is gone.
-        // Assuming we keep tracking it but not on Part table? 
-        // Or if 'partRevisions' is the only place?
-        // Let's assume for now we don't write 'revision' to Part based on error 'revision does not exist'.
 
         tags: data.tags,
         updatedBy: session.user?.email || "system",
@@ -259,6 +277,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       include: {
         costs: true,
         planning: true,
+        specs: true,
+        compliance: true,
         partSuppliers: {
           include: { supplier: true },
         },

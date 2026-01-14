@@ -1,14 +1,27 @@
 
 import { z } from 'zod';
 
+// Category enum values matching API validation schema
+export const CATEGORY_ENUM = ['FINISHED_GOOD', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL'] as const;
+
+// Display labels for categories (Vietnamese)
+export const CATEGORY_LABELS: Record<string, string> = {
+    'FINISHED_GOOD': 'Thành phẩm',
+    'COMPONENT': 'Linh kiện',
+    'RAW_MATERIAL': 'Nguyên liệu',
+    'PACKAGING': 'Bao bì',
+    'CONSUMABLE': 'Vật tư tiêu hao',
+    'TOOL': 'Công cụ',
+};
+
+// Legacy - kept for backward compatibility
 export const CATEGORIES = [
-    'Finished Goods',
-    'Component',
-    'Raw Material',
-    'Packaging',
-    'Consumable',
-    'Service',
-    'Other',
+    'FINISHED_GOOD',
+    'COMPONENT',
+    'RAW_MATERIAL',
+    'PACKAGING',
+    'CONSUMABLE',
+    'TOOL',
 ];
 
 export const UNITS = ['EA', 'PCS', 'KG', 'G', 'M', 'CM', 'L', 'ML', 'BOX', 'SET', 'ROLL', 'SHEET'];
@@ -19,7 +32,7 @@ export const partSchema = z.object({
     partNumber: z.string().min(1, 'Mã part là bắt buộc').max(50),
     name: z.string().min(1, 'Tên part là bắt buộc').max(200),
     description: z.string().max(1000).optional().nullable(),
-    category: z.string().min(1, 'Danh mục là bắt buộc'),
+    category: z.enum(CATEGORY_ENUM, { errorMap: () => ({ message: 'Danh mục là bắt buộc' }) }),
     unit: z.string().min(1, 'Đơn vị là bắt buộc'),
     unitCost: z.coerce.number().min(0, 'Giá phải >= 0'),
 
@@ -65,7 +78,7 @@ export const defaultPartValues: PartFormData = {
     partNumber: '',
     name: '',
     description: '',
-    category: 'Component',
+    category: 'COMPONENT',
     unit: 'EA',
     unitCost: 0,
     makeOrBuy: 'BUY',

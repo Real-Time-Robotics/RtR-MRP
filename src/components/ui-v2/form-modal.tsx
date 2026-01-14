@@ -101,7 +101,10 @@ export function FormModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogContent className={`${getMaxWidthClass(maxWidth)} dark:bg-slate-900 dark:border-slate-800`}>
+            <DialogContent
+                className={`${getMaxWidthClass(maxWidth)} dark:bg-slate-900 dark:border-slate-800`}
+                preventClose={true}
+            >
                 <DialogHeader>
                     <DialogTitle className="dark:text-white">{title}</DialogTitle>
                     {description && (
