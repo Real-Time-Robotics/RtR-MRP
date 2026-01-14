@@ -160,7 +160,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                     partNumber: part.partNumber,
                     name: part.name,
                     description: part.description || '',
-                    category: part.category,
+                    category: part.category as PartFormData['category'],
                     unit: part.unit,
                     unitCost: part.unitCost,
                     // nullish coalescing to match Optional fields in schema
