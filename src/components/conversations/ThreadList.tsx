@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ThreadItem } from './ThreadItem'
 import { NewThreadModal } from './NewThreadModal'
-import { Button } from '@/components/ui/button'
 import { MessageSquarePlus, Loader2, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Thread {
   id: string
@@ -75,55 +75,60 @@ export function ThreadList({
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-info-cyan" />
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-lg">Discussions</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
+      {/* Header - Industrial Precision */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border bg-gray-50 dark:bg-gunmetal">
+        <span className="text-[11px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted flex items-center gap-1.5">
+          <MessageSquarePlus className="w-3.5 h-3.5" />
+          Thảo luận
+          {threads.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-info-cyan/20 text-info-cyan text-[10px] font-mono">
+              {threads.length}
+            </span>
+          )}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
             onClick={fetchThreads}
-            title="Refresh"
+            className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-slate transition-colors"
+            title="Làm mới"
           >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-          <Button
-            size="sm"
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={() => setShowNewModal(true)}
-            className="gap-2"
+            className="h-7 px-2.5 flex items-center gap-1.5 bg-info-cyan text-steel-dark text-[11px] font-medium hover:bg-info-cyan/80 transition-colors"
           >
-            <MessageSquarePlus className="w-4 h-4" />
+            <MessageSquarePlus className="w-3.5 h-3.5" />
             Tạo mới
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Thread List */}
       <div className="flex-1 overflow-y-auto">
         {threads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-gray-500">
-            <MessageSquarePlus className="w-12 h-12 mb-4 opacity-50" />
-            <p className="font-medium">Chưa có discussion nào</p>
-            <p className="text-sm text-center mt-1">
+          <div className="flex flex-col items-center justify-center p-8 text-gray-500 dark:text-mrp-text-muted">
+            <MessageSquarePlus className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-[12px] font-medium">Chưa có discussion nào</p>
+            <p className="text-[11px] text-center mt-1 text-gray-400 dark:text-mrp-text-muted">
               Tạo discussion để thảo luận về {contextTitle || contextType}
             </p>
-            <Button
-              variant="link"
+            <button
               onClick={() => setShowNewModal(true)}
-              className="mt-3"
+              className="mt-3 text-[11px] text-info-cyan hover:underline"
             >
               Bắt đầu thảo luận
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-gray-100 dark:divide-mrp-border/50">
             {threads.map(thread => (
               <ThreadItem
                 key={thread.id}
@@ -136,9 +141,9 @@ export function ThreadList({
         )}
       </div>
 
-      {/* Thread count */}
+      {/* Thread count footer */}
       {threads.length > 0 && (
-        <div className="px-4 py-2 text-xs text-gray-500 border-t bg-gray-50 dark:bg-gray-900">
+        <div className="px-3 py-1.5 text-[10px] text-gray-500 dark:text-mrp-text-muted border-t border-gray-100 dark:border-mrp-border/50 bg-gray-50 dark:bg-gunmetal/50">
           {threads.length} discussion{threads.length !== 1 ? 's' : ''}
         </div>
       )}

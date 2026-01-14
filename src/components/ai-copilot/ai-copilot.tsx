@@ -142,7 +142,7 @@ export default function AICopilot({
         <div className="fixed bottom-4 right-4 z-40">
           <button
             onClick={() => { setIsOpen(true); setActiveMode('chat'); }}
-            className="relative p-2 bg-gradient-to-br from-violet-500 to-indigo-600 text-white rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+            className="relative p-2 bg-gradient-to-br from-emerald-600 to-green-700 text-white rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all"
             title={language === 'vi' ? 'AI Copilot (⌘J / Ctrl+J)' : 'AI Copilot (⌘J / Ctrl+J)'}
           >
             <Bot className="h-5 w-5" />
@@ -159,12 +159,11 @@ export default function AICopilot({
       {/* Main panel */}
       {isOpen && (
         <div
-          className={`fixed z-50 bottom-4 right-4 flex flex-col bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-neutral-700 overflow-hidden transition-all duration-300 ${isExpanded ? 'w-[600px] h-[700px]' : 'w-[420px] h-[600px]'
-            }`}
+          className={`fixed z-50 flex flex-col bg-white dark:bg-neutral-800 shadow-2xl border border-gray-200 dark:border-neutral-700 overflow-hidden transition-all duration-300 inset-0 rounded-none sm:inset-auto sm:bottom-4 sm:right-4 sm:rounded-2xl ${isExpanded ? 'sm:w-[600px] sm:h-[700px]' : 'sm:w-[420px] sm:h-[600px]'}`}
         >
           {/* Header */}
           {/* Header - Industrial Style */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-neutral-900 dark:to-neutral-800 text-white border-b border-violet-700 dark:border-neutral-700">
+          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-emerald-600 to-green-700 dark:from-neutral-900 dark:to-neutral-800 text-white border-b border-emerald-700 dark:border-neutral-700">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-white/20 dark:bg-neutral-800 rounded border border-white/30 dark:border-neutral-700">
                 <Bot className="h-4 w-4 text-white dark:text-neutral-300" />
@@ -180,7 +179,7 @@ export default function AICopilot({
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 hover:bg-white/20 dark:hover:bg-neutral-800 rounded transition-colors text-white/70 dark:text-neutral-400 hover:text-white"
+                className="hidden sm:block p-1.5 hover:bg-white/20 dark:hover:bg-neutral-800 rounded transition-colors text-white/70 dark:text-neutral-400 hover:text-white"
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

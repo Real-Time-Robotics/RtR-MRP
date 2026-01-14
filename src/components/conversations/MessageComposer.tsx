@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Send, AtSign, Loader2, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface MessageComposerProps {
   threadId: string
@@ -83,30 +82,30 @@ export function MessageComposer({ threadId, onSent, disabled }: MessageComposerP
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 100)}px`
     }
   }, [content])
 
   return (
-    <div className="border-t p-4 bg-white dark:bg-gray-950">
-      {/* Mention suggestions dropdown */}
+    <div className="border-t border-gray-200 dark:border-mrp-border p-2 bg-gray-50 dark:bg-gunmetal/50">
+      {/* Mention suggestions dropdown - Industrial */}
       {showMentions && (
-        <div className="mb-3 p-3 bg-white dark:bg-gray-900 border rounded-lg shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500 font-medium">Mention một role:</p>
+        <div className="mb-2 p-2 bg-white dark:bg-gunmetal border border-gray-200 dark:border-mrp-border">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted font-medium uppercase tracking-wide">Mention role:</p>
             <button
               onClick={() => setShowMentions(false)}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+              className="p-0.5 hover:bg-gray-100 dark:hover:bg-slate transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {AVAILABLE_ROLES.map(role => (
               <button
                 key={role.value}
                 onClick={() => insertMention(role.value)}
-                className="px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                className="px-2 py-1 text-[10px] bg-info-cyan/10 text-info-cyan hover:bg-info-cyan/20 transition-colors"
                 title={role.description}
               >
                 @{role.label}
@@ -116,43 +115,54 @@ export function MessageComposer({ threadId, onSent, disabled }: MessageComposerP
         </div>
       )}
 
-      {/* Input area */}
-      <div className="flex gap-2 items-end">
+      {/* Input area - Industrial */}
+      <div className="flex gap-1.5 items-end">
         <div className="flex-1 relative">
-          <Textarea
+          <textarea
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Nhập tin nhắn... (@ để mention)"
-            className="min-h-[44px] max-h-[150px] resize-none pr-10"
+            className={cn(
+              "w-full min-h-[36px] max-h-[100px] resize-none pr-8 px-2.5 py-2",
+              "bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border",
+              "text-[12px] text-gray-900 dark:text-mrp-text-primary",
+              "placeholder:text-gray-400 dark:placeholder:text-mrp-text-muted",
+              "focus:border-info-cyan focus:outline-none",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
             disabled={sending || disabled}
             rows={1}
           />
           <button
             onClick={() => setShowMentions(!showMentions)}
-            className="absolute right-2 bottom-2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            className="absolute right-2 bottom-2 p-1 text-gray-400 hover:text-info-cyan transition-colors"
             type="button"
           >
-            <AtSign className="w-4 h-4" />
+            <AtSign className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <Button
+        <button
           onClick={handleSubmit}
           disabled={!content.trim() || sending || disabled}
-          size="icon"
-          className="h-[44px] w-[44px]"
+          className={cn(
+            "h-9 w-9 flex items-center justify-center",
+            "bg-info-cyan text-steel-dark",
+            "hover:bg-info-cyan/80 transition-colors",
+            "disabled:opacity-50 disabled:cursor-not-allowed"
+          )}
         >
           {sending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Send className="w-4 h-4" />
           )}
-        </Button>
+        </button>
       </div>
 
-      <p className="text-xs text-gray-400 mt-2">
+      <p className="text-[10px] text-gray-400 dark:text-mrp-text-muted mt-1.5">
         Enter để gửi, Shift+Enter để xuống dòng
       </p>
     </div>

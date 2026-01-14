@@ -43,24 +43,25 @@ interface SidebarItem {
 // NAVIGATION ITEMS
 // =============================================================================
 
+// COMPACT: w-4 h-4 → w-3.5 h-3.5 (16px → 14px)
 const mainNavItems: SidebarItem[] = [
-  { id: 'dashboard', label: 'DASHBOARD', labelVi: 'TỔNG QUAN', icon: <LayoutDashboard className="w-4 h-4" />, href: '/home' },
-  { id: 'sales', label: 'ORDERS', labelVi: 'ĐƠN HÀNG', icon: <ShoppingCart className="w-4 h-4" />, href: '/orders', badge: 5 },
-  { id: 'inventory', label: 'INVENTORY', labelVi: 'TỒN KHO', icon: <Package className="w-4 h-4" />, href: '/inventory' },
-  { id: 'production', label: 'PRODUCTION', labelVi: 'SẢN XUẤT', icon: <Factory className="w-4 h-4" />, href: '/production' },
-  { id: 'mrp', label: 'MRP', labelVi: 'MRP', icon: <Calculator className="w-4 h-4" />, href: '/mrp' },
-  { id: 'quality', label: 'QUALITY', labelVi: 'CHẤT LƯỢNG', icon: <ClipboardCheck className="w-4 h-4" />, href: '/quality' },
+  { id: 'dashboard', label: 'DASHBOARD', labelVi: 'TỔNG QUAN', icon: <LayoutDashboard className="w-3.5 h-3.5" />, href: '/home' },
+  { id: 'sales', label: 'ORDERS', labelVi: 'ĐƠN HÀNG', icon: <ShoppingCart className="w-3.5 h-3.5" />, href: '/orders', badge: 5 },
+  { id: 'inventory', label: 'INVENTORY', labelVi: 'TỒN KHO', icon: <Package className="w-3.5 h-3.5" />, href: '/inventory' },
+  { id: 'production', label: 'PRODUCTION', labelVi: 'SẢN XUẤT', icon: <Factory className="w-3.5 h-3.5" />, href: '/production' },
+  { id: 'mrp', label: 'MRP', labelVi: 'MRP', icon: <Calculator className="w-3.5 h-3.5" />, href: '/mrp' },
+  { id: 'quality', label: 'QUALITY', labelVi: 'CHẤT LƯỢNG', icon: <ClipboardCheck className="w-3.5 h-3.5" />, href: '/quality' },
 ];
 
 const toolItems: SidebarItem[] = [
-  { id: 'parts', label: 'PARTS', labelVi: 'VẬT TƯ', icon: <Package className="w-4 h-4" />, href: '/parts' },
-  { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-4 h-4" />, href: '/bom' },
-  { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-4 h-4" />, href: '/suppliers' },
+  { id: 'parts', label: 'PARTS', labelVi: 'VẬT TƯ', icon: <Package className="w-3.5 h-3.5" />, href: '/parts' },
+  { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-3.5 h-3.5" />, href: '/bom' },
+  { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-3.5 h-3.5" />, href: '/suppliers' },
 ];
 
 const utilityItems: SidebarItem[] = [
-  { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-4 h-4" />, href: '/mobile' },
-  { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-4 h-4" />, href: '/alerts' },
+  { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-3.5 h-3.5" />, href: '/mobile' },
+  { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-3.5 h-3.5" />, href: '/alerts' },
 ];
 
 // =============================================================================
@@ -82,38 +83,39 @@ function NavItem({
     <Link
       href={item.href}
       className={cn(
-        // Base styles - Industrial Precision: NO rounded corners
-        'group flex items-center gap-3 px-3 py-2.5 transition-all relative',
+        // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
+        'group flex items-center gap-2 px-2.5 py-1.5 transition-all relative',
         'border-l-2',
         collapsed ? 'justify-center' : '',
         // Active state
         isActive
-          ? 'bg-gunmetal-light dark:bg-gunmetal border-l-info-cyan text-info-cyan'
-          : 'border-l-transparent text-mrp-text-secondary hover:bg-gunmetal/50 dark:hover:bg-gunmetal hover:text-mrp-text-primary hover:border-l-mrp-border'
+          ? 'bg-gray-100 dark:bg-gunmetal border-l-info-cyan text-info-cyan'
+          : 'border-l-transparent text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-50 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary hover:border-l-gray-300 dark:hover:border-l-mrp-border'
       )}
       title={collapsed ? (language === 'vi' ? item.labelVi : item.label) : undefined}
     >
       {/* Icon */}
       <span className={cn(
         'flex-shrink-0 transition-colors',
-        isActive ? 'text-info-cyan' : 'text-mrp-text-muted group-hover:text-info-cyan'
+        isActive ? 'text-info-cyan' : 'text-gray-500 dark:text-mrp-text-muted group-hover:text-info-cyan'
       )}>
         {item.icon}
       </span>
 
-      {/* Label - Always visible when not collapsed */}
+      {/* Label */}
       {!collapsed && (
         <>
+          {/* COMPACT: text-xs → text-[11px] */}
           <span className={cn(
-            'flex-1 text-xs font-medium font-mono tracking-wider truncate',
-            isActive ? 'text-mrp-text-primary' : 'text-mrp-text-secondary group-hover:text-mrp-text-primary'
+            'flex-1 text-[11px] font-medium font-mono tracking-wider truncate',
+            isActive ? 'text-gray-900 dark:text-mrp-text-primary' : 'text-gray-600 dark:text-mrp-text-secondary group-hover:text-gray-900 dark:group-hover:text-mrp-text-primary'
           )}>
             {language === 'vi' ? item.labelVi : item.label}
           </span>
 
-          {/* Badge */}
+          {/* Badge - COMPACT */}
           {item.badge && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold font-mono bg-info-cyan-dim text-info-cyan">
+            <span className="px-1 py-0.5 text-[9px] font-bold font-mono bg-info-cyan/10 dark:bg-info-cyan-dim text-info-cyan">
               {item.badge}
             </span>
           )}
@@ -137,8 +139,9 @@ function SectionHeader({
   if (collapsed) return null;
 
   return (
-    <div className="px-3 py-2">
-      <span className="text-[10px] font-semibold font-mono text-mrp-text-muted uppercase tracking-widest">
+    // COMPACT: px-3 py-2 → px-2.5 py-1
+    <div className="px-2.5 py-1">
+      <span className="text-[9px] font-semibold font-mono text-gray-400 dark:text-mrp-text-muted uppercase tracking-widest">
         {label}
       </span>
     </div>
@@ -174,21 +177,21 @@ export function MinimalistSidebar({
   return (
     <aside
       className={cn(
-        // Industrial Precision: Dark steel background, sharp edges, cyan border
+        // COMPACT: w-56 → w-48 (224px → 192px)
         'flex flex-col h-full transition-all duration-200',
-        'bg-steel-dark border-r border-mrp-border',
-        collapsed ? 'w-14' : 'w-56'
+        'bg-white dark:bg-steel-dark border-r border-gray-200 dark:border-mrp-border',
+        collapsed ? 'w-12' : 'w-48'
       )}
     >
       {/* Header - Product Name & Toggle */}
       <div className={cn(
-        "flex items-center h-12 px-3 border-b border-mrp-border",
+        "flex items-center h-12 px-3 border-b border-gray-200 dark:border-mrp-border",
         collapsed ? "justify-center" : "justify-between"
       )}>
         {/* Product Name */}
         {!collapsed && (
           <div className="flex items-baseline gap-0.5">
-            <span className="font-bold text-sm font-mono text-mrp-text-primary tracking-tight">
+            <span className="font-bold text-sm font-mono text-gray-900 dark:text-mrp-text-primary tracking-tight">
               RTR
             </span>
             <span className="text-info-cyan font-bold text-sm font-mono">-MRP</span>
@@ -201,7 +204,7 @@ export function MinimalistSidebar({
           onClick={onToggle}
           className={cn(
             "p-1.5 transition-colors",
-            "text-mrp-text-muted hover:text-info-cyan hover:bg-gunmetal"
+            "text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal"
           )}
           title={collapsed ? 'Expand' : 'Collapse'}
         >
@@ -213,8 +216,8 @@ export function MinimalistSidebar({
         </button>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-2">
+      {/* Navigation - COMPACT: py-2 → py-1.5 */}
+      <div className="flex-1 overflow-y-auto py-1.5">
         {/* Main Navigation */}
         <SectionHeader label={language === 'vi' ? 'Điều hướng' : 'Navigation'} collapsed={collapsed} />
         <nav className="space-y-0.5">
@@ -229,8 +232,8 @@ export function MinimalistSidebar({
           ))}
         </nav>
 
-        {/* Separator */}
-        <div className="h-px bg-mrp-border my-3 mx-3" />
+        {/* Separator - COMPACT: my-3 → my-2, mx-3 → mx-2.5 */}
+        <div className="h-px bg-gray-200 dark:bg-mrp-border my-2 mx-2.5" />
 
         {/* Tools */}
         <SectionHeader label={language === 'vi' ? 'Công cụ' : 'Tools'} collapsed={collapsed} />
@@ -246,8 +249,8 @@ export function MinimalistSidebar({
           ))}
         </nav>
 
-        {/* Separator */}
-        <div className="h-px bg-mrp-border my-3 mx-3" />
+        {/* Separator - COMPACT: my-3 → my-2, mx-3 → mx-2.5 */}
+        <div className="h-px bg-gray-200 dark:bg-mrp-border my-2 mx-2.5" />
 
         {/* Utilities */}
         <SectionHeader label={language === 'vi' ? 'Tiện ích' : 'Utilities'} collapsed={collapsed} />
@@ -264,22 +267,23 @@ export function MinimalistSidebar({
         </nav>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-mrp-border p-2 space-y-1">
+      {/* Footer - COMPACT */}
+      <div className="border-t border-gray-200 dark:border-mrp-border p-1.5 space-y-0.5">
         {/* AI Insights */}
         <Link
           href="/ai/insights"
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 transition-all',
-            'bg-info-cyan-dim border border-info-cyan/30',
+            // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
+            'flex items-center gap-2 px-2.5 py-1.5 transition-all',
+            'bg-info-cyan/10 dark:bg-info-cyan-dim border border-info-cyan/30',
             'hover:bg-info-cyan/20 hover:border-info-cyan/50',
             collapsed ? 'justify-center' : ''
           )}
           title={collapsed ? 'AI Insights' : undefined}
         >
-          <Sparkles className="w-4 h-4 text-info-cyan" />
+          <Sparkles className="w-3.5 h-3.5 text-info-cyan" />
           {!collapsed && (
-            <span className="text-xs font-medium font-mono tracking-wider text-info-cyan">
+            <span className="text-[11px] font-medium font-mono tracking-wider text-info-cyan">
               AI INSIGHTS
             </span>
           )}
@@ -289,15 +293,16 @@ export function MinimalistSidebar({
         <Link
           href="/settings"
           className={cn(
-            'flex items-center gap-3 px-3 py-2.5 transition-all',
-            'text-mrp-text-muted hover:bg-gunmetal hover:text-mrp-text-primary',
+            // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
+            'flex items-center gap-2 px-2.5 py-1.5 transition-all',
+            'text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary',
             collapsed ? 'justify-center' : ''
           )}
           title={collapsed ? 'Settings' : undefined}
         >
-          <Settings className="w-4 h-4" />
+          <Settings className="w-3.5 h-3.5" />
           {!collapsed && (
-            <span className="text-xs font-medium font-mono tracking-wider">
+            <span className="text-[11px] font-medium font-mono tracking-wider">
               {language === 'vi' ? 'CÀI ĐẶT' : 'SETTINGS'}
             </span>
           )}

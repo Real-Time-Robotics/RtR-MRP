@@ -85,29 +85,31 @@ function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
   const okCount = inventory.filter((i) => i.status === 'OK').length;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold">{inventory.length}</div>
-          <p className="text-xs text-muted-foreground">Tổng SKU</p>
+    // COMPACT: gap-4 → gap-2, mb-6 → mb-3
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        {/* COMPACT: pt-4 → p-3 */}
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono">{inventory.length}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng SKU</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-red-600">{criticalCount}</div>
-          <p className="text-xs text-muted-foreground">Critical / Hết hàng</p>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-red-600">{criticalCount}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Critical / Hết hàng</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-amber-600">{reorderCount}</div>
-          <p className="text-xs text-muted-foreground">Cần đặt hàng</p>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-amber-600">{reorderCount}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Cần đặt hàng</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-green-600">{okCount}</div>
-          <p className="text-xs text-muted-foreground">Đủ hàng</p>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-green-600">{okCount}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Đủ hàng</p>
         </CardContent>
       </Card>
     </div>

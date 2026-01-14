@@ -11,12 +11,14 @@ export function BOMHeader() {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("bom.title")}</h1>
-        <p className="text-muted-foreground">{t("bom.description")}</p>
+        {/* COMPACT: text-2xl → text-base, font-mono uppercase */}
+        <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary">{t("bom.title")}</h1>
+        <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">{t("bom.description")}</p>
       </div>
       <Link href="/bom/new">
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
+        {/* COMPACT: smaller button */}
+        <Button size="sm" className="h-7 text-[11px]">
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
           Create BOM
         </Button>
       </Link>
@@ -27,9 +29,10 @@ export function BOMHeader() {
 export function BOMTableHeader() {
   const { t } = useLanguage();
   return (
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <Package className="h-5 w-5" />
+    // COMPACT: px-3 py-2, smaller text and icon
+    <CardHeader className="px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
+      <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+        <Package className="h-3.5 w-3.5" />
         {t("bom.products")}
       </CardTitle>
     </CardHeader>

@@ -192,76 +192,79 @@ export default function ProductionPage() {
   ], [router]);
 
   return (
-    <div className="space-y-6">
+    // COMPACT: space-y-6 → space-y-3
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("production.title")}</h1>
-          <p className="text-muted-foreground">{t("production.description")}</p>
+          {/* COMPACT: text-2xl → text-base, add font-mono uppercase */}
+          <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary">{t("production.title")}</h1>
+          <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">{t("production.description")}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push("/production/schedule")}>
-            <Calendar className="h-4 w-4 mr-2" />
+        {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
+        <div className="flex gap-1.5">
+          <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/schedule")}>
+            <Calendar className="h-3.5 w-3.5 mr-1.5" />
             {t("nav.production.schedule")}
           </Button>
-          <Button onClick={() => router.push("/production/new")}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/new")}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
             {t("production.workOrders")}
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Factory className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+      {/* Stats Cards - COMPACT: gap-4 → gap-2, p-4 → p-3 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Card className="p-3 border-gray-200 dark:border-mrp-border">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30">
+              <Factory className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground">Total WOs</p>
+              <p className="text-lg font-semibold font-mono">{stats.total.toLocaleString()}</p>
+              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Total WOs</p>
             </div>
           </div>
         </Card>
-        <Card className="p-4">
+        <Card className="p-3 border-gray-200 dark:border-mrp-border">
           <div>
-            <p className="text-2xl font-bold">{stats.displayed}</p>
-            <p className="text-sm text-muted-foreground">Showing</p>
+            <p className="text-lg font-semibold font-mono">{stats.displayed}</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Showing</p>
           </div>
         </Card>
-        <Card className="p-4">
+        <Card className="p-3 border-gray-200 dark:border-mrp-border">
           <div>
-            <p className="text-2xl font-bold">{meta?.took || 0}ms</p>
-            <p className="text-sm text-muted-foreground">Response Time</p>
+            <p className="text-lg font-semibold font-mono">{meta?.took || 0}ms</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Response Time</p>
           </div>
         </Card>
-        <Card className="p-4">
+        <Card className="p-3 border-gray-200 dark:border-mrp-border">
           <div>
-            <p className="text-2xl font-bold">{pagination?.totalPages || 0}</p>
-            <p className="text-sm text-muted-foreground">Pages</p>
+            <p className="text-lg font-semibold font-mono">{pagination?.totalPages || 0}</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Pages</p>
           </div>
         </Card>
       </div>
 
-      {/* Work Orders List */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <CardTitle>Work Orders</CardTitle>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              {/* Search Input */}
+      {/* Work Orders List - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider">Work Orders</CardTitle>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
+              {/* Search Input - COMPACT */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Search WO number..."
                   value={searchInput}
                   onChange={handleSearchChange}
-                  className="pl-9 w-full sm:w-[200px]"
+                  className="pl-7 h-7 text-[11px] w-full sm:w-[160px]"
                 />
               </div>
-              {/* Status Filter */}
+              {/* Status Filter - COMPACT */}
               <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[140px] h-7 text-[11px]">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -295,9 +298,9 @@ export default function ProductionPage() {
             }}
           />
 
-          {/* Pagination */}
+          {/* Pagination - COMPACT */}
           {pagination && (
-            <div className="p-4 border-t">
+            <div className="p-2 border-t border-gray-200 dark:border-mrp-border">
               <Pagination
                 pagination={pagination}
                 onPageChange={fetchPage}

@@ -72,59 +72,61 @@ function StatsCards({ parts }: { parts: Part[] }) {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Tổng số</span>
+    // COMPACT: gap-4 → gap-2
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        {/* COMPACT: pt-4 → p-3 */}
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Tổng số</span>
           </div>
-          <p className="text-2xl font-bold">{stats.total}</p>
+          <p className="text-lg font-semibold font-mono">{stats.total}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-xs text-muted-foreground">Hoạt động</span>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <span className="text-[10px] text-muted-foreground">Hoạt động</span>
           </div>
-          <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+          <p className="text-lg font-semibold font-mono text-green-600">{stats.active}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-blue-500" />
-            <span className="text-xs text-muted-foreground">NDAA</span>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-[10px] text-muted-foreground">NDAA</span>
           </div>
-          <p className="text-2xl font-bold text-blue-600">{stats.ndaaCompliant}</p>
+          <p className="text-lg font-semibold font-mono text-blue-600">{stats.ndaaCompliant}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-            <span className="text-xs text-muted-foreground">Quan trọng</span>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-[10px] text-muted-foreground">Quan trọng</span>
           </div>
-          <p className="text-2xl font-bold text-orange-600">{stats.critical}</p>
+          <p className="text-lg font-semibold font-mono text-orange-600">{stats.critical}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-indigo-500" />
-            <span className="text-xs text-muted-foreground">Tự sản xuất</span>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5 text-indigo-500" />
+            <span className="text-[10px] text-muted-foreground">Tự sản xuất</span>
           </div>
-          <p className="text-2xl font-bold text-indigo-600">{stats.make}</p>
+          <p className="text-lg font-semibold font-mono text-indigo-600">{stats.make}</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-orange-500" />
-            <span className="text-xs text-muted-foreground">Mua</span>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-[10px] text-muted-foreground">Mua</span>
           </div>
-          <p className="text-2xl font-bold text-orange-600">{stats.buy}</p>
+          <p className="text-lg font-semibold font-mono text-orange-600">{stats.buy}</p>
         </CardContent>
       </Card>
     </div>
@@ -488,14 +490,15 @@ export function PartsTable() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
-        {/* Header */}
+      {/* COMPACT: space-y-6 → space-y-3 */}
+      <div className="space-y-3">
+        {/* Header - COMPACT */}
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="h-6 w-6" />
+          <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
+            <Package className="h-4 w-4" />
             Parts Master
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
             Quản lý danh sách parts với AS9100/ITAR compliance
           </p>
         </div>
@@ -503,9 +506,9 @@ export function PartsTable() {
         {/* Stats */}
         <StatsCards parts={parts} />
 
-        {/* Table Card */}
-        <Card>
-          <CardHeader className="pb-4">
+        {/* Table Card - COMPACT */}
+        <Card className="border-gray-200 dark:border-mrp-border">
+          <CardHeader className="px-3 py-2">
             <DataTableToolbar
               searchValue={search}
               onSearchChange={setSearch}

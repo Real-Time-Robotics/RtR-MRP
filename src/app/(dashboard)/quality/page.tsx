@@ -86,11 +86,13 @@ export default function QualityDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t("quality.title")}
-        description={t("quality.description")}
-      />
+    // COMPACT: space-y-6 → space-y-3
+    <div className="space-y-3">
+      {/* COMPACT: Custom header instead of PageHeader */}
+      <div>
+        <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary">{t("quality.title")}</h1>
+        <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">{t("quality.description")}</p>
+      </div>
 
       {/* Stats Cards */}
       <QualityDashboardCards
@@ -100,46 +102,47 @@ export default function QualityDashboardPage() {
         openCAPAs={stats?.openCAPAs || 0}
       />
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">{t("quality.quickActions")}</CardTitle>
+      {/* Quick Actions - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider">{t("quality.quickActions")}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild variant="outline">
+        <CardContent className="px-3 py-2">
+          {/* COMPACT: gap-3 → gap-1.5, smaller buttons */}
+          <div className="flex flex-wrap gap-1.5">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/receiving/new">
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newReceivingInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/in-process">
-                <Cog className="h-4 w-4 mr-2" />
+                <Cog className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newInProcessInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/final">
-                <CheckSquare className="h-4 w-4 mr-2" />
+                <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newFinalInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/ncr/new">
-                <AlertTriangle className="h-4 w-4 mr-2" />
+                <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.createNCR")}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/traceability">
-                <Search className="h-4 w-4 mr-2" />
+                <Search className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.lotLookup")}
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
               <Link href="/quality/certificates">
-                <FileText className="h-4 w-4 mr-2" />
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.generateCoC")}
               </Link>
             </Button>
@@ -147,40 +150,41 @@ export default function QualityDashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Pending Inspections */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5" />
+      {/* COMPACT: gap-6 → gap-2 */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Pending Inspections - COMPACT */}
+        <Card className="border-gray-200 dark:border-mrp-border">
+          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+            <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <ClipboardCheck className="h-3.5 w-3.5" />
               {t("quality.pendingInspections")}
             </CardTitle>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="h-6 text-[10px]">
               <Link href="/quality/receiving">{t("quality.viewAll")}</Link>
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 py-2">
             {pendingInspections.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>{t("quality.noPendingInspections")}</p>
+              <div className="text-center py-4 text-muted-foreground">
+                <ClipboardCheck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-[11px]">{t("quality.noPendingInspections")}</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {pendingInspections.map((inspection) => (
                   <Link
                     key={inspection.id}
                     href={`/quality/${inspection.type.toLowerCase().replace("_", "-")}/${inspection.id}`}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
                   >
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <InspectionTypeBadge type={inspection.type} />
-                        <span className="font-medium">
+                        <span className="text-[11px] font-medium">
                           {inspection.inspectionNumber}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {inspection.part?.partNumber || inspection.product?.sku}
                         {inspection.lotNumber && ` • Lot: ${inspection.lotNumber}`}
                       </p>
@@ -193,76 +197,76 @@ export default function QualityDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Inspection Breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+        {/* Inspection Breakdown - COMPACT */}
+        <Card className="border-gray-200 dark:border-mrp-border">
+          <CardHeader className="px-3 py-2">
+            <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5" />
               {t("quality.inspectionSummary")}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="px-3 py-2">
+            <div className="space-y-1.5">
               <Link
                 href="/quality/receiving"
-                className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Download className="h-5 w-5 text-blue-600" />
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Download className="h-3.5 w-3.5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="font-medium">{t("quality.receivingInspection")}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-[11px] font-medium">{t("quality.receivingInspection")}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {t("quality.incomingMaterialQuality")}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{stats?.pendingReceiving || 0}</p>
-                  <p className="text-xs text-muted-foreground">{t("quality.pending")}</p>
+                  <p className="text-lg font-semibold font-mono">{stats?.pendingReceiving || 0}</p>
+                  <p className="text-[9px] text-muted-foreground">{t("quality.pending")}</p>
                 </div>
               </Link>
 
               <Link
                 href="/quality/in-process"
-                className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <Cog className="h-5 w-5 text-purple-600" />
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Cog className="h-3.5 w-3.5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-medium">{t("quality.inProcessInspection")}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-[11px] font-medium">{t("quality.inProcessInspection")}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {t("quality.productionQualityChecks")}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{stats?.pendingInProcess || 0}</p>
-                  <p className="text-xs text-muted-foreground">{t("quality.pending")}</p>
+                  <p className="text-lg font-semibold font-mono">{stats?.pendingInProcess || 0}</p>
+                  <p className="text-[9px] text-muted-foreground">{t("quality.pending")}</p>
                 </div>
               </Link>
 
               <Link
                 href="/quality/final"
-                className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <CheckSquare className="h-5 w-5 text-green-600" />
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <CheckSquare className="h-3.5 w-3.5 text-green-600" />
                   </div>
                   <div>
-                    <p className="font-medium">{t("quality.finalInspection")}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-[11px] font-medium">{t("quality.finalInspection")}</p>
+                    <p className="text-[10px] text-muted-foreground">
                       {t("quality.finishedGoodsVerification")}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{stats?.pendingFinal || 0}</p>
-                  <p className="text-xs text-muted-foreground">{t("quality.pending")}</p>
+                  <p className="text-lg font-semibold font-mono">{stats?.pendingFinal || 0}</p>
+                  <p className="text-[9px] text-muted-foreground">{t("quality.pending")}</p>
                 </div>
               </Link>
             </div>
@@ -270,48 +274,48 @@ export default function QualityDashboardPage() {
         </Card>
       </div>
 
-      {/* NCR & CAPA Summary */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
+      {/* NCR & CAPA Summary - COMPACT: gap-6 → gap-2 */}
+      <div className="grid grid-cols-2 gap-2">
+        <Card className="border-gray-200 dark:border-mrp-border">
+          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+            <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
               {t("quality.ncrReports")}
             </CardTitle>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="h-6 text-[10px]">
               <Link href="/quality/ncr">{t("quality.viewAll")}</Link>
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="text-center py-4">
-              <p className="text-4xl font-bold text-amber-600">
+          <CardContent className="px-3 py-2">
+            <div className="text-center py-2">
+              <p className="text-2xl font-semibold font-mono text-amber-600">
                 {stats?.openNCRs || 0}
               </p>
-              <p className="text-sm text-muted-foreground">{t("quality.openNCRs")}</p>
-              <Button asChild className="mt-4" size="sm">
+              <p className="text-[10px] text-muted-foreground">{t("quality.openNCRs")}</p>
+              <Button asChild className="mt-2 h-7 text-[11px]" size="sm">
                 <Link href="/quality/ncr/new">{t("quality.createNCR")}</Link>
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-purple-600" />
+        <Card className="border-gray-200 dark:border-mrp-border">
+          <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+            <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <Wrench className="h-3.5 w-3.5 text-purple-600" />
               {t("quality.correctiveActions")}
             </CardTitle>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="h-6 text-[10px]">
               <Link href="/quality/capa">{t("quality.viewAll")}</Link>
             </Button>
           </CardHeader>
-          <CardContent>
-            <div className="text-center py-4">
-              <p className="text-4xl font-bold text-purple-600">
+          <CardContent className="px-3 py-2">
+            <div className="text-center py-2">
+              <p className="text-2xl font-semibold font-mono text-purple-600">
                 {stats?.openCAPAs || 0}
               </p>
-              <p className="text-sm text-muted-foreground">{t("quality.openCAPAs")}</p>
-              <Button asChild className="mt-4" size="sm">
+              <p className="text-[10px] text-muted-foreground">{t("quality.openCAPAs")}</p>
+              <Button asChild className="mt-2 h-7 text-[11px]" size="sm">
                 <Link href="/quality/capa/new">{t("quality.createCAPA")}</Link>
               </Button>
             </div>

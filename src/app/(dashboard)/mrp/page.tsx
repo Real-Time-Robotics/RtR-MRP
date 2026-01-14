@@ -201,44 +201,49 @@ export default function MrpPage() {
   ], [router]);
 
   return (
-    <div className="space-y-6">
+    // COMPACT: space-y-6 → space-y-3
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("mrp.title")}</h1>
-          <p className="text-muted-foreground">{t("mrp.description")}</p>
+          {/* COMPACT: text-base, font-mono uppercase, Industrial colors */}
+          <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-[#e8eaed]">{t("mrp.title")}</h1>
+          <p className="text-[11px] text-gray-500 dark:text-[#8b9ab0]">{t("mrp.description")}</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => router.push("/mrp/wizard")}>
-            <Wand2 className="h-4 w-4 mr-2" />
+        {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
+        <div className="flex gap-1.5">
+          <Button size="sm" className="h-7 text-[11px]" onClick={() => router.push("/mrp/wizard")}>
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" />
             MRP Wizard
           </Button>
-          <Button variant="outline" onClick={() => router.push("/mrp/shortages")}>
-            <AlertTriangle className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/mrp/shortages")}>
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
             {t("mrp.shortages")}
           </Button>
         </div>
       </div>
 
-      {/* Run MRP Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
+      {/* Run MRP Form - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+            <Brain className="h-3.5 w-3.5" />
             Run MRP Calculation (Async)
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        {/* COMPACT: space-y-6 → space-y-3 */}
+        <CardContent className="px-3 py-3 space-y-3">
           {errorMsg && (
             <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md text-sm font-medium">
               {errorMsg}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Planning Horizon</Label>
+          {/* COMPACT: gap-6 → gap-3 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[11px]">Planning Horizon</Label>
               <Select value={horizon} onValueChange={setHorizon}>
-                <SelectTrigger>
+                <SelectTrigger className="h-7 text-[11px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,11 +256,12 @@ export default function MrpPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <Label>Include in Calculation:</Label>
-            <div className="space-y-3">
+          {/* COMPACT: space-y-4 → space-y-2 */}
+          <div className="space-y-2">
+            <Label className="text-[11px]">Include in Calculation:</Label>
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="confirmed" className="font-normal">
+                <Label htmlFor="confirmed" className="text-[11px] font-normal">
                   Confirmed Sales Orders
                 </Label>
                 <Switch
@@ -265,7 +271,7 @@ export default function MrpPage() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label htmlFor="draft" className="font-normal">
+                <Label htmlFor="draft" className="text-[11px] font-normal">
                   Draft Sales Orders
                 </Label>
                 <Switch
@@ -275,7 +281,7 @@ export default function MrpPage() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <Label htmlFor="safety" className="font-normal">
+                <Label htmlFor="safety" className="text-[11px] font-normal">
                   Include Safety Stock in calculations
                 </Label>
                 <Switch
@@ -287,15 +293,16 @@ export default function MrpPage() {
             </div>
           </div>
 
-          <Button onClick={runMrp} disabled={running} size="lg">
+          {/* COMPACT: size="lg" → size="sm" */}
+          <Button onClick={runMrp} disabled={running} size="sm" className="h-7 text-[11px]">
             {running ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                 Queuing Job...
               </>
             ) : (
               <>
-                <Play className="h-4 w-4 mr-2" />
+                <Play className="h-3.5 w-3.5 mr-1.5" />
                 Queue MRP Calculation
               </>
             )}
@@ -303,11 +310,11 @@ export default function MrpPage() {
         </CardContent>
       </Card>
 
-      {/* Recent Runs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
+      {/* Recent Runs - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
+            <History className="h-3.5 w-3.5" />
             Recent MRP Runs
           </CardTitle>
         </CardHeader>

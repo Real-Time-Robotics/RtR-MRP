@@ -8,18 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface NewThreadModalProps {
   open: boolean
@@ -91,47 +81,72 @@ export function NewThreadModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Tạo Discussion Mới</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-[460px] p-0 gap-0 bg-white dark:bg-steel-dark border-gray-200 dark:border-mrp-border">
+        {/* Header - Industrial */}
+        <DialogHeader className="px-4 py-3 border-b border-gray-200 dark:border-mrp-border bg-gray-50 dark:bg-gunmetal">
+          <DialogTitle className="text-[13px] font-semibold font-mono uppercase tracking-wide text-gray-900 dark:text-mrp-text-primary">
+            Tạo Discussion Mới
+          </DialogTitle>
+          <DialogDescription className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
             Tạo cuộc thảo luận mới cho {contextTitle || contextType}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-3">
           {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Tiêu đề (tùy chọn)</Label>
-            <Input
+          <div className="space-y-1">
+            <label htmlFor="title" className="text-[11px] font-medium text-gray-700 dark:text-mrp-text-muted">
+              Tiêu đề (tùy chọn)
+            </label>
+            <input
               id="title"
+              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ví dụ: Hỏi về tiến độ, Yêu cầu kiểm tra..."
               disabled={creating}
+              className={cn(
+                "w-full h-8 px-2.5",
+                "bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border",
+                "text-[12px] text-gray-900 dark:text-mrp-text-primary",
+                "placeholder:text-gray-400 dark:placeholder:text-mrp-text-muted",
+                "focus:border-info-cyan focus:outline-none",
+                "disabled:opacity-50"
+              )}
             />
           </div>
 
           {/* Priority */}
-          <div className="space-y-2">
-            <Label htmlFor="priority">Mức độ ưu tiên</Label>
-            <Select value={priority} onValueChange={setPriority} disabled={creating}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LOW">Thấp</SelectItem>
-                <SelectItem value="NORMAL">Bình thường</SelectItem>
-                <SelectItem value="HIGH">Cao</SelectItem>
-                <SelectItem value="URGENT">Khẩn cấp</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-1">
+            <label htmlFor="priority" className="text-[11px] font-medium text-gray-700 dark:text-mrp-text-muted">
+              Mức độ ưu tiên
+            </label>
+            <select
+              id="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              disabled={creating}
+              className={cn(
+                "w-full h-8 px-2.5",
+                "bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border",
+                "text-[12px] text-gray-900 dark:text-mrp-text-primary",
+                "focus:border-info-cyan focus:outline-none",
+                "disabled:opacity-50"
+              )}
+            >
+              <option value="LOW">Thấp</option>
+              <option value="NORMAL">Bình thường</option>
+              <option value="HIGH">Cao</option>
+              <option value="URGENT">Khẩn cấp</option>
+            </select>
           </div>
 
           {/* Initial message */}
-          <div className="space-y-2">
-            <Label htmlFor="message">Tin nhắn đầu tiên *</Label>
-            <Textarea
+          <div className="space-y-1">
+            <label htmlFor="message" className="text-[11px] font-medium text-gray-700 dark:text-mrp-text-muted">
+              Tin nhắn đầu tiên <span className="text-red-500">*</span>
+            </label>
+            <textarea
               id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -139,32 +154,61 @@ export function NewThreadModal({
               rows={4}
               disabled={creating}
               required
+              className={cn(
+                "w-full px-2.5 py-2 resize-none",
+                "bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border",
+                "text-[12px] text-gray-900 dark:text-mrp-text-primary",
+                "placeholder:text-gray-400 dark:placeholder:text-mrp-text-muted",
+                "focus:border-info-cyan focus:outline-none",
+                "disabled:opacity-50"
+              )}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-[10px] text-gray-400 dark:text-mrp-text-muted">
               Dùng @ để mention role (ví dụ: @qa, @planner, @buyer)
             </p>
           </div>
 
           {/* Error */}
           {error && (
-            <p className="text-sm text-red-500">{error}</p>
+            <p className="text-[11px] text-red-500">{error}</p>
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={creating}>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={creating}
+              className={cn(
+                "h-8 px-3 text-[11px] font-medium",
+                "bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-mrp-text-secondary",
+                "hover:bg-gray-200 dark:hover:bg-slate transition-colors",
+                "border border-gray-200 dark:border-mrp-border",
+                "disabled:opacity-50"
+              )}
+            >
               Hủy
-            </Button>
-            <Button type="submit" disabled={creating || !message.trim()}>
+            </button>
+            <button
+              type="submit"
+              disabled={creating || !message.trim()}
+              className={cn(
+                "h-8 px-3 text-[11px] font-medium",
+                "bg-info-cyan text-steel-dark",
+                "hover:bg-info-cyan/80 transition-colors",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "flex items-center gap-1.5"
+              )}
+            >
               {creating ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Đang tạo...
                 </>
               ) : (
                 'Tạo Discussion'
               )}
-            </Button>
+            </button>
           </div>
         </form>
       </DialogContent>

@@ -64,6 +64,7 @@ import {
   Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScreenshotButton } from '@/components/ui/screenshot-button';
 
 // =============================================================================
 // TYPES
@@ -729,7 +730,7 @@ export function ModernHeader({
           {/* Back to Home - Industrial Style */}
           <Link
             href="/"
-            className="flex items-center justify-center w-8 h-8 bg-gunmetal hover:bg-gunmetal-light transition-colors mr-2 text-mrp-text-muted hover:text-info-cyan"
+            className="flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-gunmetal hover:bg-gray-200 dark:hover:bg-gunmetal-light transition-colors mr-2 text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan"
             title={language === 'vi' ? 'Về trang chủ' : 'Back to Home'}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -741,12 +742,12 @@ export function ModernHeader({
             className={cn(
               'hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium font-mono tracking-wider transition-all border-l-2',
               (pathname === '/home' || pathname === '/dashboard')
-                ? 'bg-gunmetal border-l-info-cyan text-info-cyan'
-                : 'border-l-transparent text-mrp-text-secondary hover:bg-gunmetal hover:text-mrp-text-primary'
+                ? 'bg-gray-100 dark:bg-gunmetal border-l-info-cyan text-info-cyan'
+                : 'border-l-transparent text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary'
             )}
           >
-            <Home className="w-3.5 h-3.5" />
-            <span>{language === 'vi' ? 'TỔNG QUAN' : 'HOME'}</span>
+            <Home className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="text-left">{language === 'vi' ? 'TỔNG QUAN' : 'HOME'}</span>
           </Link>
 
           {/* Navigation Tabs - Industrial Style */}
@@ -758,14 +759,14 @@ export function ModernHeader({
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium font-mono tracking-wider transition-all border-b-2',
                     activeTab === tab.id
-                      ? 'bg-gunmetal border-b-info-cyan text-info-cyan'
-                      : 'border-b-transparent text-mrp-text-secondary hover:bg-gunmetal hover:text-mrp-text-primary'
+                      ? 'bg-gray-100 dark:bg-gunmetal border-b-info-cyan text-info-cyan'
+                      : 'border-b-transparent text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary'
                   )}
                 >
-                  {tab.icon}
-                  <span className="uppercase">{language === 'vi' ? tab.labelVi : tab.label}</span>
+                  <span className="flex-shrink-0">{tab.icon}</span>
+                  <span className="uppercase text-left">{language === 'vi' ? tab.labelVi : tab.label}</span>
                   <ChevronDown className={cn(
-                    'w-3.5 h-3.5 transition-transform',
+                    'w-3.5 h-3.5 flex-shrink-0 transition-transform',
                     activeTab === tab.id && 'rotate-180'
                   )} />
                 </button>
@@ -787,11 +788,11 @@ export function ModernHeader({
           {/* Search / Command Palette Trigger - Industrial Style */}
           <button
             onClick={() => setShowCommandPalette(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gunmetal border border-mrp-border text-mrp-text-muted hover:bg-gunmetal-light hover:border-info-cyan/30 transition-all min-w-[180px]"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gunmetal border border-gray-200 dark:border-mrp-border text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-gunmetal-light hover:border-gray-300 dark:hover:border-info-cyan/30 transition-all min-w-[180px]"
           >
             <Search className="w-3.5 h-3.5" />
             <span className="text-xs font-mono">{language === 'vi' ? 'TÌM KIẾM...' : 'SEARCH...'}</span>
-            <kbd className="ml-auto hidden md:inline-flex items-center gap-1 px-1 py-0.5 bg-steel-dark text-[10px] font-mono text-mrp-text-muted">
+            <kbd className="ml-auto hidden md:inline-flex items-center gap-1 px-1 py-0.5 bg-gray-200 dark:bg-steel-dark text-[10px] font-mono text-gray-500 dark:text-mrp-text-muted">
               ⌘K
             </kbd>
           </button>
@@ -800,7 +801,7 @@ export function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
+              className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -811,10 +812,13 @@ export function ModernHeader({
             />
           </div>
 
+          {/* Screenshot Button - Industrial Style */}
+          <ScreenshotButton language={language} />
+
           {/* Language Toggle - Industrial Style */}
           <button
             onClick={() => onLanguageChange?.(language === 'vi' ? 'en' : 'vi')}
-            className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
+            className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
           >
             <Globe className="w-4 h-4" />
           </button>
@@ -822,7 +826,7 @@ export function ModernHeader({
           {/* Theme Toggle - Industrial Style */}
           <button
             onClick={onToggleDarkMode}
-            className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
+            className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
           >
             {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -831,7 +835,7 @@ export function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
+              className="relative flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
@@ -890,12 +894,12 @@ export function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-gunmetal transition-all"
+              className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gunmetal transition-all"
             >
-              <div className="w-7 h-7 border border-mrp-border flex items-center justify-center text-mrp-text-muted font-mono text-xs">
+              <div className="w-7 h-7 border border-gray-300 dark:border-mrp-border flex items-center justify-center text-gray-500 dark:text-mrp-text-muted font-mono text-xs bg-gray-100 dark:bg-transparent">
                 {user.name.charAt(0)}
               </div>
-              <ChevronDown className="w-3.5 h-3.5 text-mrp-text-muted hidden sm:block" />
+              <ChevronDown className="w-3.5 h-3.5 text-gray-500 dark:text-mrp-text-muted hidden sm:block" />
             </button>
             <UserDropdown
               isOpen={showUserMenu}
@@ -912,7 +916,7 @@ export function ModernHeader({
           {onSidebarToggle && (
             <button
               onClick={onSidebarToggle}
-              className="lg:hidden flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
+              className="lg:hidden flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>

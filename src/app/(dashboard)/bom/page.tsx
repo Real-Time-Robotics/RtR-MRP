@@ -98,17 +98,17 @@ export default function BOMPage() {
       width: '150px',
       align: 'right',
       render: (_, row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <Link href={`/bom/${row.id}`}>
-            <Button variant="ghost" size="sm">
-              <Eye className="h-4 w-4 mr-1" />
+            <Button variant="ghost" size="sm" className="h-6 text-[10px]">
+              <Eye className="h-3 w-3 mr-1" />
               View
             </Button>
           </Link>
           <Link href={`/bom/${row.id}/explode`}>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="h-6 text-[10px]">
               Explode
-              <ArrowRight className="h-4 w-4 ml-1" />
+              <ArrowRight className="h-3 w-3 ml-1" />
             </Button>
           </Link>
         </div>
@@ -117,10 +117,11 @@ export default function BOMPage() {
   ], []);
 
   return (
-    <div className="space-y-6">
+    // COMPACT: space-y-6 → space-y-3
+    <div className="space-y-3">
       <BOMHeader />
 
-      <Card>
+      <Card className="border-gray-200 dark:border-mrp-border">
         <BOMTableHeader />
         <CardContent className="p-0">
           <DataTable

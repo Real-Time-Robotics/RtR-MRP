@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { MessageList } from './MessageList'
 import { MessageComposer } from './MessageComposer'
 import { ThreadStatusBadge, ThreadPriorityBadge } from './ThreadStatusBadge'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +21,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { cn } from '@/lib/utils'
 
 interface Message {
   id: string
@@ -123,26 +123,29 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
   if (loading || !thread) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-info-cyan" />
       </div>
     )
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-950">
-        <div className="flex items-center gap-3">
+      {/* Header - Industrial Precision */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border bg-gray-50 dark:bg-gunmetal">
+        <div className="flex items-center gap-2">
           {onBack && (
-            <Button variant="ghost" size="icon" onClick={onBack}>
+            <button
+              onClick={onBack}
+              className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-slate transition-colors"
+            >
               <ArrowLeft className="w-4 h-4" />
-            </Button>
+            </button>
           )}
           <div>
-            <h3 className="font-semibold">
+            <h3 className="text-[12px] font-medium text-gray-900 dark:text-mrp-text-primary truncate max-w-[200px]">
               {thread.title || thread.contextTitle || 'Discussion'}
             </h3>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5 mt-0.5">
               <ThreadStatusBadge status={thread.status} size="sm" />
               {(thread.priority === 'HIGH' || thread.priority === 'URGENT') && (
                 <ThreadPriorityBadge priority={thread.priority} size="sm" />
@@ -154,34 +157,37 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
         {/* Actions dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" disabled={updatingStatus}>
+            <button
+              className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-slate transition-colors disabled:opacity-50"
+              disabled={updatingStatus}
+            >
               {updatingStatus ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <MoreVertical className="w-4 h-4" />
               )}
-            </Button>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => updateStatus('OPEN')}>
-              <AlertCircle className="w-4 h-4 mr-2" />
+          <DropdownMenuContent align="end" className="min-w-[160px]">
+            <DropdownMenuItem onClick={() => updateStatus('OPEN')} className="text-[11px]">
+              <AlertCircle className="w-3.5 h-3.5 mr-2" />
               Đánh dấu Mở
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => updateStatus('IN_PROGRESS')}>
-              <Clock className="w-4 h-4 mr-2" />
+            <DropdownMenuItem onClick={() => updateStatus('IN_PROGRESS')} className="text-[11px]">
+              <Clock className="w-3.5 h-3.5 mr-2" />
               Đang xử lý
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => updateStatus('WAITING')}>
-              <Clock className="w-4 h-4 mr-2" />
+            <DropdownMenuItem onClick={() => updateStatus('WAITING')} className="text-[11px]">
+              <Clock className="w-3.5 h-3.5 mr-2" />
               Chờ phản hồi
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => updateStatus('RESOLVED')}>
-              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+            <DropdownMenuItem onClick={() => updateStatus('RESOLVED')} className="text-[11px]">
+              <CheckCircle className="w-3.5 h-3.5 mr-2 text-production-green" />
               Đã giải quyết
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => updateStatus('ARCHIVED')}>
-              <Archive className="w-4 h-4 mr-2" />
+            <DropdownMenuItem onClick={() => updateStatus('ARCHIVED')} className="text-[11px]">
+              <Archive className="w-3.5 h-3.5 mr-2" />
               Lưu trữ
             </DropdownMenuItem>
           </DropdownMenuContent>

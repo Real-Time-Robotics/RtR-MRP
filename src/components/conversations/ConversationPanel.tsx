@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { ThreadList } from './ThreadList'
 import { ThreadDetail } from './ThreadDetail'
+import { cn } from '@/lib/utils'
 
 interface Thread {
   id: string
@@ -37,7 +38,11 @@ export function ConversationPanel({
   const [selectedThread, setSelectedThread] = useState<Thread | null>(null)
 
   return (
-    <div className={`flex flex-col bg-white dark:bg-gray-950 rounded-lg border overflow-hidden ${className}`}>
+    <div className={cn(
+      // Industrial Precision - Dark theme with sharp edges
+      'flex flex-col bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border overflow-hidden',
+      className
+    )}>
       {selectedThread ? (
         <ThreadDetail
           threadId={selectedThread.id}

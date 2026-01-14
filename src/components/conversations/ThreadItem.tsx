@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import { MessageSquare, Clock, User } from 'lucide-react'
 import { ThreadStatusBadge, ThreadPriorityBadge } from './ThreadStatusBadge'
+import { cn } from '@/lib/utils'
 
 interface ThreadItemProps {
   thread: {
@@ -33,23 +34,29 @@ export function ThreadItem({ thread, onSelect, isSelected }: ThreadItemProps) {
   return (
     <div
       onClick={onSelect}
-      className={`
-        p-4 cursor-pointer transition-colors
-        hover:bg-gray-50 dark:hover:bg-gray-800
-        ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-l-blue-500' : ''}
-        ${hasUnread ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
-      `}
+      className={cn(
+        // Industrial Precision - Compact padding, sharp styling
+        'p-2.5 cursor-pointer transition-colors border-l-2',
+        'hover:bg-gray-50 dark:hover:bg-gunmetal/50',
+        isSelected
+          ? 'bg-info-cyan/10 dark:bg-info-cyan/5 border-l-info-cyan'
+          : 'border-l-transparent',
+        hasUnread && 'bg-info-cyan/5'
+      )}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex-1 min-w-0">
-          <h4 className={`text-sm font-medium truncate ${hasUnread ? 'font-semibold' : ''}`}>
+          <h4 className={cn(
+            'text-[12px] truncate text-gray-900 dark:text-mrp-text-primary',
+            hasUnread ? 'font-semibold' : 'font-medium'
+          )}>
             {thread.title || thread.contextTitle || 'Untitled Discussion'}
           </h4>
         </div>
         <div className="flex items-center gap-1">
           {hasUnread && (
-            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-500 rounded-full">
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[9px] font-bold text-white bg-info-cyan">
               {thread.unreadCount}
             </span>
           )}
@@ -59,27 +66,29 @@ export function ThreadItem({ thread, onSelect, isSelected }: ThreadItemProps) {
 
       {/* Last message preview */}
       {lastMessage && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-          <span className="font-medium">{lastMessage.sender.name || 'Unknown'}:</span>{' '}
-          {lastMessage.content.length > 100
-            ? lastMessage.content.substring(0, 100) + '...'
+        <p className="text-[11px] text-gray-600 dark:text-mrp-text-secondary line-clamp-2 mb-1.5">
+          <span className="font-medium text-gray-700 dark:text-mrp-text-primary">
+            {lastMessage.sender.name || 'Unknown'}:
+          </span>{' '}
+          {lastMessage.content.length > 80
+            ? lastMessage.content.substring(0, 80) + '...'
             : lastMessage.content}
         </p>
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
+      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-mrp-text-muted">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-0.5">
             <MessageSquare className="w-3 h-3" />
             {thread._count.messages}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-0.5">
             <User className="w-3 h-3" />
             {thread.createdBy.name || 'Unknown'}
           </span>
         </div>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-0.5">
           <Clock className="w-3 h-3" />
           {thread.lastMessageAt
             ? formatDistanceToNow(new Date(thread.lastMessageAt), { addSuffix: true, locale: vi })
@@ -89,7 +98,7 @@ export function ThreadItem({ thread, onSelect, isSelected }: ThreadItemProps) {
 
       {/* Priority indicator for high/urgent */}
       {(thread.priority === 'HIGH' || thread.priority === 'URGENT') && (
-        <div className="mt-2">
+        <div className="mt-1.5">
           <ThreadPriorityBadge priority={thread.priority} size="sm" />
         </div>
       )}

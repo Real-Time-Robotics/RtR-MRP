@@ -38,33 +38,35 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
   const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold">{orders.length}</div>
-          <p className="text-xs text-muted-foreground">Tổng đơn hàng</p>
+    // COMPACT: gap-4 → gap-2
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        {/* COMPACT: pt-4 → p-3 */}
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono">{orders.length}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng đơn hàng</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalValue)}</div>
-          <p className="text-xs text-muted-foreground">Tổng giá trị</p>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-green-600">{formatCurrency(totalValue)}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng giá trị</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-blue-600">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-blue-600">
             {orders.filter((o) => o.status === 'in_progress').length}
           </div>
-          <p className="text-xs text-muted-foreground">Đang sản xuất</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Đang sản xuất</p>
         </CardContent>
       </Card>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="text-2xl font-bold text-amber-600">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardContent className="p-3">
+          <div className="text-lg font-semibold font-mono text-amber-600">
             {orders.filter((o) => o.status === 'pending').length}
           </div>
-          <p className="text-xs text-muted-foreground">Chờ xử lý</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Chờ xử lý</p>
         </CardContent>
       </Card>
     </div>
@@ -277,14 +279,15 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   ], []);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    // COMPACT: space-y-6 → space-y-3
+    <div className="space-y-3">
+      {/* Header - COMPACT */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <ShoppingCart className="h-6 w-6" />
+        <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4" />
           Đơn hàng bán
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
           Quản lý đơn đặt hàng từ khách hàng
         </p>
       </div>
@@ -292,9 +295,9 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       {/* Stats */}
       <StatsCards orders={orders} />
 
-      {/* Table Card */}
-      <Card>
-        <CardHeader className="pb-4">
+      {/* Table Card - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2">
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}

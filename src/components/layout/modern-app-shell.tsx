@@ -110,7 +110,7 @@ export function ModernAppShell({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#010409]">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#010409]">
       {/* Header */}
       <ModernHeader
         user={user}
@@ -153,9 +153,9 @@ export function ModernAppShell({
           </>
         )}
 
-        {/* Main Content */}
+        {/* Main Content - COMPACT: p-6 → p-4 */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6">
+          <div className="p-4">
             {children}
           </div>
         </main>
