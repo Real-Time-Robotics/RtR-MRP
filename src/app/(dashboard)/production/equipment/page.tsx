@@ -188,9 +188,7 @@ export default function EquipmentPage() {
     <div className="space-y-6">
       <PageHeader
         title="Equipment Management"
-        titleVi="Quản lý Thiết bị"
         description="Track and manage all machines and equipment"
-        descriptionVi="Theo dõi và quản lý tất cả máy móc, thiết bị"
         actions={
           <Button asChild>
             <Link href="/production/equipment/new">
