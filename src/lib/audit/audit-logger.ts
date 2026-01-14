@@ -42,6 +42,13 @@ export class AuditLogger {
    * Log a data change
    */
   async log(input: AuditLogInput): Promise<string> {
+    // Merge userRole and sessionId into metadata (not in schema)
+    const mergedMetadata = {
+      ...(input.metadata || {}),
+      ...(input.userRole ? { userRole: input.userRole } : {}),
+      ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+    };
+
     const auditLog = await prisma.auditLog.create({
       data: {
         entityType: input.entityType,
@@ -50,13 +57,10 @@ export class AuditLogger {
         action: input.action,
         oldValues: input.oldValues ?? Prisma.JsonNull,
         newValues: input.newValues ?? Prisma.JsonNull,
-        summary: input.summary || this.generateSummary(input),
         userId: input.userId,
-        userRole: input.userRole,
         ipAddress: input.ipAddress,
         userAgent: input.userAgent,
-        sessionId: input.sessionId,
-        metadata: input.metadata ?? Prisma.JsonNull,
+        metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : Prisma.JsonNull,
       },
     });
 
@@ -345,18 +349,7 @@ export class AuditLogger {
       cursor: options?.cursor ? { id: options.cursor } : undefined,
       skip: options?.cursor ? 1 : 0,
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-        conversationLinks: {
-          include: {
-            thread: {
-              select: { id: true, title: true, status: true },
-            },
-          },
-        },
-      },
+      // Note: user and conversationLinks relations removed (not in schema)
     });
 
     const hasMore = logs.length > (options?.limit || 50);

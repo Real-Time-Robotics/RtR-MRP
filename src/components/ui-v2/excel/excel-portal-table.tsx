@@ -51,7 +51,7 @@ export function ExcelPortalTable({
       {/* Table Container with Excel styling */}
       <div
         className={cn(
-          'border border-[#217346]/30 dark:border-[#70AD47]/30 overflow-hidden bg-white dark:bg-slate-950',
+          'border border-[#217346]/30 dark:border-[#70AD47]/30 overflow-hidden bg-white dark:bg-steel-dark',
           title ? 'rounded-b-lg' : 'rounded-lg'
         )}
       >
@@ -59,10 +59,10 @@ export function ExcelPortalTable({
       </div>
 
       {/* Excel-style Footer */}
-      <div className="flex items-center justify-between px-2 py-1.5 bg-slate-100 dark:bg-slate-900 border border-t-0 border-slate-200 dark:border-slate-800 rounded-b-lg">
+      <div className="flex items-center justify-between px-2 py-1.5 bg-slate-100 dark:bg-gunmetal border border-t-0 border-slate-200 dark:border-industrial-slate rounded-b-lg">
         <div className="flex items-center gap-1">
           {/* Sheet tab */}
-          <div className="px-3 py-1 text-[10px] font-medium text-[#217346] dark:text-[#70AD47] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-t-md border-b-white dark:border-b-slate-800">
+          <div className="px-3 py-1 text-[10px] font-medium text-[#217346] dark:text-[#70AD47] bg-white dark:bg-steel-dark border border-slate-200 dark:border-mrp-border-light rounded-t-md border-b-white dark:border-b-slate-800">
             {sheetName}
           </div>
         </div>
@@ -101,7 +101,7 @@ export const excelPortalStyles = {
   thCenter: 'text-center',
 
   // Body
-  tbody: 'divide-y divide-slate-100 dark:divide-slate-800',
+  tbody: 'divide-y divide-slate-100 dark:divide-industrial-slate',
 
   // Body rows
   tr: cn(
@@ -114,7 +114,7 @@ export const excelPortalStyles = {
   // Body cells
   td: cn(
     'px-4 py-2.5 text-sm',
-    'border-r border-slate-100 dark:border-slate-800 last:border-r-0'
+    'border-r border-slate-100 dark:border-industrial-slate last:border-r-0'
   ),
   tdMono: 'font-mono text-xs',
   tdRight: 'text-right',
@@ -125,12 +125,12 @@ export const excelPortalStyles = {
   // Row number column
   rowNumber: cn(
     'w-10 px-2 py-2.5 text-center text-[10px] font-mono',
-    'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500',
-    'border-r border-slate-200 dark:border-slate-800'
+    'bg-slate-50 dark:bg-gunmetal text-slate-400 dark:text-slate-500',
+    'border-r border-slate-200 dark:border-industrial-slate'
   ),
 
   // Footer row
-  tfoot: 'bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800',
+  tfoot: 'bg-slate-50 dark:bg-gunmetal border-t border-slate-200 dark:border-industrial-slate',
   tfootTd: 'px-4 py-2 text-sm font-medium',
 } as const;
 

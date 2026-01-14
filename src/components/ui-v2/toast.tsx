@@ -73,32 +73,32 @@ const toastIcons = {
   loading: Loader2,
 };
 
-// Toast styles
+// Toast styles (Industrial Precision dark mode)
 const toastStyles = {
   success: {
-    bg: 'bg-white',
-    border: 'border-l-4 border-l-success-500',
-    icon: 'text-success-500',
+    bg: 'bg-white dark:bg-steel-dark',
+    border: 'border-l-4 border-l-success-500 dark:border-l-production-green',
+    icon: 'text-success-500 dark:text-production-green',
   },
   error: {
-    bg: 'bg-white',
-    border: 'border-l-4 border-l-danger-500',
-    icon: 'text-danger-500',
+    bg: 'bg-white dark:bg-steel-dark',
+    border: 'border-l-4 border-l-danger-500 dark:border-l-urgent-red',
+    icon: 'text-danger-500 dark:text-urgent-red',
   },
   warning: {
-    bg: 'bg-white',
-    border: 'border-l-4 border-l-warning-500',
-    icon: 'text-warning-500',
+    bg: 'bg-white dark:bg-steel-dark',
+    border: 'border-l-4 border-l-warning-500 dark:border-l-alert-amber',
+    icon: 'text-warning-500 dark:text-alert-amber',
   },
   info: {
-    bg: 'bg-white',
-    border: 'border-l-4 border-l-info-500',
-    icon: 'text-info-500',
+    bg: 'bg-white dark:bg-steel-dark',
+    border: 'border-l-4 border-l-info-500 dark:border-l-info-cyan',
+    icon: 'text-info-500 dark:text-info-cyan',
   },
   loading: {
-    bg: 'bg-white',
-    border: 'border-l-4 border-l-primary-500',
-    icon: 'text-primary-500',
+    bg: 'bg-white dark:bg-steel-dark',
+    border: 'border-l-4 border-l-primary-500 dark:border-l-info-cyan',
+    icon: 'text-primary-500 dark:text-info-cyan',
   },
 };
 
@@ -121,7 +121,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
         'animate-slide-left',
         styles.bg,
         styles.border,
-        'border border-slate-200'
+        'border border-slate-200 dark:border-industrial-slate'
       )}
     >
       {/* Icon */}
@@ -136,9 +136,9 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-900">{toast.title}</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-mrp-text-primary">{toast.title}</p>
         {toast.message && (
-          <p className="mt-1 text-sm text-slate-500">{toast.message}</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-mrp-text-secondary">{toast.message}</p>
         )}
         {toast.action && (
           <button
@@ -154,7 +154,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       {toast.dismissible !== false && toast.type !== 'loading' && (
         <button
           onClick={onDismiss}
-          className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+          className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded transition-colors"
         >
           <X className="h-4 w-4" />
         </button>

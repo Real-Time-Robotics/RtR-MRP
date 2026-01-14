@@ -1,11 +1,11 @@
 // =============================================================================
-// 📱 MINIMALIST SIDEBAR - Redesigned
-// No duplicate headers - clean focused navigation
+// INDUSTRIAL SIDEBAR - Phase 2B Rebuild
+// Sharp edges, text labels always visible, Industrial Precision style
 // =============================================================================
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,15 +14,11 @@ import {
   Factory,
   Calculator,
   ClipboardCheck,
-  Activity,
   Settings,
-  Plus,
   Sparkles,
   Smartphone,
-  Wrench,
   LayoutDashboard,
   Layers,
-  Users,
   AlertTriangle,
   Building2,
   PanelLeftClose,
@@ -40,34 +36,38 @@ interface SidebarItem {
   labelVi: string;
   icon: React.ReactNode;
   href: string;
-  color: string;
   badge?: string | number;
 }
 
 // =============================================================================
-// NAVIGATION ITEMS - Simplified
+// NAVIGATION ITEMS
 // =============================================================================
 
-const quickNavItems: SidebarItem[] = [
-  { id: 'dashboard', label: 'Dashboard', labelVi: 'Tổng quan', icon: <LayoutDashboard className="w-4 h-4" />, href: '/home', color: 'text-blue-500' },
-  { id: 'sales', label: 'Orders', labelVi: 'Đơn hàng', icon: <ShoppingCart className="w-4 h-4" />, href: '/orders', color: 'text-violet-500', badge: 5 },
-  { id: 'inventory', label: 'Inventory', labelVi: 'Tồn kho', icon: <Package className="w-4 h-4" />, href: '/inventory', color: 'text-emerald-500' },
-  { id: 'production', label: 'Production', labelVi: 'Sản xuất', icon: <Factory className="w-4 h-4" />, href: '/production', color: 'text-orange-500' },
-  { id: 'mrp', label: 'MRP', labelVi: 'MRP', icon: <Calculator className="w-4 h-4" />, href: '/mrp', color: 'text-purple-500' },
-  { id: 'quality', label: 'Quality', labelVi: 'Chất lượng', icon: <ClipboardCheck className="w-4 h-4" />, href: '/quality', color: 'text-teal-500' },
+const mainNavItems: SidebarItem[] = [
+  { id: 'dashboard', label: 'DASHBOARD', labelVi: 'TỔNG QUAN', icon: <LayoutDashboard className="w-4 h-4" />, href: '/home' },
+  { id: 'sales', label: 'ORDERS', labelVi: 'ĐƠN HÀNG', icon: <ShoppingCart className="w-4 h-4" />, href: '/orders', badge: 5 },
+  { id: 'inventory', label: 'INVENTORY', labelVi: 'TỒN KHO', icon: <Package className="w-4 h-4" />, href: '/inventory' },
+  { id: 'production', label: 'PRODUCTION', labelVi: 'SẢN XUẤT', icon: <Factory className="w-4 h-4" />, href: '/production' },
+  { id: 'mrp', label: 'MRP', labelVi: 'MRP', icon: <Calculator className="w-4 h-4" />, href: '/mrp' },
+  { id: 'quality', label: 'QUALITY', labelVi: 'CHẤT LƯỢNG', icon: <ClipboardCheck className="w-4 h-4" />, href: '/quality' },
 ];
 
 const toolItems: SidebarItem[] = [
-  { id: 'parts', label: 'Parts', labelVi: 'Vật tư', icon: <Package className="w-4 h-4" />, href: '/parts', color: 'text-gray-500' },
-  { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-4 h-4" />, href: '/bom', color: 'text-cyan-500' },
-  { id: 'suppliers', label: 'Suppliers', labelVi: 'NCC', icon: <Building2 className="w-4 h-4" />, href: '/suppliers', color: 'text-amber-500' },
+  { id: 'parts', label: 'PARTS', labelVi: 'VẬT TƯ', icon: <Package className="w-4 h-4" />, href: '/parts' },
+  { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-4 h-4" />, href: '/bom' },
+  { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-4 h-4" />, href: '/suppliers' },
+];
+
+const utilityItems: SidebarItem[] = [
+  { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-4 h-4" />, href: '/mobile' },
+  { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-4 h-4" />, href: '/alerts' },
 ];
 
 // =============================================================================
-// SIDEBAR ITEM COMPONENT
+// SIDEBAR NAV ITEM - Industrial Precision Style
 // =============================================================================
 
-function SidebarItem({
+function NavItem({
   item,
   collapsed,
   language,
@@ -82,35 +82,66 @@ function SidebarItem({
     <Link
       href={item.href}
       className={cn(
-        'group flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all relative',
+        // Base styles - Industrial Precision: NO rounded corners
+        'group flex items-center gap-3 px-3 py-2.5 transition-all relative',
+        'border-l-2',
         collapsed ? 'justify-center' : '',
+        // Active state
         isActive
-          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+          ? 'bg-gunmetal-light dark:bg-gunmetal border-l-info-cyan text-info-cyan'
+          : 'border-l-transparent text-mrp-text-secondary hover:bg-gunmetal/50 dark:hover:bg-gunmetal hover:text-mrp-text-primary hover:border-l-mrp-border'
       )}
       title={collapsed ? (language === 'vi' ? item.labelVi : item.label) : undefined}
     >
+      {/* Icon */}
       <span className={cn(
-        'flex-shrink-0',
-        isActive ? item.color : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
+        'flex-shrink-0 transition-colors',
+        isActive ? 'text-info-cyan' : 'text-mrp-text-muted group-hover:text-info-cyan'
       )}>
         {item.icon}
       </span>
 
+      {/* Label - Always visible when not collapsed */}
       {!collapsed && (
         <>
-          <span className="flex-1 text-[13px] font-medium truncate">
+          <span className={cn(
+            'flex-1 text-xs font-medium font-mono tracking-wider truncate',
+            isActive ? 'text-mrp-text-primary' : 'text-mrp-text-secondary group-hover:text-mrp-text-primary'
+          )}>
             {language === 'vi' ? item.labelVi : item.label}
           </span>
 
+          {/* Badge */}
           {item.badge && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">
+            <span className="px-1.5 py-0.5 text-[10px] font-bold font-mono bg-info-cyan-dim text-info-cyan">
               {item.badge}
             </span>
           )}
         </>
       )}
     </Link>
+  );
+}
+
+// =============================================================================
+// SECTION HEADER
+// =============================================================================
+
+function SectionHeader({
+  label,
+  collapsed
+}: {
+  label: string;
+  collapsed: boolean;
+}) {
+  if (collapsed) return null;
+
+  return (
+    <div className="px-3 py-2">
+      <span className="text-[10px] font-semibold font-mono text-mrp-text-muted uppercase tracking-widest">
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -134,7 +165,6 @@ export function MinimalistSidebar({
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    // Special case: /home and /dashboard are the same
     if (href === '/home') {
       return pathname === '/home' || pathname === '/dashboard' || pathname.startsWith('/home/');
     }
@@ -144,45 +174,52 @@ export function MinimalistSidebar({
   return (
     <aside
       className={cn(
-        'flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-200',
-        collapsed ? 'w-14' : 'w-52'
+        // Industrial Precision: Dark steel background, sharp edges, cyan border
+        'flex flex-col h-full transition-all duration-200',
+        'bg-steel-dark border-r border-mrp-border',
+        collapsed ? 'w-14' : 'w-56'
       )}
     >
-      {/* Header with Product Name & Toggle */}
+      {/* Header - Product Name & Toggle */}
       <div className={cn(
-        "flex items-center h-14 px-3 border-b border-gray-100 dark:border-gray-800",
+        "flex items-center h-12 px-3 border-b border-mrp-border",
         collapsed ? "justify-center" : "justify-between"
       )}>
         {/* Product Name */}
         {!collapsed && (
-          <div className="flex items-baseline">
-            <span className="font-bold text-base font-mono text-gray-900 dark:text-white tracking-tight">
-              MRP
+          <div className="flex items-baseline gap-0.5">
+            <span className="font-bold text-sm font-mono text-mrp-text-primary tracking-tight">
+              RTR
             </span>
-            <span className="text-violet-500 font-bold text-base font-mono">-AI</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-0.5 animate-pulse" />
+            <span className="text-info-cyan font-bold text-sm font-mono">-MRP</span>
+            <span className="w-1.5 h-1.5 bg-production-green ml-1 animate-pulse" />
           </div>
         )}
 
         {/* Toggle Button */}
         <button
           onClick={onToggle}
-          className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+          className={cn(
+            "p-1.5 transition-colors",
+            "text-mrp-text-muted hover:text-info-cyan hover:bg-gunmetal"
+          )}
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           {collapsed ? (
-            <PanelLeft className="w-4 h-4 text-gray-400" />
+            <PanelLeft className="w-4 h-4" />
           ) : (
-            <PanelLeftClose className="w-4 h-4 text-gray-400" />
+            <PanelLeftClose className="w-4 h-4" />
           )}
         </button>
       </div>
 
-      {/* Quick Navigation */}
-      <div className="flex-1 overflow-y-auto p-2">
-        <div className="space-y-0.5">
-          {quickNavItems.map((item) => (
-            <SidebarItem
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto py-2">
+        {/* Main Navigation */}
+        <SectionHeader label={language === 'vi' ? 'Điều hướng' : 'Navigation'} collapsed={collapsed} />
+        <nav className="space-y-0.5">
+          {mainNavItems.map((item) => (
+            <NavItem
               key={item.id}
               item={item}
               collapsed={collapsed}
@@ -190,22 +227,16 @@ export function MinimalistSidebar({
               isActive={isActive(item.href)}
             />
           ))}
-        </div>
+        </nav>
 
         {/* Separator */}
-        <div className="h-px bg-gray-100 dark:bg-gray-800 my-3" />
+        <div className="h-px bg-mrp-border my-3 mx-3" />
 
         {/* Tools */}
-        {!collapsed && (
-          <div className="px-2.5 mb-1.5">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-              {language === 'vi' ? 'Công cụ' : 'Tools'}
-            </span>
-          </div>
-        )}
-        <div className="space-y-0.5">
+        <SectionHeader label={language === 'vi' ? 'Công cụ' : 'Tools'} collapsed={collapsed} />
+        <nav className="space-y-0.5">
           {toolItems.map((item) => (
-            <SidebarItem
+            <NavItem
               key={item.id}
               item={item}
               collapsed={collapsed}
@@ -213,45 +244,43 @@ export function MinimalistSidebar({
               isActive={isActive(item.href)}
             />
           ))}
-        </div>
+        </nav>
 
         {/* Separator */}
-        <div className="h-px bg-gray-100 dark:bg-gray-800 my-3" />
+        <div className="h-px bg-mrp-border my-3 mx-3" />
 
-        {/* Mobile & Technician */}
-        <div className="space-y-0.5">
-          <SidebarItem
-            item={{ id: 'mobile', label: 'Mobile', labelVi: 'Mobile', icon: <Smartphone className="w-4 h-4" />, href: '/mobile', color: 'text-indigo-500' }}
-            collapsed={collapsed}
-            language={language}
-            isActive={isActive('/mobile')}
-          />
-          <SidebarItem
-            item={{ id: 'alerts', label: 'Alerts', labelVi: 'Cảnh báo', icon: <AlertTriangle className="w-4 h-4" />, href: '/alerts', color: 'text-orange-500' }}
-            collapsed={collapsed}
-            language={language}
-            isActive={isActive('/alerts')}
-          />
-        </div>
+        {/* Utilities */}
+        <SectionHeader label={language === 'vi' ? 'Tiện ích' : 'Utilities'} collapsed={collapsed} />
+        <nav className="space-y-0.5">
+          {utilityItems.map((item) => (
+            <NavItem
+              key={item.id}
+              item={item}
+              collapsed={collapsed}
+              language={language}
+              isActive={isActive(item.href)}
+            />
+          ))}
+        </nav>
       </div>
 
-      {/* Footer - AI & Settings */}
-      <div className="p-2 border-t border-gray-100 dark:border-gray-800 space-y-1">
+      {/* Footer */}
+      <div className="border-t border-mrp-border p-2 space-y-1">
         {/* AI Insights */}
         <Link
           href="/ai/insights"
           className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all',
-            'bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
-            'hover:from-violet-100 hover:to-purple-100 dark:hover:from-violet-900/30 dark:hover:to-purple-900/30',
+            'flex items-center gap-3 px-3 py-2.5 transition-all',
+            'bg-info-cyan-dim border border-info-cyan/30',
+            'hover:bg-info-cyan/20 hover:border-info-cyan/50',
             collapsed ? 'justify-center' : ''
           )}
           title={collapsed ? 'AI Insights' : undefined}
         >
-          <Sparkles className="w-4 h-4 text-violet-500" />
+          <Sparkles className="w-4 h-4 text-info-cyan" />
           {!collapsed && (
-            <span className="text-[13px] font-medium text-violet-600 dark:text-violet-400">
-              AI Insights
+            <span className="text-xs font-medium font-mono tracking-wider text-info-cyan">
+              AI INSIGHTS
             </span>
           )}
         </Link>
@@ -260,16 +289,16 @@ export function MinimalistSidebar({
         <Link
           href="/settings"
           className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all',
-            'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800',
+            'flex items-center gap-3 px-3 py-2.5 transition-all',
+            'text-mrp-text-muted hover:bg-gunmetal hover:text-mrp-text-primary',
             collapsed ? 'justify-center' : ''
           )}
           title={collapsed ? 'Settings' : undefined}
         >
           <Settings className="w-4 h-4" />
           {!collapsed && (
-            <span className="text-[13px] font-medium">
-              {language === 'vi' ? 'Cài đặt' : 'Settings'}
+            <span className="text-xs font-medium font-mono tracking-wider">
+              {language === 'vi' ? 'CÀI ĐẶT' : 'SETTINGS'}
             </span>
           )}
         </Link>

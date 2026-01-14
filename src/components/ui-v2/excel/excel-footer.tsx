@@ -45,23 +45,23 @@ export function ExcelFooter({
       className={cn(
         'flex items-center justify-between',
         'px-2 py-1.5',
-        'bg-slate-50 dark:bg-slate-900',
-        'border-t border-slate-200 dark:border-slate-800',
+        'bg-slate-50 dark:bg-gunmetal',
+        'border-t border-slate-200 dark:border-industrial-slate',
         className
       )}
     >
       {/* Left: Sheet tabs */}
       <div className="flex items-center gap-1">
         {/* Navigation arrows */}
-        <div className="flex items-center border-r border-slate-200 dark:border-slate-700 pr-2 mr-1">
+        <div className="flex items-center border-r border-slate-200 dark:border-mrp-border-light pr-2 mr-1">
           <button
-            className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+            className="p-0.5 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Previous sheets"
           >
             <ChevronLeft className="h-3 w-3 text-slate-400" />
           </button>
           <button
-            className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+            className="p-0.5 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Next sheets"
           >
             <ChevronRight className="h-3 w-3 text-slate-400" />
@@ -77,8 +77,8 @@ export function ExcelFooter({
               'px-3 py-1 text-[10px] font-medium rounded-t-md transition-colors',
               'border border-b-0',
               activeSheet === sheet.id
-                ? 'bg-white dark:bg-slate-800 text-[#217346] dark:text-[#70AD47] border-slate-200 dark:border-slate-700'
-                : 'bg-slate-100 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'
+                ? 'bg-white dark:bg-steel-dark text-[#217346] dark:text-[#70AD47] border-slate-200 dark:border-mrp-border-light'
+                : 'bg-slate-100 dark:bg-steel-dark/50 text-slate-500 dark:text-slate-400 border-transparent hover:bg-slate-200 dark:hover:bg-gunmetal-light'
             )}
             style={sheet.color ? { borderBottomColor: sheet.color } : undefined}
           >
@@ -90,7 +90,7 @@ export function ExcelFooter({
         {onAddSheet && (
           <button
             onClick={onAddSheet}
-            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+            className="p-1 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Add sheet"
           >
             <Plus className="h-3 w-3 text-slate-400" />
@@ -115,7 +115,7 @@ export function ExcelFooter({
             onClick={() => onPageChange?.(currentPage - 1)}
             disabled={currentPage <= 1}
             className={cn(
-              'p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700',
+              'p-1 rounded hover:bg-slate-200 dark:hover:bg-gunmetal-light',
               currentPage <= 1 && 'opacity-50 cursor-not-allowed'
             )}
           >
@@ -128,7 +128,7 @@ export function ExcelFooter({
             onClick={() => onPageChange?.(currentPage + 1)}
             disabled={currentPage >= totalPages}
             className={cn(
-              'p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700',
+              'p-1 rounded hover:bg-slate-200 dark:hover:bg-gunmetal-light',
               currentPage >= totalPages && 'opacity-50 cursor-not-allowed'
             )}
           >
@@ -159,8 +159,8 @@ export function ExcelSimpleFooter({
       className={cn(
         'flex items-center justify-between',
         'px-2 py-1',
-        'bg-slate-50 dark:bg-slate-900',
-        'border-t border-slate-200 dark:border-slate-800',
+        'bg-slate-50 dark:bg-gunmetal',
+        'border-t border-slate-200 dark:border-industrial-slate',
         className
       )}
     >

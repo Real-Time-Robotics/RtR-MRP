@@ -55,7 +55,7 @@
     --border: 220 13% 91%;
     --input: 220 13% 91%;
     --ring: 217 91% 60%;
-    --radius: 0.5rem;
+    --radius: 0; /* Industrial Precision: Sharp edges */
 
     /* Custom colors */
     --success: 142 71% 45%;
@@ -148,9 +148,43 @@
     --excel-cell-text: #1a1a1a;
     --excel-row-number-text: #666666;
 
+    /* =========================================================================
+       INDUSTRIAL PRECISION DESIGN SYSTEM
+       Status-driven, Data-First Manufacturing UI
+       ========================================================================= */
+
+    /* Industrial Primary Palette */
+    --steel-dark: #1A1D23;
+    --gunmetal: #2D3139;
+    --gunmetal-light: #363B44;
+    --slate-industrial: #3D4450;
+    --slate-light: #4A5568;
+
+    /* Industrial Accent Colors (Status-driven) */
+    --production-green: #22C55E;
+    --production-green-dim: rgba(34, 197, 94, 0.2);
+    --alert-amber: #F59E0B;
+    --alert-amber-dim: rgba(245, 158, 11, 0.2);
+    --urgent-red: #EF4444;
+    --urgent-red-dim: rgba(239, 68, 68, 0.2);
+    --info-cyan: #06B6D4;
+    --info-cyan-dim: rgba(6, 182, 212, 0.2);
+
+    /* Industrial Text */
+    --text-industrial-primary: #F4F4F5;
+    --text-industrial-secondary: #A1A1AA;
+    --text-industrial-muted: #71717A;
+    --text-industrial-disabled: #52525B;
+
+    /* Industrial Borders */
+    --border-industrial: #3D4450;
+    --border-industrial-light: #52525B;
+    --border-industrial-focus: #06B6D4;
+
     /* Typography */
-    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    --font-display: 'JetBrains Mono', monospace;
+    --font-sans: 'IBM Plex Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
 
     /* Layout */
     --sidebar-width: 240px;

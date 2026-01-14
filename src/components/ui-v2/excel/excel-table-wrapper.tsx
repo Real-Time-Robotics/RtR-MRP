@@ -116,9 +116,9 @@ export function ExcelDataCell({
       className={cn(
         // Base
         'px-2 py-1.5 text-[11px] font-mono truncate',
-        'border-r border-b border-slate-200 dark:border-slate-800 last:border-r-0',
+        'border-r border-b border-slate-200 dark:border-industrial-slate last:border-r-0',
         // Background
-        'bg-white dark:bg-slate-950',
+        'bg-white dark:bg-steel-dark',
         // Alignment
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
@@ -169,7 +169,7 @@ export function ExcelDataRow({
       onClick={onClick}
       className={cn(
         'flex',
-        'border-b border-slate-200 dark:border-slate-800 last:border-b-0',
+        'border-b border-slate-200 dark:border-industrial-slate last:border-b-0',
         'hover:bg-[#E2EFDA]/30 dark:hover:bg-[#217346]/10 transition-colors',
         isSelected && 'bg-[#E2EFDA]/50 dark:bg-[#217346]/15',
         onClick && 'cursor-pointer',
@@ -181,8 +181,8 @@ export function ExcelDataRow({
         <div
           className={cn(
             'w-10 min-w-[40px] px-1 py-1.5 text-center text-[10px] font-mono',
-            'border-r border-slate-200 dark:border-slate-800',
-            'bg-slate-50 dark:bg-slate-900',
+            'border-r border-slate-200 dark:border-industrial-slate',
+            'bg-slate-50 dark:bg-gunmetal',
             isSelected
               ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 text-[#217346] dark:text-[#70AD47] font-semibold'
               : 'text-slate-400 dark:text-slate-500'

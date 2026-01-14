@@ -99,6 +99,45 @@ const config: Config = {
   				'green-dark': '#70AD47',
   			},
 
+  			// Industrial Precision Design System
+  			steel: {
+  				dark: '#1A1D23',
+  				DEFAULT: '#1A1D23',
+  			},
+  			gunmetal: {
+  				DEFAULT: '#2D3139',
+  				light: '#363B44',
+  			},
+  			industrial: {
+  				slate: '#3D4450',
+  				'slate-light': '#4A5568',
+  			},
+  			production: {
+  				green: '#22C55E',
+  				'green-dim': 'rgba(34, 197, 94, 0.2)',
+  			},
+  			alert: {
+  				amber: '#F59E0B',
+  				'amber-dim': 'rgba(245, 158, 11, 0.2)',
+  			},
+  			urgent: {
+  				red: '#EF4444',
+  				'red-dim': 'rgba(239, 68, 68, 0.2)',
+  			},
+  			'info-cyan': {
+  				DEFAULT: '#06B6D4',
+  				dim: 'rgba(6, 182, 212, 0.2)',
+  			},
+  			mrp: {
+  				'text-primary': '#F4F4F5',
+  				'text-secondary': '#A1A1AA',
+  				'text-muted': '#71717A',
+  				'text-disabled': '#52525B',
+  				'border': '#3D4450',
+  				'border-light': '#52525B',
+  				'border-focus': '#06B6D4',
+  			},
+
   			// Semantic colors (extended)
   			success: {
   				DEFAULT: 'hsl(var(--success))',
@@ -169,11 +208,11 @@ const config: Config = {
   			},
   		},
 
-  		// Extended Typography
+  		// Extended Typography (Industrial Precision)
   		fontFamily: {
-  			sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-  			mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'monospace'],
-  			display: ['Inter', 'system-ui', 'sans-serif'],
+  			sans: ['var(--font-ibm-plex-sans)', 'var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+  			mono: ['var(--font-ibm-plex-mono)', 'var(--font-jetbrains-mono)', 'Fira Code', 'Consolas', 'Monaco', 'monospace'],
+  			display: ['var(--font-jetbrains-mono)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
   		},
   		fontSize: {
   			'display-xl': ['3rem', { lineHeight: '3.5rem', letterSpacing: '-0.02em', fontWeight: '600' }],
@@ -204,14 +243,17 @@ const config: Config = {
   			'22': '5.5rem',
   		},
 
-  		// Extended Border Radius
+  		// Extended Border Radius - Industrial Precision: SHARP EDGES
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)',
-  			'xl': '1rem',
-  			'2xl': '1.25rem',
-  			'3xl': '1.5rem',
+  			none: '0',
+  			sm: '0',        // Force sharp
+  			DEFAULT: '0',   // Force sharp
+  			md: '0',        // Force sharp
+  			lg: '0',        // Force sharp
+  			xl: '0',        // Force sharp
+  			'2xl': '0',     // Force sharp
+  			'3xl': '0',     // Force sharp
+  			full: '9999px', // Keep for avatars/badges
   		},
 
   		// Extended Shadows

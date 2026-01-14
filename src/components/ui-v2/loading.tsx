@@ -73,7 +73,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
     )}
   >
     <LoadingSpinner size="lg" />
-    <p className="mt-4 text-sm text-slate-500">{message}</p>
+    <p className="mt-4 text-sm text-slate-500 dark:text-mrp-text-secondary">{message}</p>
   </div>
 );
 
@@ -83,9 +83,9 @@ export interface CardLoadingProps {
 }
 
 export const CardLoading: React.FC<CardLoadingProps> = ({ message }) => (
-  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-xl">
+  <div className="absolute inset-0 bg-white/80 dark:bg-steel-dark/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-xl">
     <LoadingSpinner size="md" />
-    {message && <p className="mt-2 text-sm text-slate-500">{message}</p>}
+    {message && <p className="mt-2 text-sm text-slate-500 dark:text-mrp-text-secondary">{message}</p>}
   </div>
 );
 
@@ -170,7 +170,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {icon && (
         <div
           className={cn(
-            'flex items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-4',
+            'flex items-center justify-center rounded-full bg-slate-100 dark:bg-gunmetal text-slate-400 dark:text-mrp-text-muted mb-4',
             styles.icon
           )}
         >
@@ -179,7 +179,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       )}
 
       {/* Title */}
-      <h3 className={cn('font-semibold text-slate-900 mb-1', styles.title)}>
+      <h3 className={cn('font-semibold text-slate-900 dark:text-mrp-text-primary mb-1', styles.title)}>
         {title}
       </h3>
 
@@ -187,7 +187,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       {description && (
         <p
           className={cn(
-            'text-slate-500 max-w-sm mb-4',
+            'text-slate-500 dark:text-mrp-text-secondary max-w-sm mb-4',
             styles.description
           )}
         >
@@ -297,7 +297,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 }) => (
   <div
     className={cn(
-      'bg-slate-200 rounded',
+      'bg-slate-200 dark:bg-gunmetal rounded',
       animate && 'animate-pulse',
       className
     )}
@@ -334,7 +334,7 @@ export const SkeletonAvatar: React.FC<{
 
 // Card skeleton
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={cn('bg-white rounded-xl border border-slate-200 p-5', className)}>
+  <div className={cn('bg-white dark:bg-steel-dark rounded-xl border border-slate-200 dark:border-industrial-slate p-5', className)}>
     <div className="flex items-start gap-4">
       <SkeletonAvatar />
       <div className="flex-1 space-y-2">
@@ -351,7 +351,7 @@ export const SkeletonCard: React.FC<{ className?: string }> = ({ className }) =>
 
 // KPI card skeleton
 export const SkeletonKPICard: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={cn('bg-white rounded-xl border border-slate-200 p-5', className)}>
+  <div className={cn('bg-white dark:bg-steel-dark rounded-xl border border-slate-200 dark:border-industrial-slate p-5', className)}>
     <div className="flex items-center gap-3">
       <Skeleton className="h-10 w-10 rounded-lg" />
       <div className="flex-1">
@@ -369,9 +369,9 @@ export const SkeletonTable: React.FC<{
   cols?: number;
   className?: string;
 }> = ({ rows = 5, cols = 4, className }) => (
-  <div className={cn('bg-white rounded-xl border border-slate-200 overflow-hidden', className)}>
+  <div className={cn('bg-white dark:bg-steel-dark rounded-xl border border-slate-200 dark:border-industrial-slate overflow-hidden', className)}>
     {/* Header */}
-    <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex gap-4">
+    <div className="px-4 py-3 bg-slate-50 dark:bg-gunmetal border-b border-slate-200 dark:border-industrial-slate flex gap-4">
       {Array.from({ length: cols }).map((_, i) => (
         <Skeleton key={i} className="h-4 flex-1" />
       ))}
@@ -380,7 +380,7 @@ export const SkeletonTable: React.FC<{
     {Array.from({ length: rows }).map((_, rowIndex) => (
       <div
         key={rowIndex}
-        className="px-4 py-3 border-b border-slate-100 last:border-0 flex gap-4"
+        className="px-4 py-3 border-b border-slate-100 dark:border-gunmetal last:border-0 flex gap-4"
       >
         {Array.from({ length: cols }).map((_, colIndex) => (
           <Skeleton
@@ -398,7 +398,7 @@ export const SkeletonChart: React.FC<{
   type?: 'bar' | 'line' | 'donut';
   className?: string;
 }> = ({ type = 'bar', className }) => (
-  <div className={cn('bg-white rounded-xl border border-slate-200 p-5', className)}>
+  <div className={cn('bg-white dark:bg-steel-dark rounded-xl border border-slate-200 dark:border-industrial-slate p-5', className)}>
     <Skeleton className="h-5 w-32 mb-4" />
     <div className="h-64 flex items-end justify-around gap-2">
       {type === 'bar' &&
@@ -467,11 +467,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       className
     )}
   >
-    <div className="w-12 h-12 rounded-full bg-danger-100 text-danger-600 flex items-center justify-center mb-4">
+    <div className="w-12 h-12 rounded-full bg-danger-100 dark:bg-urgent-red-dim text-danger-600 dark:text-urgent-red flex items-center justify-center mb-4">
       <AlertCircle className="h-6 w-6" />
     </div>
-    <h3 className="text-lg font-semibold text-slate-900 mb-1">{title}</h3>
-    <p className="text-sm text-slate-500 max-w-sm mb-4">{message}</p>
+    <h3 className="text-lg font-semibold text-slate-900 dark:text-mrp-text-primary mb-1">{title}</h3>
+    <p className="text-sm text-slate-500 dark:text-mrp-text-secondary max-w-sm mb-4">{message}</p>
     {onRetry && (
       <Button
         variant="secondary"

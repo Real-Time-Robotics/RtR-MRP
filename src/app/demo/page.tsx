@@ -159,19 +159,29 @@ export default function DemoPage() {
 
     try {
       const creds = DEMO_CREDENTIALS[role];
+      console.log('[DEMO] Attempting login with:', creds.email);
+
       const result = await signIn('credentials', {
         redirect: false,
         email: creds.email,
         password: creds.password,
       });
 
+      console.log('[DEMO] SignIn result:', result);
+
       if (result?.error) {
-        setError('Login failed. Please try again.');
+        console.error('[DEMO] Login error:', result.error);
+        setError(`Login failed: ${result.error}`);
       } else if (result?.ok) {
+        console.log('[DEMO] Login success, redirecting...');
         router.push('/home');
         router.refresh();
+      } else {
+        console.error('[DEMO] Unexpected result:', result);
+        setError('Login failed. Unexpected response.');
       }
     } catch (err: any) {
+      console.error('[DEMO] Exception:', err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(null);

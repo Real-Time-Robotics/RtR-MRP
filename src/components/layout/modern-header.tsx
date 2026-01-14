@@ -290,7 +290,7 @@ function MegaMenu({ tab, isOpen, onClose, language }: MegaMenuProps) {
     <div 
       ref={menuRef}
       className={cn(
-        'absolute left-0 top-full mt-1 w-full bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700',
+        'absolute left-0 top-full mt-1 w-full bg-white dark:bg-steel-dark rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700',
         'animate-in fade-in slide-in-from-top-2 duration-200',
         'max-h-[70vh] overflow-y-auto'
       )}
@@ -310,7 +310,7 @@ function MegaMenu({ tab, isOpen, onClose, language }: MegaMenuProps) {
                     key={item.id}
                     href={item.href}
                     onClick={onClose}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all group"
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gunmetal transition-all group"
                   >
                     <div className={cn(
                       'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110',
@@ -391,7 +391,7 @@ function QuickCreateDropdown({ isOpen, onClose, language }: QuickCreateDropdownP
 
   return (
     <div className={cn(
-      'absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700',
+      'absolute right-0 top-full mt-2 w-56 bg-white dark:bg-steel-dark rounded-xl shadow-xl border border-gray-200 dark:border-gray-700',
       'animate-in fade-in slide-in-from-top-2 duration-200'
     )}>
       <div className="p-2">
@@ -403,7 +403,7 @@ function QuickCreateDropdown({ isOpen, onClose, language }: QuickCreateDropdownP
             key={item.id}
             href={item.href}
             onClick={onClose}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all"
           >
             <span className={item.color}>{item.icon}</span>
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -481,7 +481,7 @@ function CommandPalette({ isOpen, onClose, language }: CommandPaletteProps) {
       
       {/* Modal */}
       <div className={cn(
-        'relative w-full max-w-xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700',
+        'relative w-full max-w-xl bg-white dark:bg-steel-dark rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700',
         'animate-in fade-in zoom-in-95 duration-200'
       )}>
         {/* Search Input */}
@@ -495,7 +495,7 @@ function CommandPalette({ isOpen, onClose, language }: CommandPaletteProps) {
             placeholder={language === 'vi' ? 'Tìm kiếm tính năng...' : 'Search for anything...'}
             className="flex-1 bg-transparent border-0 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none text-base"
           />
-          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500">
+          <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gunmetal rounded text-xs text-gray-500">
             ESC
           </kbd>
         </div>
@@ -514,7 +514,7 @@ function CommandPalette({ isOpen, onClose, language }: CommandPaletteProps) {
                 <button
                   key={item.id}
                   onClick={() => handleSelect(item.href)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all text-left"
                 >
                   <div className={cn(
                     'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
@@ -543,11 +543,11 @@ function CommandPalette({ isOpen, onClose, language }: CommandPaletteProps) {
         <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-400">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">↵</kbd>
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gunmetal rounded">↵</kbd>
               to select
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded">↑↓</kbd>
+              <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gunmetal rounded">↑↓</kbd>
               to navigate
             </span>
           </div>
@@ -579,7 +579,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
 
   return (
     <div className={cn(
-      'absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700',
+      'absolute right-0 top-full mt-2 w-72 bg-white dark:bg-steel-dark rounded-xl shadow-xl border border-gray-200 dark:border-gray-700',
       'animate-in fade-in slide-in-from-top-2 duration-200'
     )}>
       {/* User Info */}
@@ -609,7 +609,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
         <Link
           href="/profile"
           onClick={onClose}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all"
         >
           <UserCircle className="w-5 h-5 text-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -619,7 +619,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
         <Link
           href="/settings"
           onClick={onClose}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all"
         >
           <Settings className="w-5 h-5 text-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -628,7 +628,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
         </Link>
         <button
           onClick={onToggleDarkMode}
-          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all"
         >
           <div className="flex items-center gap-3">
             {darkMode ? <Moon className="w-5 h-5 text-gray-400" /> : <Sun className="w-5 h-5 text-gray-400" />}
@@ -649,7 +649,7 @@ function UserDropdown({ isOpen, onClose, user, language, darkMode, onToggleDarkM
         <Link
           href="/help"
           onClick={onClose}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gunmetal transition-all"
         >
           <HelpCircle className="w-5 h-5 text-gray-400" />
           <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -723,48 +723,49 @@ export function ModernHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="flex items-center h-16 px-4 gap-2">
-          {/* Back to Home */}
+      {/* Industrial Precision Header: Compact 48px, Sharp edges */}
+      <header className="sticky top-0 z-40 bg-white dark:bg-steel-dark border-b border-gray-200 dark:border-mrp-border">
+        <div className="flex items-center h-12 px-4 gap-2">
+          {/* Back to Home - Industrial Style */}
           <Link
             href="/"
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mr-4"
+            className="flex items-center justify-center w-8 h-8 bg-gunmetal hover:bg-gunmetal-light transition-colors mr-2 text-mrp-text-muted hover:text-info-cyan"
             title={language === 'vi' ? 'Về trang chủ' : 'Back to Home'}
           >
-            <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <ChevronLeft className="w-4 h-4" />
           </Link>
 
-          {/* Home Button */}
+          {/* Home Button - Industrial Style */}
           <Link
             href="/home"
             className={cn(
-              'hidden md:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+              'hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium font-mono tracking-wider transition-all border-l-2',
               (pathname === '/home' || pathname === '/dashboard')
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-gunmetal border-l-info-cyan text-info-cyan'
+                : 'border-l-transparent text-mrp-text-secondary hover:bg-gunmetal hover:text-mrp-text-primary'
             )}
           >
-            <Home className="w-4 h-4" />
-            <span>{language === 'vi' ? 'Tổng quan' : 'Home'}</span>
+            <Home className="w-3.5 h-3.5" />
+            <span>{language === 'vi' ? 'TỔNG QUAN' : 'HOME'}</span>
           </Link>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden lg:flex items-center gap-1 ml-2">
+          {/* Navigation Tabs - Industrial Style */}
+          <nav className="hidden lg:flex items-center gap-0.5 ml-2">
             {navigationTabs.map((tab) => (
               <div key={tab.id} className="relative">
                 <button
                   onClick={() => setActiveTab(activeTab === tab.id ? null : tab.id)}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all',
-                    activeTab === tab.id 
-                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium font-mono tracking-wider transition-all border-b-2',
+                    activeTab === tab.id
+                      ? 'bg-gunmetal border-b-info-cyan text-info-cyan'
+                      : 'border-b-transparent text-mrp-text-secondary hover:bg-gunmetal hover:text-mrp-text-primary'
                   )}
                 >
                   {tab.icon}
-                  <span>{language === 'vi' ? tab.labelVi : tab.label}</span>
+                  <span className="uppercase">{language === 'vi' ? tab.labelVi : tab.label}</span>
                   <ChevronDown className={cn(
-                    'w-4 h-4 transition-transform',
+                    'w-3.5 h-3.5 transition-transform',
                     activeTab === tab.id && 'rotate-180'
                   )} />
                 </button>
@@ -783,28 +784,25 @@ export function ModernHeader({
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Search / Command Palette Trigger */}
+          {/* Search / Command Palette Trigger - Industrial Style */}
           <button
             onClick={() => setShowCommandPalette(true)}
-            className="hidden sm:flex items-center gap-3 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all min-w-[200px]"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gunmetal border border-mrp-border text-mrp-text-muted hover:bg-gunmetal-light hover:border-info-cyan/30 transition-all min-w-[180px]"
           >
-            <Search className="w-4 h-4" />
-            <span className="text-sm">{language === 'vi' ? 'Tìm kiếm...' : 'Search...'}</span>
-            <kbd className="ml-auto hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-xs">
+            <Search className="w-3.5 h-3.5" />
+            <span className="text-xs font-mono">{language === 'vi' ? 'TÌM KIẾM...' : 'SEARCH...'}</span>
+            <kbd className="ml-auto hidden md:inline-flex items-center gap-1 px-1 py-0.5 bg-steel-dark text-[10px] font-mono text-mrp-text-muted">
               ⌘K
-            </kbd>
-            <kbd className="ml-1 hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-xs text-gray-400">
-              Ctrl+K
             </kbd>
           </button>
 
-          {/* Quick Create */}
+          {/* Quick Create - Industrial Style */}
           <div className="relative">
             <button
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
             </button>
             <QuickCreateDropdown
               isOpen={showQuickCreate}
@@ -813,38 +811,38 @@ export function ModernHeader({
             />
           </div>
 
-          {/* Language Toggle */}
+          {/* Language Toggle - Industrial Style */}
           <button
             onClick={() => onLanguageChange?.(language === 'vi' ? 'en' : 'vi')}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
           >
-            <Globe className="w-5 h-5" />
+            <Globe className="w-4 h-4" />
           </button>
 
-          {/* Theme Toggle */}
+          {/* Theme Toggle - Industrial Style */}
           <button
             onClick={onToggleDarkMode}
-            className="flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            className="flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
           >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Notifications */}
+          {/* Notifications - Industrial Style */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="relative flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 bg-urgent-red text-white text-[9px] font-bold font-mono flex items-center justify-center">
                   {unreadCount}
                 </span>
               )}
             </button>
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gunmetal rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     {language === 'vi' ? 'Thông báo' : 'Notifications'}
@@ -879,7 +877,7 @@ export function ModernHeader({
                     ))
                   )}
                 </div>
-                <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gunmetal/50">
                   <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline w-full text-center">
                     {language === 'vi' ? 'Xem tất cả' : 'View all'}
                   </button>
@@ -888,16 +886,16 @@ export function ModernHeader({
             )}
           </div>
 
-          {/* User Menu */}
+          {/* User Menu - Industrial Style */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+              className="flex items-center gap-2 px-2 py-1 hover:bg-gunmetal transition-all"
             >
-              <div className="w-8 h-8 rounded-full border-2 border-gray-400 dark:border-gray-500 flex items-center justify-center text-gray-600 dark:text-gray-400 font-semibold text-sm">
+              <div className="w-7 h-7 border border-mrp-border flex items-center justify-center text-mrp-text-muted font-mono text-xs">
                 {user.name.charAt(0)}
               </div>
-              <ChevronDown className="w-4 h-4 text-gray-400 hidden sm:block" />
+              <ChevronDown className="w-3.5 h-3.5 text-mrp-text-muted hidden sm:block" />
             </button>
             <UserDropdown
               isOpen={showUserMenu}
@@ -910,13 +908,13 @@ export function ModernHeader({
             />
           </div>
 
-          {/* Mobile Menu Toggle */}
+          {/* Mobile Menu Toggle - Industrial Style */}
           {onSidebarToggle && (
             <button
               onClick={onSidebarToggle}
-              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="lg:hidden flex items-center justify-center w-8 h-8 text-mrp-text-muted hover:bg-gunmetal hover:text-info-cyan transition-all"
             >
-              <LayoutGrid className="w-5 h-5" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
           )}
         </div>

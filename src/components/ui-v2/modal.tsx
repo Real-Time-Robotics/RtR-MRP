@@ -134,7 +134,7 @@ const Modal: React.FC<ModalProps> = ({
         ref={modalRef}
         tabIndex={-1}
         className={cn(
-          'relative bg-white rounded-2xl shadow-2xl w-full',
+          'relative bg-white dark:bg-steel-dark rounded-2xl shadow-2xl w-full',
           'animate-scale-in',
           'focus:outline-none',
           modalSizes[size],
@@ -148,19 +148,19 @@ const Modal: React.FC<ModalProps> = ({
               {title && (
                 <h2
                   id="modal-title"
-                  className="text-lg font-semibold text-slate-900"
+                  className="text-lg font-semibold text-slate-900 dark:text-mrp-text-primary dark:text-mrp-text-primary"
                 >
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-slate-500">{description}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-mrp-text-secondary">{description}</p>
               )}
             </div>
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 -mr-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1 -mr-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -177,7 +177,7 @@ const Modal: React.FC<ModalProps> = ({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 bg-slate-50 rounded-b-2xl border-t border-slate-100">
+          <div className="px-6 py-4 bg-slate-50 dark:bg-gunmetal rounded-b-2xl border-t border-slate-100 dark:border-industrial-slate">
             {footer}
           </div>
         )}
@@ -265,7 +265,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-mrp-text-primary mb-2">{title}</h3>
 
         {/* Message */}
         <p className="text-sm text-slate-500 mb-6">{message}</p>
@@ -337,7 +337,7 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
         >
           <IconComponent className={cn('h-6 w-6', config.color)} />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-mrp-text-primary mb-2">{title}</h3>
         <p className="text-sm text-slate-500 mb-6">{message}</p>
         <Button onClick={onClose} fullWidth>
           {buttonText}
@@ -421,21 +421,21 @@ const Drawer: React.FC<DrawerProps> = ({
       {/* Drawer */}
       <div
         className={cn(
-          'absolute top-0 bottom-0 bg-white shadow-2xl w-full flex flex-col',
+          'absolute top-0 bottom-0 bg-white dark:bg-steel-dark shadow-2xl w-full flex flex-col',
           drawerSizes[size],
           position === 'left' ? 'left-0 animate-slide-right' : 'right-0 animate-slide-left'
         )}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-industrial-slate">
             {title && (
-              <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-mrp-text-primary">{title}</h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -448,7 +448,7 @@ const Drawer: React.FC<DrawerProps> = ({
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-industrial-slate bg-slate-50 dark:bg-gunmetal">
             {footer}
           </div>
         )}

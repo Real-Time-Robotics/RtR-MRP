@@ -110,7 +110,7 @@ export function ModernAppShell({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#010409]">
       {/* Header */}
       <ModernHeader
         user={user}
@@ -123,7 +123,8 @@ export function ModernAppShell({
         onSidebarToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
       />
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      {/* Industrial Precision: 48px header (h-12 = 3rem) */}
+      <div className="flex h-[calc(100vh-3rem)]">
         {/* Sidebar - Desktop */}
         <div className="hidden lg:block">
           <MinimalistSidebar
