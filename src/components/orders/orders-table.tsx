@@ -10,8 +10,10 @@ import { SalesOrderForm, DeleteSalesOrderDialog, SalesOrder } from '@/components
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 
 // =============================================================================
 // TYPES
@@ -176,7 +178,35 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   };
 
   const handleExport = () => {
-    toast.info('Tính năng export đang được phát triển');
+    if (orders.length === 0) {
+      toast.info('Không có dữ liệu để xuất');
+      return;
+    }
+
+    const exportColumns: ExportColumn[] = [
+      { key: 'orderNumber', header: 'Order Number', width: 12 },
+      { key: 'customer', header: 'Customer', width: 25, format: (v) => v?.name || '-' },
+      { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
+      { key: 'requiredDate', header: 'Required Date', width: 12, type: 'date' },
+      { key: 'priority', header: 'Priority', width: 10, format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || '-' },
+      { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
+      { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
+    ];
+
+    const totalValue = orders.reduce((sum, so) => sum + (so.totalAmount || 0), 0);
+
+    exportToExcel(orders, exportColumns, {
+      title: 'Sales Orders Report',
+      filename: 'sales-orders',
+      sheetName: 'Sales Orders',
+    }, [
+      ['Total Sales Orders', orders.length.toString()],
+      ['Total Value', formatCurrencyUtil(totalValue)],
+      ['In Progress', orders.filter(so => so.status === 'in_progress').length.toString()],
+      ['Pending', orders.filter(so => so.status === 'pending').length.toString()],
+    ]);
+
+    toast.success('Đã xuất file Excel thành công');
   };
 
   const handleImport = () => {
@@ -229,14 +259,14 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       header: 'Ngày đặt',
       width: '100px',
       sortable: true,
-      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+      render: (value) => formatDateShort(value),
     },
     {
       key: 'requiredDate',
       header: 'Ngày yêu cầu',
       width: '100px',
       sortable: true,
-      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+      render: (value) => formatDateShort(value),
     },
     {
       key: 'priority',

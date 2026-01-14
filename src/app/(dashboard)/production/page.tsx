@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Factory, Calendar, Search } from "lucide-react";
+import { Plus, Factory, Calendar, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +16,12 @@ import {
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
-import { format } from "date-fns";
+import { formatDateMedium } from "@/lib/date";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { useDebouncedCallback } from "use-debounce";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { WOExportButton } from "@/components/production/wo-export-button";
 
 interface WorkOrder {
   id: string;
@@ -150,7 +151,7 @@ export default function ProductionPage() {
       header: 'Due',
       width: '90px',
       sortable: true,
-      render: (value) => value ? format(new Date(value), "MMM dd") : "-",
+      render: (value) => value ? formatDateMedium(value) : "-",
     },
     {
       key: 'allocations',
@@ -202,6 +203,7 @@ export default function ProductionPage() {
         </div>
         {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
         <div className="flex gap-1.5">
+          <WOExportButton workOrders={workOrders} variant="outline" size="sm" />
           <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/schedule")}>
             <Calendar className="h-3.5 w-3.5 mr-1.5" />
             {t("nav.production.schedule")}

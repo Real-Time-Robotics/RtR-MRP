@@ -10,8 +10,10 @@ import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropd
 import { PurchaseOrderForm, DeletePurchaseOrderDialog, PurchaseOrder } from '@/components/forms/purchase-order-form';
 import { POStatusBadge } from '@/components/purchasing/po-status-badge';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
+import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 
 // =============================================================================
 // TYPES
@@ -204,7 +206,34 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   };
 
   const handleExport = () => {
-    toast.info('Tính năng export đang được phát triển');
+    if (orders.length === 0) {
+      toast.info('Không có dữ liệu để xuất');
+      return;
+    }
+
+    const exportColumns: ExportColumn[] = [
+      { key: 'poNumber', header: 'PO Number', width: 12 },
+      { key: 'supplier', header: 'Supplier', width: 25, format: (v) => v?.name || '-' },
+      { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
+      { key: 'expectedDate', header: 'Expected Date', width: 12, type: 'date' },
+      { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => row.lines?.length || 0 },
+      { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
+      { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
+    ];
+
+    const totalValue = orders.reduce((sum, po) => sum + (po.totalAmount || 0), 0);
+
+    exportToExcel(orders, exportColumns, {
+      title: 'Purchase Orders Report',
+      filename: 'purchase-orders',
+      sheetName: 'Purchase Orders',
+    }, [
+      ['Total Purchase Orders', orders.length.toString()],
+      ['Total Value', formatCurrencyUtil(totalValue)],
+      ['Pending Orders', orders.filter(po => !['received', 'cancelled'].includes(po.status)).length.toString()],
+    ]);
+
+    toast.success('Đã xuất file Excel thành công');
   };
 
   const handleImport = () => {
@@ -257,14 +286,14 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       header: 'Ngày đặt',
       width: '100px',
       sortable: true,
-      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+      render: (value) => formatDateShort(value),
     },
     {
       key: 'expectedDate',
       header: 'Ngày dự kiến',
       width: '100px',
       sortable: true,
-      render: (value) => format(new Date(value), 'dd/MM/yyyy'),
+      render: (value) => formatDateShort(value),
     },
     {
       key: 'lines',

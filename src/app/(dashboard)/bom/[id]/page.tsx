@@ -10,6 +10,7 @@ import { BomTree } from "@/components/bom/bom-tree";
 import { BomDiscussions } from "@/components/bom/bom-discussions";
 import { BOMExportButton } from "@/components/bom/bom-export-button";
 import prisma from "@/lib/prisma";
+import { formatCurrency } from "@/lib/currency";
 
 interface BOMDetailPageProps {
   params: Promise<{ id: string }>;
@@ -109,14 +110,7 @@ async function getProductWithBOM(id: string) {
   };
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
+// Using centralized formatCurrency from @/lib/currency
 
 export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
   const { id } = await params;

@@ -12,6 +12,8 @@ import {
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatCurrency } from '@/lib/currency';
+import { formatDate } from '@/lib/date';
 
 interface BOMLine {
   lineNumber: number;
@@ -84,8 +86,8 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
         ['Product Name', productName],
         ['BOM Version', bomVersion || 'N/A'],
         ['Total Lines', lines.length.toString()],
-        ['Total Cost', `$${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`],
-        ['Generated', new Date().toLocaleString('vi-VN')],
+        ['Total Cost', formatCurrency(totalCost)],
+        ['Generated', formatDate(new Date(), { format: 'shortTime' })],
       ];
       const wsInfo = XLSX.utils.aoa_to_sheet(infoData);
       XLSX.utils.book_append_sheet(wb, wsInfo, 'Info');
@@ -134,7 +136,7 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
       doc.text(`Product: ${productName}`, 14, 30);
       doc.text(`SKU: ${productSku}`, 14, 37);
       doc.text(`Version: ${bomVersion || 'N/A'}`, 14, 44);
-      doc.text(`Generated: ${new Date().toLocaleString('vi-VN')}`, 200, 30);
+      doc.text(`Generated: ${formatDate(new Date(), { format: 'shortTime' })}`, 200, 30);
 
       // Table data
       const tableData = lines.map((item, index) => [
@@ -144,8 +146,8 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
         item.name.length > 40 ? item.name.substring(0, 40) + '...' : item.name,
         item.quantity,
         item.unit,
-        `$${(item.unitCost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-        `$${((item.quantity || 0) * (item.unitCost || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+        formatCurrency(item.unitCost || 0),
+        formatCurrency((item.quantity || 0) * (item.unitCost || 0)),
         item.isCritical ? 'Yes' : '',
       ]);
 
@@ -183,7 +185,7 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Total BOM Cost: $${totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 14, finalY + 12);
+      doc.text(`Total BOM Cost: ${formatCurrency(totalCost)}`, 14, finalY + 12);
       doc.text(`Total Components: ${lines.length}`, 14, finalY + 20);
 
       // Footer

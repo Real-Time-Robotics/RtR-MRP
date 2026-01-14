@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/page-header";
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { formatDateMedium } from "@/lib/date";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface WorkOrderData {
@@ -237,7 +237,7 @@ export default function WorkOrderDetailPage() {
           <p className="text-sm text-muted-foreground">Due Date</p>
           <p className="font-medium">
             {data.plannedEnd
-              ? format(new Date(data.plannedEnd), "MMM dd, yyyy")
+              ? formatDateMedium(data.plannedEnd)
               : "-"}
           </p>
         </Card>
@@ -255,7 +255,7 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-muted-foreground">Planned Start</p>
                 <p className="font-medium">
                   {data.plannedStart
-                    ? format(new Date(data.plannedStart), "MMM dd")
+                    ? formatDateMedium(data.plannedStart)
                     : "-"}
                 </p>
               </div>
@@ -263,7 +263,7 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-muted-foreground">Planned End</p>
                 <p className="font-medium">
                   {data.plannedEnd
-                    ? format(new Date(data.plannedEnd), "MMM dd")
+                    ? formatDateMedium(data.plannedEnd)
                     : "-"}
                 </p>
               </div>
@@ -271,7 +271,7 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-muted-foreground">Actual Start</p>
                 <p className="font-medium">
                   {data.actualStart
-                    ? format(new Date(data.actualStart), "MMM dd")
+                    ? formatDateMedium(data.actualStart)
                     : "-"}
                 </p>
               </div>
@@ -279,7 +279,7 @@ export default function WorkOrderDetailPage() {
                 <p className="text-sm text-muted-foreground">Actual End</p>
                 <p className="font-medium">
                   {data.actualEnd
-                    ? format(new Date(data.actualEnd), "MMM dd")
+                    ? formatDateMedium(data.actualEnd)
                     : "-"}
                 </p>
               </div>
@@ -329,7 +329,7 @@ export default function WorkOrderDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Required Date</p>
                 <p className="font-medium">
-                  {format(new Date(data.salesOrder.requiredDate), "MMM dd, yyyy")}
+                  {formatDateMedium(data.salesOrder.requiredDate)}
                 </p>
               </div>
             </div>
