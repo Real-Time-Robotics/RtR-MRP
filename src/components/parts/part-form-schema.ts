@@ -45,7 +45,7 @@ export const partSchema = z.object({
     partNumber: z.string().min(1, 'Mã part là bắt buộc').max(50),
     name: z.string().min(1, 'Tên part là bắt buộc').max(200),
     description: z.string().max(1000).optional().nullable(),
-    category: z.enum(CATEGORY_ENUM, { errorMap: () => ({ message: 'Danh mục là bắt buộc' }) }),
+    category: z.enum(CATEGORY_ENUM, { message: 'Danh mục là bắt buộc' }),
     unit: z.string().min(1, 'Đơn vị là bắt buộc'),
     unitCost: z.coerce.number().min(0, 'Giá phải >= 0'),
 
