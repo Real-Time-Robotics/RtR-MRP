@@ -152,8 +152,8 @@ const navigationTabs: NavTab[] = [
         titleVi: 'Sản xuất',
         items: [
           { id: 'work-orders', label: 'Work Orders', labelVi: 'Lệnh sản xuất', description: 'Production orders', icon: <Factory className="w-5 h-5" />, href: '/production', color: 'text-orange-600 bg-orange-50' },
-          { id: 'scheduling', label: 'Scheduling', labelVi: 'Lập lịch', description: 'Production schedule', icon: <CalendarDays className="w-5 h-5" />, href: '/production', color: 'text-blue-600 bg-blue-50' },
-          { id: 'shop-floor', label: 'Shop Floor', labelVi: 'Xưởng SX', description: 'Real-time tracking', icon: <Activity className="w-5 h-5" />, href: '/production', color: 'text-emerald-600 bg-emerald-50', isNew: true },
+          { id: 'scheduling', label: 'Scheduling', labelVi: 'Lập lịch', description: 'Production schedule', icon: <CalendarDays className="w-5 h-5" />, href: '/production/schedule', color: 'text-blue-600 bg-blue-50' },
+          { id: 'shop-floor', label: 'Shop Floor', labelVi: 'Xưởng SX', description: 'Real-time tracking', icon: <Activity className="w-5 h-5" />, href: '/production/shop-floor', color: 'text-emerald-600 bg-emerald-50', isNew: true },
         ]
       },
       {
