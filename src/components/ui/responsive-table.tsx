@@ -113,10 +113,10 @@ export function ResponsiveTable<T>({
     const primaryValue = primaryColumn.render
       ? primaryColumn.render(item)
       : (item as Record<string, unknown>)[primaryColumn.key];
-    const secondaryValue = secondaryColumn?.render
+    const secondaryValue: React.ReactNode = secondaryColumn?.render
       ? secondaryColumn.render(item)
       : secondaryColumn
-        ? (item as Record<string, unknown>)[secondaryColumn.key]
+        ? ((item as Record<string, unknown>)[secondaryColumn.key] as React.ReactNode)
         : null;
 
     return (
