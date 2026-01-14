@@ -169,9 +169,9 @@ const navigationTabs: NavTab[] = [
         title: 'Resources',
         titleVi: 'Tài nguyên',
         items: [
-          { id: 'workcenters', label: 'Work Centers', labelVi: 'Trung tâm SX', description: 'Work center setup', icon: <Cog className="w-5 h-5" />, href: '/production', color: 'text-slate-600 bg-slate-50' },
-          { id: 'equipment', label: 'Equipment', labelVi: 'Thiết bị', description: 'Machine management', icon: <Wrench className="w-5 h-5" />, href: '/production', color: 'text-gray-600 bg-gray-50' },
-          { id: 'workforce', label: 'Workforce', labelVi: 'Nhân công', description: 'Labor management', icon: <Users className="w-5 h-5" />, href: '/production', color: 'text-sky-600 bg-sky-50' },
+          { id: 'workcenters', label: 'Work Centers', labelVi: 'Trung tâm SX', description: 'Work center setup', icon: <Cog className="w-5 h-5" />, href: '/production/work-centers', color: 'text-slate-600 bg-slate-50' },
+          { id: 'equipment', label: 'Equipment', labelVi: 'Thiết bị', description: 'Machine management', icon: <Wrench className="w-5 h-5" />, href: '/production/work-centers', color: 'text-gray-600 bg-gray-50' },
+          { id: 'workforce', label: 'Workforce', labelVi: 'Nhân công', description: 'Labor management', icon: <Users className="w-5 h-5" />, href: '/production/capacity', color: 'text-sky-600 bg-sky-50' },
         ]
       },
     ],
