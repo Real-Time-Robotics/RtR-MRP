@@ -122,6 +122,8 @@ export interface Part {
   rohsCompliant: boolean;
   reachCompliant: boolean;
   revision: string;
+  revisionDate?: string | Date | null;
+  drawingNumber?: string | null;
   manufacturer?: string | null;
   manufacturerPn?: string | null;
   lifecycleStatus: string;

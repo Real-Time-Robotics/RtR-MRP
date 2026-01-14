@@ -186,6 +186,8 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                     rohsCompliant: part.rohsCompliant,
                     reachCompliant: part.reachCompliant,
                     revision: part.revision,
+                    revisionDate: part.revisionDate ? new Date(part.revisionDate).toISOString().split('T')[0] : null,
+                    drawingNumber: part.drawingNumber || '',
                     manufacturer: part.manufacturer || '',
                     manufacturerPn: part.manufacturerPn || '',
                     lifecycleStatus: part.lifecycleStatus as PartFormData['lifecycleStatus'],
@@ -225,55 +227,28 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
             <Form {...form}>
                 <form className="space-y-4">
                     <Tabs defaultValue="basic" className="w-full">
-                        <TabsList className="grid grid-cols-4 w-full dark:bg-slate-800">
+                        <TabsList className="grid grid-cols-5 w-full dark:bg-slate-800">
                             <TabsTrigger value="basic">Cơ bản</TabsTrigger>
                             <TabsTrigger value="physical">Vật lý</TabsTrigger>
+                            <TabsTrigger value="engineering">Engineering</TabsTrigger>
                             <TabsTrigger value="procurement">Procurement</TabsTrigger>
                             <TabsTrigger value="compliance">Compliance</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="basic" className="space-y-4 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="partNumber"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Mã Part *</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="PART-001" {...field} disabled={isEditing} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="lifecycleStatus"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Trạng thái</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="DEVELOPMENT">Phát triển</SelectItem>
-                                                    <SelectItem value="PROTOTYPE">Mẫu thử</SelectItem>
-                                                    <SelectItem value="ACTIVE">Hoạt động</SelectItem>
-                                                    <SelectItem value="PHASE_OUT">Ngừng dần</SelectItem>
-                                                    <SelectItem value="OBSOLETE">Lỗi thời</SelectItem>
-                                                    <SelectItem value="EOL">Hết vòng đời</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                            <FormField
+                                control={form.control}
+                                name="partNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Mã Part *</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="PART-001" {...field} disabled={isEditing} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
                             <FormField
                                 control={form.control}
@@ -360,36 +335,6 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                             <FormLabel>Giá (USD) *</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} step={0.01} {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="manufacturer"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Nhà sản xuất</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Manufacturer" {...field} value={field.value || ''} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="manufacturerPn"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>MPN</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Manufacturer Part Number" {...field} value={field.value || ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -499,6 +444,113 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormControl>
                                             <Input placeholder="Black, White, Silver..." {...field} value={field.value || ''} />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </TabsContent>
+
+                        {/* Engineering Tab */}
+                        <TabsContent value="engineering" className="space-y-4 mt-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="revision"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Revision</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="A" {...field} />
+                                            </FormControl>
+                                            <FormDescription>Phiên bản thiết kế</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="revisionDate"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Revision Date</FormLabel>
+                                            <FormControl>
+                                                <Input type="date" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormDescription>Ngày cập nhật phiên bản</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="drawingNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Drawing Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="DWG-001" {...field} value={field.value || ''} />
+                                        </FormControl>
+                                        <FormDescription>Số bản vẽ kỹ thuật</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="manufacturer"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Manufacturer</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Nhà sản xuất" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="manufacturerPn"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mfr Part Number</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="MPN" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="lifecycleStatus"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Lifecycle Status</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="DEVELOPMENT">Development</SelectItem>
+                                                <SelectItem value="PROTOTYPE">Prototype</SelectItem>
+                                                <SelectItem value="ACTIVE">Active</SelectItem>
+                                                <SelectItem value="PHASE_OUT">Phase Out</SelectItem>
+                                                <SelectItem value="OBSOLETE">Obsolete</SelectItem>
+                                                <SelectItem value="EOL">End of Life</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Trạng thái vòng đời sản phẩm</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -640,44 +692,29 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
                         {/* Compliance Tab */}
                         <TabsContent value="compliance" className="space-y-4 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="countryOfOrigin"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Xuất xứ</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value || ''}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Chọn quốc gia" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {COUNTRIES.map((c) => (
-                                                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="revision"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Revision</FormLabel>
+                            <FormField
+                                control={form.control}
+                                name="countryOfOrigin"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Xuất xứ</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value || ''}>
                                             <FormControl>
-                                                <Input placeholder="A" {...field} />
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Chọn quốc gia" />
+                                                </SelectTrigger>
                                             </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                                            <SelectContent>
+                                                {COUNTRIES.map((c) => (
+                                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormDescription>Quốc gia sản xuất</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
                             <div className="space-y-3">
                                 <FormField

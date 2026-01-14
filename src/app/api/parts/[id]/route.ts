@@ -141,6 +141,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         rohsCompliant: data.rohsCompliant ?? true,
         reachCompliant: data.reachCompliant ?? true,
         revision: data.revision ?? "A",
+        revisionDate: data.revisionDate ? new Date(data.revisionDate) : undefined,
+        drawingNumber: data.drawingNumber,
 
         status: "active",
         lifecycleStatus: data.lifecycleStatus,

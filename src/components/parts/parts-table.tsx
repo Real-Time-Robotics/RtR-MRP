@@ -23,6 +23,8 @@ import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
 import { DeletePartDialog, Part } from '@/components/forms/part-form';
 import { PartFormDialog } from '@/components/parts/part-form-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ImportWizard } from '@/components/excel/import-wizard';
 import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -148,6 +150,7 @@ export function PartsTable() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
   const [deletingPart, setDeletingPart] = useState<Part | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Inline editing state
   const [editingCostId, setEditingCostId] = useState<string | null>(null);
@@ -328,7 +331,13 @@ export function PartsTable() {
   };
 
   const handleImport = () => {
-    toast.info('Tính năng import đang được phát triển');
+    setImportDialogOpen(true);
+  };
+
+  const handleImportSuccess = () => {
+    setImportDialogOpen(false);
+    fetchParts();
+    toast.success('Import thành công!');
   };
 
   // Get unique categories
@@ -601,6 +610,16 @@ export function PartsTable() {
           part={deletingPart}
           onSuccess={handleDeleteSuccess}
         />
+
+        {/* Import Dialog */}
+        <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Import Parts từ Excel</DialogTitle>
+            </DialogHeader>
+            <ImportWizard />
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

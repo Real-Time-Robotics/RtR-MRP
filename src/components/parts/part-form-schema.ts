@@ -80,6 +80,8 @@ export const partSchema = z.object({
 
     // Engineering
     revision: z.string().max(20),
+    revisionDate: z.string().optional().nullable(), // ISO date string
+    drawingNumber: z.string().max(100).optional().nullable(),
     manufacturer: z.string().max(100).optional().nullable(),
     manufacturerPn: z.string().max(100).optional().nullable(),
     lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']),
@@ -105,6 +107,8 @@ export const defaultPartValues: PartFormData = {
     rohsCompliant: true,
     reachCompliant: true,
     revision: 'A',
+    revisionDate: null,
+    drawingNumber: null,
     lifecycleStatus: 'ACTIVE',
     // Optional numeric fields need to be null or undefined, handled by form reset usually
 };

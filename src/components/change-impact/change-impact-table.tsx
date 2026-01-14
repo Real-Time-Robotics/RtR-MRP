@@ -19,10 +19,11 @@ function formatValue(value: unknown, valueType: ValueType): string {
 
   switch (valueType) {
     case 'currency':
-      return new Intl.NumberFormat('vi-VN', {
+      return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0,
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
       }).format(Number(value));
     case 'number':
       return new Intl.NumberFormat('vi-VN').format(Number(value));
