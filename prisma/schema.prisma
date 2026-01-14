@@ -863,6 +863,13 @@ model User {
   createdThreads       ConversationThread[] @relation("ThreadCreator")
   sentMessages         Message[]            @relation("MessageSender")
   threadParticipations ThreadParticipant[]
+  mentions             Mention[]            @relation("MentionedUser")
+
+  // Notifications
+  notifications        Notification[]
+  notifyOnMention      Boolean   @default(true)
+  notifyOnReply        Boolean   @default(true)
+  notifyByEmail        Boolean   @default(false)
 
   // Multi-tenancy
   tenantId            String?
@@ -1174,21 +1181,41 @@ model NotificationSetting {
 }
 
 model Notification {
-  id          String    @id @default(cuid())
-  userId      String
-  type        String    // stock_alert, order_update, po_received
-  title       String
-  message     String
-  priority    String    @default("normal")
-  link        String?
-  isRead      Boolean   @default(false)
-  readAt      DateTime?
-  emailSent   Boolean   @default(false)
-  emailSentAt DateTime?
-  metadata    Json?
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type            String    // stock_alert, order_update, po_received, mention, reply, thread_update
+  title           String
+  message         String    @db.Text
+  priority        String    @default("normal")
+  link            String?
+
+  // Source reference
+  sourceType      String?   // 'message', 'thread', 'task', etc.
+  sourceId        String?
+
+  // Mention specific
+  mentionedBy     String?   // User ID who mentioned
+  mentionedByName String?   // User name for display
+  threadId        String?
+  messageId       String?
+
+  // Context for navigation
+  contextType     String?   // 'PART', 'BOM', 'WORK_ORDER', etc.
+  contextId       String?
+  contextUrl      String?   // Direct URL to navigate
+
+  // Status
+  isRead          Boolean   @default(false)
+  readAt          DateTime?
+  emailSent       Boolean   @default(false)
+  emailSentAt     DateTime?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([sourceType, sourceId])
   @@index([createdAt])
   @@map("notifications")
 }
@@ -4739,6 +4766,9 @@ model Message {
 
   // Relations
   mentions        Mention[]
+  attachments     MessageAttachment[]
+  editHistory     MessageEditHistory[]
+  entityLinks     EntityLink[]
 
   // Timestamps
   createdAt       DateTime       @default(now())
@@ -4794,7 +4824,12 @@ model Mention {
   // Mention target
   mentionType     MentionType
   userId          String?                   // If mentioning specific user
+  user            User?          @relation("MentionedUser", fields: [userId], references: [id], onDelete: Cascade)
   roleName        String?                   // If mentioning role (@planner)
+
+  // Position in message for highlighting
+  startIndex      Int?
+  endIndex        Int?
 
   // Acknowledgment
   isRead          Boolean        @default(false)
@@ -4802,9 +4837,126 @@ model Mention {
 
   createdAt       DateTime       @default(now())
 
+  @@unique([messageId, userId])
   @@index([messageId])
   @@index([userId])
   @@index([roleName])
 
   @@map("mentions")
 }
+
+// =============================================================================
+// MESSAGE ATTACHMENT
+// =============================================================================
+
+enum AttachmentType {
+  IMAGE           // Screenshot, photo
+  DOCUMENT        // PDF, Excel, Word
+  FILE            // Other files
+}
+
+model MessageAttachment {
+  id              String         @id @default(cuid())
+
+  messageId       String
+  message         Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // File info
+  type            AttachmentType
+  filename        String                    // Original filename
+  fileUrl         String                    // Storage URL
+  fileSize        Int                       // Size in bytes
+  mimeType        String                    // MIME type
+
+  // Image metadata (for screenshots)
+  width           Int?                      // Image width
+  height          Int?                      // Image height
+  thumbnailUrl    String?                   // Thumbnail for preview
+
+  // Context metadata (where was this captured from)
+  capturedContext String?       @db.Text    // JSON: { page: "work-orders", id: "wo-123", title: "WO Details" }
+
+  // Upload info
+  uploadedById    String
+  uploadedAt      DateTime       @default(now())
+
+  @@index([messageId])
+  @@index([type])
+  @@index([uploadedById])
+
+  @@map("message_attachments")
+}
+
+// =============================================================================
+// MESSAGE EDIT HISTORY (Audit Trail)
+// =============================================================================
+
+model MessageEditHistory {
+  id              String         @id @default(cuid())
+
+  messageId       String
+  message         Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Previous content
+  previousContent String         @db.Text    // Content before edit
+
+  // Edit info
+  editedById      String
+  editedAt        DateTime       @default(now())
+
+  // Edit reason (optional)
+  reason          String?                   // Why the edit was made
+
+  @@index([messageId])
+  @@index([editedById])
+  @@index([editedAt])
+
+  @@map("message_edit_history")
+}
+
+// =============================================================================
+// ENTITY LINK (Link to business entities from messages)
+// =============================================================================
+
+enum LinkedEntityType {
+  PART
+  BOM
+  WORK_ORDER
+  PURCHASE_ORDER
+  SALES_ORDER
+  SUPPLIER
+  CUSTOMER
+  INVENTORY
+  QC_REPORT
+  MRP_RUN
+}
+
+model EntityLink {
+  id              String         @id @default(cuid())
+
+  messageId       String
+  message         Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // Entity reference
+  entityType      LinkedEntityType
+  entityId        String                    // ID of the linked entity
+
+  // Cached display info (for quick rendering)
+  entityTitle     String                    // Cached title (e.g., "Part: PN-12345 - Resistor 10K")
+  entitySubtitle  String?                   // Cached subtitle (e.g., "In Stock: 500 units")
+  entityIcon      String?                   // Icon name to display
+  entityStatus    String?                   // Current status for badge
+
+  // Link position in message
+  startIndex      Int?                      // Where in message content this link starts
+  endIndex        Int?                      // Where in message content this link ends
+
+  createdAt       DateTime       @default(now())
+
+  @@index([messageId])
+  @@index([entityType, entityId])
+  @@index([entityType])
+
+  @@map("entity_links")
+}
+

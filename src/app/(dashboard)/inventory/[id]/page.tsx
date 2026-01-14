@@ -8,7 +8,9 @@ import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 import { useDataEntry } from '@/hooks/use-data-entry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -162,125 +164,142 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left Column: Info */}
-                <div className="space-y-6 col-span-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Package className="h-4 w-4" />
-                                Stock Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-6">
-                            <div>
-                                <Label className="text-muted-foreground text-xs uppercase">Quantity On Hand</Label>
-                                <div className="text-3xl font-bold mt-1">{inventory.quantity} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
-                            </div>
-                            <div>
-                                <Label className="text-muted-foreground text-xs uppercase">Available</Label>
-                                <div className="text-3xl font-bold mt-1 text-green-600">{available} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
-                            </div>
-                            <div className="col-span-2 grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
-                                <div>
-                                    <Label className="text-muted-foreground text-xs uppercase">Reserved</Label>
-                                    <div className="font-semibold">{inventory.reservedQty}</div>
-                                </div>
-                                <div>
-                                    <Label className="text-muted-foreground text-xs uppercase">Allocated</Label>
-                                    <div className="font-semibold">0</div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            <Tabs defaultValue="details" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="details">Chi tiết</TabsTrigger>
+                    <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+                </TabsList>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <MapPin className="h-4 w-4" />
-                                Location & Storage
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Warehouse</Label>
-                                    <div className="font-medium flex items-center gap-2">
-                                        <Box className="h-4 w-4 text-muted-foreground" />
-                                        {inventory.warehouse.name}
+                <TabsContent value="details" className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Left Column: Info */}
+                        <div className="space-y-6 col-span-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Package className="h-4 w-4" />
+                                        Stock Information
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <Label className="text-muted-foreground text-xs uppercase">Quantity On Hand</Label>
+                                        <div className="text-3xl font-bold mt-1">{inventory.quantity} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Location Code</Label>
-                                    {editMode ? (
-                                        <Input
-                                            value={formData.locationCode}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, locationCode: e.target.value }))}
-                                            placeholder="e.g. A-01-02"
-                                        />
-                                    ) : (
-                                        <div className="font-medium font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded inline-block">
-                                            {inventory.locationCode || 'N/A'}
+                                    <div>
+                                        <Label className="text-muted-foreground text-xs uppercase">Available</Label>
+                                        <div className="text-3xl font-bold mt-1 text-green-600">{available} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
+                                    </div>
+                                    <div className="col-span-2 grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
+                                        <div>
+                                            <Label className="text-muted-foreground text-xs uppercase">Reserved</Label>
+                                            <div className="font-semibold">{inventory.reservedQty}</div>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                            <Separator />
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Lot / Batch Number</Label>
-                                    {editMode ? (
-                                        <Input
-                                            value={formData.lotNumber}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, lotNumber: e.target.value }))}
-                                            placeholder="LOT-2024-XXX"
-                                        />
-                                    ) : (
-                                        <div className="font-medium font-mono">{inventory.lotNumber || 'N/A'}</div>
-                                    )}
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Expiry Date</Label>
-                                    <div className="font-medium text-muted-foreground text-sm italic">Not tracking expiry</div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                                        <div>
+                                            <Label className="text-muted-foreground text-xs uppercase">Allocated</Label>
+                                            <div className="font-semibold">0</div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-                {/* Right Column: Meta & History */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm">Metadata</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Updated At</span>
-                                <span>{new Date(inventory.updatedAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Category</span>
-                                <Badge variant="secondary">{inventory.part.category}</Badge>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <MapPin className="h-4 w-4" />
+                                        Location & Storage
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Warehouse</Label>
+                                            <div className="font-medium flex items-center gap-2">
+                                                <Box className="h-4 w-4 text-muted-foreground" />
+                                                {inventory.warehouse.name}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Location Code</Label>
+                                            {editMode ? (
+                                                <Input
+                                                    value={formData.locationCode}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, locationCode: e.target.value }))}
+                                                    placeholder="e.g. A-01-02"
+                                                />
+                                            ) : (
+                                                <div className="font-medium font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded inline-block">
+                                                    {inventory.locationCode || 'N/A'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <Separator />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Lot / Batch Number</Label>
+                                            {editMode ? (
+                                                <Input
+                                                    value={formData.lotNumber}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, lotNumber: e.target.value }))}
+                                                    placeholder="LOT-2024-XXX"
+                                                />
+                                            ) : (
+                                                <div className="font-medium font-mono">{inventory.lotNumber || 'N/A'}</div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Expiry Date</Label>
+                                            <div className="font-medium text-muted-foreground text-sm italic">Not tracking expiry</div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                    <Card className="bg-slate-50 dark:bg-slate-900/50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-sm">
-                                <History className="h-4 w-4" />
-                                Recent Movements
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-center py-6 text-muted-foreground text-xs">
-                                No recent movements recorded.
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                        {/* Right Column: Meta & History */}
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-sm">Metadata</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Updated At</span>
+                                        <span>{new Date(inventory.updatedAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Category</span>
+                                        <Badge variant="secondary">{inventory.part.category}</Badge>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-slate-50 dark:bg-slate-900/50">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-sm">
+                                        <History className="h-4 w-4" />
+                                        Recent Movements
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-center py-6 text-muted-foreground text-xs">
+                                        No recent movements recorded.
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="discussions" className="mt-4">
+                    <EntityDiscussions
+                        contextType="INVENTORY"
+                        contextId={inventory.id}
+                        contextTitle={`Inventory ${inventory.part.partNumber} - ${inventory.warehouse.name}`}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

@@ -16,7 +16,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { MrpSummaryCards } from "@/components/mrp/mrp-summary-cards";
 import { SuggestionCard } from "@/components/mrp/suggestion-card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 
 interface MrpRunData {
   id: string;
@@ -280,82 +282,99 @@ export default function MrpRunDetailPage() {
         deferSuggestions={deferCount}
       />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Suggestions</CardTitle>
-            <div className="flex gap-2">
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Action" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="PURCHASE">Purchase</SelectItem>
-                  <SelectItem value="EXPEDITE">Expedite</SelectItem>
-                  <SelectItem value="DEFER">Defer</SelectItem>
-                </SelectContent>
-              </Select>
+      <Tabs defaultValue="suggestions" className="w-full">
+        <TabsList>
+          <TabsTrigger value="suggestions">Đề xuất</TabsTrigger>
+          <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+        </TabsList>
 
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="HIGH">High</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="LOW">Low</SelectItem>
-                </SelectContent>
-              </Select>
+        <TabsContent value="suggestions" className="mt-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Suggestions</CardTitle>
+                <div className="flex gap-2">
+                  <Select value={actionFilter} onValueChange={setActionFilter}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Actions</SelectItem>
+                      <SelectItem value="PURCHASE">Purchase</SelectItem>
+                      <SelectItem value="EXPEDITE">Expedite</SelectItem>
+                      <SelectItem value="DEFER">Defer</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="converted">Converted</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredSuggestions.length === 0 ? (
-            <p className="text-center py-8 text-muted-foreground">
-              No suggestions match the selected filters
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {filteredSuggestions.map((suggestion) => (
-                <SuggestionCard
-                  key={suggestion.id}
-                  suggestion={{
-                    id: suggestion.id,
-                    partNumber: suggestion.part.partNumber,
-                    partName: suggestion.part.name,
-                    actionType: suggestion.actionType,
-                    priority: suggestion.priority,
-                    suggestedQty: suggestion.suggestedQty,
-                    suggestedDate: suggestion.suggestedDate,
-                    reason: suggestion.reason,
-                    supplierName: suggestion.supplier?.name,
-                    estimatedCost: suggestion.estimatedCost,
-                    status: suggestion.status,
-                  }}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onCreatePO={handleCreatePO}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priority</SelectItem>
+                      <SelectItem value="HIGH">High</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="LOW">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="converted">Converted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {filteredSuggestions.length === 0 ? (
+                <p className="text-center py-8 text-muted-foreground">
+                  No suggestions match the selected filters
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {filteredSuggestions.map((suggestion) => (
+                    <SuggestionCard
+                      key={suggestion.id}
+                      suggestion={{
+                        id: suggestion.id,
+                        partNumber: suggestion.part.partNumber,
+                        partName: suggestion.part.name,
+                        actionType: suggestion.actionType,
+                        priority: suggestion.priority,
+                        suggestedQty: suggestion.suggestedQty,
+                        suggestedDate: suggestion.suggestedDate,
+                        reason: suggestion.reason,
+                        supplierName: suggestion.supplier?.name,
+                        estimatedCost: suggestion.estimatedCost,
+                        status: suggestion.status,
+                      }}
+                      onApprove={handleApprove}
+                      onReject={handleReject}
+                      onCreatePO={handleCreatePO}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="discussions" className="mt-4">
+          <EntityDiscussions
+            contextType="MRP_RUN"
+            contextId={data.id}
+            contextTitle={`MRP Run ${data.runNumber}`}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

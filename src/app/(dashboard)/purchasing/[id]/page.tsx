@@ -17,6 +17,8 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 
 interface PurchaseOrderDetail {
     id: string;
@@ -124,115 +126,132 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left Column: Line Items */}
-                <div className="space-y-6 col-span-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="h-4 w-4" />
-                                PO Items
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[50px]">#</TableHead>
-                                        <TableHead>Part</TableHead>
-                                        <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead className="text-right">Received</TableHead>
-                                        <TableHead className="text-right">Unit Price</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {po.lines.map((line) => (
-                                        <TableRow key={line.id}>
-                                            <TableCell>{line.lineNumber}</TableCell>
-                                            <TableCell>
-                                                <div className="font-medium">{line.part.partNumber}</div>
-                                                <div className="text-xs text-muted-foreground">{line.part.name}</div>
-                                            </TableCell>
-                                            <TableCell className="text-right">{line.quantity} <span className="text-xs text-muted-foreground">{line.part.unit}</span></TableCell>
-                                            <TableCell className="text-right font-mono">
-                                                {line.receivedQty > 0 ? (
-                                                    <span className="text-green-600">{line.receivedQty}</span>
-                                                ) : (
-                                                    <span className="text-slate-300">-</span>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono">${line.unitPrice.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-medium">
-                                                ${(line.quantity * line.unitPrice).toFixed(2)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-right font-bold">Total Estimated Cost</TableCell>
-                                        <TableCell className="text-right font-bold text-lg">
-                                            ${totalAmount.toFixed(2)}
-                                        </TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
+            <Tabs defaultValue="details" className="w-full">
+                <TabsList>
+                    <TabsTrigger value="details">Chi tiết</TabsTrigger>
+                    <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+                </TabsList>
 
-                {/* Right Column: Meta Info */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Truck className="h-4 w-4" />
-                                Supplier
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="font-semibold text-lg">{po.supplier.name}</div>
-                            <div className="space-y-2 text-sm text-muted-foreground">
-                                {po.supplier.contactName && <div>Contact: {po.supplier.contactName}</div>}
-                                {po.supplier.contactEmail && <div>Email: {po.supplier.contactEmail}</div>}
-                                {po.supplier.contactPhone && <div>Phone: {po.supplier.contactPhone}</div>}
-                            </div>
-                        </CardContent>
-                    </Card>
+                <TabsContent value="details" className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Left Column: Line Items */}
+                        <div className="space-y-6 col-span-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <FileText className="h-4 w-4" />
+                                        PO Items
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[50px]">#</TableHead>
+                                                <TableHead>Part</TableHead>
+                                                <TableHead className="text-right">Qty</TableHead>
+                                                <TableHead className="text-right">Received</TableHead>
+                                                <TableHead className="text-right">Unit Price</TableHead>
+                                                <TableHead className="text-right">Total</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {po.lines.map((line) => (
+                                                <TableRow key={line.id}>
+                                                    <TableCell>{line.lineNumber}</TableCell>
+                                                    <TableCell>
+                                                        <div className="font-medium">{line.part.partNumber}</div>
+                                                        <div className="text-xs text-muted-foreground">{line.part.name}</div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">{line.quantity} <span className="text-xs text-muted-foreground">{line.part.unit}</span></TableCell>
+                                                    <TableCell className="text-right font-mono">
+                                                        {line.receivedQty > 0 ? (
+                                                            <span className="text-green-600">{line.receivedQty}</span>
+                                                        ) : (
+                                                            <span className="text-slate-300">-</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-mono">${line.unitPrice.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right font-medium">
+                                                        ${(line.quantity * line.unitPrice).toFixed(2)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-right font-bold">Total Estimated Cost</TableCell>
+                                                <TableCell className="text-right font-bold text-lg">
+                                                    ${totalAmount.toFixed(2)}
+                                                </TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Calendar className="h-4 w-4" />
-                                Timeline
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Order Date</span>
-                                <span>{new Date(po.orderDate).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Expected Date</span>
-                                <span className="font-medium text-orange-600">{new Date(po.expectedDate).toLocaleDateString()}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        {/* Right Column: Meta Info */}
+                        <div className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Truck className="h-4 w-4" />
+                                        Supplier
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="font-semibold text-lg">{po.supplier.name}</div>
+                                    <div className="space-y-2 text-sm text-muted-foreground">
+                                        {po.supplier.contactName && <div>Contact: {po.supplier.contactName}</div>}
+                                        {po.supplier.contactEmail && <div>Email: {po.supplier.contactEmail}</div>}
+                                        {po.supplier.contactPhone && <div>Phone: {po.supplier.contactPhone}</div>}
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="h-4 w-4" />
-                                Notes
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground italic">
-                                {po.notes || "No additional notes."}
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Calendar className="h-4 w-4" />
+                                        Timeline
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Order Date</span>
+                                        <span>{new Date(po.orderDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Expected Date</span>
+                                        <span className="font-medium text-orange-600">{new Date(po.expectedDate).toLocaleDateString()}</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <FileText className="h-4 w-4" />
+                                        Notes
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-muted-foreground italic">
+                                        {po.notes || "No additional notes."}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="discussions" className="mt-4">
+                    <EntityDiscussions
+                        contextType="PURCHASE_ORDER"
+                        contextId={po.id}
+                        contextTitle={`PO ${po.poNumber} - ${po.supplier.name}`}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

@@ -130,7 +130,7 @@ function StatCard({
         // COMPACT: p-4 → p-3, min-h reduced
         'bg-white dark:bg-gunmetal border p-3 transition-all min-h-[72px]',
         statusColors[status],
-        onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gunmetal-light'
+        onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gunmetal-light touch-manipulation active:scale-[0.98]'
       )}
       onClick={onClick}
     >
@@ -237,18 +237,17 @@ function AlertItem({ alert }: { alert: Alert }) {
   const Icon = config.icon;
 
   return (
-    // COMPACT: gap-3 → gap-2, p-3 → p-2
-    <div className="flex items-start gap-2 p-2 border-b border-gray-100 dark:border-mrp-border/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gunmetal-light transition-colors cursor-pointer">
-      {/* COMPACT: w-6 h-6 → w-5 h-5 */}
-      <div className={cn('w-5 h-5 flex items-center justify-center flex-shrink-0', config.bg)}>
-        <Icon className={cn('w-3 h-3', config.color)} />
+    // Mobile-optimized with larger touch target
+    <div className="flex items-start gap-2 p-2.5 sm:p-2 border-b border-gray-100 dark:border-mrp-border/50 last:border-0 hover:bg-gray-50 dark:hover:bg-gunmetal-light transition-colors cursor-pointer touch-manipulation active:bg-gray-100 dark:active:bg-gunmetal">
+      {/* Larger icon on mobile */}
+      <div className={cn('w-6 h-6 sm:w-5 sm:h-5 flex items-center justify-center flex-shrink-0', config.bg)}>
+        <Icon className={cn('w-3.5 h-3.5 sm:w-3 sm:h-3', config.color)} />
       </div>
       <div className="flex-1 min-w-0">
-        {/* COMPACT: text-sm → text-[11px] */}
-        <p className="text-[11px] text-gray-900 dark:text-mrp-text-primary leading-tight">
+        <p className="text-xs sm:text-[11px] text-gray-900 dark:text-mrp-text-primary leading-tight">
           {alert.title}
         </p>
-        <p className="text-[9px] text-gray-500 dark:text-mrp-text-muted">
+        <p className="text-[10px] sm:text-[9px] text-gray-500 dark:text-mrp-text-muted">
           {alert.time}
         </p>
       </div>
@@ -270,20 +269,19 @@ function QuickActionButton({
   return (
     <Link
       href={href}
-      // COMPACT: gap-3 → gap-2, p-3 → p-2
-      className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-steel-dark border border-gray-200 dark:border-mrp-border hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors group"
+      // Mobile-optimized with larger touch target
+      className="flex items-center gap-2 p-2.5 sm:p-2 bg-gray-50 dark:bg-steel-dark border border-gray-200 dark:border-mrp-border hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors group touch-manipulation active:scale-[0.98]"
     >
-      {/* COMPACT: w-10 h-10 → w-7 h-7 */}
-      <div className={cn('w-7 h-7 flex items-center justify-center', color)}>
-        <Icon className="w-3.5 h-3.5" />
+      {/* Larger icon on mobile */}
+      <div className={cn('w-8 h-8 sm:w-7 sm:h-7 flex items-center justify-center', color)}>
+        <Icon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </div>
-      <div className="flex-1">
-        {/* COMPACT: text-sm → text-[11px] */}
-        <span className="text-[11px] font-medium text-gray-900 dark:text-mrp-text-primary">
+      <div className="flex-1 min-w-0">
+        <span className="text-xs sm:text-[11px] font-medium text-gray-900 dark:text-mrp-text-primary truncate block">
           {label}
         </span>
       </div>
-      <ChevronRight className="w-3 h-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-mrp-text-primary transition-colors" />
+      <ChevronRight className="w-4 h-4 sm:w-3 sm:h-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-mrp-text-primary transition-colors flex-shrink-0" />
     </Link>
   );
 }
@@ -342,22 +340,23 @@ export default function HomePage() {
   return (
     // COMPACT: space-y-6 → space-y-3, pb-8 → pb-4
     <div className="space-y-3 pb-4">
-      {/* Page Header - COMPACT */}
-      <div className="flex items-center justify-between">
-        <div>
-          {/* COMPACT: text-xl → text-base */}
-          <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary">
+      {/* Page Header - Responsive */}
+      <div className="flex items-start sm:items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {/* Mobile: smaller title, Desktop: normal */}
+          <h1 className="text-sm sm:text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary truncate">
             {t('dashboard.title')}
           </h1>
-          {/* COMPACT: text-sm → text-[11px], mt-1 → removed */}
-          <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
-            {t('dashboard.description')} • {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          {/* Hide date on mobile for cleaner look */}
+          <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-mrp-text-muted">
+            <span>{t('dashboard.description')}</span>
+            <span className="hidden sm:inline"> • {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
           </p>
         </div>
-        {/* COMPACT: smaller button */}
-        <button className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors">
-          <RefreshCw className="w-3 h-3" />
-          REFRESH
+        {/* Refresh button - larger touch target on mobile */}
+        <button className="flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1 min-h-[36px] sm:min-h-0 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors touch-manipulation rounded">
+          <RefreshCw className="w-4 h-4 sm:w-3 sm:h-3" />
+          <span className="hidden sm:inline">REFRESH</span>
         </button>
       </div>
 

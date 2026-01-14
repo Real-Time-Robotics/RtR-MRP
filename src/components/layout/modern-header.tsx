@@ -785,7 +785,7 @@ export function ModernHeader({
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Search / Command Palette Trigger - Industrial Style */}
+          {/* Search / Command Palette Trigger - Desktop */}
           <button
             onClick={() => setShowCommandPalette(true)}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gunmetal border border-gray-200 dark:border-mrp-border text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-gunmetal-light hover:border-gray-300 dark:hover:border-info-cyan/30 transition-all min-w-[180px]"
@@ -797,8 +797,16 @@ export function ModernHeader({
             </kbd>
           </button>
 
-          {/* Quick Create - Industrial Style */}
-          <div className="relative">
+          {/* Search - Mobile */}
+          <button
+            onClick={() => setShowCommandPalette(true)}
+            className="sm:hidden flex items-center justify-center w-10 h-10 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all touch-manipulation"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
+          {/* Quick Create - Hidden on mobile */}
+          <div className="relative hidden sm:block">
             <button
               onClick={() => setShowQuickCreate(!showQuickCreate)}
               className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
@@ -812,32 +820,34 @@ export function ModernHeader({
             />
           </div>
 
-          {/* Screenshot Button - Industrial Style */}
-          <ScreenshotButton language={language} />
+          {/* Screenshot Button - Hidden on mobile */}
+          <div className="hidden sm:block">
+            <ScreenshotButton language={language} />
+          </div>
 
-          {/* Language Toggle - Industrial Style */}
+          {/* Language Toggle - Hidden on small mobile */}
           <button
             onClick={() => onLanguageChange?.(language === 'vi' ? 'en' : 'vi')}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
+            className="hidden xs:flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all touch-manipulation"
           >
-            <Globe className="w-4 h-4" />
+            <Globe className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
 
-          {/* Theme Toggle - Industrial Style */}
+          {/* Theme Toggle - Larger touch target on mobile */}
           <button
             onClick={onToggleDarkMode}
-            className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
+            className="flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all touch-manipulation"
           >
-            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            {darkMode ? <Sun className="w-5 h-5 sm:w-4 sm:h-4" /> : <Moon className="w-5 h-5 sm:w-4 sm:h-4" />}
           </button>
 
-          {/* Notifications - Industrial Style */}
+          {/* Notifications - Larger touch target on mobile */}
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
+              className="relative flex items-center justify-center w-10 h-10 sm:w-8 sm:h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all touch-manipulation"
             >
-              <Bell className="w-4 h-4" />
+              <Bell className="w-5 h-5 sm:w-4 sm:h-4" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-1 bg-urgent-red text-white text-[9px] font-bold font-mono flex items-center justify-center">
                   {unreadCount}
@@ -890,13 +900,13 @@ export function ModernHeader({
             )}
           </div>
 
-          {/* User Menu - Industrial Style */}
+          {/* User Menu - Responsive */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gunmetal transition-all"
+              className="flex items-center gap-2 px-2 py-1 hover:bg-gray-100 dark:hover:bg-gunmetal transition-all touch-manipulation"
             >
-              <div className="w-7 h-7 border border-gray-300 dark:border-mrp-border flex items-center justify-center text-gray-500 dark:text-mrp-text-muted font-mono text-xs bg-gray-100 dark:bg-transparent">
+              <div className="w-8 h-8 sm:w-7 sm:h-7 border border-gray-300 dark:border-mrp-border flex items-center justify-center text-gray-500 dark:text-mrp-text-muted font-mono text-sm sm:text-xs bg-gray-100 dark:bg-transparent">
                 {user.name.charAt(0)}
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-gray-500 dark:text-mrp-text-muted hidden sm:block" />
@@ -912,13 +922,13 @@ export function ModernHeader({
             />
           </div>
 
-          {/* Mobile Menu Toggle - Industrial Style */}
+          {/* Mobile Menu Toggle - Hidden on md and above (we use bottom nav) */}
           {onSidebarToggle && (
             <button
               onClick={onSidebarToggle}
-              className="lg:hidden flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all"
+              className="hidden md:flex lg:hidden items-center justify-center w-10 h-10 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-info-cyan transition-all touch-manipulation"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="w-5 h-5" />
             </button>
           )}
         </div>

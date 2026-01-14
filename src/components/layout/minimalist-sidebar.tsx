@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Building2,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +61,7 @@ const toolItems: SidebarItem[] = [
 ];
 
 const utilityItems: SidebarItem[] = [
+  { id: 'discussions', label: 'DISCUSS', labelVi: 'THẢO LUẬN', icon: <MessageSquare className="w-3.5 h-3.5" />, href: '/discussions' },
   { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-3.5 h-3.5" />, href: '/mobile' },
   { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-3.5 h-3.5" />, href: '/alerts' },
 ];

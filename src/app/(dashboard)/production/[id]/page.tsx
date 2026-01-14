@@ -10,8 +10,10 @@ import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/page-header";
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateMedium } from "@/lib/date";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 
 interface WorkOrderData {
   id: string;
@@ -243,144 +245,162 @@ export default function WorkOrderDetailPage() {
         </Card>
       </div>
 
-      {/* Schedule & Progress */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Schedule</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Planned Start</p>
-                <p className="font-medium">
-                  {data.plannedStart
-                    ? formatDateMedium(data.plannedStart)
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Planned End</p>
-                <p className="font-medium">
-                  {data.plannedEnd
-                    ? formatDateMedium(data.plannedEnd)
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Actual Start</p>
-                <p className="font-medium">
-                  {data.actualStart
-                    ? formatDateMedium(data.actualStart)
-                    : "-"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Actual End</p>
-                <p className="font-medium">
-                  {data.actualEnd
-                    ? formatDateMedium(data.actualEnd)
-                    : "-"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList>
+          <TabsTrigger value="details">Chi tiết</TabsTrigger>
+          <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">
-                  Completed: {data.completedQty}/{data.quantity}
-                </span>
-                <span className="text-sm font-medium">
-                  {Math.round(progressPercent)}%
-                </span>
-              </div>
-              <Progress value={progressPercent} />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Scrap: {data.scrapQty} units
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="details" className="mt-4 space-y-6">
+          {/* Schedule & Progress */}
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Schedule</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Planned Start</p>
+                    <p className="font-medium">
+                      {data.plannedStart
+                        ? formatDateMedium(data.plannedStart)
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Planned End</p>
+                    <p className="font-medium">
+                      {data.plannedEnd
+                        ? formatDateMedium(data.plannedEnd)
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Actual Start</p>
+                    <p className="font-medium">
+                      {data.actualStart
+                        ? formatDateMedium(data.actualStart)
+                        : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Actual End</p>
+                    <p className="font-medium">
+                      {data.actualEnd
+                        ? formatDateMedium(data.actualEnd)
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Sales Order Info */}
-      {data.salesOrder && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Order</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Order Number</p>
-                <p className="font-medium">{data.salesOrder.orderNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Customer</p>
-                <p className="font-medium">{data.salesOrder.customer.name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Required Date</p>
-                <p className="font-medium">
-                  {formatDateMedium(data.salesOrder.requiredDate)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Material Checklist */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Material Checklist
-            </CardTitle>
-            <div className="flex items-center gap-4">
-              <Badge variant={materialReadiness === 100 ? "default" : "secondary"}>
-                {materialReadiness}% Ready
-              </Badge>
-              <Button
-                onClick={handleAllocate}
-                disabled={allocating || data.status === "completed"}
-              >
-                {allocating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : null}
-                Allocate Materials
-              </Button>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Progress</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm">
+                      Completed: {data.completedQty}/{data.quantity}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {Math.round(progressPercent)}%
+                    </span>
+                  </div>
+                  <Progress value={progressPercent} />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Scrap: {data.scrapQty} units
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <DataTable
-            data={data.allocations}
-            columns={allocationColumns}
-            keyField="id"
-            emptyMessage="No materials allocated yet"
-            searchable={false}
-            stickyHeader
-            excelMode={{
-              enabled: true,
-              showRowNumbers: true,
-              columnHeaderStyle: 'field-names',
-              gridBorders: true,
-              showFooter: true,
-              sheetName: 'Material Checklist',
-              compactMode: true,
-            }}
+
+          {/* Sales Order Info */}
+          {data.salesOrder && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Order</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Order Number</p>
+                    <p className="font-medium">{data.salesOrder.orderNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Customer</p>
+                    <p className="font-medium">{data.salesOrder.customer.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Required Date</p>
+                    <p className="font-medium">
+                      {formatDateMedium(data.salesOrder.requiredDate)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Material Checklist */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Material Checklist
+                </CardTitle>
+                <div className="flex items-center gap-4">
+                  <Badge variant={materialReadiness === 100 ? "default" : "secondary"}>
+                    {materialReadiness}% Ready
+                  </Badge>
+                  <Button
+                    onClick={handleAllocate}
+                    disabled={allocating || data.status === "completed"}
+                  >
+                    {allocating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Allocate Materials
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <DataTable
+                data={data.allocations}
+                columns={allocationColumns}
+                keyField="id"
+                emptyMessage="No materials allocated yet"
+                searchable={false}
+                stickyHeader
+                excelMode={{
+                  enabled: true,
+                  showRowNumbers: true,
+                  columnHeaderStyle: 'field-names',
+                  gridBorders: true,
+                  showFooter: true,
+                  sheetName: 'Material Checklist',
+                  compactMode: true,
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="discussions" className="mt-4">
+          <EntityDiscussions
+            contextType="WORK_ORDER"
+            contextId={data.id}
+            contextTitle={`Work Order ${data.woNumber} - ${data.product.name}`}
           />
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

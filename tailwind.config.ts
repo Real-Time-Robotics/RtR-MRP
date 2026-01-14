@@ -8,6 +8,15 @@ const config: Config = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+  	// Add custom xs breakpoint for mobile
+  	screens: {
+  		'xs': '480px',
+  		'sm': '640px',
+  		'md': '768px',
+  		'lg': '1024px',
+  		'xl': '1280px',
+  		'2xl': '1536px',
+  	},
   	extend: {
   		colors: {
   			// Shadcn UI Variables (preserved)
@@ -451,6 +460,28 @@ const config: Config = {
   		},
   		minHeight: {
   			'screen-content': 'calc(100vh - 64px)',
+  		},
+
+  		// Safe area insets for mobile devices (notch, home indicator)
+  		padding: {
+  			'safe': 'env(safe-area-inset-bottom)',
+  			'safe-top': 'env(safe-area-inset-top)',
+  			'safe-bottom': 'env(safe-area-inset-bottom)',
+  			'safe-left': 'env(safe-area-inset-left)',
+  			'safe-right': 'env(safe-area-inset-right)',
+  		},
+  		margin: {
+  			'safe': 'env(safe-area-inset-bottom)',
+  			'safe-top': 'env(safe-area-inset-top)',
+  			'safe-bottom': 'env(safe-area-inset-bottom)',
+  			'safe-left': 'env(safe-area-inset-left)',
+  			'safe-right': 'env(safe-area-inset-right)',
+  		},
+  		inset: {
+  			'safe-top': 'env(safe-area-inset-top)',
+  			'safe-bottom': 'env(safe-area-inset-bottom)',
+  			'safe-left': 'env(safe-area-inset-left)',
+  			'safe-right': 'env(safe-area-inset-right)',
   		},
 
   		// Backgrounds

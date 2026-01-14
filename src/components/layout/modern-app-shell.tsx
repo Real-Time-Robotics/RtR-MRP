@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
+import { MobileNav } from './mobile-nav';
 
 // =============================================================================
 // TYPES
@@ -155,11 +156,15 @@ export function ModernAppShell({
 
         {/* Main Content - COMPACT: p-6 → p-4 */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4">
+          {/* Add bottom padding on mobile for fixed bottom nav (h-14 + safe area) */}
+          <div className="p-4 pb-20 md:pb-4">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav language={language} />
     </div>
   );
 }

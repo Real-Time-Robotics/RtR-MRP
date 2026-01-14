@@ -1,169 +1,278 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Bell,
+  BellDot,
+  CheckCheck,
+  MessageSquare,
+  AtSign,
+  AlertCircle,
+  Loader2,
+  X,
+  Package,
+  ClipboardList,
+  ShoppingCart,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDistanceToNow } from "date-fns";
+} from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { formatRelativeTime } from '@/lib/date';
+import { useNotifications, Notification } from '@/hooks/use-notifications';
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  priority: string;
-  link?: string;
-  isRead: boolean;
-  createdAt: Date;
+interface NotificationBellProps {
+  className?: string;
 }
 
-export function NotificationBell() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+export function NotificationBell({ className }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    refresh,
+  } = useNotifications({ pollInterval: 30000 });
 
-  useEffect(() => {
-    fetchNotifications();
-    // Poll for new notifications
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch("/api/notifications?limit=10");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+  const handleNotificationClick = useCallback(
+    async (notification: Notification) => {
+      // Mark as read
+      if (!notification.isRead) {
+        await markAsRead(notification.id);
       }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
-    }
-  };
 
-  const markAsRead = async (id: string) => {
-    try {
-      await fetch(`/api/notifications/${id}/read`, { method: "POST" });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error("Failed to mark as read:", error);
-    }
-  };
+      // Navigate to the link if present
+      if (notification.link) {
+        setIsOpen(false);
+        router.push(notification.link);
+      }
+    },
+    [markAsRead, router]
+  );
 
-  const markAllAsRead = async () => {
-    try {
-      await fetch("/api/notifications/read-all", { method: "POST" });
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch (error) {
-      console.error("Failed to mark all as read:", error);
-    }
-  };
-
-  const getIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      stock_alert: "⚠️",
-      order_update: "📋",
-      po_received: "📦",
-      mrp_complete: "🧠",
-      user_mention: "👤",
-    };
-    return icons[type] || "🔔";
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      urgent: "bg-red-500",
-      high: "bg-orange-500",
-      normal: "bg-blue-500",
-      low: "bg-gray-400",
-    };
-    return colors[priority] || "bg-gray-400";
-  };
+  const handleMarkAllAsRead = useCallback(async () => {
+    await markAllAsRead();
+  }, [markAllAsRead]);
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white text-xs">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('relative', className)}
+        >
+          {unreadCount > 0 ? (
+            <>
+              <BellDot className="h-5 w-5" />
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 text-[10px] font-bold"
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            </>
+          ) : (
+            <Bell className="h-5 w-5" />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold">Notifications</h4>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-              Mark all read
+
+      <PopoverContent
+        className="w-[380px] p-0"
+        align="end"
+        sideOffset={8}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            <span className="font-semibold">Notifications</span>
+            {unreadCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {unreadCount} new
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {unreadCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={handleMarkAllAsRead}
+                  >
+                    <CheckCheck className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Mark all as read</TooltipContent>
+              </Tooltip>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-4 w-4" />
             </Button>
-          )}
+          </div>
         </div>
-        <ScrollArea className="h-[400px]">
-          {notifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              No notifications
+
+        {/* Content */}
+        <ScrollArea className="max-h-[400px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+              <AlertCircle className="h-6 w-6" />
+              <span className="text-sm">Failed to load notifications</span>
+              <Button variant="outline" size="sm" onClick={refresh}>
+                Try again
+              </Button>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+              <Bell className="h-8 w-8" />
+              <span className="text-sm">No notifications yet</span>
             </div>
           ) : (
             <div className="divide-y">
               {notifications.map((notification) => (
-                <div
+                <NotificationItem
                   key={notification.id}
-                  className={`p-4 hover:bg-gray-50 cursor-pointer ${
-                    !notification.isRead ? "bg-blue-50" : ""
-                  }`}
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    if (notification.link) {
-                      window.location.href = notification.link;
-                    }
-                  }}
-                >
-                  <div className="flex gap-3">
-                    <div className="text-xl">{getIcon(notification.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`w-2 h-2 rounded-full ${getPriorityColor(notification.priority)}`}
-                        />
-                        <p className="font-medium text-sm truncate">
-                          {notification.title}
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {formatDistanceToNow(new Date(notification.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                  notification={notification}
+                  onClick={() => handleNotificationClick(notification)}
+                />
               ))}
             </div>
           )}
         </ScrollArea>
-        <div className="p-2 border-t">
-          <Button variant="ghost" className="w-full" asChild>
-            <a href="/activity">View all activity</a>
-          </Button>
-        </div>
+
+        {/* Footer */}
+        {notifications.length > 0 && (
+          <div className="border-t px-4 py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground"
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/activity');
+              }}
+            >
+              View all notifications
+            </Button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+// Individual notification item
+interface NotificationItemProps {
+  notification: Notification;
+  onClick: () => void;
+}
+
+function NotificationItem({ notification, onClick }: NotificationItemProps) {
+  const getIcon = () => {
+    switch (notification.type) {
+      case 'MENTION':
+      case 'user_mention':
+        return <AtSign className="h-4 w-4 text-blue-500" />;
+      case 'REPLY':
+        return <MessageSquare className="h-4 w-4 text-green-500" />;
+      case 'stock_alert':
+        return <Package className="h-4 w-4 text-orange-500" />;
+      case 'order_update':
+        return <ClipboardList className="h-4 w-4 text-purple-500" />;
+      case 'po_received':
+        return <ShoppingCart className="h-4 w-4 text-emerald-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getPriorityColor = () => {
+    switch (notification.priority) {
+      case 'urgent':
+        return 'border-l-red-500';
+      case 'high':
+        return 'border-l-orange-500';
+      default:
+        return 'border-l-transparent';
+    }
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 border-l-2',
+        getPriorityColor(),
+        !notification.isRead && 'bg-primary/5'
+      )}
+    >
+      <div className="flex gap-3">
+        {/* Icon */}
+        <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <span
+              className={cn(
+                'text-sm line-clamp-1',
+                !notification.isRead && 'font-medium'
+              )}
+            >
+              {notification.title}
+            </span>
+            {!notification.isRead && (
+              <span className="flex-shrink-0 h-2 w-2 rounded-full bg-primary" />
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+            {notification.message}
+          </p>
+
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] text-muted-foreground">
+              {formatRelativeTime(notification.createdAt)}
+            </span>
+            {notification.mentionedByName && (
+              <>
+                <span className="text-[10px] text-muted-foreground">•</span>
+                <span className="text-[10px] text-muted-foreground">
+                  by {notification.mentionedByName}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }

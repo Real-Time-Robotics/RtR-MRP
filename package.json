@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "ts-node --project tsconfig.server.json server.ts",
+    "dev:next": "next dev",
     "build": "npx prisma generate && npx prisma db push --skip-generate && next build",
-    "start": "next start",
+    "start": "NODE_ENV=production ts-node --project tsconfig.server.json server.ts",
+    "start:next": "next start",
     "lint": "next lint",
     "test": "vitest",
     "test:run": "vitest run",
@@ -22,7 +24,20 @@
     "clean": "rm -rf .next public/sw.js public/workbox-*.js public/fallback-*.js",
     "artillery:smoke": "artillery run load-testing/artillery/smoke.yml",
     "artillery:main": "artillery run load-testing/artillery/main.yml",
-    "artillery:stress": "artillery run load-testing/artillery/stress.yml"
+    "artillery:stress": "artillery run load-testing/artillery/stress.yml",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:mobile": "playwright test --project='Mobile Chrome' --project='Mobile Safari'",
+    "test:e2e:desktop": "playwright test --project=chromium --project=firefox --project=webkit",
+    "test:e2e:auth": "playwright test e2e/auth/",
+    "test:e2e:parts": "playwright test e2e/parts/",
+    "test:e2e:bom": "playwright test e2e/bom/",
+    "test:e2e:production": "playwright test e2e/production/",
+    "test:e2e:discussions": "playwright test e2e/discussions/",
+    "test:e2e:perf": "playwright test e2e/performance/"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -94,6 +109,8 @@
     "recharts": "^3.6.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "sonner": "^1.7.4",
     "swr": "^2.3.8",
     "tailwind-merge": "^3.4.0",
@@ -120,6 +137,7 @@
     "jsdom": "^27.4.0",
     "sharp": "^0.34.5",
     "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "vitest": "^4.0.16"
   }

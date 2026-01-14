@@ -15,7 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 
 interface LotSummary {
   lotNumber: string;
@@ -123,105 +125,123 @@ export default function LotTraceabilityPage({
         }
       />
 
-      {/* Lot Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Lot Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Part/Product</p>
-              <p className="font-medium">
-                {summary.partNumber || summary.productSku} -{" "}
-                {summary.partName || summary.productName}
-              </p>
-            </div>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold">{summary.originalQty}</p>
-                <p className="text-xs text-muted-foreground">Original</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-blue-600">{summary.consumedQty}</p>
-                <p className="text-xs text-muted-foreground">Consumed</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-red-600">{summary.scrappedQty}</p>
-                <p className="text-xs text-muted-foreground">Scrapped</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{summary.availableQty}</p>
-                <p className="text-xs text-muted-foreground">Available</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList>
+          <TabsTrigger value="details">Chi tiết</TabsTrigger>
+          <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-2 gap-6">
-        {/* Forward Traceability */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Forward Traceability (Where Used)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {traceability ? (
-              <TraceabilityTree node={traceability} />
-            ) : (
-              <p className="text-muted-foreground text-center py-4">
-                No forward traceability data
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Transaction History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Transaction History
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {summary.transactions.map((tx) => {
-                const Icon = transactionIcons[tx.transactionType] || Package;
-                return (
-                  <div
-                    key={tx.id}
-                    className="flex items-start gap-3 p-3 rounded-lg border"
-                  >
-                    <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline">{tx.transactionType}</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(tx.createdAt), "MMM d, yyyy h:mm a")}
-                        </span>
-                      </div>
-                      <p className="text-sm mt-1">
-                        Quantity: <strong>{tx.quantity > 0 ? "+" : ""}{tx.quantity}</strong>
-                      </p>
-                      {tx.notes && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {tx.notes}
-                        </p>
-                      )}
-                    </div>
+        <TabsContent value="details" className="mt-4 space-y-6">
+          {/* Lot Summary */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Lot Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">Part/Product</p>
+                  <p className="font-medium">
+                    {summary.partNumber || summary.productSku} -{" "}
+                    {summary.partName || summary.productName}
+                  </p>
+                </div>
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold">{summary.originalQty}</p>
+                    <p className="text-xs text-muted-foreground">Original</p>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">{summary.consumedQty}</p>
+                    <p className="text-xs text-muted-foreground">Consumed</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-red-600">{summary.scrappedQty}</p>
+                    <p className="text-xs text-muted-foreground">Scrapped</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">{summary.availableQty}</p>
+                    <p className="text-xs text-muted-foreground">Available</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* Forward Traceability */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Forward Traceability (Where Used)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {traceability ? (
+                  <TraceabilityTree node={traceability} />
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No forward traceability data
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Transaction History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Transaction History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {summary.transactions.map((tx) => {
+                    const Icon = transactionIcons[tx.transactionType] || Package;
+                    return (
+                      <div
+                        key={tx.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border"
+                      >
+                        <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline">{tx.transactionType}</Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {format(new Date(tx.createdAt), "MMM d, yyyy h:mm a")}
+                            </span>
+                          </div>
+                          <p className="text-sm mt-1">
+                            Quantity: <strong>{tx.quantity > 0 ? "+" : ""}{tx.quantity}</strong>
+                          </p>
+                          {tx.notes && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {tx.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="discussions" className="mt-4">
+          <EntityDiscussions
+            contextType="QC_REPORT"
+            contextId={lotNumber}
+            contextTitle={`Lot ${decodeURIComponent(lotNumber)} - ${summary.partNumber || summary.productSku}`}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

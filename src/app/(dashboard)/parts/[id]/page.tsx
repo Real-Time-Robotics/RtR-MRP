@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 import {
   Table,
   TableBody,
@@ -335,7 +336,7 @@ export default function PartDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="procurement">Procurement</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -343,6 +344,7 @@ export default function PartDetailPage() {
           <TabsTrigger value="alternates">Alternates</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="costing">Costing</TabsTrigger>
+          <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
         {/* General Tab */}
@@ -1048,6 +1050,15 @@ export default function PartDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Discussions Tab */}
+        <TabsContent value="discussions" className="mt-4">
+          <EntityDiscussions
+            contextType="PART"
+            contextId={part.id}
+            contextTitle={`Part ${part.partNumber} - ${part.name}`}
+          />
         </TabsContent>
       </Tabs>
 
