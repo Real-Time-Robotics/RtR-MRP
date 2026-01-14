@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Download } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import { BomTree } from "@/components/bom/bom-tree";
 import { BomDiscussions } from "@/components/bom/bom-discussions";
+import { BOMExportButton } from "@/components/bom/bom-export-button";
 import prisma from "@/lib/prisma";
 
 interface BOMDetailPageProps {
@@ -133,10 +134,22 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
         backHref="/bom"
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
+            <BOMExportButton
+              productSku={product.sku}
+              productName={product.name}
+              bomVersion={product.bomVersion}
+              lines={product.modules.flatMap(m => m.lines.map(l => ({
+                lineNumber: l.lineNumber,
+                partNumber: l.partNumber,
+                name: l.name,
+                quantity: l.quantity,
+                unit: l.unit,
+                unitCost: l.unitCost,
+                isCritical: l.isCritical,
+                moduleCode: m.moduleCode,
+                moduleName: m.moduleName,
+              })))}
+            />
             <Link href={`/bom/${product.id}/explode`}>
               <Button>
                 Explode BOM

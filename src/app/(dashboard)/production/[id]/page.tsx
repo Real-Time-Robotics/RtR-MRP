@@ -185,19 +185,19 @@ export default function WorkOrderDetailPage() {
         backHref="/production"
         actions={
           <div className="flex gap-2">
-            {data.status === "draft" && (
+            {data.status?.toLowerCase() === "draft" && (
               <Button onClick={() => handleStatusChange("released")}>
                 <Play className="h-4 w-4 mr-2" />
                 Release
               </Button>
             )}
-            {data.status === "released" && (
+            {data.status?.toLowerCase() === "released" && (
               <Button onClick={() => handleStatusChange("in_progress")}>
                 <Play className="h-4 w-4 mr-2" />
                 Start Production
               </Button>
             )}
-            {data.status === "in_progress" && (
+            {data.status?.toLowerCase() === "in_progress" && (
               <>
                 <Button
                   variant="outline"
