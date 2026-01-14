@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,11 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '@/lib/currency';
 import { formatDate } from '@/lib/date';
+
+// Note: xlsx and jspdf are now dynamically imported to reduce bundle size
 
 interface BOMLine {
   lineNumber: number;
@@ -39,9 +38,12 @@ interface BOMExportButtonProps {
 export function BOMExportButton({ productSku, productName, bomVersion, lines }: BOMExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     setIsExporting(true);
     try {
+      // Dynamically import xlsx only when needed
+      const XLSX = await import('xlsx');
+
       // Prepare data
       const exportData = lines.map((item, index) => ({
         '#': index + 1,
@@ -121,9 +123,16 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     setIsExporting(true);
     try {
+      // Dynamically import jspdf and autoTable only when needed
+      const [{ jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+      const autoTable = autoTableModule.default;
+
       const doc = new jsPDF('landscape');
 
       // Header
@@ -158,7 +167,7 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
         body: tableData,
         theme: 'grid',
         headStyles: {
-          fillColor: [45, 49, 57], // gunmetal
+          fillColor: [45, 49, 57],
           fontSize: 9,
           fontStyle: 'bold',
         },
@@ -167,15 +176,15 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
           cellPadding: 2,
         },
         columnStyles: {
-          0: { cellWidth: 8 },   // #
-          1: { cellWidth: 12 },  // Line
-          2: { cellWidth: 30 },  // Part Number
-          3: { cellWidth: 70 },  // Part Name
-          4: { cellWidth: 15, halign: 'right' },  // Qty
-          5: { cellWidth: 15 },  // Unit
-          6: { cellWidth: 25, halign: 'right' },  // Unit Cost
-          7: { cellWidth: 25, halign: 'right' },  // Extended
-          8: { cellWidth: 18 },  // Critical
+          0: { cellWidth: 8 },
+          1: { cellWidth: 12 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 70 },
+          4: { cellWidth: 15, halign: 'right' },
+          5: { cellWidth: 15 },
+          6: { cellWidth: 25, halign: 'right' },
+          7: { cellWidth: 25, halign: 'right' },
+          8: { cellWidth: 18 },
         },
       });
 
@@ -205,7 +214,11 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" disabled={isExporting}>
-          <Download className="h-4 w-4 mr-2" />
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
           {isExporting ? 'Exporting...' : 'Export'}
         </Button>
       </DropdownMenuTrigger>

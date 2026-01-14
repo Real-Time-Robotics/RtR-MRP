@@ -1,8 +1,7 @@
 /**
- * Centralized Export Utilities with Lazy Loading
- * RTR-MRP System
- *
- * Note: xlsx and jspdf are dynamically imported to reduce initial bundle size
+ * Lazy Export Utilities
+ * Dynamically imports heavy libraries (xlsx, jspdf) only when needed
+ * Reduces initial bundle size significantly
  */
 
 import { formatCurrency, Currency } from './currency';
@@ -15,8 +14,8 @@ import { formatDate } from './date';
 export interface ExportColumn {
   key: string;
   header: string;
-  width?: number; // Excel column width
-  pdfWidth?: number; // PDF column width
+  width?: number;
+  pdfWidth?: number;
   type?: 'text' | 'number' | 'currency' | 'date' | 'boolean';
   align?: 'left' | 'center' | 'right';
   format?: (value: any, row: any) => string;
@@ -31,10 +30,10 @@ export interface ExportConfig {
 }
 
 // =============================================================================
-// EXCEL EXPORT (Lazy Loaded)
+// LAZY EXCEL EXPORT
 // =============================================================================
 
-export async function exportToExcel<T extends Record<string, any>>(
+export async function lazyExportToExcel<T extends Record<string, any>>(
   data: T[],
   columns: ExportColumn[],
   config: ExportConfig,
@@ -97,10 +96,10 @@ export async function exportToExcel<T extends Record<string, any>>(
 }
 
 // =============================================================================
-// PDF EXPORT (Lazy Loaded)
+// LAZY PDF EXPORT
 // =============================================================================
 
-export async function exportToPDF<T extends Record<string, any>>(
+export async function lazyExportToPDF<T extends Record<string, any>>(
   data: T[],
   columns: ExportColumn[],
   config: ExportConfig
@@ -171,7 +170,7 @@ export async function exportToPDF<T extends Record<string, any>>(
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: [45, 49, 57], // gunmetal
+      fillColor: [45, 49, 57],
       fontSize: 9,
       fontStyle: 'bold',
     },
