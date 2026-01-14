@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 type POStatus =
   | "draft"
-  | "sent"
+  | "pending"
   | "confirmed"
-  | "partial"
+  | "in_progress"
   | "received"
   | "cancelled";
 
@@ -21,21 +21,21 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: "Nháp",
     className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
   },
-  sent: {
-    label: "Đã gửi",
+  pending: {
+    label: "Chờ xử lý",
     className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
   },
   confirmed: {
     label: "Đã xác nhận",
     className: "bg-green-100 text-green-800 hover:bg-green-100",
   },
-  partial: {
-    label: "Một phần",
+  in_progress: {
+    label: "Đang xử lý",
     className: "bg-amber-100 text-amber-800 hover:bg-amber-100",
   },
   received: {
     label: "Đã nhận",
-    className: "bg-green-100 text-green-800 hover:bg-green-100",
+    className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
   },
   cancelled: {
     label: "Đã hủy",

@@ -28,9 +28,9 @@ interface PurchaseOrderDetail {
     supplier: {
         id: string;
         name: string;
-        contactPerson: string | null;
-        email: string | null;
-        phone: string | null;
+        contactName: string | null;
+        contactEmail: string | null;
+        contactPhone: string | null;
     };
     lines: Array<{
         id: string;
@@ -192,9 +192,9 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                         <CardContent className="space-y-4">
                             <div className="font-semibold text-lg">{po.supplier.name}</div>
                             <div className="space-y-2 text-sm text-muted-foreground">
-                                {po.supplier.contactPerson && <div>Contact: {po.supplier.contactPerson}</div>}
-                                {po.supplier.email && <div>Email: {po.supplier.email}</div>}
-                                {po.supplier.phone && <div>Phone: {po.supplier.phone}</div>}
+                                {po.supplier.contactName && <div>Contact: {po.supplier.contactName}</div>}
+                                {po.supplier.contactEmail && <div>Email: {po.supplier.contactEmail}</div>}
+                                {po.supplier.contactPhone && <div>Phone: {po.supplier.contactPhone}</div>}
                             </div>
                         </CardContent>
                     </Card>

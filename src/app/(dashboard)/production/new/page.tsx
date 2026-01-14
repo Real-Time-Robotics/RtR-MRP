@@ -50,7 +50,7 @@ export default function NewWorkOrderPage() {
   const [productId, setProductId] = useState("");
   const [salesOrderId, setSalesOrderId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [priority, setPriority] = useState("medium");
+  const [priority, setPriority] = useState("normal");
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
   const [notes, setNotes] = useState("");
@@ -197,7 +197,7 @@ export default function NewWorkOrderPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
                     <SelectItem value="high">High</SelectItem>
                     <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>

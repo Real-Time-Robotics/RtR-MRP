@@ -5,11 +5,10 @@ import { cn } from "@/lib/utils";
 
 type OrderStatus =
   | "draft"
+  | "pending"
   | "confirmed"
-  | "in_production"
-  | "ready"
-  | "shipped"
-  | "delivered"
+  | "in_progress"
+  | "completed"
   | "cancelled";
 
 interface OrderStatusBadgeProps {
@@ -22,25 +21,21 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: "Nháp",
     className: "bg-gray-100 text-gray-800 hover:bg-gray-100",
   },
+  pending: {
+    label: "Chờ xử lý",
+    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+  },
   confirmed: {
     label: "Đã xác nhận",
     className: "bg-green-100 text-green-800 hover:bg-green-100",
   },
-  in_production: {
-    label: "Đang sản xuất",
+  in_progress: {
+    label: "Đang xử lý",
     className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
   },
-  ready: {
-    label: "Sẵn sàng",
-    className: "bg-purple-100 text-purple-800 hover:bg-purple-100",
-  },
-  shipped: {
-    label: "Đã gửi hàng",
-    className: "bg-indigo-100 text-indigo-800 hover:bg-indigo-100",
-  },
-  delivered: {
-    label: "Đã giao hàng",
-    className: "bg-green-100 text-green-800 hover:bg-green-100",
+  completed: {
+    label: "Hoàn thành",
+    className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
   },
   cancelled: {
     label: "Đã hủy",

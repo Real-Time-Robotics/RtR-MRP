@@ -91,8 +91,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         positionY: data.positionY,
         positionZ: data.positionZ,
 
-        // Manufacturing
-        scrapPercent: data.scrapPercent ?? 0,
+        // Manufacturing - scrapRate is decimal (0.02 = 2%), scrapPercent is percentage (2 = 2%)
+        scrapRate: data.scrapPercent ? data.scrapPercent / 100 : (data.scrapRate ?? 0),
+        scrapPercent: data.scrapPercent ?? (data.scrapRate ? data.scrapRate * 100 : 0),
         operationSeq: data.operationSeq,
 
         // Effectivity & Revision
@@ -167,7 +168,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             positionX: lineData.positionX as number,
             positionY: lineData.positionY as number,
             positionZ: lineData.positionZ as number,
-            scrapPercent: lineData.scrapPercent as number,
+            // Sync both scrap fields - scrapRate is decimal, scrapPercent is percentage
+            scrapRate: lineData.scrapPercent ? (lineData.scrapPercent as number) / 100 : (lineData.scrapRate as number ?? 0),
+            scrapPercent: lineData.scrapPercent as number ?? ((lineData.scrapRate as number ?? 0) * 100),
             operationSeq: lineData.operationSeq as number,
             revision: lineData.revision as string,
             alternateGroup: lineData.alternateGroup as string,

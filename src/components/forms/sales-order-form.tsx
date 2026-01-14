@@ -99,7 +99,7 @@ export interface SalesOrder {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
-    product?: { id: string; partNumber: string; name: string };
+    product?: { id: string; sku: string; name: string };
   }>;
 }
 
@@ -111,7 +111,7 @@ interface Customer {
 
 interface Product {
   id: string;
-  partNumber: string;
+  sku: string;
   name: string;
   unitCost: number;
 }
@@ -540,7 +540,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                                   <SelectContent>
                                     {products.map((p) => (
                                       <SelectItem key={p.id} value={p.id}>
-                                        {p.partNumber} - {p.name}
+                                        {p.sku} - {p.name}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
