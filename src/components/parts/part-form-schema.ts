@@ -14,6 +14,19 @@ export const CATEGORY_LABELS: Record<string, string> = {
     'TOOL': 'Công cụ',
 };
 
+// Status/Lifecycle enum values matching API validation schema
+export const STATUS_ENUM = ['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL'] as const;
+
+// Display labels for status (Vietnamese)
+export const STATUS_LABELS: Record<string, string> = {
+    'DEVELOPMENT': 'Phát triển',
+    'PROTOTYPE': 'Mẫu thử',
+    'ACTIVE': 'Hoạt động',
+    'PHASE_OUT': 'Ngừng dần',
+    'OBSOLETE': 'Lỗi thời',
+    'EOL': 'Kết thúc',
+};
+
 // Legacy - kept for backward compatibility
 export const CATEGORIES = [
     'FINISHED_GOOD',

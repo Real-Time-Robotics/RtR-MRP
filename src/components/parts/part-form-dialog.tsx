@@ -81,16 +81,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // 2. Setup Data Entry Hook
     const { submit: performSave, isSubmitting } = useDataEntry<PartFormData>({
         onSubmit: async (data: PartFormData) => {
-            const cleanData = {
-                ...data,
-                description: data.description || null,
-                material: data.material || null,
-                color: data.color || null,
-                procurementType: data.procurementType || null,
-                countryOfOrigin: data.countryOfOrigin || null,
-                manufacturer: data.manufacturer || null,
-                manufacturerPn: data.manufacturerPn || null,
-            };
+            // Clean data: convert empty strings to undefined (to work with API's optional fields)
+            const cleanData: Record<string, unknown> = {};
+            Object.entries(data).forEach(([key, value]) => {
+                // Skip empty strings, null, and undefined - let API use defaults
+                if (value === '' || value === null || value === undefined) {
+                    return;
+                }
+                cleanData[key] = value;
+            });
 
             const url = isEditing ? `/api/parts/${part.id}` : '/api/parts';
             const method = isEditing ? 'PUT' : 'POST';
