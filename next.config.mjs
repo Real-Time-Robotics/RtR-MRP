@@ -1,11 +1,18 @@
 import withPWAInit from "next-pwa";
 import path from "path";
 import { fileURLToPath } from "url";
-import bundleAnalyzer from "@next/bundle-analyzer";
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env.ANALYZE === "true",
-});
+// Bundle analyzer is optional - only used when ANALYZE=true
+// It's a devDependency so may not be available in production
+let withBundleAnalyzer = (config) => config;
+if (process.env.ANALYZE === "true") {
+  try {
+    const bundleAnalyzer = (await import("@next/bundle-analyzer")).default;
+    withBundleAnalyzer = bundleAnalyzer({ enabled: true });
+  } catch (e) {
+    console.warn("Bundle analyzer not available, skipping...");
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
