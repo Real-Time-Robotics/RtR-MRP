@@ -46,8 +46,9 @@ export default function CertificatesPage() {
 
       const res = await fetch(`/api/quality/certificates?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setCertificates(data);
+        const result = await res.json();
+        // API returns { data: [...], pagination: {...} }
+        setCertificates(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
       console.error("Failed to fetch certificates:", error);

@@ -46,8 +46,9 @@ export default function InspectionPlansPage() {
 
       const res = await fetch(`/api/quality/inspection-plans?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setPlans(data);
+        const result = await res.json();
+        // API returns { data: [...], pagination: {...} }
+        setPlans(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
       console.error("Failed to fetch inspection plans:", error);

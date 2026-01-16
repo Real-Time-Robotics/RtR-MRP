@@ -51,8 +51,9 @@ export default function CAPAListPage() {
 
       const res = await fetch(`/api/quality/capa?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setCAPAs(data);
+        const result = await res.json();
+        // API returns { data: [...], pagination: {...} }
+        setCAPAs(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
       console.error("Failed to fetch CAPAs:", error);
