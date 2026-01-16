@@ -32,6 +32,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const part = await prisma.part.findUnique({
       where: { id },
       include: {
+        planning: true,
+        costs: true,
+        specs: true,
+        compliance: true,
         partSuppliers: {
           include: { supplier: true },
           orderBy: { isPreferred: "desc" },

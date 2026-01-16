@@ -81,13 +81,27 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // 2. Setup Data Entry Hook
     const { submit: performSave, isSubmitting } = useDataEntry<PartFormData>({
         onSubmit: async (data: PartFormData) => {
-            // Clean data: convert empty strings to null, but KEEP all fields
+            // Clean data: convert empty strings to null, ensure numbers are numbers
             // API needs to receive all fields to properly update nested relations
             const cleanData: Record<string, unknown> = {};
+
+            // Number fields that must be sent as numbers (not null/undefined)
+            const requiredNumberFields = ['unitCost', 'leadTimeDays', 'moq', 'minStockLevel', 'reorderPoint'];
+            const optionalNumberFields = ['weightKg', 'lengthMm', 'widthMm', 'heightMm', 'orderMultiple', 'maxStock', 'safetyStock'];
+
             Object.entries(data).forEach(([key, value]) => {
-                // Convert empty strings to null, but keep the field
-                if (value === '') {
-                    cleanData[key] = null;
+                // Convert empty strings to null
+                if (value === '' || value === undefined) {
+                    // For required number fields, use 0 instead of null
+                    if (requiredNumberFields.includes(key)) {
+                        cleanData[key] = 0;
+                    } else {
+                        cleanData[key] = null;
+                    }
+                } else if (typeof value === 'string' && (requiredNumberFields.includes(key) || optionalNumberFields.includes(key))) {
+                    // Convert string numbers to actual numbers
+                    const num = parseFloat(value);
+                    cleanData[key] = isNaN(num) ? (requiredNumberFields.includes(key) ? 0 : null) : num;
                 } else {
                     cleanData[key] = value;
                 }
@@ -247,9 +261,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                         <TabsList className="grid grid-cols-5 w-full dark:bg-slate-800">
                             <TabsTrigger value="basic">Cơ bản</TabsTrigger>
                             <TabsTrigger value="physical">Vật lý</TabsTrigger>
-                            <TabsTrigger value="engineering">Engineering</TabsTrigger>
-                            <TabsTrigger value="procurement">Procurement</TabsTrigger>
-                            <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                            <TabsTrigger value="engineering">Kỹ thuật</TabsTrigger>
+                            <TabsTrigger value="procurement">Mua hàng</TabsTrigger>
+                            <TabsTrigger value="compliance">Tuân thủ</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="basic" className="space-y-4 mt-4">
@@ -351,7 +365,16 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Giá (USD) *</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} step={0.01} {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={0.01}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -386,7 +409,16 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Trọng lượng (kg)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} step={0.001} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={0.001}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -416,7 +448,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Dài (mm)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -430,7 +470,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Rộng (mm)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -444,7 +492,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Cao (mm)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -607,7 +663,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Thời gian giao hàng (ngày)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -621,9 +685,17 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="moq"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>SL đặt tối thiểu</FormLabel>
+                                            <FormLabel>SL đặt tối thiểu (MOQ)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={1} {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? 1 : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormDescription>Số lượng đặt hàng tối thiểu</FormDescription>
                                             <FormMessage />
@@ -638,7 +710,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Bội số đặt hàng</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={1} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -652,9 +732,17 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="minStockLevel"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Tồn kho tối thiểu</FormLabel>
+                                            <FormLabel>Tồn kho tối thiểu (Min Stock)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -668,7 +756,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Điểm đặt lại</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -684,7 +780,15 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                         <FormItem>
                                             <FormLabel>Tồn kho an toàn</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -696,9 +800,17 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="maxStock"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Tồn kho tối đa</FormLabel>
+                                            <FormLabel>Tồn kho tối đa (Max Stock)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min={0} {...field} value={field.value ?? ''} />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

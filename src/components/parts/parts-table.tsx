@@ -320,9 +320,42 @@ export function PartsTable() {
       return;
     }
 
-    // Flatten data for better export structure if needed, or export as is
-    // For now, exporting the raw parts data which is already flat-ish
-    exportToExcel(parts, {
+    // Flatten nested relations (planning, costs, specs, compliance) for export
+    const flattenedParts = parts.map((p: any) => ({
+      partNumber: p.partNumber,
+      name: p.name,
+      description: p.description,
+      category: p.category,
+      unit: p.unit,
+      unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
+      makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+      leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+      moq: p.planning?.moq ?? p.moq ?? 1,
+      orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+      minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+      maxStock: p.planning?.maxStock ?? null,
+      safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+      reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+      weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+      lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+      widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+      heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+      material: p.specs?.material ?? p.material ?? '',
+      color: p.specs?.color ?? p.color ?? '',
+      manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+      manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+      drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+      countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+      ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? true,
+      itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+      rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? true,
+      reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? true,
+      lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+      revision: p.revision ?? 'A',
+      isCritical: p.isCritical ?? false,
+    }));
+
+    exportToExcel(flattenedParts, {
       fileName: 'Parts_List',
       sheetName: 'Parts Master'
     });

@@ -88,6 +88,10 @@ export async function GET(request: NextRequest) {
               },
               take: 3, // Limit certifications
             },
+            planning: true,
+            costs: true,
+            specs: true,
+            compliance: true,
           }
           : {
             partSuppliers: {
@@ -95,6 +99,8 @@ export async function GET(request: NextRequest) {
               orderBy: { isPreferred: "desc" },
               take: 1,
             },
+            planning: true,
+            costs: true,
           },
       }),
     ]);

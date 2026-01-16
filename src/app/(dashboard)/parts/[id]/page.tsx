@@ -537,13 +537,13 @@ export default function PartDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <InfoRow label="MOQ" value={part.moq} />
-                <InfoRow label="Order Multiple" value={part.orderMultiple} />
-                <InfoRow label="Standard Pack" value={part.standardPack} />
-                <InfoRow label="Min Stock Level" value={part.minStockLevel} />
-                <InfoRow label="Reorder Point" value={part.reorderPoint} />
-                <InfoRow label="Max Stock" value={part.maxStock} />
-                <InfoRow label="Safety Stock" value={part.safetyStock} />
+                <InfoRow label="MOQ" value={(part as any).planning?.moq ?? part.moq} />
+                <InfoRow label="Order Multiple" value={(part as any).planning?.orderMultiple ?? part.orderMultiple} />
+                <InfoRow label="Standard Pack" value={(part as any).planning?.standardPack ?? part.standardPack} />
+                <InfoRow label="Min Stock Level" value={(part as any).planning?.minStockLevel ?? part.minStockLevel} />
+                <InfoRow label="Reorder Point" value={(part as any).planning?.reorderPoint ?? part.reorderPoint} />
+                <InfoRow label="Max Stock" value={(part as any).planning?.maxStock ?? part.maxStock} />
+                <InfoRow label="Safety Stock" value={(part as any).planning?.safetyStock ?? part.safetyStock} />
               </CardContent>
             </Card>
 
