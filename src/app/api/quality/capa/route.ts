@@ -2,30 +2,54 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateCAPANumber } from "@/lib/quality/capa-workflow";
+import { z } from "zod";
+
+// Validation schema for CAPA creation
+const CAPACreateSchema = z.object({
+  type: z.enum(["corrective", "preventive"]),
+  source: z.enum(["ncr", "audit", "customer_complaint", "process_improvement", "management_review"]),
+  sourceReference: z.string().optional().nullable(),
+  title: z.string().min(1, "Tiêu đề là bắt buộc").max(200),
+  description: z.string().min(1, "Mô tả là bắt buộc").max(5000),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+  ownerId: z.string().optional(),
+  targetDate: z.string().optional(),
+  ncrIds: z.array(z.string()).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const capas = await prisma.cAPA.findMany({
-      where: {
-        ...(status && status !== "all" ? { status } : {}),
-        ...(type && type !== "all" ? { type } : {}),
-      },
-      include: {
-        ncrs: { select: { ncrNumber: true } },
-        _count: { select: { actions: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
+    const where: Record<string, unknown> = {};
+    if (status && status !== "all") where.status = status;
+    if (type && type !== "all") where.type = type;
+
+    const [capas, total] = await Promise.all([
+      prisma.cAPA.findMany({
+        where,
+        include: {
+          ncrs: { select: { ncrNumber: true } },
+          _count: { select: { actions: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.cAPA.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: capas,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
-
-    return NextResponse.json(capas);
   } catch (error) {
-    console.error("Failed to fetch CAPAs:", error);
-    return NextResponse.json({ error: "Failed to fetch CAPAs" }, { status: 500 });
+    console.error("Lỗi tải danh sách CAPA:", error);
+    return NextResponse.json({ error: "Lỗi tải danh sách CAPA" }, { status: 500 });
   }
 }
 
@@ -33,33 +57,69 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
     const body = await request.json();
+
+    // Validate request body
+    const validationResult = CAPACreateSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Dữ liệu không hợp lệ", details: validationResult.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
+    // Validate owner exists if provided
+    if (data.ownerId) {
+      const owner = await prisma.user.findUnique({ where: { id: data.ownerId } });
+      if (!owner) {
+        return NextResponse.json({ error: "Người phụ trách không tồn tại" }, { status: 400 });
+      }
+    }
+
+    // Validate NCRs exist if provided
+    if (data.ncrIds && data.ncrIds.length > 0) {
+      const ncrs = await prisma.nCR.findMany({
+        where: { id: { in: data.ncrIds } },
+        select: { id: true },
+      });
+      const foundIds = new Set(ncrs.map((n) => n.id));
+      const missingIds = data.ncrIds.filter((id) => !foundIds.has(id));
+      if (missingIds.length > 0) {
+        return NextResponse.json(
+          { error: `NCR không tồn tại: ${missingIds.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
     const capaNumber = await generateCAPANumber();
 
     const capa = await prisma.cAPA.create({
       data: {
         capaNumber,
-        type: body.type,
-        source: body.source,
-        sourceReference: body.sourceReference,
-        title: body.title,
-        description: body.description,
-        priority: body.priority || "medium",
-        ownerId: body.ownerId || session.user.id,
-        targetDate: body.targetDate ? new Date(body.targetDate) : undefined,
-        originalTargetDate: body.targetDate ? new Date(body.targetDate) : undefined,
+        type: data.type,
+        source: data.source,
+        sourceReference: data.sourceReference || null,
+        title: data.title,
+        description: data.description,
+        priority: data.priority,
+        ownerId: data.ownerId || session.user.id,
+        targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
+        originalTargetDate: data.targetDate ? new Date(data.targetDate) : undefined,
         createdBy: session.user.id,
         status: "open",
       },
     });
 
     // Link NCRs if provided
-    if (body.ncrIds && body.ncrIds.length > 0) {
+    if (data.ncrIds && data.ncrIds.length > 0) {
       await prisma.nCR.updateMany({
-        where: { id: { in: body.ncrIds } },
+        where: { id: { in: data.ncrIds } },
         data: { capaId: capa.id },
       });
     }
@@ -76,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(capa, { status: 201 });
   } catch (error) {
-    console.error("Failed to create CAPA:", error);
-    return NextResponse.json({ error: "Failed to create CAPA" }, { status: 500 });
+    console.error("Lỗi tạo CAPA:", error);
+    return NextResponse.json({ error: "Lỗi tạo CAPA" }, { status: 500 });
   }
 }

@@ -3,6 +3,14 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * RTR-MRP Playwright E2E Test Configuration
  * @see https://playwright.dev/docs/test-configuration
+ *
+ * Test Execution Commands:
+ * - Smoke Tests (P0):     npx playwright test --grep @p0
+ * - Regression (P0+P1):   npx playwright test --grep "@p0|@p1"
+ * - Full Suite:           npx playwright test
+ * - Quality Module:       npx playwright test --grep @quality
+ * - Workflows:            npx playwright test --grep @workflow
+ * - With Bug Reporter:    npx playwright test --reporter=html,json,./e2e/reporters/bug-reporter.ts
  */
 export default defineConfig({
   testDir: './e2e',
@@ -13,11 +21,24 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   timeout: 60000,
 
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['list'],
-  ],
+  // Enhanced reporter configuration for QA/QC workflow
+  reporter: process.env.CI
+    ? [
+        ['html', { outputFolder: 'e2e/reports/html', open: 'never' }],
+        ['json', { outputFile: 'e2e/reports/json/results.json' }],
+        ['./e2e/reporters/bug-reporter.ts', { outputFolder: 'e2e/reports/bugs' }],
+        ['github'],
+      ]
+    : [
+        ['html', { outputFolder: 'e2e/reports/html' }],
+        ['json', { outputFile: 'e2e/reports/json/results.json' }],
+        ['./e2e/reporters/bug-reporter.ts', { outputFolder: 'e2e/reports/bugs' }],
+        ['list'],
+      ],
+
+  // Global test metadata for filtering
+  grep: process.env.TEST_GREP ? new RegExp(process.env.TEST_GREP) : undefined,
+  grepInvert: process.env.TEST_GREP_INVERT ? new RegExp(process.env.TEST_GREP_INVERT) : undefined,
 
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',

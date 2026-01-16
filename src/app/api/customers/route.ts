@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
     const params = parsePaginationParams(request);
@@ -83,8 +83,8 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(customers, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch customers:", error);
-    return paginatedError("Failed to fetch customers", 500);
+    console.error("Lỗi tải danh sách khách hàng:", error);
+    return paginatedError("Lỗi tải danh sách khách hàng", 500);
   }
 }
 
@@ -100,7 +100,7 @@ async function postHandler(
   try {
     body = await request.json();
   } catch {
-    return errorResponse('Invalid JSON body', 400);
+    return errorResponse('Dữ liệu JSON không hợp lệ', 400);
   }
 
   const validation = createCustomerSchema.safeParse(body);

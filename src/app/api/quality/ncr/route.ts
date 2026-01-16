@@ -2,30 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateNCRNumber } from "@/lib/quality/ncr-workflow";
+import { z } from "zod";
+
+// Validation schema for NCR creation
+const NCRCreateSchema = z.object({
+  source: z.enum(["receiving", "in_process", "final", "customer_complaint", "supplier"]),
+  inspectionId: z.string().optional().nullable(),
+  partId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  workOrderId: z.string().optional().nullable(),
+  salesOrderId: z.string().optional().nullable(),
+  poId: z.string().optional().nullable(),
+  lotNumber: z.string().optional().nullable(),
+  quantityAffected: z.number().int().min(1, "Số lượng phải >= 1"),
+  title: z.string().min(1, "Tiêu đề là bắt buộc").max(200),
+  description: z.string().min(1, "Mô tả là bắt buộc").max(5000),
+  defectCode: z.string().optional().nullable(),
+  defectCategory: z.string().optional().nullable(),
+  priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const ncrs = await prisma.nCR.findMany({
-      where: {
-        ...(status && status !== "all" ? { status } : {}),
-      },
-      include: {
-        part: { select: { partNumber: true, name: true } },
-        product: { select: { sku: true, name: true } },
-        workOrder: { select: { woNumber: true } },
-        inspection: { select: { inspectionNumber: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
+    const where: Record<string, unknown> = {};
+    if (status && status !== "all") where.status = status;
+
+    const [ncrs, total] = await Promise.all([
+      prisma.nCR.findMany({
+        where,
+        include: {
+          part: { select: { partNumber: true, name: true } },
+          product: { select: { sku: true, name: true } },
+          workOrder: { select: { woNumber: true } },
+          inspection: { select: { inspectionNumber: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.nCR.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: ncrs,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
-
-    return NextResponse.json(ncrs);
   } catch (error) {
-    console.error("Failed to fetch NCRs:", error);
-    return NextResponse.json({ error: "Failed to fetch NCRs" }, { status: 500 });
+    console.error("Lỗi tải danh sách NCR:", error);
+    return NextResponse.json({ error: "Lỗi tải danh sách NCR" }, { status: 500 });
   }
 }
 
@@ -33,29 +62,70 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
     const body = await request.json();
+
+    // Validate request body
+    const validationResult = NCRCreateSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Dữ liệu không hợp lệ", details: validationResult.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
+    // Validate entity references exist
+    if (data.partId) {
+      const part = await prisma.part.findUnique({ where: { id: data.partId } });
+      if (!part) {
+        return NextResponse.json({ error: "Linh kiện không tồn tại" }, { status: 400 });
+      }
+    }
+
+    if (data.productId) {
+      const product = await prisma.product.findUnique({ where: { id: data.productId } });
+      if (!product) {
+        return NextResponse.json({ error: "Sản phẩm không tồn tại" }, { status: 400 });
+      }
+    }
+
+    if (data.workOrderId) {
+      const wo = await prisma.workOrder.findUnique({ where: { id: data.workOrderId } });
+      if (!wo) {
+        return NextResponse.json({ error: "Lệnh sản xuất không tồn tại" }, { status: 400 });
+      }
+    }
+
+    if (data.inspectionId) {
+      const inspection = await prisma.inspection.findUnique({ where: { id: data.inspectionId } });
+      if (!inspection) {
+        return NextResponse.json({ error: "Kiểm tra không tồn tại" }, { status: 400 });
+      }
+    }
+
     const ncrNumber = await generateNCRNumber();
 
     const ncr = await prisma.nCR.create({
       data: {
         ncrNumber,
-        source: body.source,
-        inspectionId: body.inspectionId,
-        partId: body.partId,
-        productId: body.productId,
-        workOrderId: body.workOrderId,
-        salesOrderId: body.salesOrderId,
-        poId: body.poId,
-        lotNumber: body.lotNumber,
-        quantityAffected: body.quantityAffected,
-        title: body.title,
-        description: body.description,
-        defectCode: body.defectCode,
-        defectCategory: body.defectCategory,
-        priority: body.priority || "medium",
+        source: data.source,
+        inspectionId: data.inspectionId || null,
+        partId: data.partId || null,
+        productId: data.productId || null,
+        workOrderId: data.workOrderId || null,
+        salesOrderId: data.salesOrderId || null,
+        poId: data.poId || null,
+        lotNumber: data.lotNumber || null,
+        quantityAffected: data.quantityAffected,
+        title: data.title,
+        description: data.description,
+        defectCode: data.defectCode || null,
+        defectCategory: data.defectCategory || null,
+        priority: data.priority,
         createdBy: session.user.id,
         status: "open",
       },
@@ -73,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(ncr, { status: 201 });
   } catch (error) {
-    console.error("Failed to create NCR:", error);
-    return NextResponse.json({ error: "Failed to create NCR" }, { status: 500 });
+    console.error("Lỗi tạo NCR:", error);
+    return NextResponse.json({ error: "Lỗi tạo NCR" }, { status: 500 });
   }
 }

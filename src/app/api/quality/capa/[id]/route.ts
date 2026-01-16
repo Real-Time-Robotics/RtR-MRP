@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { transitionCAPA } from "@/lib/quality/capa-workflow";
+import { z } from "zod";
+
+// Validation schema for CAPA update
+const CAPAUpdateSchema = z.object({
+  action: z.string().optional(), // Workflow transition action
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  rcaMethod: z.string().optional().nullable(),
+  rcaFindings: z.string().optional().nullable(),
+  rootCause: z.string().optional().nullable(),
+  immediateAction: z.string().optional().nullable(),
+  verificationMethod: z.string().optional().nullable(),
+  verificationResults: z.string().optional().nullable(),
+  effectivenessScore: z.number().min(0).max(100).optional().nullable(),
+  closureNotes: z.string().optional().nullable(),
+  targetDate: z.string().optional(),
+});
 
 export async function GET(
   request: NextRequest,
@@ -26,13 +44,13 @@ export async function GET(
     });
 
     if (!capa) {
-      return NextResponse.json({ error: "CAPA not found" }, { status: 404 });
+      return NextResponse.json({ error: "CAPA không tồn tại" }, { status: 404 });
     }
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Failed to fetch CAPA:", error);
-    return NextResponse.json({ error: "Failed to fetch CAPA" }, { status: 500 });
+    console.error("Lỗi tải CAPA:", error);
+    return NextResponse.json({ error: "Lỗi tải CAPA" }, { status: 500 });
   }
 }
 
@@ -43,15 +61,33 @@ export async function PATCH(
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
     const { id } = await params;
+
+    // Check if CAPA exists
+    const existing = await prisma.cAPA.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "CAPA không tồn tại" }, { status: 404 });
+    }
+
     const body = await request.json();
 
+    // Validate request body
+    const validationResult = CAPAUpdateSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Dữ liệu không hợp lệ", details: validationResult.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
     // If action is provided, use the workflow transition
-    if (body.action) {
-      const result = await transitionCAPA(id, body.action, session.user.id, body);
+    if (data.action) {
+      const result = await transitionCAPA(id, data.action, session.user.id, body);
       if (!result.success) {
         return NextResponse.json({ error: result.error }, { status: 400 });
       }
@@ -59,28 +95,29 @@ export async function PATCH(
       return NextResponse.json(updatedCAPA);
     }
 
-    // Otherwise, do a regular update
+    // Otherwise, do a regular update (only update provided fields)
+    const updateData: Record<string, unknown> = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.rcaMethod !== undefined) updateData.rcaMethod = data.rcaMethod;
+    if (data.rcaFindings !== undefined) updateData.rcaFindings = data.rcaFindings;
+    if (data.rootCause !== undefined) updateData.rootCause = data.rootCause;
+    if (data.immediateAction !== undefined) updateData.immediateAction = data.immediateAction;
+    if (data.verificationMethod !== undefined) updateData.verificationMethod = data.verificationMethod;
+    if (data.verificationResults !== undefined) updateData.verificationResults = data.verificationResults;
+    if (data.effectivenessScore !== undefined) updateData.effectivenessScore = data.effectivenessScore;
+    if (data.closureNotes !== undefined) updateData.closureNotes = data.closureNotes;
+    if (data.targetDate !== undefined) updateData.targetDate = new Date(data.targetDate);
+
     const capa = await prisma.cAPA.update({
       where: { id },
-      data: {
-        title: body.title,
-        description: body.description,
-        priority: body.priority,
-        rcaMethod: body.rcaMethod,
-        rcaFindings: body.rcaFindings,
-        rootCause: body.rootCause,
-        immediateAction: body.immediateAction,
-        verificationMethod: body.verificationMethod,
-        verificationResults: body.verificationResults,
-        effectivenessScore: body.effectivenessScore,
-        closureNotes: body.closureNotes,
-        targetDate: body.targetDate ? new Date(body.targetDate) : undefined,
-      },
+      data: updateData,
     });
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Failed to update CAPA:", error);
-    return NextResponse.json({ error: "Failed to update CAPA" }, { status: 500 });
+    console.error("Lỗi cập nhật CAPA:", error);
+    return NextResponse.json({ error: "Lỗi cập nhật CAPA" }, { status: 500 });
   }
 }

@@ -13,6 +13,13 @@ import {
 // VALIDATION
 // =============================================================================
 
+// Schema for PO line item
+const POLineSchema = z.object({
+  partId: z.string().min(1, "Part ID là bắt buộc"),
+  quantity: z.number().int().min(1, "Số lượng phải >= 1"),
+  unitPrice: z.number().min(0, "Đơn giá phải >= 0"),
+});
+
 const updatePOSchema = z.object({
   poNumber: z.string().min(1).optional(),
   supplierId: z.string().optional(),
@@ -20,6 +27,7 @@ const updatePOSchema = z.object({
   expectedDate: z.string().or(z.date()).optional(),
   status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']).optional(),
   notes: z.string().optional().nullable(),
+  lines: z.array(POLineSchema).optional(),
 });
 
 // =============================================================================
@@ -84,14 +92,65 @@ async function putHandler(
     return validationErrorResponse(errors);
   }
 
-  const updateData: Record<string, unknown> = { ...validation.data };
-  if (validation.data.orderDate) updateData.orderDate = new Date(validation.data.orderDate);
-  if (validation.data.expectedDate) updateData.expectedDate = new Date(validation.data.expectedDate);
+  const { lines, ...headerData } = validation.data;
 
-  const order = await prisma.purchaseOrder.update({
-    where: { id },
-    data: updateData,
-    include: { supplier: true, lines: { include: { part: true } } },
+  // Build header update data
+  const updateData: Record<string, unknown> = { ...headerData };
+  if (headerData.orderDate) updateData.orderDate = new Date(headerData.orderDate);
+  if (headerData.expectedDate) updateData.expectedDate = new Date(headerData.expectedDate);
+
+  // Validate parts exist if lines provided
+  if (lines && lines.length > 0) {
+    const partIds = lines.map((line) => line.partId);
+    const parts = await prisma.part.findMany({
+      where: { id: { in: partIds } },
+      select: { id: true },
+    });
+    const foundPartIds = new Set(parts.map((p) => p.id));
+    const missingParts = partIds.filter((pid) => !foundPartIds.has(pid));
+    if (missingParts.length > 0) {
+      return errorResponse(`Parts không tồn tại: ${missingParts.join(", ")}`, 400);
+    }
+
+    // Calculate new total amount
+    const totalAmount = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+    updateData.totalAmount = totalAmount;
+  }
+
+  // Use transaction to update header and lines together
+  const order = await prisma.$transaction(async (tx) => {
+    // Delete existing lines if new lines provided
+    if (lines && lines.length > 0) {
+      await tx.purchaseOrderLine.deleteMany({
+        where: { poId: id },
+      });
+    }
+
+    // Update header and create new lines
+    return tx.purchaseOrder.update({
+      where: { id },
+      data: {
+        ...updateData,
+        ...(lines && lines.length > 0 && {
+          lines: {
+            create: lines.map((line, index) => ({
+              lineNumber: index + 1,
+              partId: line.partId,
+              quantity: line.quantity,
+              unitPrice: line.unitPrice,
+              lineTotal: line.quantity * line.unitPrice,
+            })),
+          },
+        }),
+      },
+      include: {
+        supplier: true,
+        lines: {
+          include: { part: true },
+          orderBy: { lineNumber: 'asc' },
+        }
+      },
+    });
   });
 
   return successResponse(order);

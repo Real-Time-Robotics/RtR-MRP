@@ -2,32 +2,73 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateInspectionPlanNumber } from "@/lib/quality/inspection-engine";
+import { z } from "zod";
+
+// Validation schema for Inspection Characteristic
+const CharacteristicSchema = z.object({
+  name: z.string().min(1, "Tên là bắt buộc").max(100),
+  description: z.string().max(500).optional().nullable(),
+  type: z.enum(["variable", "attribute"]),
+  specification: z.string().optional().nullable(),
+  nominalValue: z.number().optional().nullable(),
+  upperLimit: z.number().optional().nullable(),
+  lowerLimit: z.number().optional().nullable(),
+  unitOfMeasure: z.string().optional().nullable(),
+  acceptanceCriteria: z.string().optional().nullable(),
+  isCritical: z.boolean().default(false),
+  isMajor: z.boolean().default(false),
+  gageRequired: z.string().optional().nullable(),
+});
+
+// Validation schema for Inspection Plan creation
+const InspectionPlanCreateSchema = z.object({
+  name: z.string().min(1, "Tên kế hoạch là bắt buộc").max(200),
+  description: z.string().max(2000).optional().nullable(),
+  type: z.enum(["receiving", "in_process", "final"]),
+  partId: z.string().optional().nullable(),
+  productId: z.string().optional().nullable(),
+  supplierId: z.string().optional().nullable(),
+  sampleSize: z.string().optional().nullable(), // "100%", "AQL 1.0", etc.
+  sampleMethod: z.string().optional().nullable(),
+  characteristics: z.array(CharacteristicSchema).optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const plans = await prisma.inspectionPlan.findMany({
-      where: {
-        ...(type && { type }),
-        ...(status && { status }),
-      },
-      include: {
-        part: { select: { partNumber: true, name: true } },
-        product: { select: { sku: true, name: true } },
-        supplier: { select: { code: true, name: true } },
-        _count: { select: { characteristics: true, inspections: true } },
-      },
-      orderBy: { createdAt: "desc" },
+    const where: Record<string, unknown> = {};
+    if (type) where.type = type;
+    if (status) where.status = status;
+
+    const [plans, total] = await Promise.all([
+      prisma.inspectionPlan.findMany({
+        where,
+        include: {
+          part: { select: { partNumber: true, name: true } },
+          product: { select: { sku: true, name: true } },
+          supplier: { select: { code: true, name: true } },
+          _count: { select: { characteristics: true, inspections: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.inspectionPlan.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: plans,
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
-
-    return NextResponse.json(plans);
   } catch (error) {
-    console.error("Failed to fetch inspection plans:", error);
+    console.error("Lỗi tải danh sách kế hoạch kiểm tra:", error);
     return NextResponse.json(
-      { error: "Failed to fetch inspection plans" },
+      { error: "Lỗi tải danh sách kế hoạch kiểm tra" },
       { status: 500 }
     );
   }
@@ -37,57 +78,89 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
     const body = await request.json();
+
+    // Validate request body
+    const validationResult = InspectionPlanCreateSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Dữ liệu không hợp lệ", details: validationResult.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validationResult.data;
+
+    // Validate entity references exist
+    if (data.partId) {
+      const part = await prisma.part.findUnique({ where: { id: data.partId } });
+      if (!part) {
+        return NextResponse.json({ error: "Linh kiện không tồn tại" }, { status: 400 });
+      }
+    }
+
+    if (data.productId) {
+      const product = await prisma.product.findUnique({ where: { id: data.productId } });
+      if (!product) {
+        return NextResponse.json({ error: "Sản phẩm không tồn tại" }, { status: 400 });
+      }
+    }
+
+    if (data.supplierId) {
+      const supplier = await prisma.supplier.findUnique({ where: { id: data.supplierId } });
+      if (!supplier) {
+        return NextResponse.json({ error: "Nhà cung cấp không tồn tại" }, { status: 400 });
+      }
+    }
+
     const planNumber = await generateInspectionPlanNumber();
 
     const plan = await prisma.inspectionPlan.create({
       data: {
         planNumber,
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        partId: body.partId,
-        productId: body.productId,
-        supplierId: body.supplierId,
-        sampleSize: body.sampleSize,
-        sampleMethod: body.sampleMethod,
+        name: data.name,
+        description: data.description || null,
+        type: data.type,
+        partId: data.partId || null,
+        productId: data.productId || null,
+        supplierId: data.supplierId || null,
+        sampleSize: data.sampleSize || null,
+        sampleMethod: data.sampleMethod || null,
         createdBy: session.user.id,
         status: "draft",
       },
     });
 
     // Create characteristics if provided
-    if (body.characteristics && body.characteristics.length > 0) {
+    if (data.characteristics && data.characteristics.length > 0) {
       await prisma.inspectionCharacteristic.createMany({
-        data: body.characteristics.map(
-          (char: Record<string, unknown>, index: number) => ({
-            planId: plan.id,
-            sequence: index + 1,
-            name: char.name,
-            description: char.description,
-            type: char.type,
-            specification: char.specification,
-            nominalValue: char.nominalValue,
-            upperLimit: char.upperLimit,
-            lowerLimit: char.lowerLimit,
-            unitOfMeasure: char.unitOfMeasure,
-            acceptanceCriteria: char.acceptanceCriteria,
-            isCritical: char.isCritical || false,
-            isMajor: char.isMajor || false,
-            gageRequired: char.gageRequired,
-          })
-        ),
+        data: data.characteristics.map((char, index) => ({
+          planId: plan.id,
+          sequence: index + 1,
+          name: char.name,
+          description: char.description || null,
+          type: char.type,
+          specification: char.specification || null,
+          nominalValue: char.nominalValue || null,
+          upperLimit: char.upperLimit || null,
+          lowerLimit: char.lowerLimit || null,
+          unitOfMeasure: char.unitOfMeasure || null,
+          acceptanceCriteria: char.acceptanceCriteria || null,
+          isCritical: char.isCritical,
+          isMajor: char.isMajor,
+          gageRequired: char.gageRequired || null,
+        })),
       });
     }
 
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
-    console.error("Failed to create inspection plan:", error);
+    console.error("Lỗi tạo kế hoạch kiểm tra:", error);
     return NextResponse.json(
-      { error: "Failed to create inspection plan" },
+      { error: "Lỗi tạo kế hoạch kiểm tra" },
       { status: 500 }
     );
   }

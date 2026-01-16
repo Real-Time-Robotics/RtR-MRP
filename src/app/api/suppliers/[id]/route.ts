@@ -113,7 +113,7 @@ async function putHandler(
   try {
     body = await request.json();
   } catch {
-    return errorResponse('Invalid JSON body', 400);
+    return errorResponse('Dữ liệu JSON không hợp lệ', 400);
   }
 
   const validation = updateSupplierSchema.safeParse(body);
