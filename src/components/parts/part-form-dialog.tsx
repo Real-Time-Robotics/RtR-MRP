@@ -81,15 +81,20 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // 2. Setup Data Entry Hook
     const { submit: performSave, isSubmitting } = useDataEntry<PartFormData>({
         onSubmit: async (data: PartFormData) => {
-            // Clean data: convert empty strings to undefined (to work with API's optional fields)
+            // Clean data: convert empty strings to null, but KEEP all fields
+            // API needs to receive all fields to properly update nested relations
             const cleanData: Record<string, unknown> = {};
             Object.entries(data).forEach(([key, value]) => {
-                // Skip empty strings, null, and undefined - let API use defaults
-                if (value === '' || value === null || value === undefined) {
-                    return;
+                // Convert empty strings to null, but keep the field
+                if (value === '') {
+                    cleanData[key] = null;
+                } else {
+                    cleanData[key] = value;
                 }
-                cleanData[key] = value;
             });
+
+            console.log('=== SUBMITTING FORM DATA ===');
+            console.log(JSON.stringify(cleanData, null, 2));
 
             const url = isEditing ? `/api/parts/${part.id}` : '/api/parts';
             const method = isEditing ? 'PUT' : 'POST';
@@ -155,51 +160,63 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     useEffect(() => {
         if (open) {
             if (part) {
-                // Map Part to PartFormData (need to handle potential type discrepancies carefully)
+                // Map Part to PartFormData
+                // IMPORTANT: Read from nested relations (planning, costs, specs, compliance) when available
+                // Fall back to root-level fields for backwards compatibility
+                const planning = (part as any).planning;
+                const costs = (part as any).costs;
+                const specs = (part as any).specs;
+                const compliance = (part as any).compliance;
+
                 form.reset({
                     partNumber: part.partNumber,
                     name: part.name,
                     description: part.description || '',
                     category: part.category as PartFormData['category'],
                     unit: part.unit,
-                    unitCost: part.unitCost,
-                    // nullish coalescing to match Optional fields in schema
-                    weightKg: part.weightKg ?? null,
-                    lengthMm: part.lengthMm ?? null,
-                    widthMm: part.widthMm ?? null,
-                    heightMm: part.heightMm ?? null,
-                    material: part.material || '',
-                    color: part.color || '',
-                    makeOrBuy: part.makeOrBuy as 'MAKE' | 'BUY' | 'BOTH',
-                    procurementType: part.procurementType || '',
-                    leadTimeDays: part.leadTimeDays,
-                    moq: part.moq,
-                    orderMultiple: part.orderMultiple ?? null,
-                    minStockLevel: part.minStockLevel,
-                    reorderPoint: part.reorderPoint,
-                    maxStock: part.maxStock ?? null,
-                    safetyStock: part.safetyStock ?? null,
-                    isCritical: part.isCritical,
-                    countryOfOrigin: part.countryOfOrigin || '',
-                    ndaaCompliant: part.ndaaCompliant,
-                    itarControlled: part.itarControlled,
-                    rohsCompliant: part.rohsCompliant,
-                    reachCompliant: part.reachCompliant,
-                    revision: part.revision,
+                    // Cost: prefer nested, fallback to root
+                    unitCost: costs?.unitCost ?? part.unitCost ?? 0,
+                    // Physical: prefer nested specs, fallback to root
+                    weightKg: specs?.weightKg ?? part.weightKg ?? null,
+                    lengthMm: specs?.lengthMm ?? part.lengthMm ?? null,
+                    widthMm: specs?.widthMm ?? part.widthMm ?? null,
+                    heightMm: specs?.heightMm ?? part.heightMm ?? null,
+                    material: specs?.material ?? part.material ?? '',
+                    color: specs?.color ?? part.color ?? '',
+                    // Procurement: prefer nested planning, fallback to root
+                    makeOrBuy: (planning?.makeOrBuy ?? part.makeOrBuy ?? 'BUY') as 'MAKE' | 'BUY' | 'BOTH',
+                    procurementType: planning?.procurementType ?? part.procurementType ?? '',
+                    leadTimeDays: planning?.leadTimeDays ?? part.leadTimeDays ?? 14,
+                    moq: planning?.moq ?? part.moq ?? 1,
+                    orderMultiple: planning?.orderMultiple ?? part.orderMultiple ?? null,
+                    // Inventory: prefer nested planning, fallback to root
+                    minStockLevel: planning?.minStockLevel ?? part.minStockLevel ?? 0,
+                    reorderPoint: planning?.reorderPoint ?? part.reorderPoint ?? 0,
+                    maxStock: planning?.maxStock ?? null, // maxStock ONLY exists in planning
+                    safetyStock: planning?.safetyStock ?? part.safetyStock ?? null,
+                    isCritical: part.isCritical ?? false,
+                    // Compliance: prefer nested compliance, fallback to root
+                    countryOfOrigin: compliance?.countryOfOrigin ?? part.countryOfOrigin ?? '',
+                    ndaaCompliant: compliance?.ndaaCompliant ?? part.ndaaCompliant ?? true,
+                    itarControlled: compliance?.itarControlled ?? part.itarControlled ?? false,
+                    rohsCompliant: compliance?.rohsCompliant ?? part.rohsCompliant ?? true,
+                    reachCompliant: compliance?.reachCompliant ?? part.reachCompliant ?? true,
+                    // Engineering
+                    revision: part.revision ?? 'A',
                     revisionDate: part.revisionDate ? new Date(part.revisionDate).toISOString().split('T')[0] : null,
-                    drawingNumber: part.drawingNumber || '',
-                    manufacturer: part.manufacturer || '',
-                    manufacturerPn: part.manufacturerPn || '',
-                    lifecycleStatus: part.lifecycleStatus as PartFormData['lifecycleStatus'],
+                    drawingNumber: specs?.drawingNumber ?? part.drawingNumber ?? '',
+                    manufacturer: specs?.manufacturer ?? part.manufacturer ?? '',
+                    manufacturerPn: specs?.manufacturerPn ?? part.manufacturerPn ?? '',
+                    lifecycleStatus: (part.lifecycleStatus ?? 'ACTIVE') as PartFormData['lifecycleStatus'],
                 });
                 // Store original values for change impact detection
                 originalValuesRef.current = {
-                    unitCost: part.unitCost,
-                    leadTime: part.leadTimeDays,
-                    minOrderQty: part.moq,
-                    safetyStock: part.safetyStock,
-                    reorderPoint: part.reorderPoint,
-                    maxStock: part.maxStock,
+                    unitCost: costs?.unitCost ?? part.unitCost,
+                    leadTime: planning?.leadTimeDays ?? part.leadTimeDays,
+                    minOrderQty: planning?.moq ?? part.moq,
+                    safetyStock: planning?.safetyStock ?? part.safetyStock,
+                    reorderPoint: planning?.reorderPoint ?? part.reorderPoint,
+                    maxStock: planning?.maxStock ?? null,
                 };
             } else {
                 form.reset(defaultPartValues);
@@ -348,7 +365,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 render={({ field }) => (
                                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                         <div className="space-y-0.5">
-                                            <FormLabel>Critical Part</FormLabel>
+                                            <FormLabel>Linh kiện Quan trọng</FormLabel>
                                             <FormDescription>Đánh dấu là part quan trọng</FormDescription>
                                         </div>
                                         <FormControl>
@@ -458,7 +475,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="revision"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Revision</FormLabel>
+                                            <FormLabel>Phiên bản</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="A" {...field} />
                                             </FormControl>
@@ -473,7 +490,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="revisionDate"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Revision Date</FormLabel>
+                                            <FormLabel>Ngày cập nhật</FormLabel>
                                             <FormControl>
                                                 <Input type="date" {...field} value={field.value || ''} />
                                             </FormControl>
@@ -489,7 +506,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 name="drawingNumber"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Drawing Number</FormLabel>
+                                        <FormLabel>Số bản vẽ</FormLabel>
                                         <FormControl>
                                             <Input placeholder="DWG-001" {...field} value={field.value || ''} />
                                         </FormControl>
@@ -505,7 +522,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="manufacturer"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Manufacturer</FormLabel>
+                                            <FormLabel>Nhà sản xuất</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="Nhà sản xuất" {...field} value={field.value || ''} />
                                             </FormControl>
@@ -519,7 +536,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="manufacturerPn"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Mfr Part Number</FormLabel>
+                                            <FormLabel>Mã NSX</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="MPN" {...field} value={field.value || ''} />
                                             </FormControl>
@@ -534,7 +551,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 name="lifecycleStatus"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Lifecycle Status</FormLabel>
+                                        <FormLabel>Trạng thái</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
@@ -565,7 +582,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="makeOrBuy"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Make/Buy</FormLabel>
+                                            <FormLabel>Tự SX/Mua</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
@@ -588,7 +605,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="leadTimeDays"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Lead Time (ngày)</FormLabel>
+                                            <FormLabel>Thời gian giao hàng (ngày)</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} {...field} />
                                             </FormControl>
@@ -604,7 +621,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="moq"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>MOQ</FormLabel>
+                                            <FormLabel>SL đặt tối thiểu</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={1} {...field} />
                                             </FormControl>
@@ -619,7 +636,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="orderMultiple"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Order Multiple</FormLabel>
+                                            <FormLabel>Bội số đặt hàng</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={1} {...field} value={field.value ?? ''} />
                                             </FormControl>
@@ -635,7 +652,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="minStockLevel"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Min Stock Level</FormLabel>
+                                            <FormLabel>Tồn kho tối thiểu</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} {...field} />
                                             </FormControl>
@@ -649,7 +666,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="reorderPoint"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Reorder Point</FormLabel>
+                                            <FormLabel>Điểm đặt lại</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} {...field} />
                                             </FormControl>
@@ -665,7 +682,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="safetyStock"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Safety Stock</FormLabel>
+                                            <FormLabel>Tồn kho an toàn</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} {...field} value={field.value ?? ''} />
                                             </FormControl>
@@ -679,7 +696,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="maxStock"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Max Stock</FormLabel>
+                                            <FormLabel>Tồn kho tối đa</FormLabel>
                                             <FormControl>
                                                 <Input type="number" min={0} {...field} value={field.value ?? ''} />
                                             </FormControl>
@@ -723,7 +740,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                             <div className="space-y-0.5">
-                                                <FormLabel>NDAA Compliant</FormLabel>
+                                                <FormLabel>Tuân thủ NDAA</FormLabel>
                                                 <FormDescription>Section 889 compliant</FormDescription>
                                             </div>
                                             <FormControl>
@@ -739,7 +756,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                             <div className="space-y-0.5">
-                                                <FormLabel>ITAR Controlled</FormLabel>
+                                                <FormLabel>Kiểm soát ITAR</FormLabel>
                                                 <FormDescription>Export controlled item</FormDescription>
                                             </div>
                                             <FormControl>
@@ -755,7 +772,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                             <div className="space-y-0.5">
-                                                <FormLabel>RoHS Compliant</FormLabel>
+                                                <FormLabel>Tuân thủ RoHS</FormLabel>
                                                 <FormDescription>Restriction of Hazardous Substances</FormDescription>
                                             </div>
                                             <FormControl>
@@ -771,7 +788,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     render={({ field }) => (
                                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                                             <div className="space-y-0.5">
-                                                <FormLabel>REACH Compliant</FormLabel>
+                                                <FormLabel>Tuân thủ REACH</FormLabel>
                                                 <FormDescription>EU Chemicals Regulation</FormDescription>
                                             </div>
                                             <FormControl>

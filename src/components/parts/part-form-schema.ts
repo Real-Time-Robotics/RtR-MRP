@@ -90,25 +90,48 @@ export const partSchema = z.object({
 export type PartFormData = z.infer<typeof partSchema>;
 
 export const defaultPartValues: PartFormData = {
+    // Basic
     partNumber: '',
     name: '',
     description: '',
     category: 'COMPONENT',
     unit: 'EA',
     unitCost: 0,
+
+    // Physical
+    weightKg: null,
+    lengthMm: null,
+    widthMm: null,
+    heightMm: null,
+    material: null,
+    color: null,
+
+    // Procurement
     makeOrBuy: 'BUY',
+    procurementType: null,
     leadTimeDays: 14,
     moq: 1,
+    orderMultiple: null,
+
+    // Inventory
     minStockLevel: 0,
     reorderPoint: 0,
+    maxStock: null,
+    safetyStock: null,
     isCritical: false,
+
+    // Compliance
+    countryOfOrigin: null,
     ndaaCompliant: true,
     itarControlled: false,
     rohsCompliant: true,
     reachCompliant: true,
+
+    // Engineering
     revision: 'A',
     revisionDate: null,
     drawingNumber: null,
+    manufacturer: null,
+    manufacturerPn: null,
     lifecycleStatus: 'ACTIVE',
-    // Optional numeric fields need to be null or undefined, handled by form reset usually
 };

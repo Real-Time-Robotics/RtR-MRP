@@ -75,11 +75,17 @@ interface ValidationError {
   severity: "error" | "warning";
 }
 
-export function ImportWizard() {
+interface ImportWizardProps {
+  onSuccess?: () => void;
+  onClose?: () => void;
+  defaultEntityType?: string;
+}
+
+export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWizardProps = {}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
-  const [entityType, setEntityType] = useState<string>("");
+  const [entityType, setEntityType] = useState<string>(defaultEntityType || "");
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [updateMode, setUpdateMode] = useState<"insert" | "update" | "upsert">("insert");
   const [isLoading, setIsLoading] = useState(false);
@@ -227,12 +233,17 @@ export function ImportWizard() {
 
       const result = await response.json();
       setImportResult(result);
+
+      // Call onSuccess callback if import was successful
+      if (result.successCount > 0 && onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setIsLoading(false);
     }
-  }, [parseResult]);
+  }, [parseResult, onSuccess]);
 
   const canProceed = (): boolean => {
     switch (currentStep) {

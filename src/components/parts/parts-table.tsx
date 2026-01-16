@@ -617,7 +617,11 @@ export function PartsTable() {
             <DialogHeader>
               <DialogTitle>Import Parts từ Excel</DialogTitle>
             </DialogHeader>
-            <ImportWizard />
+            <ImportWizard
+              defaultEntityType="parts"
+              onSuccess={handleImportSuccess}
+              onClose={() => setImportDialogOpen(false)}
+            />
           </DialogContent>
         </Dialog>
       </div>
