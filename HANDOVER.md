@@ -1,152 +1,211 @@
-# RTR-MRP HANDOVER
-> **Last Updated:** 2026-01-12 21:20
-> **Lenh tiep tuc:** `Doc HANDOVER.md va tiep tuc cong viec`
+# HANDOVER - RTR-MRP E2E Testing Project
+
+> **Ngày tạo:** 2026-01-16
+> **Commit cuối:** 4a88aab
+> **Trạng thái:** E2E Test Suite hoàn thành, sẵn sàng cho Phase tiếp theo
 
 ---
 
-## TRANG THAI HIEN TAI
+## 1. TỔNG QUAN CÔNG VIỆC ĐÃ LÀM
+
+### 1.1 E2E Test Suite (Hoàn thành)
+
+Đã tạo **26 test spec files** mới với **334 test cases**:
+
+| Module | Files | Tests | Status |
+|--------|-------|-------|--------|
+| Quality | 7 | ~87 | Cần implement pages |
+| Inventory | 4 | ~49 | 98% pass |
+| Production | 3 | ~34 | 53% pass |
+| Purchasing | 3 | ~33 | Cần implement pages |
+| Orders | 2 | ~22 | 95% pass |
+| MRP | 2 | ~22 | 91% pass |
+| Workflows | 3 | ~15 | Cần implement pages |
+| Reports | 1 | ~12 | Cần implement pages |
+
+### 1.2 Infrastructure đã tạo
 
 ```
-+===========================================================================+
-|  BUILD:     PASSING                                                       |
-|  DEPLOY:    PUSHED (Render auto-deploy)                                   |
-|  COMMIT:    7ccdd39                                                       |
-|  SITE:      https://rtr-mrp.onrender.com                                 |
-|  REPO:      https://github.com/nclamvn/rtr-mrp                           |
-+===========================================================================+
+e2e/
+├── reporters/
+│   └── bug-reporter.ts          # Custom reporter tự động tạo bug reports
+├── utils/
+│   └── quality-helpers.ts       # 25+ helper functions cho Quality module
+├── fixtures/
+│   └── test-data.ts             # Extended với factories mới
+├── quality/                     # 7 test files
+├── inventory/                   # 4 test files
+├── production/                  # 3 test files (2 mới)
+├── purchasing/                  # 3 test files
+├── orders/                      # 2 test files
+├── mrp/                         # 2 test files
+├── workflows/                   # 3 test files
+└── reports/                     # 1 test file
+```
+
+### 1.3 Kết quả test cuối cùng
+
+```
+Total:    334 tests
+Passed:   167 (50%)
+Failed:   167 (50%)
+Duration: 15.9 minutes
+```
+
+**Modules hoạt động tốt (100%):**
+- Auth, BOM, Parts, Discussions, Notifications, Performance
+
+**Modules cần implement pages:**
+- Quality (NCR, CAPA, Inspections, Certificates)
+- Purchasing (PO, PR, Suppliers)
+- Reports/Analytics
+- E2E Workflows
+
+---
+
+## 2. VẤN ĐỀ CẦN LƯU Ý
+
+### 2.1 Server Configuration
+
+```bash
+# ĐÚNG - Chạy Next.js dev server
+npx next dev -p 3000
+
+# SAI - Custom server có issues với WebSocket
+npm run dev  # Chạy ts-node server.ts
+```
+
+### 2.2 Auth Fixture Issue
+
+File `e2e/fixtures/auth.fixture.ts` đang expect login form với:
+- `input[type="email"]`
+- `input[type="password"]`
+- `button[type="submit"]`
+
+Một số pages redirect về login nhưng login page có thể dùng UI khác (NextAuth).
+
+---
+
+## 3. CÔNG VIỆC TIẾP THEO
+
+### Phase 1: Implement Quality Module Pages (Ưu tiên cao)
+
+```
+src/app/(dashboard)/quality/
+├── ncr/
+│   ├── page.tsx              # NCR list
+│   └── [id]/page.tsx         # NCR detail
+├── capa/
+│   ├── page.tsx              # CAPA list
+│   └── [id]/page.tsx         # CAPA detail
+├── inspection-plans/
+│   └── page.tsx
+├── inspections/
+│   ├── receiving/page.tsx
+│   ├── in-process/page.tsx
+│   └── final/page.tsx
+└── certificates/
+    └── page.tsx
+```
+
+### Phase 2: Implement Purchasing Module Pages
+
+```
+src/app/(dashboard)/purchasing/
+├── orders/page.tsx           # Purchase Orders
+├── requisitions/page.tsx     # Purchase Requisitions
+└── suppliers/page.tsx        # Supplier Management
+```
+
+### Phase 3: Implement Reports Module
+
+```
+src/app/(dashboard)/reports/
+├── page.tsx                  # Reports dashboard
+├── inventory/page.tsx
+├── production/page.tsx
+└── quality/page.tsx
 ```
 
 ---
 
-## VIEC VUA HOAN THANH (Session 2026-01-12)
+## 4. COMMANDS QUAN TRỌNG
 
-### Landing Page Redesign - Medusa.js Style
+```bash
+# Chạy tất cả tests
+npx playwright test --project=chromium
 
-| # | Phan | Mo ta | File |
-|---|------|-------|------|
-| 1 | **Hero Section** | Mock dashboard UI voi HERA X8 drone content, giam height | `page.tsx` |
-| 2 | **Partners** | Marquee animation vo han, full brand names | `page.tsx` |
-| 3 | **Platform** | CAD-style technical schematic + scan line animation | `page.tsx` |
-| 4 | **Framework** | Drone blueprint illustration light theme | `page.tsx` |
-| 5 | **Docs** | Fix markdown renderer - light theme, code blocks doc duoc | `markdown-renderer.tsx` |
-| 6 | **CSS** | Keyframes: scroll (marquee), scan (blueprint) | `globals.css` |
+# Chạy smoke tests (P0)
+npx playwright test --grep @p0
 
-### Chi tiet thay doi cuoi:
-- Giam hero dashboard height: `aspect-[16/10]` -> `aspect-[16/7]`
-- Them scan line animation vao Platform section
-- Loai bo subtitle "Huong dan tich hop" va "Bat dau ngay"
-- Fix buttons dong nhat kich thuoc
-- Fix "Dang ky" text wrapping voi `whitespace-nowrap`
+# Chạy regression (P0 + P1)
+npx playwright test --grep "@p0|@p1"
 
-### Commit hom nay
-```
-7ccdd39 - feat: Redesign landing page with drone manufacturing content
+# Chạy theo module
+npx playwright test e2e/quality/
+npx playwright test e2e/inventory/
+
+# Debug mode
+npx playwright test --debug
+
+# Xem report
+npx playwright show-report
 ```
 
 ---
 
-## LANDING PAGE CONTENT RULES
+## 5. FILES QUAN TRỌNG
 
-**QUAN TRONG:**
-- Noi dung phai ve **DRONE/UAV** - cu the la **HERA X8 Professional**
-- KHONG dung noi dung san pham generic
-- Partners: KDE Direct, NVIDIA, FLIR Systems, Pixhawk, T-Motor, Tattu
-- Style: Medusa.js inspired - minimal, premium, data-first
-- Theme: LIGHT (khong dark backgrounds)
-- Text: Tieng Viet co dau
-
----
-
-## KEY FILES DA SUA
-
-| File | Thay doi |
-|------|----------|
-| `src/app/page.tsx` | Landing page hoan chinh voi drone content |
-| `src/app/docs/page.tsx` | Documentation page |
-| `src/app/docs/markdown-renderer.tsx` | Light theme cho code blocks |
-| `src/app/globals.css` | Keyframes: scroll, scan |
-
----
-
-## CONG VIEC TIEP THEO
-
-### HIGH - Landing Page
-1. **Test responsive** tren mobile/tablet
-2. **Review animations** - scan line, marquee smooth
-3. **SEO meta tags** neu can
-
-### MEDIUM - Performance (Plan exists)
-4. Memoize large components (React.memo)
-5. Lazy load recharts (~800KB)
-6. Lazy load AI components (~2MB)
-
-**Plan file:** `/Users/mac/.claude/plans/pure-stirring-coral.md`
-
-### LOW - Backlog
-7. Fix mixed Vietnamese/English trong UI
-8. Complete i18n translation audit
-
----
-
-## THONG TIN PROJECT
-
-| Item | Value |
+| File | Mô tả |
 |------|-------|
-| **Stack** | Next.js 15, React 19, Prisma, PostgreSQL |
-| **Path** | `/Users/mac/AnhQuocLuong/rtr-mrp` |
-| **Local** | http://localhost:3000 |
-| **Style** | Tailwind CSS, Shadcn/UI |
-| **AI** | Google Gemini, OpenAI fallback |
+| `playwright.config.ts` | Config test với custom reporters |
+| `e2e/fixtures/auth.fixture.ts` | Auth fixture cho authenticated tests |
+| `e2e/fixtures/test-data.ts` | Test data factories |
+| `e2e/reporters/bug-reporter.ts` | Custom bug reporter |
+| `e2e/utils/quality-helpers.ts` | Quality module helpers |
+| `CLAUDE.md` | AI behavior configuration |
 
 ---
 
-## QUICK COMMANDS
+## 6. GIT STATUS
+
+```
+Branch: main
+Remote: nclamvn/rtr-mrp
+Last commit: 4a88aab - feat(e2e): Add comprehensive E2E test suite
+```
+
+---
+
+## 7. HƯỚNG DẪN TIẾP TỤC
+
+Khi quay lại, chạy:
 
 ```bash
 cd /Users/mac/AnhQuocLuong/rtr-mrp
 
-npm run dev          # Dev server (port 3000)
-npm run build        # Build
-npm run test:run     # Tests
+# 1. Start dev server
+npx next dev -p 3000
 
-git push             # Deploy to Render
+# 2. Run tests để xem status hiện tại
+npx playwright test --project=chromium --reporter=list
+
+# 3. Xem test report
+npx playwright show-report
 ```
+
+Sau đó yêu cầu:
+> "Đọc HANDOVER.md và tiếp tục công việc"
 
 ---
 
-## CRITICAL NOTES
+## 8. NOTES
 
-1. **Landing content** = HERA X8 Professional Drone (khong generic)
-2. **Light theme** cho illustrations (khong dark blue backgrounds)
-3. **Vietnamese text** voi diacritics dung
-4. **Medusa.js style** - minimal, premium feel
-5. **NO REDIS** - Dung `lib/cache/memory-cache.ts`
-
----
-
-## KHI QUAY LAI
-
-```
-Doc HANDOVER.md va tiep tuc cong viec
-```
-
-Hoac cu the:
-```
-Doc HANDOVER.md, tiep tuc landing page
-Doc HANDOVER.md, thuc hien performance optimization
-```
+- Test results được lưu tại `test-results/`
+- Screenshots của failed tests: `test-results/*/test-failed-1.png`
+- Bug reports sẽ được tạo tại `e2e/reports/bugs/` khi chạy với bug-reporter
+- Tất cả API routes đã được cập nhật để support Quality module
 
 ---
 
-## SESSION LOG
-
-| Date | Work Done |
-|------|-----------|
-| 2026-01-12 | **Landing page redesign** - Medusa.js style, drone content, light theme |
-| 2026-01-10 | 5 runtime fixes, Customer Verification Report |
-| 2026-01-09 | Redis removal, validation infrastructure |
-| 2026-01-06 | Demo mode, Enterprise tools v1.2 |
-
----
-
-*RTR-MRP v1.0 | Commit: 7ccdd39*
+*Handover created: 2026-01-16*
