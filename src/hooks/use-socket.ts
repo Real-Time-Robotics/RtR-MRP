@@ -48,6 +48,8 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
   useEffect(() => {
     if (!autoConnect || !session?.user) return;
 
+    let isMounted = true;
+
     const socket: TypedSocket = io({
       path: '/api/socket',
       auth: {
@@ -56,23 +58,33 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 10000,
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected:', socket.id);
-      setIsConnected(true);
+      if (isMounted) {
+        console.log('[Socket] Connected:', socket.id);
+        setIsConnected(true);
+      }
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected:', reason);
-      setIsConnected(false);
+      if (isMounted) {
+        // Only log if not a client-initiated disconnect during cleanup
+        if (reason !== 'io client disconnect') {
+          console.log('[Socket] Disconnected:', reason);
+        }
+        setIsConnected(false);
+      }
     });
 
     socket.on('connect_error', (error) => {
-      console.error('[Socket] Connection error:', error);
+      if (isMounted) {
+        console.error('[Socket] Connection error:', error.message);
+      }
     });
 
     // Online presence handlers
@@ -91,6 +103,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     socketRef.current = socket;
 
     return () => {
+      isMounted = false;
       socket.disconnect();
       socketRef.current = null;
     };
