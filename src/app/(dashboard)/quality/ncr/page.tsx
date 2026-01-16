@@ -48,8 +48,9 @@ export default function NCRListPage() {
 
       const res = await fetch(`/api/quality/ncr?${params}`);
       if (res.ok) {
-        const data = await res.json();
-        setNCRs(data);
+        const result = await res.json();
+        // API returns { data: [...], pagination: {...} }
+        setNCRs(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
       console.error("Failed to fetch NCRs:", error);

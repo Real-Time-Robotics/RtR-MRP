@@ -67,7 +67,9 @@ export default function QualityDashboardPage() {
       }
 
       if (inspectionsRes.ok) {
-        const inspectionsData = await inspectionsRes.json();
+        const result = await inspectionsRes.json();
+        // API returns { data: [...], pagination: {...} }
+        const inspectionsData = Array.isArray(result) ? result : (result.data || []);
         setPendingInspections(inspectionsData.slice(0, 10));
       }
     } catch (error) {
