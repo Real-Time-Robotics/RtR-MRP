@@ -49,62 +49,79 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     if (!autoConnect || !session?.user) return;
 
     let isMounted = true;
+    let socket: TypedSocket | null = null;
+    let connectTimer: NodeJS.Timeout | null = null;
 
-    const socket: TypedSocket = io({
-      path: '/api/socket',
-      auth: {
-        userId: session.user.id,
-        userName: session.user.name || session.user.email,
-      },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
-      reconnectionDelayMax: 10000,
-      timeout: 10000,
-    });
+    // Delay connection to avoid "closed before established" warning during Fast Refresh
+    connectTimer = setTimeout(() => {
+      if (!isMounted) return;
 
-    socket.on('connect', () => {
-      if (isMounted) {
-        console.log('[Socket] Connected:', socket.id);
-        setIsConnected(true);
-      }
-    });
+      socket = io({
+        path: '/api/socket',
+        auth: {
+          userId: session.user.id,
+          userName: session.user.name || session.user.email,
+        },
+        transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        timeout: 10000,
+      });
 
-    socket.on('disconnect', (reason) => {
-      if (isMounted) {
-        // Only log if not a client-initiated disconnect during cleanup
-        if (reason !== 'io client disconnect') {
+      socket.on('connect', () => {
+        if (isMounted) {
+          console.log('[Socket] Connected:', socket?.id);
+          setIsConnected(true);
+        }
+      });
+
+      socket.on('disconnect', (reason) => {
+        if (isMounted && reason !== 'io client disconnect') {
           console.log('[Socket] Disconnected:', reason);
         }
-        setIsConnected(false);
-      }
-    });
+        if (isMounted) {
+          setIsConnected(false);
+        }
+      });
 
-    socket.on('connect_error', (error) => {
-      if (isMounted) {
-        console.error('[Socket] Connection error:', error.message);
-      }
-    });
+      socket.on('connect_error', (error) => {
+        if (isMounted) {
+          console.error('[Socket] Connection error:', error.message);
+        }
+      });
 
-    // Online presence handlers
-    socket.on('user:online', (userId) => {
-      setOnlineUsers((prev) => [...new Set([...prev, userId])]);
-    });
+      // Online presence handlers
+      socket.on('user:online', (userId) => {
+        if (isMounted) {
+          setOnlineUsers((prev) => [...new Set([...prev, userId])]);
+        }
+      });
 
-    socket.on('user:offline', (userId) => {
-      setOnlineUsers((prev) => prev.filter((id) => id !== userId));
-    });
+      socket.on('user:offline', (userId) => {
+        if (isMounted) {
+          setOnlineUsers((prev) => prev.filter((id) => id !== userId));
+        }
+      });
 
-    socket.on('users:online', (userIds) => {
-      setOnlineUsers(userIds);
-    });
+      socket.on('users:online', (userIds) => {
+        if (isMounted) {
+          setOnlineUsers(userIds);
+        }
+      });
 
-    socketRef.current = socket;
+      socketRef.current = socket;
+    }, 200);
 
     return () => {
       isMounted = false;
-      socket.disconnect();
+      if (connectTimer) {
+        clearTimeout(connectTimer);
+      }
+      if (socket) {
+        socket.disconnect();
+      }
       socketRef.current = null;
     };
   }, [autoConnect, session?.user]);

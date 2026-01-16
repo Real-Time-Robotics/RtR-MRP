@@ -578,7 +578,7 @@ export default function AnalyticsDashboard() {
                 <span className="text-sm text-gray-500">6 tháng gần nhất</span>
               }>
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <ComposedChart data={charts.revenueByMonth}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -596,7 +596,7 @@ export default function AnalyticsDashboard() {
               {/* Orders by Status */}
               <ChartCard title="Đơn hàng theo trạng thái">
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <RechartsPie>
                       <Pie
                         data={charts.ordersByStatus}
@@ -675,7 +675,7 @@ export default function AnalyticsDashboard() {
               {/* Production Trend */}
               <ChartCard title="Tiến độ sản xuất (Tháng này)">
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={charts.productionTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="week" tick={{ fontSize: 12 }} />
@@ -692,7 +692,7 @@ export default function AnalyticsDashboard() {
               {/* Quality Trend */}
               <ChartCard title="Xu hướng chất lượng">
                 <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <ComposedChart data={charts.qualityTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -840,7 +840,7 @@ export default function AnalyticsDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartCard title="Giá trị tồn kho theo danh mục">
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={charts.inventoryByCategory} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v/1000}K`} />
@@ -854,7 +854,7 @@ export default function AnalyticsDashboard() {
 
               <ChartCard title="Số lượng theo danh mục">
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <RechartsPie>
                       <Pie
                         data={charts.inventoryByCategory}
@@ -938,7 +938,7 @@ export default function AnalyticsDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ChartCard title="Doanh thu theo tháng">
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <AreaChart data={charts.revenueByMonth}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -952,7 +952,7 @@ export default function AnalyticsDashboard() {
 
               <ChartCard title="Top sản phẩm bán chạy">
                 <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                  <ResponsiveContainer width="100%" height={280}>
                     <BarChart data={charts.topProducts} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis type="number" tick={{ fontSize: 12 }} />
@@ -1005,7 +1005,7 @@ export default function AnalyticsDashboard() {
 
             <ChartCard title="Tiến độ sản xuất theo tuần">
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                <ResponsiveContainer width="100%" height={280}>
                   <ComposedChart data={charts.productionTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="week" tick={{ fontSize: 12 }} />
@@ -1061,7 +1061,7 @@ export default function AnalyticsDashboard() {
 
             <ChartCard title="Xu hướng chất lượng theo tháng">
               <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+                <ResponsiveContainer width="100%" height={280}>
                   <ComposedChart data={charts.qualityTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
