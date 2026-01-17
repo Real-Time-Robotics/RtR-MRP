@@ -5,6 +5,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/monitoring/logger";
 
+// Check if running in test environment
+function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test' ||
+         process.env.PLAYWRIGHT_TEST === 'true' ||
+         process.env.E2E_TEST === 'true' ||
+         process.env.SKIP_RATE_LIMIT === 'true';
+}
+
 interface RateLimitConfig {
   windowMs: number;
   maxRequests: number;
@@ -43,6 +51,16 @@ export async function rateLimit(
     maxRequests = 100,
     keyPrefix = "rl",
   } = config;
+
+  // Skip rate limiting in test environment
+  if (isTestEnvironment()) {
+    return {
+      allowed: true,
+      remaining: maxRequests,
+      resetTime: Date.now() + windowMs,
+      limit: maxRequests,
+    };
+  }
 
   const key = `${keyPrefix}:${identifier}`;
   const now = Date.now();

@@ -6,7 +6,15 @@
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// Initialize Redis client (only if credentials available)
+// Check if running in test environment
+function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test' ||
+         process.env.PLAYWRIGHT_TEST === 'true' ||
+         process.env.E2E_TEST === 'true' ||
+         process.env.SKIP_RATE_LIMIT === 'true';
+}
+
+// Initialize Redis client (only if credentials available and NOT in test mode)
 let redis: Redis | null = null;
 let heavyEndpointLimiter: Ratelimit | null = null;
 
@@ -64,6 +72,11 @@ export async function checkHeavyEndpointLimit(
   reset: number;
   retryAfter?: number;
 }> {
+  // Skip rate limiting in test environment
+  if (isTestEnvironment()) {
+    return { success: true, limit: 9999, remaining: 9999, reset: 0 };
+  }
+
   // If Upstash not configured, allow all requests
   if (!heavyEndpointLimiter) {
     return { success: true, limit: 60, remaining: 60, reset: 0 };

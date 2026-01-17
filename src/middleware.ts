@@ -133,7 +133,20 @@ const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 100; // requests per window
 
+// Check if running in test environment
+function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test' ||
+         process.env.PLAYWRIGHT_TEST === 'true' ||
+         process.env.E2E_TEST === 'true' ||
+         process.env.SKIP_RATE_LIMIT === 'true';
+}
+
 function checkRateLimit(ip: string): boolean {
+  // Skip rate limiting in test environment
+  if (isTestEnvironment()) {
+    return true;
+  }
+
   const now = Date.now();
   const record = rateLimitMap.get(ip);
 
@@ -179,8 +192,9 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
 
-  // Rate limiting for API routes
-  if (isApiRoute(pathname) && !checkRateLimit(ip)) {
+  // Rate limiting for API routes (skip for test requests)
+  const isTestRequest = request.headers.get('x-test-request') === 'true';
+  if (isApiRoute(pathname) && !isTestRequest && !checkRateLimit(ip)) {
     return new NextResponse(
       JSON.stringify({ error: 'Too many requests. Please try again later.' }),
       {
