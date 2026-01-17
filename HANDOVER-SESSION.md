@@ -1,82 +1,96 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-01-14 22:30 (Vietnam Time)
-> **Session:** E2E Testing + Navigation Fixes + Equipment Page
+> **Last Updated:** 2026-01-17 (Vietnam Time)
+> **Session:** Project Status Review
 
 ---
 
-## TRẠNG THÁI HIỆN TẠI
+## 🎯 HƯỚNG DẪN KHI TRỞ LẠI
+
+**Khi bắt đầu session mới, nói:** `"Đọc HANDOVER-SESSION.md để tiếp tục"`
+
+Claude sẽ đọc file này và nắm được toàn bộ ngữ cảnh để tiếp tục công việc liền mạch.
+
+---
+
+## TRẠNG THÁI HIỆN TẠI (2026-01-17)
+
+### Project Stats
+| Metric | Giá trị |
+|--------|---------|
+| **Prisma Models** | 130 models |
+| **API Routes** | 164 routes |
+| **Pages** | 128 pages |
+| **Components** | 253 files |
+| **E2E Tests** | 334 test cases (87% pass - 290/334) |
+| **Documentation** | 47+ files |
 
 ### Deployment Status
 | Item | Status |
 |------|--------|
-| **Render Build** | Đang chạy (commit `0770471`) |
 | **Production URL** | https://rtr-mrp.onrender.com |
 | **GitHub Repo** | https://github.com/nclamvn/rtr-mrp |
 | **Git Remote** | `nclamvn` (không phải `origin`) |
+| **Branch** | main |
 
-### Build Fixes Applied
-1. ✅ Prisma `--accept-data-loss` flag
-2. ✅ Conditional bundle-analyzer import
-3. ✅ ES2017 target in tsconfig.json
-4. ✅ Server compilation (ts-node → node dist/server.js)
-5. ✅ PageHeader props fix (remove titleVi/descriptionVi)
-
----
-
-## CÔNG VIỆC ĐÃ HOÀN THÀNH
-
-### 1. E2E Testing (87/87 tests passing)
-- Fixed test credentials (`admin@rtr.com` / `admin123456@`)
-- Fixed mobile test isolation in playwright.config.ts
-- Changed `networkidle` → `domcontentloaded` across all tests
-- Adjusted performance thresholds (15s for heavy pages)
-
-### 2. Navigation URL Audit (14 items fixed)
-File: `src/components/layout/modern-header.tsx`
-
-| Section | Menu Item | Fixed URL |
-|---------|-----------|-----------|
-| Operations | Customers | `/customers` |
-| Operations | Quotations | `/orders` |
-| Operations | Receiving | `/quality/receiving` |
-| Manufacturing | Scheduling | `/production/schedule` |
-| Manufacturing | Shop Floor | `/production/shop-floor` |
-| Planning | Capacity Planning | `/production/capacity` |
-| Planning | Resource Planning | `/mrp/planning` |
-| Resources | Work Centers | `/production/work-centers` |
-| Resources | Equipment | `/production/equipment` |
-| Resources | Workforce | `/production/capacity` |
-| Performance | Downtime Tracking | `/production/oee` |
-| Performance | Maintenance | `/production/routing` |
-| Dashboards | Overview | `/home` |
-| Dashboards | Real-time | `/analytics` |
-
-### 3. New Equipment Page Created
-- **Path:** `/src/app/(dashboard)/production/equipment/page.tsx`
-- **URL:** `/production/equipment`
-- **Features:**
-  - Equipment list with status cards
-  - Stats: Total, Running, Idle, Maintenance, Offline, Efficiency
-  - Search & filter by type/status
-  - Links to work centers
-  - Maintenance schedule display
+### Tech Stack
+- **Frontend:** Next.js 14 + React 18 + TypeScript + TailwindCSS + Shadcn/UI
+- **Backend:** Prisma ORM + PostgreSQL
+- **Auth:** NextAuth.js v5
+- **AI:** Claude SDK + Google Gemini + OpenAI
+- **Cache:** Upstash Redis
+- **Real-time:** Socket.io
+- **Testing:** Playwright + Vitest + K6 + Artillery
 
 ---
 
-## PENDING / CẦN THEO DÕI
+## ✅ TÍNH NĂNG HOÀN THÀNH
 
-### 1. Render Deployment
-- Đang build commit `0770471`
-- Nếu thành công → production live
-- Nếu fail → check error log
+| Module | Status | Pass Rate |
+|--------|--------|-----------|
+| BOM Management | ✅ Complete | - |
+| MRP Planning | ✅ Complete | 91% |
+| Production | ✅ Complete | 53% |
+| Quality (NCR, CAPA, SPC) | ✅ Complete | 98.8% |
+| Purchasing | ✅ Complete | 100% |
+| Inventory | ✅ Complete | 98% |
+| Finance | ✅ Complete | - |
+| AI/ML Integration | ✅ Complete | - |
+| Mobile PWA | ✅ Complete | - |
+| E2E Testing | ✅ 87% Pass | 290/334 |
 
-### 2. OEE & Downtime
-- Hiện tại cả 2 trỏ đến `/production/oee`
-- Có thể tạo trang `/production/downtime` riêng nếu cần
+### E2E Testing Status
+- Test credentials: `admin@rtr.com` / `admin123456@`
+- Config: `playwright.config.ts`
+- Wait strategy: `domcontentloaded` (không dùng `networkidle`)
+- Performance thresholds: 15s cho heavy pages
 
-### 3. Workforce Page
-- Hiện trỏ đến `/production/capacity`
-- Có thể tạo trang riêng `/production/workforce` nếu cần
+### Recent Commits
+1. `afbcc61` - fix(e2e): Fix receiving inspection test + add documentation
+2. `e1fbd7a` - fix(e2e): Disable rate limiting for test environment
+3. `51f5bc0` - docs: Add handover document for E2E testing project
+4. `4a88aab` - feat(e2e): Add comprehensive E2E test suite for QA/QC workflow
+5. `641dfac` - fix: Fix chart and WebSocket warnings properly
+
+---
+
+## ⚠️ PENDING / CẦN THEO DÕI
+
+### 1. E2E Tests Failed (44 tests)
+- **Production module:** 53% pass rate - cần fix
+- **MRP module:** 91% pass rate - có vấn đề nhỏ
+- Chạy `npm run test:e2e` để xem chi tiết
+
+### 2. Git Uncommitted Changes
+```
+Modified: playwright-report/index.html, test-results/.last-run.json
+Deleted: public/fallback-*.js, test-results/results.json
+Untracked: e2e/reports/html/, e2e/reports/json/, playwright-report/data/
+```
+
+### 3. Potential Improvements
+- Performance monitoring cần tăng cường
+- Load testing results chưa lưu trữ
+- Production module tests cần attention
 
 ---
 
@@ -132,18 +146,42 @@ src/
 
 ---
 
-## KHI TRỞ LẠI
+## 🔄 KHI TRỞ LẠI
 
-1. Đọc file này: `Đọc HANDOVER-SESSION.md để tiếp tục`
-2. Check Render deployment status
-3. Verify production: https://rtr-mrp.onrender.com
-4. Check health: https://rtr-mrp.onrender.com/api/health
+**Bước 1:** Nói với Claude: `"Đọc HANDOVER-SESSION.md để tiếp tục"`
+
+**Bước 2:** Claude sẽ tự động:
+- Đọc file này để nắm ngữ cảnh
+- Hiểu trạng thái dự án
+- Sẵn sàng tiếp tục công việc
+
+**Bước 3:** Verify production nếu cần:
+- URL: https://rtr-mrp.onrender.com
+- Health: https://rtr-mrp.onrender.com/api/health
 
 ---
 
-## NOTES
+## 📝 NOTES
 
-- TypeScript target đã set ES2017 để support Set/Map iteration
-- Server được compile sang `dist/server.js` trong build step
-- Dev server sử dụng `ts-node`, production sử dụng `node`
-- Mobile Safari tests cần `npx playwright install webkit`
+- TypeScript target: ES2017 (support Set/Map iteration)
+- Dev server: `npx next dev -p 3000` (KHÔNG dùng `npm run dev` vì WebSocket issues)
+- Production build: `dist/server.js`
+- Mobile Safari tests: `npx playwright install webkit`
+- Rate limiting: Disabled cho test environment
+
+---
+
+## 📂 FILES QUAN TRỌNG
+
+| File | Mô tả |
+|------|-------|
+| `prisma/schema.prisma` | 130 data models |
+| `src/components/layout/modern-header.tsx` | Navigation mega menu |
+| `playwright.config.ts` | E2E test config |
+| `CLAUDE.md` | AI behavior configuration |
+| `docs/` | 47+ documentation files |
+
+---
+
+*Cập nhật lần cuối: 2026-01-17*
+*Dự án: RTR-MRP - Material Requirements Planning System*
