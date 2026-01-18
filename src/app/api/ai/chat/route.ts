@@ -9,6 +9,7 @@ import { getAIProvider, AIMessage } from '@/lib/ai/provider';
 import { detectIntent, buildPrompt, RESPONSE_TEMPLATES } from '@/lib/ai/prompts';
 import { getQueryExecutor } from '@/lib/ai/query-executor';
 import { generateStructuredResponse, StructuredResponse, AIAction } from '@/lib/ai/response-generator';
+import { getRAGKnowledgeService } from '@/lib/ai/rag-knowledge-service';
 
 // =============================================================================
 // TYPES
@@ -131,18 +132,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       // Query execution failed silently - will use fallback response
     }
 
+    // Retrieve RAG knowledge context
+    let ragContext = '';
+    try {
+      const ragService = getRAGKnowledgeService();
+      const ragResult = await ragService.retrieveContext(userMessage, {
+        limit: 5,
+        threshold: 0.25,
+      });
+      if (ragResult.chunks.length > 0) {
+        ragContext = ragService.buildContextPrompt(ragResult);
+      }
+    } catch (ragError) {
+      console.warn('[AI Chat] RAG context retrieval failed:', ragError);
+      // Continue without RAG context
+    }
+
     // Generate structured response with actions and alerts
     const structuredResponse = generateStructuredResponse(
       detectedIntent,
       queryResult.data || {}
     );
 
-    // Build prompt with context
+    // Build prompt with context (including RAG)
     const messages = buildPrompt({
       intent: detectedIntent.intent,
       query: userMessage,
       data: queryResult.data,
       context: context, // Legacy context support
+      ragContext: ragContext || undefined,
     });
 
     // Add conversation history if provided

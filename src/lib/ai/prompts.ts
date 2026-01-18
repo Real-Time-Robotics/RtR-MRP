@@ -209,6 +209,7 @@ export interface PromptContext {
   query: string;
   data?: Record<string, any>;
   context?: string; // Legacy context from old AI Copilot
+  ragContext?: string; // RAG knowledge context
   language?: 'vi' | 'en';
 }
 
@@ -216,6 +217,11 @@ export function buildPrompt(context: PromptContext): AIMessage[] {
   const messages: AIMessage[] = [
     createSystemMessage(MRP_SYSTEM_CONTEXT),
   ];
+
+  // Add RAG knowledge context if available
+  if (context.ragContext) {
+    messages.push(createSystemMessage(context.ragContext));
+  }
 
   // Add legacy context if provided (from old AI Copilot)
   if (context.context) {
