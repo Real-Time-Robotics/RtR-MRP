@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { QueryIntent, DetectedIntent } from './prompts';
+import { prismaDataFetcher } from './prisma-data-fetcher';
 
 // =============================================================================
 // TYPES
@@ -210,7 +211,9 @@ export class QueryExecutor {
   private dataFetcher: DataFetcher;
 
   constructor(fetcher?: DataFetcher) {
-    this.dataFetcher = fetcher || mockDataFetcher;
+    // Use prismaDataFetcher as default for real database queries
+    // Fall back to mockDataFetcher for testing
+    this.dataFetcher = fetcher || prismaDataFetcher;
   }
 
   async execute(intent: DetectedIntent): Promise<QueryResult> {
