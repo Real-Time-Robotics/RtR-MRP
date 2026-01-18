@@ -167,6 +167,12 @@ function renderMessageContent(content: string, isUserMessage: boolean = false): 
 }
 
 // Types
+interface ResponseAlert {
+  type: 'critical' | 'warning' | 'info' | 'success';
+  message: string;
+  action?: AIAction;
+}
+
 interface AIMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -178,6 +184,9 @@ interface AIMessage {
   warnings?: string[];
   feedback?: 'positive' | 'negative';
   isLoading?: boolean;
+  // Structured response data
+  alerts?: ResponseAlert[];
+  relatedQueries?: string[];
 }
 
 interface AIAction {
@@ -399,12 +408,15 @@ export default function AIChatPanel({
         return [...filtered, {
           id: `msg_${Date.now()}`,
           role: 'assistant',
-          content: data.message,
+          content: data.response || data.message,
           timestamp: new Date(),
           confidence: data.confidence,
-          suggestedActions: data.suggestedActions,
+          suggestedActions: data.actions || data.suggestedActions,
           dataUsed: data.dataUsed,
           warnings: data.warnings,
+          // New structured response data
+          alerts: data.structured?.alerts,
+          relatedQueries: data.structured?.relatedQueries,
         }];
       });
 
@@ -592,6 +604,61 @@ export default function AIChatPanel({
                         <div className="text-sm">{renderMessageContent(message.content, message.role === 'user')}</div>
                       )}
                     </div>
+
+                    {/* Alerts for assistant messages */}
+                    {message.role === 'assistant' && !message.isLoading && message.alerts && message.alerts.length > 0 && (
+                      <div className="mt-2 space-y-1.5 w-full">
+                        {message.alerts.map((alert, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-start gap-2 px-3 py-2 rounded-lg text-xs ${
+                              alert.type === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' :
+                              alert.type === 'warning' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400' :
+                              alert.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
+                              'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                            }`}
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                            <span className="flex-1">{alert.message}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Actions for assistant messages */}
+                    {message.role === 'assistant' && !message.isLoading && message.suggestedActions && message.suggestedActions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {message.suggestedActions.slice(0, 3).map((action) => (
+                          <ActionButton
+                            key={action.id}
+                            action={action}
+                            language={context.language}
+                            onExecute={handleActionExecute}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Related Queries */}
+                    {message.role === 'assistant' && !message.isLoading && message.relatedQueries && message.relatedQueries.length > 0 && (
+                      <div className="mt-3 w-full">
+                        <p className="text-[10px] text-gray-400 dark:text-neutral-500 mb-1.5">
+                          {context.language === 'vi' ? 'Câu hỏi liên quan:' : 'Related:'}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {message.relatedQueries.slice(0, 3).map((query, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => sendMessage(query)}
+                              className="px-2.5 py-1 text-[11px] bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-neutral-300 rounded-full hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+                            >
+                              {query}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <span className="text-xs text-gray-400 dark:text-neutral-500 mt-1" suppressHydrationWarning>
                       {message.timestamp.toLocaleTimeString(context.language === 'vi' ? 'vi-VN' : 'en-US', {
                         hour: '2-digit',
