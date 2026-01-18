@@ -560,8 +560,8 @@ export function PartsTable() {
               onExport={handleExport}
               onBulkDelete={handleBulkDelete}
               onRefresh={fetchParts}
-              addPermission="orders:create"
-              deletePermission="orders:delete"
+              addPermission="parts:create"
+              deletePermission="parts:delete"
               addLabel="Thêm Part"
               selectedCount={selectedIds.size}
               isLoading={loading}

@@ -85,6 +85,12 @@ export type Permission =
   | 'orders:delete'
   | 'orders:approve'
 
+  // Parts (Master Data)
+  | 'parts:view'
+  | 'parts:create'
+  | 'parts:edit'
+  | 'parts:delete'
+
   // Inventory
   | 'inventory:view'
   | 'inventory:adjust'
@@ -132,6 +138,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
   admin: [
     // All permissions
     'dashboard:view',
+    'parts:view', 'parts:create', 'parts:edit', 'parts:delete',
     'orders:view', 'orders:create', 'orders:edit', 'orders:delete', 'orders:approve',
     'inventory:view', 'inventory:adjust', 'inventory:transfer',
     'production:view', 'production:create', 'production:edit', 'production:complete',
@@ -145,6 +152,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
 
   manager: [
     'dashboard:view',
+    'parts:view', 'parts:create', 'parts:edit', 'parts:delete',
     'orders:view', 'orders:create', 'orders:edit', 'orders:approve',
     'inventory:view', 'inventory:adjust', 'inventory:transfer',
     'production:view', 'production:create', 'production:edit', 'production:complete',
@@ -158,6 +166,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
 
   operator: [
     'dashboard:view',
+    'parts:view', 'parts:create', 'parts:edit',
     'orders:view', 'orders:create', 'orders:edit',
     'inventory:view', 'inventory:adjust',
     'production:view', 'production:create', 'production:edit', 'production:complete',
@@ -169,6 +178,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
 
   viewer: [
     'dashboard:view',
+    'parts:view',
     'orders:view',
     'inventory:view',
     'production:view',

@@ -125,9 +125,11 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const bodyResult = await validateBody(PartCreateSchema, request);
     if (!bodyResult.success) {
+      console.error('[Part Create] Validation failed:', JSON.stringify(bodyResult.response, null, 2));
       return bodyResult.response;
     }
     const data = bodyResult.data;
+    console.log('[Part Create] Validated data:', JSON.stringify(data, null, 2));
 
     // Generate ID if not provided
     const id = data.id || `PRT-${Date.now()}`;
@@ -254,10 +256,19 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(part, { status: 201 });
-  } catch (error) {
-    console.error("Failed to create part:", error);
+  } catch (error: any) {
+    console.error("[Part Create] Failed to create part:", error);
+    console.error("[Part Create] Error details:", {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
     return NextResponse.json(
-      { error: "Failed to create part" },
+      {
+        error: "Failed to create part",
+        message: error.message,
+        details: error.meta?.cause || error.message
+      },
       { status: 500 }
     );
   }

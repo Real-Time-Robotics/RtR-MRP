@@ -123,7 +123,27 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
             if (!response.ok) {
                 // Handle Validation Errors from Server
+                // Backend returns: { error: "Validation failed", details: [{ field, message }] }
+                // Also handle legacy format: { errors: { field: [messages] } }
+                if (result.details && Array.isArray(result.details)) {
+                    // New format from backend validation.ts
+                    const errorMessages: string[] = [];
+                    result.details.forEach((detail: { field: string; message: string }) => {
+                        if (detail.field && detail.message) {
+                            form.setError(detail.field as keyof PartFormData, {
+                                type: 'server',
+                                message: detail.message,
+                            });
+                            errorMessages.push(`${detail.field}: ${detail.message}`);
+                        }
+                    });
+                    console.error('Validation errors:', errorMessages);
+                    throw new Error(errorMessages.length > 0
+                        ? `Lỗi: ${errorMessages.slice(0, 3).join('; ')}${errorMessages.length > 3 ? '...' : ''}`
+                        : "Vui lòng kiểm tra lại thông tin nhập liệu.");
+                }
                 if (result.errors) {
+                    // Legacy format
                     Object.entries(result.errors).forEach(([field, messages]) => {
                         form.setError(field as keyof PartFormData, {
                             type: 'server',
