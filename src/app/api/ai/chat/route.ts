@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider, AIMessage } from '@/lib/ai/provider';
 import { detectIntent, buildPrompt, RESPONSE_TEMPLATES } from '@/lib/ai/prompts';
 import { getQueryExecutor } from '@/lib/ai/query-executor';
+import { generateStructuredResponse, StructuredResponse, AIAction } from '@/lib/ai/response-generator';
 
 // =============================================================================
 // TYPES
@@ -28,8 +29,12 @@ interface ChatResponse {
   provider?: string;
   model?: string;
   intent?: string;
+  confidence?: number;
   latency?: number;
   error?: string;
+  // Structured response data
+  structured?: StructuredResponse;
+  actions?: AIAction[];
 }
 
 // =============================================================================
@@ -105,6 +110,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
 
     // Handle help intent directly
     if (detectedIntent.intent === 'help') {
+      const helpStructured = generateStructuredResponse(detectedIntent, {});
       return NextResponse.json({
         success: true,
         response: RESPONSE_TEMPLATES.help,
@@ -112,6 +118,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
         intent: 'help',
         confidence: detectedIntent.confidence,
         latency: Date.now() - startTime,
+        structured: helpStructured,
+        actions: helpStructured.actions,
       });
     }
 
@@ -122,6 +130,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     if (!queryResult.success) {
       // Query execution failed silently - will use fallback response
     }
+
+    // Generate structured response with actions and alerts
+    const structuredResponse = generateStructuredResponse(
+      detectedIntent,
+      queryResult.data || {}
+    );
 
     // Build prompt with context
     const messages = buildPrompt({
@@ -165,6 +179,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
       intent: detectedIntent.intent,
       confidence: detectedIntent.confidence,
       latency: totalLatency,
+      // Structured response data for rich UI
+      structured: structuredResponse,
+      actions: structuredResponse.actions,
     });
 
   } catch (error) {
