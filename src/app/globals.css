@@ -35,32 +35,32 @@
 
 @layer base {
   :root {
-    /* Shadcn UI Variables (preserved) */
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
+    /* Shadcn UI Variables - HIGH CONTRAST INDUSTRIAL */
+    --background: 0 0% 97%;
+    --foreground: 222 47% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 222 47% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
+    --popover-foreground: 222 47% 8%;
+    --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 47% 8%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 13% 35%;
+    --accent: 220 14% 90%;
+    --accent-foreground: 222 47% 8%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --border: 220 13% 78%;
+    --input: 220 13% 75%;
+    --ring: 217 91% 50%;
     --radius: 0; /* Industrial Precision: Sharp edges */
 
     /* Custom colors */
-    --success: 142 71% 45%;
+    --success: 142 71% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 92% 45%;
     --warning-foreground: 0 0% 100%;
 
     /* Chart colors */
@@ -202,12 +202,12 @@
     --z-tooltip: 1800;
     --z-command: 1900;
 
-    /* Shadows */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    /* Shadows - Higher contrast for industrial feel */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.08);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.12);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.12);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.15), 0 4px 6px -4px rgb(0 0 0 / 0.12);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.12);
 
     /* Transitions */
     --transition-fast: 100ms;
@@ -454,4 +454,122 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* =============================================================================
+   LIGHT MODE - HIGH CONTRAST INDUSTRIAL ENHANCEMENTS
+   Better readability for users with vision issues
+   Only applies when NOT in dark mode
+   ============================================================================= */
+
+/* Light mode specific hover states - More visible */
+:root:not(.dark) .hover\:bg-muted:hover {
+  background-color: hsl(220 14% 88%) !important;
+}
+
+:root:not(.dark) .hover\:bg-accent:hover {
+  background-color: hsl(220 14% 86%) !important;
+}
+
+/* Buttons - More visible hover states in light mode */
+:root:not(.dark) button:hover {
+  filter: brightness(0.96);
+}
+
+/* Cards - More visible borders and shadows */
+:root:not(.dark) [data-slot="card"] {
+  border-color: hsl(220 13% 78%);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+}
+
+:root:not(.dark) [data-slot="card"]:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.12), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Table rows - More visible hover in light mode */
+:root:not(.dark) tbody tr:hover {
+  background-color: hsl(220 14% 95%) !important;
+}
+
+/* Input fields - Darker borders for visibility */
+:root:not(.dark) input,
+:root:not(.dark) textarea,
+:root:not(.dark) select {
+  border-color: hsl(220 13% 78%);
+}
+
+:root:not(.dark) input:focus,
+:root:not(.dark) textarea:focus,
+:root:not(.dark) select:focus {
+  border-color: hsl(217 91% 50%);
+  box-shadow: 0 0 0 2px hsl(217 91% 50% / 0.15);
+}
+
+/* Dropdown menus - More visible separators */
+:root:not(.dark) [role="menu"] {
+  border-color: hsl(220 13% 78%);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+}
+
+/* Tooltips - Higher contrast in light mode */
+:root:not(.dark) [role="tooltip"] {
+  background-color: hsl(222 47% 11%);
+  color: white;
+  border: 1px solid hsl(222 47% 20%);
+}
+
+/* Data tables - Clearer header separation */
+:root:not(.dark) th {
+  background-color: hsl(220 14% 93%);
+  border-bottom: 2px solid hsl(220 13% 78%);
+  font-weight: 600;
+  color: hsl(222 47% 11%);
+}
+
+/* Progress bars - More visible track */
+:root:not(.dark) [role="progressbar"] {
+  background-color: hsl(220 14% 88%);
+}
+
+/* Skeleton loading - More visible contrast */
+:root:not(.dark) .animate-pulse {
+  background-color: hsl(220 14% 90%);
+}
+
+/* Dividers/Separators - More visible */
+:root:not(.dark) hr,
+:root:not(.dark) [role="separator"] {
+  border-color: hsl(220 13% 80%);
+}
+
+/* Sidebar items - Higher contrast hover/active */
+:root:not(.dark) [data-sidebar="menu-button"]:hover {
+  background-color: hsl(220 14% 90%);
+}
+
+:root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
+  background-color: hsl(217 91% 95%);
+  border-left: 3px solid hsl(217 91% 50%);
+}
+
+/* Tabs - More visible active state */
+:root:not(.dark) [role="tab"][data-state="active"] {
+  border-bottom: 2px solid hsl(217 91% 50%);
+  color: hsl(217 91% 45%);
+}
+
+/* Badges - Higher contrast */
+:root:not(.dark) [data-slot="badge"] {
+  border: 1px solid hsl(220 13% 75%);
+}
+
+/* Select/Dropdown triggers */
+:root:not(.dark) [data-slot="select-trigger"],
+:root:not(.dark) [role="combobox"] {
+  border-color: hsl(220 13% 78%);
+}
+
+:root:not(.dark) [data-slot="select-trigger"]:hover,
+:root:not(.dark) [role="combobox"]:hover {
+  border-color: hsl(220 13% 65%);
 }
