@@ -20,6 +20,12 @@ import {
   ExternalLink,
   Clock,
   Boxes,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,11 +212,42 @@ function InfoRow({
   );
 }
 
+interface AIRecommendation {
+  partId: string;
+  partSku: string;
+  current: {
+    safetyStock: number;
+    reorderPoint: number;
+  };
+  recommended: {
+    safetyStock: number;
+    reorderPoint: number;
+  };
+  delta: {
+    safetyStock: number;
+    reorderPoint: number;
+  };
+  confidence: number;
+  factors: {
+    demandVariability: number;
+    leadTimeVariability: number;
+    serviceLevel: number;
+    holidayBuffer: number;
+  };
+  reasoning: string[];
+}
+
 export default function PartDetailPage() {
   const params = useParams();
   const [part, setPart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  // AI Recommendations state
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
 
   const fetchPart = useCallback(async () => {
     try {
@@ -229,6 +266,60 @@ export default function PartDetailPage() {
   useEffect(() => {
     fetchPart();
   }, [fetchPart]);
+
+  // Fetch AI recommendations
+  const fetchAIRecommendations = useCallback(async () => {
+    if (!params.id) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await fetch(`/api/ai/forecast/mrp-integration?action=recommendation&partId=${params.id}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        setAiRecommendation(data.data);
+      } else {
+        setAiError(data.error || "Failed to fetch AI recommendations");
+      }
+    } catch (error) {
+      console.error("Failed to fetch AI recommendations:", error);
+      setAiError("Failed to connect to AI service");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [params.id]);
+
+  // Apply AI recommendations
+  const applyRecommendations = async () => {
+    if (!params.id || !aiRecommendation) return;
+    setApplying(true);
+    try {
+      const res = await fetch("/api/ai/forecast/mrp-integration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "apply",
+          partIds: [params.id],
+          options: {
+            updateSafetyStock: true,
+            updateReorderPoint: true,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh part data and recommendations
+        await fetchPart();
+        await fetchAIRecommendations();
+      } else {
+        setAiError(data.error || "Failed to apply recommendations");
+      }
+    } catch (error) {
+      console.error("Failed to apply recommendations:", error);
+      setAiError("Failed to apply recommendations");
+    } finally {
+      setApplying(false);
+    }
+  };
 
   useAIContextSync('part', part);
 
@@ -336,7 +427,7 @@ export default function PartDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="procurement">Procurement</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -344,6 +435,10 @@ export default function PartDetailPage() {
           <TabsTrigger value="alternates">Alternates</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="costing">Costing</TabsTrigger>
+          <TabsTrigger value="ai" onClick={() => !aiRecommendation && fetchAIRecommendations()}>
+            <Sparkles className="h-3.5 w-3.5 mr-1" />
+            AI
+          </TabsTrigger>
           <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
@@ -1049,6 +1144,263 @@ export default function PartDetailPage() {
                 </Table>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        {/* AI Recommendations Tab */}
+        <TabsContent value="ai" className="mt-4">
+          <div className="space-y-6">
+            {/* Header with refresh */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-500" />
+                <h3 className="text-lg font-semibold">AI Safety Stock Recommendations</h3>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200">
+                  AI-Powered
+                </Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchAIRecommendations}
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="ml-2">Refresh</span>
+              </Button>
+            </div>
+
+            {/* Error message */}
+            {aiError && (
+              <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md text-sm">
+                {aiError}
+              </div>
+            )}
+
+            {/* Loading state */}
+            {aiLoading && !aiRecommendation && (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                    <p className="text-muted-foreground">Analyzing demand patterns...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* No data state */}
+            {!aiLoading && !aiRecommendation && !aiError && (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <Sparkles className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-muted-foreground">Click to analyze this part</p>
+                    <Button onClick={fetchAIRecommendations}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Get AI Recommendations
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Recommendations display */}
+            {aiRecommendation && (
+              <div className="grid grid-cols-2 gap-6">
+                {/* Safety Stock Comparison */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Safety Stock
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-1">Current</p>
+                        <p className="text-2xl font-bold">{aiRecommendation.current.safetyStock}</p>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {aiRecommendation.delta.safetyStock > 0 ? (
+                          <TrendingUp className="h-6 w-6 text-amber-500" />
+                        ) : aiRecommendation.delta.safetyStock < 0 ? (
+                          <TrendingDown className="h-6 w-6 text-green-500" />
+                        ) : (
+                          <Minus className="h-6 w-6 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                        <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">Recommended</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                          {aiRecommendation.recommended.safetyStock}
+                        </p>
+                      </div>
+                    </div>
+                    {aiRecommendation.delta.safetyStock !== 0 && (
+                      <div className={`text-sm text-center p-2 rounded ${
+                        aiRecommendation.delta.safetyStock > 0
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                          : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                      }`}>
+                        {aiRecommendation.delta.safetyStock > 0 ? 'Increase' : 'Decrease'} by{' '}
+                        <strong>{Math.abs(aiRecommendation.delta.safetyStock)}</strong> units
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Reorder Point Comparison */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Reorder Point
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-1">Current</p>
+                        <p className="text-2xl font-bold">{aiRecommendation.current.reorderPoint}</p>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        {aiRecommendation.delta.reorderPoint > 0 ? (
+                          <TrendingUp className="h-6 w-6 text-amber-500" />
+                        ) : aiRecommendation.delta.reorderPoint < 0 ? (
+                          <TrendingDown className="h-6 w-6 text-green-500" />
+                        ) : (
+                          <Minus className="h-6 w-6 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                        <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">Recommended</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                          {aiRecommendation.recommended.reorderPoint}
+                        </p>
+                      </div>
+                    </div>
+                    {aiRecommendation.delta.reorderPoint !== 0 && (
+                      <div className={`text-sm text-center p-2 rounded ${
+                        aiRecommendation.delta.reorderPoint > 0
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                          : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                      }`}>
+                        {aiRecommendation.delta.reorderPoint > 0 ? 'Increase' : 'Decrease'} by{' '}
+                        <strong>{Math.abs(aiRecommendation.delta.reorderPoint)}</strong> units
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Analysis Factors */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Analysis Factors
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Demand Variability</span>
+                      <span className="font-medium">
+                        {((aiRecommendation.factors?.demandVariability || 0) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Lead Time Variability</span>
+                      <span className="font-medium">
+                        {((aiRecommendation.factors?.leadTimeVariability || 0) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Service Level Target</span>
+                      <span className="font-medium">
+                        {((aiRecommendation.factors?.serviceLevel || 0.95) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {aiRecommendation.factors?.holidayBuffer > 0 && (
+                      <div className="flex justify-between items-center text-amber-600 dark:text-amber-400">
+                        <span className="text-sm">Holiday Buffer Active</span>
+                        <span className="font-medium">
+                          +{((aiRecommendation.factors.holidayBuffer) * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    )}
+                    <Separator className="my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Confidence Score</span>
+                      <Badge variant={aiRecommendation.confidence >= 0.8 ? "default" : aiRecommendation.confidence >= 0.6 ? "secondary" : "outline"}>
+                        {(aiRecommendation.confidence * 100).toFixed(0)}%
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AI Reasoning */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      AI Reasoning
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {aiRecommendation.reasoning && aiRecommendation.reasoning.length > 0 ? (
+                      <ul className="space-y-2">
+                        {aiRecommendation.reasoning.map((reason, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm">
+                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Recommendations based on historical demand patterns, lead time analysis, and current market conditions.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Apply Button */}
+                <Card className="col-span-2">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Apply AI Recommendations</p>
+                        <p className="text-sm text-muted-foreground">
+                          Update this part's safety stock and reorder point to AI-recommended values
+                        </p>
+                      </div>
+                      <Button
+                        onClick={applyRecommendations}
+                        disabled={applying || (aiRecommendation.delta.safetyStock === 0 && aiRecommendation.delta.reorderPoint === 0)}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        {applying ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Applying...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Apply Recommendations
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </TabsContent>
 

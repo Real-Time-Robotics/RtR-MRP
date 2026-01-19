@@ -24,13 +24,33 @@ export function formatNumber(
 
 /**
  * Format currency value
+ * @param value - The number to format
+ * @param currencyOrCompact - Currency code (default 'VND') or true for compact format
+ * @param options - Additional Intl.NumberFormat options
  */
 export function formatCurrency(
   value: number,
-  currency: string = 'USD',
+  currencyOrCompact?: string | boolean,
   options?: Intl.NumberFormatOptions
 ): string {
-  return new Intl.NumberFormat('en-US', {
+  const isCompact = currencyOrCompact === true;
+  const currency = typeof currencyOrCompact === 'string' ? currencyOrCompact : 'VND';
+
+  if (isCompact) {
+    // Compact format for VND (e.g., 1.5M, 2.3B)
+    if (value >= 1e9) {
+      return `${(value / 1e9).toFixed(1)}B`;
+    }
+    if (value >= 1e6) {
+      return `${(value / 1e6).toFixed(1)}M`;
+    }
+    if (value >= 1e3) {
+      return `${(value / 1e3).toFixed(1)}K`;
+    }
+    return value.toLocaleString('vi-VN');
+  }
+
+  return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
@@ -56,27 +76,41 @@ export function formatPercent(
 
 /**
  * Format date with various presets
+ * @param date - The date to format
+ * @param formatOrShowTime - Format preset or true to include time
  */
 export function formatDate(
   date: Date | string | number,
-  format: 'short' | 'medium' | 'long' | 'relative' = 'medium'
+  formatOrShowTime?: 'short' | 'medium' | 'long' | 'relative' | boolean
 ): string {
   const d = new Date(date);
+  const showTime = formatOrShowTime === true;
+  const format = typeof formatOrShowTime === 'string' ? formatOrShowTime : 'medium';
+
+  if (showTime) {
+    return d.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 
   switch (format) {
     case 'short':
-      return d.toLocaleDateString('en-US', {
+      return d.toLocaleDateString('vi-VN', {
         month: 'short',
         day: 'numeric',
       });
     case 'medium':
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
+      return d.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
       });
     case 'long':
-      return d.toLocaleDateString('en-US', {
+      return d.toLocaleDateString('vi-VN', {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
@@ -85,7 +119,7 @@ export function formatDate(
     case 'relative':
       return formatRelativeTime(d);
     default:
-      return d.toLocaleDateString();
+      return d.toLocaleDateString('vi-VN');
   }
 }
 

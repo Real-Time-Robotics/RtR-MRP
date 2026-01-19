@@ -3,6 +3,10 @@
 // RTR MRP AI Integration with OpenAI + Anthropic Fallback
 // =============================================================================
 
+// Forecast Module
+export * from './forecast';
+export { default as ForecastModule } from './forecast';
+
 // Provider Service
 export {
   AIProviderService,

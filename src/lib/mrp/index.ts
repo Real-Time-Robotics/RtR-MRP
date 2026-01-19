@@ -57,3 +57,14 @@ export {
   type DetectedExceptionData,
   type ExceptionSummary,
 } from "./exception-engine";
+
+// Forecast Demand Integration
+export {
+  ForecastDemandIntegration,
+  getForecastDemandIntegration,
+  getForecastDemandForMRP,
+  getBulkForecastDemandForMRP,
+  type ForecastDemand,
+  type ForecastBasedMRPInput,
+  type MRPForecastSummary,
+} from "./forecast-demand-integration";

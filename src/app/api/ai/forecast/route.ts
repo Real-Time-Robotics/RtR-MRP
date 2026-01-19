@@ -1,0 +1,381 @@
+// =============================================================================
+// AI FORECAST API ROUTE
+// POST /api/ai/forecast - Generate demand forecast for a product
+// GET /api/ai/forecast - Get forecast accuracy summary
+// =============================================================================
+
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  getForecastEngine,
+  getAIEnhancerService,
+  getAccuracyTrackerService,
+  getDataExtractorService,
+  ForecastConfig,
+  ForecastResult,
+  EnhancedForecast,
+} from '@/lib/ai/forecast';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface ForecastRequest {
+  productId?: string;
+  productIds?: string[];
+  action?: 'generate' | 'enhance' | 'bulk' | 'history' | 'accuracy' | 'sync-actuals';
+  config?: Partial<ForecastConfig>;
+  months?: number;
+  periodType?: 'weekly' | 'monthly';
+}
+
+interface ForecastResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  latency?: number;
+}
+
+// =============================================================================
+// RATE LIMITING
+// =============================================================================
+
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 20;
+const RATE_LIMIT_WINDOW = 60 * 1000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    return false;
+  }
+
+  record.count++;
+  return true;
+}
+
+// =============================================================================
+// POST - Generate Forecast
+// =============================================================================
+
+export async function POST(request: NextRequest): Promise<NextResponse<ForecastResponse>> {
+  const startTime = Date.now();
+
+  try {
+    // Rate limiting
+    const ip = request.headers.get('x-forwarded-for') || 'unknown';
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Rate limit exceeded. Please try again later.',
+        },
+        { status: 429 }
+      );
+    }
+
+    const body: ForecastRequest = await request.json();
+    const { productId, productIds, action = 'generate', config = {}, months = 24, periodType = 'monthly' } = body;
+
+    const forecastEngine = getForecastEngine();
+    const aiEnhancer = getAIEnhancerService();
+    const accuracyTracker = getAccuracyTrackerService();
+    const dataExtractor = getDataExtractorService();
+
+    let result: any;
+
+    switch (action) {
+      case 'generate': {
+        // Generate forecast for single product
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required for generate action' },
+            { status: 400 }
+          );
+        }
+
+        const forecast = await forecastEngine.generateForecast(productId, {
+          ...config,
+          periodType,
+        });
+
+        if (!forecast) {
+          return NextResponse.json(
+            { success: false, error: 'Insufficient data for forecasting. Need at least 6 periods of history.' },
+            { status: 400 }
+          );
+        }
+
+        // Save to database
+        await forecastEngine.saveForecast(forecast);
+
+        result = {
+          forecast,
+          message: `Forecast generated for ${forecast.productName}`,
+        };
+        break;
+      }
+
+      case 'enhance': {
+        // Generate enhanced forecast with AI insights
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required for enhance action' },
+            { status: 400 }
+          );
+        }
+
+        const forecast = await forecastEngine.generateForecast(productId, {
+          ...config,
+          periodType,
+        });
+
+        if (!forecast) {
+          return NextResponse.json(
+            { success: false, error: 'Insufficient data for forecasting.' },
+            { status: 400 }
+          );
+        }
+
+        const enhanced = await aiEnhancer.enhanceForecast(forecast);
+
+        // Save to database
+        await forecastEngine.saveForecast(forecast);
+
+        result = {
+          forecast: enhanced,
+          insights: enhanced.aiInsights,
+          risks: enhanced.riskAssessment,
+          actions: enhanced.actionItems,
+          message: `Enhanced forecast generated for ${forecast.productName}`,
+        };
+        break;
+      }
+
+      case 'bulk': {
+        // Generate forecasts for all products
+        const bulkResult = await forecastEngine.generateAllForecasts({
+          ...config,
+          periodType,
+        });
+
+        result = {
+          success: bulkResult.success,
+          failed: bulkResult.failed,
+          totalProducts: bulkResult.success + bulkResult.failed,
+          message: `Generated forecasts for ${bulkResult.success} products, ${bulkResult.failed} failed`,
+        };
+        break;
+      }
+
+      case 'history': {
+        // Get sales history for a product
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required for history action' },
+            { status: 400 }
+          );
+        }
+
+        const history = await dataExtractor.extractProductSalesHistory(
+          productId,
+          months,
+          periodType
+        );
+
+        if (!history) {
+          return NextResponse.json(
+            { success: false, error: 'Product not found or no sales history' },
+            { status: 404 }
+          );
+        }
+
+        result = {
+          history,
+          totalQuantity: history.totalQuantity,
+          trend: history.trend,
+          volatility: history.volatility,
+        };
+        break;
+      }
+
+      case 'accuracy': {
+        // Get accuracy metrics for a product
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required for accuracy action' },
+            { status: 400 }
+          );
+        }
+
+        const accuracy = await accuracyTracker.getProductAccuracy(
+          productId,
+          periodType
+        );
+
+        if (!accuracy) {
+          return NextResponse.json(
+            { success: false, error: 'Product not found' },
+            { status: 404 }
+          );
+        }
+
+        result = {
+          accuracy,
+          metrics: accuracy.metrics,
+          trend: accuracy.trend,
+          bestModel: accuracy.bestModel,
+        };
+        break;
+      }
+
+      case 'sync-actuals': {
+        // Sync actual values from sales data
+        const syncResult = await accuracyTracker.autoRecordActuals(
+          periodType,
+          months > 0 ? Math.min(months, 12) : 3
+        );
+
+        result = {
+          ...syncResult,
+          message: `Synced actuals for ${syncResult.periodsProcessed} periods, updated ${syncResult.recordsUpdated} records`,
+        };
+        break;
+      }
+
+      default:
+        return NextResponse.json(
+          { success: false, error: `Unknown action: ${action}` },
+          { status: 400 }
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      latency: Date.now() - startTime,
+    });
+
+  } catch (error) {
+    console.error('[AI Forecast] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        latency: Date.now() - startTime,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// =============================================================================
+// GET - Accuracy Summary & Model Performance
+// =============================================================================
+
+export async function GET(request: NextRequest): Promise<NextResponse<ForecastResponse>> {
+  const startTime = Date.now();
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action') || 'summary';
+    const productId = searchParams.get('productId');
+    const periodType = (searchParams.get('periodType') || 'monthly') as 'weekly' | 'monthly';
+
+    const accuracyTracker = getAccuracyTrackerService();
+
+    let result: any;
+
+    switch (action) {
+      case 'summary': {
+        // Get overall accuracy summary
+        const summary = await accuracyTracker.getAccuracySummary();
+        result = summary;
+        break;
+      }
+
+      case 'models': {
+        // Get model performance comparison
+        const models = await accuracyTracker.getModelPerformance();
+        result = { models };
+        break;
+      }
+
+      case 'compare': {
+        // Compare forecast vs actual for a product
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required for compare action' },
+            { status: 400 }
+          );
+        }
+
+        const comparison = await accuracyTracker.compareForecastVsActual(
+          productId,
+          periodType
+        );
+
+        result = {
+          productId,
+          comparison,
+          periodsCompared: comparison.length,
+        };
+        break;
+      }
+
+      case 'product': {
+        // Get accuracy for specific product
+        if (!productId) {
+          return NextResponse.json(
+            { success: false, error: 'productId is required' },
+            { status: 400 }
+          );
+        }
+
+        const accuracy = await accuracyTracker.getProductAccuracy(
+          productId,
+          periodType
+        );
+
+        if (!accuracy) {
+          return NextResponse.json(
+            { success: false, error: 'Product not found' },
+            { status: 404 }
+          );
+        }
+
+        result = accuracy;
+        break;
+      }
+
+      default:
+        return NextResponse.json(
+          { success: false, error: `Unknown action: ${action}` },
+          { status: 400 }
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+      latency: Date.now() - startTime,
+    });
+
+  } catch (error) {
+    console.error('[AI Forecast] Error:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        latency: Date.now() - startTime,
+      },
+      { status: 500 }
+    );
+  }
+}

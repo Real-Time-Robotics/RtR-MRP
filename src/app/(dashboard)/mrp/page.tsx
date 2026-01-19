@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Brain, Play, History, Loader2, AlertTriangle, Wand2 } from "lucide-react";
+import { Brain, Play, History, Loader2, AlertTriangle, Wand2, TrendingUp, Calendar, Sparkles, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -15,9 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import Link from "next/link";
 
 interface MrpRun {
   id: string;
@@ -45,6 +52,39 @@ export default function MrpPage() {
   const [includeConfirmed, setIncludeConfirmed] = useState(true);
   const [includeDraft, setIncludeDraft] = useState(true);
   const [includeSafetyStock, setIncludeSafetyStock] = useState(true);
+
+  // Forecast Integration
+  const [useForecast, setUseForecast] = useState(false);
+  const [forecastWeight, setForecastWeight] = useState("0.5");
+  const [forecastStatus, setForecastStatus] = useState<{
+    holidayBuffer: number;
+    tetPhase: string | null;
+    upcomingHolidays: any[];
+  } | null>(null);
+  const [loadingForecastStatus, setLoadingForecastStatus] = useState(false);
+
+  // Fetch forecast status
+  const fetchForecastStatus = useCallback(async () => {
+    if (!useForecast) return;
+    setLoadingForecastStatus(true);
+    try {
+      const res = await fetch("/api/ai/forecast/mrp-integration?action=summary");
+      const data = await res.json();
+      if (data.success) {
+        setForecastStatus(data.data.holidayStatus);
+      }
+    } catch (error) {
+      console.error("Failed to fetch forecast status:", error);
+    } finally {
+      setLoadingForecastStatus(false);
+    }
+  }, [useForecast]);
+
+  useEffect(() => {
+    if (useForecast) {
+      fetchForecastStatus();
+    }
+  }, [useForecast, fetchForecastStatus]);
 
   // Initial fetch
   useEffect(() => {
@@ -95,6 +135,9 @@ export default function MrpPage() {
           includeConfirmed,
           includeDraft,
           includeSafetyStock,
+          // AI Forecast options
+          useForecast,
+          forecastWeight: parseFloat(forecastWeight),
         }),
       });
 
@@ -291,6 +334,83 @@ export default function MrpPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* AI Forecast Integration */}
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                <Label className="text-[11px] font-semibold">AI Forecast Integration</Label>
+                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-purple-50 text-purple-700 border-purple-200">
+                  NEW
+                </Badge>
+              </div>
+              <Switch
+                id="forecast"
+                checked={useForecast}
+                onCheckedChange={setUseForecast}
+              />
+            </div>
+
+            {useForecast && (
+              <div className="space-y-2 pl-5 animate-in fade-in-50 duration-200">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="forecastWeight" className="text-[11px] font-normal">
+                    Forecast Weight
+                  </Label>
+                  <Select value={forecastWeight} onValueChange={setForecastWeight}>
+                    <SelectTrigger className="h-6 w-24 text-[10px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0.3">30% (Low)</SelectItem>
+                      <SelectItem value="0.5">50% (Balanced)</SelectItem>
+                      <SelectItem value="0.7">70% (High)</SelectItem>
+                      <SelectItem value="1.0">100% (Full)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Forecast Status */}
+                {loadingForecastStatus ? (
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading forecast status...
+                  </div>
+                ) : forecastStatus && (
+                  <div className="p-2 bg-muted/50 rounded-md space-y-1">
+                    {forecastStatus.holidayBuffer > 0 && (
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        <Calendar className="h-3 w-3 text-amber-500" />
+                        <span className="text-amber-700 dark:text-amber-400">
+                          Holiday buffer active: +{(forecastStatus.holidayBuffer * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    )}
+                    {forecastStatus.tetPhase && forecastStatus.tetPhase !== 'normal' && (
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        <TrendingUp className="h-3 w-3 text-red-500" />
+                        <span className="text-red-700 dark:text-red-400">
+                          Tết phase: {forecastStatus.tetPhase}
+                        </span>
+                      </div>
+                    )}
+                    {forecastStatus.upcomingHolidays?.length > 0 && (
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        Next: {forecastStatus.upcomingHolidays[0]?.name} ({forecastStatus.upcomingHolidays[0]?.daysUntil} days)
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Link href="/ai/forecast" className="flex items-center gap-1 text-[10px] text-purple-600 hover:underline">
+                  View Forecast Dashboard
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* COMPACT: size="lg" → size="sm" */}

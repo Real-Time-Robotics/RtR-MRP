@@ -3,15 +3,16 @@
 // RTR-MRP Test Suite
 // =============================================================================
 
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Mock the API handlers
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 
 describe('Customer API Integration Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = mockFetch;
+    vi.clearAllMocks();
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
 
   // ===========================================================================
@@ -358,8 +359,8 @@ describe('Customer API Integration Tests', () => {
 
 describe('AI API Integration Tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = mockFetch;
+    vi.clearAllMocks();
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
 
   describe('GET /api/v2/ai?view=dashboard', () => {
@@ -455,8 +456,8 @@ describe('AI API Integration Tests', () => {
 
 describe('API Error Handling', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    global.fetch = mockFetch;
+    vi.clearAllMocks();
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
 
   it('should handle invalid view parameter', async () => {
