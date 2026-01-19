@@ -1,14 +1,58 @@
-# HANDOVER - RTR-MRP E2E Testing Project
+# HANDOVER - RTR-MRP Project
 
-> **Ngày tạo:** 2026-01-16
-> **Commit cuối:** 4a88aab
-> **Trạng thái:** E2E Test Suite hoàn thành, sẵn sàng cho Phase tiếp theo
+> **Ngày cập nhật:** 2026-01-19
+> **Commit cuối:** eb99d9e
+> **Trạng thái:** Data Integrity Tests + UI/UX Improvements hoàn thành
 
 ---
 
 ## 1. TỔNG QUAN CÔNG VIỆC ĐÃ LÀM
 
-### 1.1 E2E Test Suite (Hoàn thành)
+### 1.1 API Bug Fixes (Session 19/01/2026)
+
+**Fixed critical data integrity bugs:**
+
+| API | Bug | Fix |
+|-----|-----|-----|
+| Parts POST | unitCost, leadTimeDays, etc. không được lưu | Thêm các fields vào create statement |
+| Purchase Orders | currency không được lưu | Thêm currency vào POST handler |
+| Sales Orders | currency không được lưu | Thêm currency vào POST handler |
+| BOM | Không có PUT handler | Tạo PUT handler mới |
+| Work Centers | nextMaintenanceDate không được lưu | Thêm field vào POST handler |
+
+### 1.2 Data Integrity Test Suite (Mới)
+
+Đã tạo **6 spec files** với **~2,800 dòng code** để verify data integrity:
+
+```
+e2e/data-integrity/
+├── parts-integrity.spec.ts              # 681 lines - Test all Part fields
+├── products-integrity.spec.ts           # 204 lines
+├── customers-suppliers-integrity.spec.ts # 372 lines
+├── orders-integrity.spec.ts             # 449 lines
+├── bom-integrity.spec.ts                # 404 lines
+└── work-centers-integrity.spec.ts       # 424 lines
+
+e2e/utils/
+└── data-integrity-helpers.ts            # 344 lines - Utility functions
+```
+
+**Test pattern:** Input → Create/Update → Verify Output === Input
+
+### 1.3 UI/UX Improvements
+
+**Back Button Navigation:**
+- Tạo `src/hooks/use-navigation-history.ts` - Track navigation trong sessionStorage
+- Cập nhật `modern-header.tsx` - Back button giờ về trang trước (như browser back)
+
+**Light Mode High Contrast:**
+- Tăng contrast borders: 91% → 78% lightness
+- Tăng contrast text: muted-foreground 46% → 35%
+- Tăng shadow opacity: 5-10% → 8-15%
+- Thêm visible hover states, active states cho sidebar, tabs
+- Industrial feel với sharp edges và clear separations
+
+### 1.4 E2E Test Suite (Từ session trước)
 
 Đã tạo **26 test spec files** mới với **334 test cases**:
 
@@ -171,8 +215,14 @@ npx playwright show-report
 ```
 Branch: main
 Remote: nclamvn/rtr-mrp
-Last commit: 4a88aab - feat(e2e): Add comprehensive E2E test suite
+Last commit: eb99d9e - Increase light mode contrast for better readability
 ```
+
+### Recent Commits (19/01/2026):
+- `eb99d9e` - Increase light mode contrast for better readability and industrial feel
+- `0813cb7` - Fix back button to go to previous page using navigation history
+- `e3f6872` - Add comprehensive data integrity tests for all major entities
+- `5f1c9d2` - Fix API data integrity issues (Parts, PO, SO, BOM, Work Centers)
 
 ---
 
@@ -204,7 +254,23 @@ Sau đó yêu cầu:
 - Screenshots của failed tests: `test-results/*/test-failed-1.png`
 - Bug reports sẽ được tạo tại `e2e/reports/bugs/` khi chạy với bug-reporter
 - Tất cả API routes đã được cập nhật để support Quality module
+- Data Integrity tests verify input === output sau Create/Update
+- Light mode đã được tăng contrast cho người dùng có thị lực kém
+
+### Key Files Changed (Session 19/01):
+
+| File | Thay đổi |
+|------|----------|
+| `src/app/api/parts/route.ts` | Fix missing fields in POST |
+| `src/app/api/purchasing/orders/route.ts` | Add currency field |
+| `src/app/api/sales/orders/route.ts` | Add currency field |
+| `src/app/api/bom/[id]/route.ts` | Add PUT handler |
+| `src/app/api/production/work-centers/route.ts` | Add nextMaintenanceDate |
+| `src/hooks/use-navigation-history.ts` | New - Navigation tracking |
+| `src/components/layout/modern-header.tsx` | Back button uses history |
+| `src/app/globals.css` | High contrast light mode |
+| `src/styles/theme.css` | High contrast light mode |
 
 ---
 
-*Handover created: 2026-01-16*
+*Handover updated: 2026-01-19*
