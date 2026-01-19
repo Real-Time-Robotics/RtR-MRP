@@ -8,6 +8,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useNavigationHistory } from '@/hooks/use-navigation-history';
 import {
   Search,
   Bell,
@@ -701,6 +702,7 @@ export function ModernHeader({
   onSidebarToggle,
 }: ModernHeaderProps) {
   const pathname = usePathname();
+  const { goBack, hasPreviousPage } = useNavigationHistory('/');
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -727,14 +729,14 @@ export function ModernHeader({
       {/* Industrial Precision Header: Compact 48px, Sharp edges */}
       <header className="sticky top-0 z-40 bg-white dark:bg-steel-dark border-b border-gray-200 dark:border-mrp-border">
         <div className="flex items-center h-12 px-4 gap-2">
-          {/* Back to Home - Industrial Style */}
-          <Link
-            href="/"
+          {/* Back Button - Goes to previous page in history */}
+          <button
+            onClick={goBack}
             className="flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-gunmetal hover:bg-gray-200 dark:hover:bg-gunmetal-light transition-colors mr-2 text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan"
-            title={language === 'vi' ? 'Về trang chủ' : 'Back to Home'}
+            title={language === 'vi' ? 'Quay lại trang trước' : 'Go back'}
           >
             <ChevronLeft className="w-4 h-4" />
-          </Link>
+          </button>
 
           {/* Home Button - Industrial Style */}
           <Link
