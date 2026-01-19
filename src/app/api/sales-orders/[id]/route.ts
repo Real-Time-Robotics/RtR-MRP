@@ -21,6 +21,7 @@ const updateOrderSchema = z.object({
   promisedDate: z.string().or(z.date()).optional().nullable(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
   status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled']).optional(),
+  currency: z.string().optional(), // Added: allow currency update
   notes: z.string().optional().nullable(),
 });
 

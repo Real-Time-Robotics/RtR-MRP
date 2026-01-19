@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         operatorSkillLevel: body.operatorSkillLevel,
         status: body.status || "active",
         maintenanceInterval: body.maintenanceInterval,
+        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
       },
     });
 

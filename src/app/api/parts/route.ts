@@ -142,22 +142,39 @@ export async function POST(request: NextRequest) {
         description: data.description,
         category: data.category,
         unit: data.unit || "EA",
-        // unitCost moved to PartCost
 
-        // Move to PartSpecs
-        // weightKg, lengthMm, etc.
+        // ROOT LEVEL FIELDS - Keep in sync with nested relations for queries
+        // (Same pattern as Update API for consistency)
+        unitCost: data.unitCost ?? 0,
+        weightKg: data.weightKg,
+        lengthMm: data.lengthMm,
+        widthMm: data.widthMm,
+        heightMm: data.heightMm,
+        volumeCm3: data.volumeCm3,
+        color: data.color,
+        material: data.material,
+        leadTimeDays: data.leadTimeDays ?? 14,
+        minStockLevel: data.minStockLevel ?? 0,
+        reorderPoint: data.reorderPoint ?? 0,
+        safetyStock: data.safetyStock ?? 0,
+        makeOrBuy: data.makeOrBuy ?? "BUY",
+        procurementType: data.procurementType ?? "STOCK",
+        moq: data.moq ?? 1,
+        orderMultiple: data.orderMultiple ?? 1,
+        manufacturer: data.manufacturer,
+        manufacturerPn: data.manufacturerPn,
+        countryOfOrigin: data.countryOfOrigin,
+        ndaaCompliant: data.ndaaCompliant ?? true,
+        itarControlled: data.itarControlled ?? false,
+        rohsCompliant: data.rohsCompliant ?? true,
+        reachCompliant: data.reachCompliant ?? true,
+        drawingNumber: data.drawingNumber,
+        revisionDate: data.revisionDate ? new Date(data.revisionDate) : undefined,
+        isCritical: data.isCritical ?? false,
 
-        // Move to PartPlanning -> separate object/relation
-        // makeOrBuy, procurementType, etc.
-
-        // Move to PartCompliance -> separate object/relation
-        // hsCode, etc.
-
-        status: "active", // Explicitly set status to avoid legacy issues
+        status: "active",
         lifecycleStatus: data.lifecycleStatus || "ACTIVE",
 
-        // Revision tracking
-        // revision: data.revision || "A", // Likely moved to PartRevision or kept on Part? Schema says kept on Part? Wait, checking schema...
         // Revision tracking
         revision: data.revision || "A",
 

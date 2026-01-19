@@ -26,6 +26,7 @@ const updatePOSchema = z.object({
   orderDate: z.string().or(z.date()).optional(),
   expectedDate: z.string().or(z.date()).optional(),
   status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']).optional(),
+  currency: z.string().optional(), // Added: allow currency update
   notes: z.string().optional().nullable(),
   lines: z.array(POLineSchema).optional(),
 });

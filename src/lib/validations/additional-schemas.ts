@@ -420,6 +420,9 @@ export const PartCreateSchema = z.object({
   certificateRequired: z.preprocess((v) => v ?? false, z.boolean()),
   rohsCompliant: z.preprocess((v) => v ?? true, z.boolean()),
   reachCompliant: z.preprocess((v) => v ?? true, z.boolean()),
+  // Additional fields for full compatibility with Update API
+  revisionDate: z.string().nullish(), // ISO date string from frontend
+  isCritical: z.preprocess((v) => v ?? false, z.boolean()),
 });
 
 // =============================================================================
