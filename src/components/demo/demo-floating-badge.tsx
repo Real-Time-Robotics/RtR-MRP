@@ -96,6 +96,13 @@ export function DemoFloatingBadge({
   const [isExpanded, setIsExpanded] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    // Remember minimized state
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('demo-badge-minimized') === 'true';
+    }
+    return false;
+  });
 
   // Check if current user is a demo user
   const userEmail = session?.user?.email || '';
@@ -111,10 +118,10 @@ export function DemoFloatingBadge({
   const CurrentIcon = currentAccount?.icon || Play;
 
   const positionClasses = {
-    'bottom-left': 'bottom-4 left-4',
-    'bottom-right': 'bottom-4 right-4',
-    'top-left': 'top-20 left-4',
-    'top-right': 'top-20 right-4',
+    'bottom-left': 'bottom-20 left-4', // Moved up to avoid covering bottom nav
+    'bottom-right': 'bottom-20 right-4',
+    'top-left': 'top-16 left-4',
+    'top-right': 'top-16 right-4',
   };
 
   const handleSwitchRole = async (account: typeof DEMO_ACCOUNTS[0]) => {
@@ -166,6 +173,32 @@ export function DemoFloatingBadge({
 
   const permissionCount = userRole ? rolePermissions[userRole]?.length || 0 : 0;
 
+  const toggleMinimized = () => {
+    const newState = !isMinimized;
+    setIsMinimized(newState);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo-badge-minimized', String(newState));
+    }
+  };
+
+  // Minimized view - just a small icon
+  if (isMinimized) {
+    return (
+      <div className={cn('fixed z-50', positionClasses[position])}>
+        <button
+          onClick={toggleMinimized}
+          className={cn(
+            'w-8 h-8 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110',
+            'bg-amber-500 text-white border-2 border-amber-400'
+          )}
+          title="Mở Demo Panel"
+        >
+          <Sparkles className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('fixed z-50', positionClasses[position])}>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -174,18 +207,17 @@ export function DemoFloatingBadge({
             variant="outline"
             size="sm"
             className={cn(
-              'gap-2 shadow-lg border-2 transition-all duration-300',
+              'gap-1.5 shadow-lg border-2 transition-all duration-300 h-7 px-2',
               'bg-white dark:bg-gray-800 hover:scale-105',
               currentAccount?.color.replace('bg-', 'border-'),
               isOpen && 'ring-2 ring-offset-2'
             )}
           >
-            <Sparkles className="h-4 w-4 text-amber-500" />
-            <span className="font-medium">Demo</span>
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
             <Badge
               variant="secondary"
               className={cn(
-                'px-1.5 py-0 text-xs font-semibold text-white',
+                'px-1 py-0 text-[10px] font-semibold text-white',
                 currentAccount?.color
               )}
             >
@@ -202,19 +234,32 @@ export function DemoFloatingBadge({
         <PopoverContent
           side="top"
           align="start"
-          className="w-80 p-0"
+          className="w-72 p-0"
           sideOffset={8}
         >
           {/* Header */}
-          <div className="px-4 py-3 border-b bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
-              <div>
-                <h4 className="font-semibold text-sm">Demo Mode</h4>
-                <p className="text-xs text-gray-500">
-                  Chuyển đổi vai trò để trải nghiệm
-                </p>
+          <div className="px-3 py-2 border-b bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <div>
+                  <h4 className="font-semibold text-xs">Demo Mode</h4>
+                  <p className="text-[10px] text-gray-500">
+                    Chuyển đổi vai trò
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMinimized();
+                  setIsOpen(false);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                title="Thu nhỏ"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
             </div>
           </div>
 

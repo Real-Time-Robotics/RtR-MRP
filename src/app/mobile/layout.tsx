@@ -7,11 +7,11 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Package, 
-  Scan, 
-  ClipboardList, 
+import {
+  Home,
+  Package,
+  Scan,
+  ClipboardList,
   Settings,
   Wifi,
   WifiOff,
@@ -19,7 +19,9 @@ import {
   User,
   ChevronLeft,
   Wrench,
-  Loader2
+  Loader2,
+  Monitor,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MobileToastProvider, MOBILE_TOKENS } from '@/components/mobile/mobile-ui-kit';
@@ -159,13 +161,28 @@ interface HeaderProps {
   title: string;
   showBack: boolean;
   onBack: () => void;
+  onBackToDesktop: () => void;
 }
 
-function Header({ title, showBack, onBack }: HeaderProps) {
+function Header({ title, showBack, onBack, onBackToDesktop }: HeaderProps) {
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2 min-h-[56px]">
+      {/* Back to Desktop - Only visible on larger screens */}
+      <button
+        onClick={onBackToDesktop}
+        className="hidden md:flex items-center gap-1.5 px-2 py-1.5 mr-2 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+        aria-label="Về giao diện Desktop"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <Monitor className="w-4 h-4" />
+        <span className="hidden lg:inline">Desktop</span>
+      </button>
+
+      {/* Divider - Only on desktop */}
+      <div className="hidden md:block w-px h-6 bg-gray-200 dark:bg-gray-700 mr-2" />
+
       {showBack && (
-        <button 
+        <button
           onClick={onBack}
           className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors active:scale-95"
           aria-label="Quay lại"
@@ -282,6 +299,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
     }
   };
 
+  const handleBackToDesktop = () => {
+    // Navigate back to desktop dashboard
+    router.push('/home');
+  };
+
   const handleNavigate = (href: string) => {
     // Haptic feedback
     if ('vibrate' in navigator) {
@@ -297,10 +319,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
         <StatusBar />
 
         {/* Header */}
-        <Header 
-          title={getPageTitle()} 
+        <Header
+          title={getPageTitle()}
           showBack={showBackButton}
           onBack={handleBack}
+          onBackToDesktop={handleBackToDesktop}
         />
 
         {/* Main Content */}

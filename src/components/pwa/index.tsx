@@ -300,10 +300,17 @@ interface UpdateNotificationProps {
 
 export function UpdateNotification({ className }: UpdateNotificationProps) {
   const { isUpdating, skipWaiting } = useServiceWorker();
+  const [dismissed, setDismissed] = useState(false);
 
-  if (!isUpdating) {
+  if (!isUpdating || dismissed) {
     return null;
   }
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    // Show again after 1 hour if still updating
+    setTimeout(() => setDismissed(false), 60 * 60 * 1000);
+  };
 
   return (
     <div
@@ -316,7 +323,16 @@ export function UpdateNotification({ className }: UpdateNotificationProps) {
         className
       )}
     >
-      <div className="flex items-start gap-4">
+      {/* Close button */}
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 p-1.5 text-white/70 hover:text-white hover:bg-white/20 rounded-lg transition-colors"
+        aria-label="Đóng"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      <div className="flex items-start gap-4 pr-6">
         <div className="p-2 bg-white/20 rounded-lg">
           <RefreshCw className="w-5 h-5" />
         </div>
