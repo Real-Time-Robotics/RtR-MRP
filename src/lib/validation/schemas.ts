@@ -89,7 +89,7 @@ export const PartCreateSchema = z.object({
   maxStock: z.number().int().min(0).optional(),
   reorderPoint: z.number().int().min(0).default(0),
   safetyStock: z.number().int().min(0).default(0),
-  leadTimeDays: z.number().int().min(0).default(14),
+  leadTimeDays: z.number().int().min(0).default(0),
   critical: z.boolean().default(false),
 
   // Costing

@@ -518,7 +518,18 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                               control={form.control}
                               name={`lines.${index}.quantity`}
                               render={({ field }) => (
-                                <Input type="number" min={1} {...field} />
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={field.value ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    field.onChange(val === '' ? 1 : parseInt(val, 10) || 1);
+                                  }}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
+                                />
                               )}
                             />
                           </TableCell>
@@ -527,7 +538,19 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                               control={form.control}
                               name={`lines.${index}.unitPrice`}
                               render={({ field }) => (
-                                <Input type="number" min={0} step={0.01} {...field} />
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={0.01}
+                                  value={field.value ?? ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    field.onChange(val === '' ? 0 : parseFloat(val) || 0);
+                                  }}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
+                                />
                               )}
                             />
                           </TableCell>

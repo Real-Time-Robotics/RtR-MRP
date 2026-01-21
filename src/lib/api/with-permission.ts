@@ -317,7 +317,7 @@ export function errorResponse(
   details?: Record<string, unknown>
 ) {
   return NextResponse.json(
-    { success: false, error: message, ...details },
+    { success: false, error: message, message, ...details },
     { status }
   );
 }

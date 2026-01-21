@@ -63,7 +63,7 @@ export const defaultSupplierValues: SupplierFormData = {
     contactPhone: '',
     address: '',
     paymentTerms: 'Net 30',
-    leadTimeDays: 14,
+    leadTimeDays: 0,
     rating: null,
     category: '',
     status: 'active',

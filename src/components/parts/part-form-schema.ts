@@ -109,7 +109,7 @@ export const defaultPartValues: PartFormData = {
     // Procurement
     makeOrBuy: 'BUY',
     procurementType: null,
-    leadTimeDays: 14,
+    leadTimeDays: 0,
     moq: 1,
     orderMultiple: null,
 

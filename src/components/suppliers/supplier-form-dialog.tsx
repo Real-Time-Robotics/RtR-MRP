@@ -387,7 +387,14 @@ export function SupplierFormDialog({
                                                     className="pl-9"
                                                     type="number"
                                                     min={0}
-                                                    {...field}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
+                                                    }}
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
                                                 />
                                             </div>
                                         </FormControl>

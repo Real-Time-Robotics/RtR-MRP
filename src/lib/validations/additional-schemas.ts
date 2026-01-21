@@ -269,7 +269,7 @@ export const SupplierCreateSchema = z.object({
   country: z.string().max(50).optional(),
   currency: z.string().length(3).default('USD'),
   paymentTerms: z.string().max(50).optional(),
-  leadTimeDays: z.number().int().min(0).default(14),
+  leadTimeDays: z.number().int().min(0).default(0),
   notes: z.string().max(2000).optional(),
 });
 

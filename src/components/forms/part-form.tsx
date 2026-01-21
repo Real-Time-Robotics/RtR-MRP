@@ -186,7 +186,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
       unit: 'EA',
       unitCost: 0,
       makeOrBuy: 'BUY',
-      leadTimeDays: 14,
+      leadTimeDays: 0,
       moq: 1,
       minStockLevel: 0,
       reorderPoint: 0,
@@ -257,7 +257,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           unit: 'EA',
           unitCost: 0,
           makeOrBuy: 'BUY',
-          leadTimeDays: 14,
+          leadTimeDays: 0,
           moq: 1,
           minStockLevel: 0,
           reorderPoint: 0,
@@ -698,7 +698,18 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                       <FormItem>
                         <FormLabel>Lead Time (ngày)</FormLabel>
                         <FormControl>
-                          <Input type="number" min={0} {...field} />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -714,7 +725,18 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                       <FormItem>
                         <FormLabel>MOQ</FormLabel>
                         <FormControl>
-                          <Input type="number" min={1} {...field} />
+                          <Input
+                            type="number"
+                            min={1}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              field.onChange(val === '' ? 1 : parseInt(val, 10) || 1);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
                         </FormControl>
                         <FormDescription>Số lượng đặt hàng tối thiểu</FormDescription>
                         <FormMessage />
@@ -745,7 +767,18 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                       <FormItem>
                         <FormLabel>Min Stock Level</FormLabel>
                         <FormControl>
-                          <Input type="number" min={0} {...field} />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -759,7 +792,18 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                       <FormItem>
                         <FormLabel>Reorder Point</FormLabel>
                         <FormControl>
-                          <Input type="number" min={0} {...field} />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

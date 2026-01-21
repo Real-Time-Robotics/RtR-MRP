@@ -33,7 +33,7 @@ const createSupplierSchema = z.object({
   contactPhone: z.string().nullish(),
   address: z.string().nullish(),
   paymentTerms: z.string().nullish(),
-  leadTimeDays: z.number().int().min(0, 'Lead time phải >= 0').default(14),
+  leadTimeDays: z.number().int().min(0, 'Lead time phải >= 0').default(0),
   rating: z.number().min(0).max(5).nullish(),
   category: z.string().nullish(),
   status: z.enum(['active', 'inactive', 'pending']).default('active'),
