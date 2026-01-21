@@ -1,276 +1,205 @@
 # HANDOVER - RTR-MRP Project
 
-> **Ngày cập nhật:** 2026-01-19
-> **Commit cuối:** eb99d9e
-> **Trạng thái:** Data Integrity Tests + UI/UX Improvements hoàn thành
+> **Ngày cập nhật:** 2026-01-21
+> **Commit cuối:** 592a821
+> **Trạng thái:** UAT Ready - Bug Fixes + SONG ÁNH 1:1 + UI Improvements hoàn thành
 
 ---
 
 ## 1. TỔNG QUAN CÔNG VIỆC ĐÃ LÀM
 
-### 1.1 API Bug Fixes (Session 19/01/2026)
+### 1.1 Bug Fixes từ Customer Feedback (Session 21/01/2026)
 
-**Fixed critical data integrity bugs:**
+**6 bugs đã được fix:**
 
-| API | Bug | Fix |
-|-----|-----|-----|
-| Parts POST | unitCost, leadTimeDays, etc. không được lưu | Thêm các fields vào create statement |
-| Purchase Orders | currency không được lưu | Thêm currency vào POST handler |
-| Sales Orders | currency không được lưu | Thêm currency vào POST handler |
-| BOM | Không có PUT handler | Tạo PUT handler mới |
-| Work Centers | nextMaintenanceDate không được lưu | Thêm field vào POST handler |
+| Bug # | Mô tả | Fix | Commit |
+|-------|-------|-----|--------|
+| #1 | Leading zeros trong number inputs (08 → 8) | Custom onChange handlers strip leading zeros | 32a94c0 |
+| #2 | Part form tabs tự đóng khi save | Redesign với "Lưu" + "Lưu & Đóng" buttons | 32a94c0 |
+| #3 | Default lead time = 14 (cần = 0) | Changed default to 0 in all schemas | 32a94c0 |
+| #4 | "Supplier không tồn tại" message sai | Fixed errorResponse to include both error & message | 32a94c0 |
+| #5 | PO line quantity chỉ nhập được 1 | Fixed z.coerce.number() → z.number() with manual conversion | 32a94c0 |
+| #6 | Cần AI giải thích lỗi | Created AI Error Explainer + Toast component | 32a94c0 |
 
-### 1.2 Data Integrity Test Suite (Mới)
+### 1.2 SONG ÁNH 1:1 - Full Column Mapping (Session 21/01/2026)
 
-Đã tạo **6 spec files** với **~2,800 dòng code** để verify data integrity:
+**Tất cả bảng đã có đầy đủ columns tương ứng với form fields:**
 
-```
-e2e/data-integrity/
-├── parts-integrity.spec.ts              # 681 lines - Test all Part fields
-├── products-integrity.spec.ts           # 204 lines
-├── customers-suppliers-integrity.spec.ts # 372 lines
-├── orders-integrity.spec.ts             # 449 lines
-├── bom-integrity.spec.ts                # 404 lines
-└── work-centers-integrity.spec.ts       # 424 lines
+| Table | Columns Added | Features |
+|-------|--------------|----------|
+| **Parts** | ~30 columns | columnToggle, sticky columns, hidden defaults |
+| **Suppliers** | +6 (category, contact info, address, paymentTerms) | columnToggle enabled |
+| **Customers** | +4 (country, contactPhone, billingAddress, paymentTerms) | columnToggle enabled |
+| **Purchase Orders** | +2 (currency, notes) | columnToggle enabled |
+| **Sales Orders** | +3 (promisedDate, notes, lines count) | columnToggle enabled |
+| **Inventory** | +5 (name, category, unit, reserved, warehouseName) | columnToggle enabled |
 
-e2e/utils/
-└── data-integrity-helpers.ts            # 344 lines - Utility functions
-```
+**Key Features:**
+- Sticky columns: ID/code sticks left, actions stick right
+- Hidden columns: Less common fields default to hidden
+- Column toggle: Users can show/hide any column
+- Organized sections: Columns grouped by form tabs
 
-**Test pattern:** Input → Create/Update → Verify Output === Input
+### 1.3 UI Improvements (Session 21/01/2026)
 
-### 1.3 UI/UX Improvements
+| Issue | Fix | Commit |
+|-------|-----|--------|
+| Demo Admin badge quá lớn | Compact design + minimize feature | 592a821 |
+| Update popup không đóng được | Added X close button | 592a821 |
+| Mobile pages thiếu back to desktop | Added "Back to Desktop" button (md+ screens) | 592a821 |
 
-**Back Button Navigation:**
-- Tạo `src/hooks/use-navigation-history.ts` - Track navigation trong sessionStorage
-- Cập nhật `modern-header.tsx` - Back button giờ về trang trước (như browser back)
+### 1.4 Documentation Created (Session 21/01/2026)
 
-**Light Mode High Contrast:**
-- Tăng contrast borders: 91% → 78% lightness
-- Tăng contrast text: muted-foreground 46% → 35%
-- Tăng shadow opacity: 5-10% → 8-15%
-- Thêm visible hover states, active states cho sidebar, tabs
-- Industrial feel với sharp edges và clear separations
-
-### 1.4 E2E Test Suite (Từ session trước)
-
-Đã tạo **26 test spec files** mới với **334 test cases**:
-
-| Module | Files | Tests | Status |
-|--------|-------|-------|--------|
-| Quality | 7 | ~87 | ✅ 98.8% pass (86/87) |
-| Inventory | 4 | ~49 | ✅ 98% pass |
-| Production | 3 | ~34 | 53% pass |
-| Purchasing | 3 | ~33 | ✅ 100% pass (33/33) |
-| Orders | 2 | ~22 | ✅ 95% pass |
-| MRP | 2 | ~22 | ✅ 91% pass |
-| Workflows | 3 | ~15 | Cần test |
-| Reports | 1 | ~12 | Cần test |
-
-### 1.2 Infrastructure đã tạo
-
-```
-e2e/
-├── reporters/
-│   └── bug-reporter.ts          # Custom reporter tự động tạo bug reports
-├── utils/
-│   └── quality-helpers.ts       # 25+ helper functions cho Quality module
-├── fixtures/
-│   └── test-data.ts             # Extended với factories mới
-├── quality/                     # 7 test files
-├── inventory/                   # 4 test files
-├── production/                  # 3 test files (2 mới)
-├── purchasing/                  # 3 test files
-├── orders/                      # 2 test files
-├── mrp/                         # 2 test files
-├── workflows/                   # 3 test files
-└── reports/                     # 1 test file
-```
-
-### 1.3 Kết quả test cuối cùng (17/01/2026)
-
-```
-Total:    334 tests
-Passed:   ~290+ (87%+)
-Failed:   ~44
-Duration: ~15 minutes
-```
-
-**Modules hoạt động tốt (95%+):**
-- Auth, BOM, Parts, Discussions, Notifications, Performance
-- Quality (NCR, CAPA, Inspections, Certificates) - 86/87 pass
-- Purchasing (PO, PR, Suppliers) - 33/33 pass
-- Inventory, Orders, MRP
-
-**Note:** Trước đây tests fail do rate limiting, đã fix trong commit này.
+| Document | Location | Purpose |
+|----------|----------|---------|
+| **UAT Checklist** | `/Users/mac/Downloads/RTR_MRP_UAT_CHECKLIST.md` | ~140 test cases cho customer testing |
+| **Quick Start Guide** | `/Users/mac/Downloads/RTR_MRP_QUICK_START_GUIDE.md` | Hướng dẫn sử dụng cho người dùng mới |
 
 ---
 
-## 2. VẤN ĐỀ CẦN LƯU Ý
+## 2. GIT COMMITS (Session 21/01/2026)
 
-### 2.1 Server Configuration
+```
+592a821 - fix(ui): 3 UI improvements - Demo badge, Update popup, Mobile back button
+3709d24 - feat(tables): Implement SONG ÁNH 1:1 for all data tables
+a2d55e6 - feat(parts): Implement full column mapping (SONG ÁNH 1:1)
+32a94c0 - fix: Customer feedback bug fixes (6 issues)
+```
+
+---
+
+## 3. FILES CHANGED (Session 21/01/2026)
+
+### Bug Fixes:
+| File | Changes |
+|------|---------|
+| `src/components/forms/purchase-order-form.tsx` | Fixed quantity input, z.number() with manual conversion |
+| `src/components/forms/sales-order-form.tsx` | Fixed quantity input |
+| `src/components/parts/part-form-dialog.tsx` | Redesigned tabs with Lưu/Lưu & Đóng buttons |
+| `src/lib/api/with-permission.ts` | Fixed errorResponse() |
+| `src/lib/schemas/schemas.ts` | Default leadTimeDays = 0 |
+| `src/lib/ai/error-explainer.ts` | NEW - AI error explanation utility |
+| `src/components/ui/ai-error-toast.tsx` | NEW - Expandable AI error toast |
+
+### SONG ÁNH 1:1:
+| File | Changes |
+|------|---------|
+| `src/components/parts/parts-table.tsx` | +30 columns, columnToggle |
+| `src/components/suppliers/suppliers-table.tsx` | +6 columns, columnToggle |
+| `src/components/customers/customers-table.tsx` | +4 columns, columnToggle |
+| `src/components/purchasing/purchase-orders-table.tsx` | +2 columns, columnToggle |
+| `src/components/orders/orders-table.tsx` | +3 columns, columnToggle |
+| `src/components/inventory/inventory-table.tsx` | +5 columns, columnToggle |
+
+### UI Improvements:
+| File | Changes |
+|------|---------|
+| `src/components/demo/demo-floating-badge.tsx` | Compact + minimize feature |
+| `src/components/pwa/index.tsx` | X close button for update popup |
+| `src/app/mobile/layout.tsx` | Back to Desktop button |
+
+---
+
+## 4. UAT CHECKLIST SUMMARY
+
+**~140 test cases covering:**
+
+| Section | Tests |
+|---------|-------|
+| Parts (CRUD, Data Integrity, Song ánh) | 25 |
+| Suppliers | 9 |
+| Customers | 6 |
+| Purchase Orders | 16 |
+| Sales Orders | 9 |
+| Inventory | 5 |
+| Leading Zeros (Bug #1) | 7 |
+| AI Error Explanations (Bug #6) | 6 |
+| AI Features (7 modules) | 48 |
+| Performance | 8 |
+| Usability | 7 |
+
+---
+
+## 5. CÔNG VIỆC TIẾP THEO
+
+### Immediate (UAT Preparation):
+- [ ] Setup UAT environment
+- [ ] Schedule UAT session với khách hàng
+- [ ] Prepare demo data
+
+### Post-UAT:
+- [ ] Fix any bugs found during UAT
+- [ ] Implement improvement suggestions
+- [ ] Production deployment
+
+### Future Enhancements:
+- [ ] Deployment Guide
+- [ ] Training materials
+- [ ] Video tutorials
+
+---
+
+## 6. COMMANDS QUAN TRỌNG
 
 ```bash
-# ĐÚNG - Chạy Next.js dev server
-npx next dev -p 3000
+# Development
+cd /Users/mac/AnhQuocLuong/rtr-mrp
+npm run dev
 
-# SAI - Custom server có issues với WebSocket
-npm run dev  # Chạy ts-node server.ts
-```
+# Build
+npm run build
 
-### 2.2 Auth Fixture Issue
-
-File `e2e/fixtures/auth.fixture.ts` đang expect login form với:
-- `input[type="email"]`
-- `input[type="password"]`
-- `button[type="submit"]`
-
-Một số pages redirect về login nhưng login page có thể dùng UI khác (NextAuth).
-
----
-
-## 3. CÔNG VIỆC TIẾP THEO
-
-### Phase 1: Implement Quality Module Pages (Ưu tiên cao)
-
-```
-src/app/(dashboard)/quality/
-├── ncr/
-│   ├── page.tsx              # NCR list
-│   └── [id]/page.tsx         # NCR detail
-├── capa/
-│   ├── page.tsx              # CAPA list
-│   └── [id]/page.tsx         # CAPA detail
-├── inspection-plans/
-│   └── page.tsx
-├── inspections/
-│   ├── receiving/page.tsx
-│   ├── in-process/page.tsx
-│   └── final/page.tsx
-└── certificates/
-    └── page.tsx
-```
-
-### Phase 2: Implement Purchasing Module Pages
-
-```
-src/app/(dashboard)/purchasing/
-├── orders/page.tsx           # Purchase Orders
-├── requisitions/page.tsx     # Purchase Requisitions
-└── suppliers/page.tsx        # Supplier Management
-```
-
-### Phase 3: Implement Reports Module
-
-```
-src/app/(dashboard)/reports/
-├── page.tsx                  # Reports dashboard
-├── inventory/page.tsx
-├── production/page.tsx
-└── quality/page.tsx
-```
-
----
-
-## 4. COMMANDS QUAN TRỌNG
-
-```bash
-# Chạy tất cả tests
+# Test
 npx playwright test --project=chromium
 
-# Chạy smoke tests (P0)
-npx playwright test --grep @p0
-
-# Chạy regression (P0 + P1)
-npx playwright test --grep "@p0|@p1"
-
-# Chạy theo module
-npx playwright test e2e/quality/
-npx playwright test e2e/inventory/
-
-# Debug mode
-npx playwright test --debug
-
-# Xem report
-npx playwright show-report
+# Deploy
+git push origin main
 ```
 
 ---
 
-## 5. FILES QUAN TRỌNG
+## 7. DEMO ACCOUNTS
 
-| File | Mô tả |
-|------|-------|
-| `playwright.config.ts` | Config test với custom reporters |
-| `e2e/fixtures/auth.fixture.ts` | Auth fixture cho authenticated tests |
-| `e2e/fixtures/test-data.ts` | Test data factories |
-| `e2e/reporters/bug-reporter.ts` | Custom bug reporter |
-| `e2e/utils/quality-helpers.ts` | Quality module helpers |
-| `CLAUDE.md` | AI behavior configuration |
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@demo.rtr-mrp.com | Admin@Demo2026! |
+| Manager | manager@demo.rtr-mrp.com | Manager@Demo2026! |
+| Operator | operator@demo.rtr-mrp.com | Operator@Demo2026! |
+| Viewer | viewer@demo.rtr-mrp.com | Viewer@Demo2026! |
 
 ---
 
-## 6. GIT STATUS
+## 8. KEY FEATURES IMPLEMENTED
 
-```
-Branch: main
-Remote: nclamvn/rtr-mrp
-Last commit: eb99d9e - Increase light mode contrast for better readability
-```
+### Data Tables:
+- ✅ Column Toggle (show/hide columns)
+- ✅ Sticky columns (ID left, actions right)
+- ✅ Excel mode export
+- ✅ Pagination, sorting, filtering
+- ✅ Song ánh 1:1 với forms
 
-### Recent Commits (19/01/2026):
-- `eb99d9e` - Increase light mode contrast for better readability and industrial feel
-- `0813cb7` - Fix back button to go to previous page using navigation history
-- `e3f6872` - Add comprehensive data integrity tests for all major entities
-- `5f1c9d2` - Fix API data integrity issues (Parts, PO, SO, BOM, Work Centers)
+### Forms:
+- ✅ Part form với 5 tabs + per-tab Reset
+- ✅ "Lưu" vs "Lưu & Đóng" buttons
+- ✅ AI Error explanations
+- ✅ Leading zeros handling
 
----
-
-## 7. HƯỚNG DẪN TIẾP TỤC
-
-Khi quay lại, chạy:
-
-```bash
-cd /Users/mac/AnhQuocLuong/rtr-mrp
-
-# 1. Start dev server
-npx next dev -p 3000
-
-# 2. Run tests để xem status hiện tại
-npx playwright test --project=chromium --reporter=list
-
-# 3. Xem test report
-npx playwright show-report
-```
-
-Sau đó yêu cầu:
-> "Đọc HANDOVER.md và tiếp tục công việc"
+### UI/UX:
+- ✅ Demo badge compact + minimize
+- ✅ Update popup với close button
+- ✅ Mobile back to desktop button
+- ✅ High contrast light mode
 
 ---
 
-## 8. NOTES
+## 9. NOTES
 
-- Test results được lưu tại `test-results/`
-- Screenshots của failed tests: `test-results/*/test-failed-1.png`
-- Bug reports sẽ được tạo tại `e2e/reports/bugs/` khi chạy với bug-reporter
-- Tất cả API routes đã được cập nhật để support Quality module
-- Data Integrity tests verify input === output sau Create/Update
-- Light mode đã được tăng contrast cho người dùng có thị lực kém
-
-### Key Files Changed (Session 19/01):
-
-| File | Thay đổi |
-|------|----------|
-| `src/app/api/parts/route.ts` | Fix missing fields in POST |
-| `src/app/api/purchasing/orders/route.ts` | Add currency field |
-| `src/app/api/sales/orders/route.ts` | Add currency field |
-| `src/app/api/bom/[id]/route.ts` | Add PUT handler |
-| `src/app/api/production/work-centers/route.ts` | Add nextMaintenanceDate |
-| `src/hooks/use-navigation-history.ts` | New - Navigation tracking |
-| `src/components/layout/modern-header.tsx` | Back button uses history |
-| `src/app/globals.css` | High contrast light mode |
-| `src/styles/theme.css` | High contrast light mode |
+- Build passes without errors
+- All changes tested manually
+- UAT Checklist covers all bug fixes
+- Quick Start Guide ready for customers
+- Demo accounts ready for testing
 
 ---
 
-*Handover updated: 2026-01-19*
+*Handover updated: 2026-01-21 by Claude Opus 4.5*
