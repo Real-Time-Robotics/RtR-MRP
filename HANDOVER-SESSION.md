@@ -1,6 +1,64 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-01-17 (Vietnam Time)
-> **Session:** Project Status Review
+> **Last Updated:** 2026-01-21 (Vietnam Time)
+> **Session:** Critical Bug Fixes - Part Form & Leading Zeros
+
+---
+
+## 🔥 SESSION 21/01/2026 - CRITICAL BUG FIXES
+
+### Bugs Fixed This Session
+
+| Bug # | Issue | Status | Priority |
+|-------|-------|--------|----------|
+| **#7** | Part Form Tabs - CREATE vs UPDATE mode | ✅ FIXED | 🔴 CRITICAL |
+| **#1** | Leading Zeros không được strip | ✅ FIXED | 🔴 HIGH |
+
+### Bug #7: Part Form Tabs CREATE/UPDATE Mode (CRITICAL)
+**Problem:** Khi tạo Part mới với nhiều tabs:
+- Tab 1 Save → Tạo Part OK
+- Tab 2 Save → Lỗi "Part đã tồn tại" (vì form vẫn ở CREATE mode)
+
+**Root Cause:** `isEditing = !!part` được set 1 lần và không đổi sau khi tạo Part
+
+**Solution:**
+- Added `formMode` state ('create' | 'edit')
+- Added `savedPartId` state
+- After first CREATE → switch to EDIT mode
+- Subsequent saves use PUT (update) instead of POST (create)
+
+**Files Changed:** `src/components/parts/part-form-dialog.tsx`
+
+### Bug #1: Leading Zeros in Number Inputs
+**Problem:** NumberInput component đã có nhưng KHÔNG ĐƯỢC SỬ DỤNG trong forms
+
+**Solution:** Updated 4 forms to use NumberInput (18 fields total):
+- `part-form-dialog.tsx` - 12 fields
+- `supplier-form-dialog.tsx` - 2 fields
+- `purchase-order-form.tsx` - 2 fields
+- `sales-order-form.tsx` - 2 fields
+
+### Commit
+```
+eb2746b fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
+```
+
+### P0 Test Cases (14 tests)
+| Test | Description | Status |
+|------|-------------|--------|
+| P0-1.1 | First Tab Save → Creates Part | Ready |
+| P0-1.2 | Second Tab Save → Updates (no duplicate) | Ready |
+| P0-1.3 | Third Tab Save → Updates | Ready |
+| P0-1.4 | Data Integrity Check | Ready |
+| P0-2.1 | PO Quantity = 100 | Ready |
+| P0-2.2 | PO Quantity = 500 | Ready |
+| P0-2.3 | PO Quantity = 1000 | Ready |
+| P0-2.4 | Save & Verify | Ready |
+| P0-3.1 | Create First Supplier | Ready |
+| P0-3.2 | Duplicate → "đã tồn tại" | Ready |
+| P0-4.1 | Price: "08" → "8" | Ready |
+| P0-4.2 | Lead Time: "014" → "14" | Ready |
+| P0-4.3 | MOQ: "0100" → "100" | Ready |
+| P0-4.4 | Reorder Point: "050" → "50" | Ready |
 
 ---
 
@@ -65,32 +123,38 @@ Claude sẽ đọc file này và nắm được toàn bộ ngữ cảnh để ti
 - Performance thresholds: 15s cho heavy pages
 
 ### Recent Commits
-1. `afbcc61` - fix(e2e): Fix receiving inspection test + add documentation
-2. `e1fbd7a` - fix(e2e): Disable rate limiting for test environment
-3. `51f5bc0` - docs: Add handover document for E2E testing project
-4. `4a88aab` - feat(e2e): Add comprehensive E2E test suite for QA/QC workflow
-5. `641dfac` - fix: Fix chart and WebSocket warnings properly
+1. `eb2746b` - fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
+2. `67b86cf` - docs: Update HANDOVER.md with session 21/01 changes
+3. `592a821` - fix(ui): 3 UI improvements - Demo badge, Update popup, Mobile back button
+4. `3709d24` - feat(tables): Implement SONG ÁNH 1:1 for all data tables
+5. `a2d55e6` - feat(parts): Implement full column mapping (SONG ÁNH 1:1)
+6. `32a94c0` - fix: Customer feedback bug fixes (6 issues)
 
 ---
 
 ## ⚠️ PENDING / CẦN THEO DÕI
 
-### 1. E2E Tests Failed (44 tests)
-- **Production module:** 53% pass rate - cần fix
-- **MRP module:** 91% pass rate - có vấn đề nhỏ
+### 1. P0 Manual Testing (14 tests) - KHẨN CẤP
+- **Bug #7:** Part Form CREATE/UPDATE - cần verify trên browser
+- **Bug #1:** Leading Zeros - cần verify trên browser
+- **Bug #4, #5:** Supplier message, PO quantity - cần verify
+- Chạy `npm run dev` và test manual theo QA Checklist
+
+### 2. E2E Tests (44 tests failed)
+- **Production module:** 53% pass rate
+- **MRP module:** 91% pass rate
 - Chạy `npm run test:e2e` để xem chi tiết
 
-### 2. Git Uncommitted Changes
-```
-Modified: playwright-report/index.html, test-results/.last-run.json
-Deleted: public/fallback-*.js, test-results/results.json
-Untracked: e2e/reports/html/, e2e/reports/json/, playwright-report/data/
-```
-
-### 3. Potential Improvements
-- Performance monitoring cần tăng cường
-- Load testing results chưa lưu trữ
-- Production module tests cần attention
+### 3. Customer Bugs (6 original + 1 new)
+| Bug | Description | Status |
+|-----|-------------|--------|
+| #1 | Leading Zeros | ✅ Fixed |
+| #2 | Part Tabs Auto Exit | ✅ Fixed (earlier) |
+| #3 | Default Lead Time = 0 | ✅ Fixed (earlier) |
+| #4 | Supplier "đã tồn tại" message | ✅ Fixed (earlier) |
+| #5 | PO Quantity no max | ✅ Fixed (earlier) |
+| #6 | AI Error Explanations | ✅ Fixed (earlier) |
+| #7 | Part Form CREATE/UPDATE | ✅ Fixed (this session) |
 
 ---
 
@@ -183,5 +247,5 @@ src/
 
 ---
 
-*Cập nhật lần cuối: 2026-01-17*
+*Cập nhật lần cuối: 2026-01-21*
 *Dự án: RTR-MRP - Material Requirements Planning System*
