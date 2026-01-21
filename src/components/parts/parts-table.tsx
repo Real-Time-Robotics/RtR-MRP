@@ -9,6 +9,15 @@ import {
   CheckCircle,
   XCircle,
   Shield,
+  Leaf,
+  Globe,
+  Factory,
+  Box,
+  Ruler,
+  Clock,
+  ShoppingCart,
+  Warehouse,
+  Calendar,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +66,25 @@ function formatCurrency(amount: number | null | undefined) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+function formatNumber(value: number | null | undefined, decimals = 0) {
+  if (value == null || isNaN(value)) return '-';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
+}
+
+function formatDate(date: string | Date | null | undefined) {
+  if (!date) return '-';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDimensions(length: number | null, width: number | null, height: number | null) {
+  if (!length && !width && !height) return '-';
+  return `${length || 0} × ${width || 0} × ${height || 0} mm`;
 }
 
 // =============================================================================
@@ -172,22 +200,48 @@ export function PartsTable() {
       if (filters.category !== 'all') params.set('category', filters.category);
       if (filters.lifecycle !== 'all') params.set('lifecycleStatus', filters.lifecycle);
       if (filters.makeOrBuy !== 'all') params.set('makeOrBuy', filters.makeOrBuy);
+      // Include relations for full column data (planning, costs, specs)
+      params.set('includeRelations', 'true');
 
       const response = await fetch(`/api/parts?${params.toString()}`);
       const result = await response.json();
 
       if (response.ok) {
         // Ensure we have an array and each part has required fields with defaults
+        // Flatten nested relations (planning, costs, specs, compliance) for display
         const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
-        const normalizedParts = partsArray.map((p: Part) => ({
+        const normalizedParts = partsArray.map((p: any) => ({
           ...p,
-          unitCost: p.unitCost ?? 0,
-          makeOrBuy: p.makeOrBuy ?? 'BUY',
-          lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
-          ndaaCompliant: p.ndaaCompliant ?? false,
-          itarControlled: p.itarControlled ?? false,
-          rohsCompliant: p.rohsCompliant ?? false,
+          // Basic
+          unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
           isCritical: p.isCritical ?? false,
+          // Engineering
+          makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+          lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+          // Physical (from specs)
+          weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+          lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+          widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+          heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+          material: p.specs?.material ?? p.material ?? '',
+          color: p.specs?.color ?? p.color ?? '',
+          manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+          manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+          drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+          // Procurement (from planning)
+          leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+          moq: p.planning?.moq ?? p.moq ?? 1,
+          orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+          minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+          reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+          safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+          maxStock: p.planning?.maxStock ?? null,
+          // Compliance
+          countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+          ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? false,
+          itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+          rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? false,
+          reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? false,
         }));
         setParts(normalizedParts);
       } else {
@@ -395,13 +449,15 @@ export function PartsTable() {
     },
   ];
 
-  // Column definitions for DataTable
+  // Column definitions for DataTable - FULL SONG ÁNH với Form
   const columns: Column<Part>[] = useMemo(() => [
+    // ===== TAB CƠ BẢN (Basic) =====
     {
       key: 'partNumber',
-      header: 'Part #',
+      header: 'Mã Part',
       width: '130px',
       sortable: true,
+      sticky: 'left',
       render: (value, row) => (
         <div className="flex items-center gap-1">
           <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline">
@@ -413,79 +469,35 @@ export function PartsTable() {
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Tên Part',
       width: '180px',
       sortable: true,
       render: (value) => <div className="truncate max-w-[160px]">{value || '-'}</div>,
     },
     {
+      key: 'description',
+      header: 'Mô tả',
+      width: '200px',
+      hidden: true,
+      render: (value) => <div className="truncate max-w-[180px] text-muted-foreground">{value || '-'}</div>,
+    },
+    {
       key: 'category',
-      header: 'Category',
+      header: 'Danh mục',
       width: '100px',
       sortable: true,
       render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value || '-'}</Badge>,
     },
     {
-      key: 'makeOrBuy',
-      header: 'Make/Buy',
-      width: '80px',
+      key: 'unit',
+      header: 'Đơn vị',
+      width: '70px',
       align: 'center',
-      render: (value) => (
-        <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
-          {value || 'BUY'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'revision',
-      header: 'Rev',
-      width: '60px',
-      align: 'center',
-      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value || 'A'}</Badge>,
-    },
-    {
-      key: 'compliance',
-      header: 'Compliance',
-      width: '100px',
-      align: 'center',
-      render: (_, row) => (
-        <div className="flex items-center justify-center gap-1">
-          <Tooltip>
-            <TooltipTrigger>
-              {row.ndaaCompliant ? (
-                <CheckCircle className="h-3 w-3 text-green-500" />
-              ) : (
-                <XCircle className="h-3 w-3 text-red-500" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent>NDAA: {row.ndaaCompliant ? 'Compliant' : 'Non-compliant'}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger>
-              {row.itarControlled ? (
-                <Shield className="h-3 w-3 text-red-500" />
-              ) : (
-                <div className="h-3 w-3" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent>ITAR: {row.itarControlled ? 'Controlled' : 'Not controlled'}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger>
-              {row.rohsCompliant ? (
-                <CheckCircle className="h-3 w-3 text-green-500" />
-              ) : (
-                <XCircle className="h-3 w-3 text-yellow-500" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent>RoHS: {row.rohsCompliant ? 'Compliant' : 'Non-compliant'}</TooltipContent>
-          </Tooltip>
-        </div>
-      ),
+      render: (value) => <span className="text-xs">{value || 'EA'}</span>,
     },
     {
       key: 'unitCost',
-      header: 'Unit Cost',
+      header: 'Đơn giá',
       width: '100px',
       align: 'right',
       type: 'currency',
@@ -503,7 +515,7 @@ export function PartsTable() {
           />
         ) : (
           <span
-            className="cursor-pointer hover:text-primary"
+            className="cursor-pointer hover:text-primary font-mono"
             onClick={(e) => { e.stopPropagation(); startEditingCost(row); }}
           >
             {formatCurrency(value)}
@@ -512,8 +524,100 @@ export function PartsTable() {
       ),
     },
     {
+      key: 'isCritical',
+      header: 'Quan trọng',
+      width: '80px',
+      align: 'center',
+      render: (value) => value ? (
+        <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1 py-0">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Critical
+        </Badge>
+      ) : <span className="text-muted-foreground">-</span>,
+    },
+
+    // ===== TAB VẬT LÝ (Physical) =====
+    {
+      key: 'weightKg',
+      header: 'Trọng lượng',
+      width: '90px',
+      align: 'right',
+      hidden: true,
+      render: (value) => value ? `${formatNumber(value, 3)} kg` : '-',
+    },
+    {
+      key: 'dimensions',
+      header: 'Kích thước',
+      width: '140px',
+      hidden: true,
+      render: (_, row: any) => formatDimensions(row.lengthMm, row.widthMm, row.heightMm),
+    },
+    {
+      key: 'material',
+      header: 'Vật liệu',
+      width: '100px',
+      hidden: true,
+      render: (value) => <span className="truncate">{value || '-'}</span>,
+    },
+    {
+      key: 'color',
+      header: 'Màu sắc',
+      width: '80px',
+      hidden: true,
+      render: (value) => value || '-',
+    },
+
+    // ===== TAB KỸ THUẬT (Engineering) =====
+    {
+      key: 'makeOrBuy',
+      header: 'Make/Buy',
+      width: '85px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
+          {value || 'BUY'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'revision',
+      header: 'Rev',
+      width: '55px',
+      align: 'center',
+      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value || 'A'}</Badge>,
+    },
+    {
+      key: 'revisionDate',
+      header: 'Ngày Rev',
+      width: '100px',
+      hidden: true,
+      render: (value) => formatDate(value),
+    },
+    {
+      key: 'drawingNumber',
+      header: 'Số bản vẽ',
+      width: '120px',
+      hidden: true,
+      render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
+    },
+    {
+      key: 'manufacturer',
+      header: 'Nhà SX',
+      width: '120px',
+      hidden: true,
+      render: (value) => <span className="truncate">{value || '-'}</span>,
+    },
+    {
+      key: 'manufacturerPn',
+      header: 'MPN',
+      width: '120px',
+      hidden: true,
+      render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
+    },
+    {
       key: 'lifecycleStatus',
-      header: 'Status',
+      header: 'Trạng thái',
       width: '100px',
       sortable: true,
       render: (value) => (
@@ -522,10 +626,147 @@ export function PartsTable() {
         </Badge>
       ),
     },
+
+    // ===== TAB MUA HÀNG (Procurement) =====
+    {
+      key: 'leadTimeDays',
+      header: 'Lead Time',
+      width: '85px',
+      align: 'right',
+      sortable: true,
+      render: (value) => value ? (
+        <span className="font-mono">{value} <span className="text-muted-foreground text-[10px]">ngày</span></span>
+      ) : '-',
+    },
+    {
+      key: 'moq',
+      header: 'MOQ',
+      width: '70px',
+      align: 'right',
+      render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
+    },
+    {
+      key: 'orderMultiple',
+      header: 'Bội số đặt',
+      width: '80px',
+      align: 'right',
+      hidden: true,
+      render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
+    },
+    {
+      key: 'minStockLevel',
+      header: 'Min Stock',
+      width: '85px',
+      align: 'right',
+      render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
+    },
+    {
+      key: 'reorderPoint',
+      header: 'ROP',
+      width: '70px',
+      align: 'right',
+      render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
+    },
+    {
+      key: 'safetyStock',
+      header: 'Safety Stock',
+      width: '90px',
+      align: 'right',
+      hidden: true,
+      render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
+    },
+    {
+      key: 'maxStock',
+      header: 'Max Stock',
+      width: '85px',
+      align: 'right',
+      hidden: true,
+      render: (value) => <span className="font-mono">{value ? formatNumber(value) : '-'}</span>,
+    },
+
+    // ===== TAB TUÂN THỦ (Compliance) =====
+    {
+      key: 'countryOfOrigin',
+      header: 'Xuất xứ',
+      width: '100px',
+      hidden: true,
+      render: (value) => (
+        <div className="flex items-center gap-1">
+          <Globe className="h-3 w-3 text-muted-foreground" />
+          <span className="truncate">{value || '-'}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'ndaaCompliant',
+      header: 'NDAA',
+      width: '65px',
+      align: 'center',
+      render: (value) => value ? (
+        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+      ) : (
+        <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+      ),
+    },
+    {
+      key: 'itarControlled',
+      header: 'ITAR',
+      width: '65px',
+      align: 'center',
+      render: (value) => value ? (
+        <Shield className="h-4 w-4 text-red-500 mx-auto" />
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
+    },
+    {
+      key: 'rohsCompliant',
+      header: 'RoHS',
+      width: '65px',
+      align: 'center',
+      render: (value) => value ? (
+        <Leaf className="h-4 w-4 text-green-500 mx-auto" />
+      ) : (
+        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+      ),
+    },
+    {
+      key: 'reachCompliant',
+      header: 'REACH',
+      width: '70px',
+      align: 'center',
+      hidden: true,
+      render: (value) => value ? (
+        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+      ) : (
+        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+      ),
+    },
+
+    // ===== SYSTEM FIELDS =====
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      width: '100px',
+      hidden: true,
+      sortable: true,
+      render: (value) => formatDate(value),
+    },
+    {
+      key: 'updatedAt',
+      header: 'Cập nhật',
+      width: '100px',
+      hidden: true,
+      sortable: true,
+      render: (value) => formatDate(value),
+    },
+
+    // ===== ACTIONS =====
     {
       key: 'actions',
       header: '',
       width: '50px',
+      sticky: 'right',
       render: (_, row) => <ActionDropdown items={createPartActions(row)} />,
     },
   ], [editingCostId, editingCostValue]);
@@ -616,6 +857,7 @@ export function PartsTable() {
               pageSize={20}
               searchable={false}
               stickyHeader
+              columnToggle
               excelMode={{
                 enabled: true,
                 showRowNumbers: true,
