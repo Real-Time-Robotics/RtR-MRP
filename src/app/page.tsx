@@ -37,13 +37,13 @@ import {
 
 function LandingHeader() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-black rounded-md flex items-center justify-center">
-              <span className="text-[10px] font-bold text-white tracking-tight">RTR</span>
+            <div className="w-7 h-7 bg-black dark:bg-white rounded-md flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white dark:text-gray-900 tracking-tight">RTR</span>
             </div>
           </Link>
 
@@ -59,11 +59,11 @@ function LandingHeader() {
               <a
                 key={item.href}
                 href={item.href}
-                className="px-4 py-2 text-[14px] font-normal text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 text-[14px] font-normal text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
               >
                 {item.label}
                 {item.badge && (
-                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-emerald-50 text-emerald-600 rounded">
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded">
                     Mới
                   </span>
                 )}
@@ -78,7 +78,7 @@ function LandingHeader() {
               href="https://github.com/rtr-mrp"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-900 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 text-[13px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <Github className="w-4 h-4" />
               <span className="font-medium">2.4k</span>
@@ -87,7 +87,7 @@ function LandingHeader() {
             {/* Docs Button */}
             <Link
               href="/docs"
-              className="px-4 py-2 text-[14px] font-medium text-gray-700 hover:text-gray-900 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"
+              className="px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all"
             >
               Tài liệu
             </Link>
@@ -95,7 +95,7 @@ function LandingHeader() {
             {/* Get Started Button */}
             <Link
               href="/login"
-              className="px-4 py-2 text-[14px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all"
+              className="px-4 py-2 text-[14px] font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               Bắt đầu
             </Link>
@@ -116,12 +116,12 @@ function HeroSection() {
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Hero Content */}
         <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-[42px] sm:text-[52px] lg:text-[64px] font-medium leading-[1.1] tracking-[-0.02em] text-gray-900">
+          <h1 className="text-[42px] sm:text-[52px] lg:text-[64px] font-medium leading-[1.1] tracking-[-0.02em] text-gray-900 dark:text-white">
             Nền tảng sản xuất
             <br />
             drone chuyên nghiệp
           </h1>
-          <p className="mt-6 text-[18px] lg:text-[20px] text-gray-500 leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-6 text-[18px] lg:text-[20px] text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto">
             Hệ thống MRP hàng đầu cho sản xuất UAV công nghiệp. Quản lý BOM đa cấp,
             theo dõi linh kiện quan trọng và tuân thủ NDAA cho khách hàng chính phủ.
           </p>
@@ -131,16 +131,16 @@ function HeroSection() {
             {/* Read Docs Button */}
             <Link
               href="/docs"
-              className="group flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-xl hover:border-gray-300 transition-all"
+              className="group flex items-center gap-2 px-5 py-3 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 transition-all bg-white dark:bg-gray-800"
             >
-              <FileCheck className="w-4 h-4 text-gray-500" />
-              <span className="text-[14px] font-medium text-gray-900">Tài liệu kỹ thuật</span>
+              <FileCheck className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-[14px] font-medium text-gray-900 dark:text-white">Tài liệu kỹ thuật</span>
             </Link>
 
             {/* Get Started Button */}
             <Link
               href="/login"
-              className="group flex items-center gap-2 px-5 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all"
+              className="group flex items-center gap-2 px-5 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
               <span className="text-[14px] font-medium">RTR Cloud</span>
@@ -152,23 +152,23 @@ function HeroSection() {
         <div className="mt-16 lg:mt-20 relative">
           <div className="relative mx-auto max-w-6xl">
             {/* Main Dashboard Preview */}
-            <div className="relative bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-              <div className="aspect-[16/7] bg-gradient-to-br from-gray-50 to-white p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="aspect-[16/7] bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 p-6">
                 {/* Mock Dashboard UI */}
                 <div className="h-full flex gap-4">
                   {/* Sidebar */}
-                  <div className="w-56 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                  <div className="w-56 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                      <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-                        <span className="text-[8px] font-bold text-white">RTR</span>
+                      <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center">
+                        <span className="text-[8px] font-bold text-white dark:text-gray-900">RTR</span>
                       </div>
-                      <span className="text-[13px] font-semibold text-gray-900">HERA Drones</span>
+                      <span className="text-[13px] font-semibold text-gray-900 dark:text-white">HERA Drones</span>
                     </div>
                     <div className="space-y-1">
                       {['Tìm kiếm', 'Work Orders', 'Sản phẩm', 'Linh kiện', 'BOM'].map((item, i) => (
                         <div
                           key={item}
-                          className={`px-3 py-2 rounded-lg text-[13px] ${i === 1 ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500'}`}
+                          className={`px-3 py-2 rounded-lg text-[13px] ${i === 1 ? 'bg-gray-100 dark:bg-gray-700 font-medium text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}
                         >
                           {item}
                         </div>
@@ -177,20 +177,20 @@ function HeroSection() {
                   </div>
 
                   {/* Main Content */}
-                  <div className="flex-1 bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+                  <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <div className="text-[11px] text-gray-400 mb-1">Work Order › WO-2024-0156</div>
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 bg-blue-500 rounded-full" />
-                          <span className="text-[14px] font-medium text-gray-900">HERA X8 Professional</span>
+                          <span className="text-[14px] font-medium text-gray-900 dark:text-white">HERA X8 Professional</span>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button className="px-3 py-1.5 text-[12px] border border-gray-200 rounded-lg text-gray-600">
+                        <button className="px-3 py-1.5 text-[12px] border border-gray-200 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300">
                           BOM Chi tiết
                         </button>
-                        <button className="px-3 py-1.5 text-[12px] bg-gray-900 text-white rounded-lg">
+                        <button className="px-3 py-1.5 text-[12px] bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg">
                           Bắt đầu sản xuất
                         </button>
                       </div>
@@ -198,53 +198,53 @@ function HeroSection() {
 
                     {/* Order Items */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Cog className="w-5 h-5 text-blue-600" />
+                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center">
+                            <Cog className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div>
-                            <div className="text-[13px] font-medium text-gray-900">KDE7215XF Motor</div>
-                            <div className="text-[11px] text-gray-500">SKU: MOT-KDE-7215</div>
+                            <div className="text-[13px] font-medium text-gray-900 dark:text-white">KDE7215XF Motor</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">SKU: MOT-KDE-7215</div>
                           </div>
                         </div>
-                        <div className="text-[13px] font-medium">8x</div>
+                        <div className="text-[13px] font-medium text-gray-900 dark:text-white">8x</div>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                            <CircuitBoard className="w-5 h-5 text-emerald-600" />
+                          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center">
+                            <CircuitBoard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div>
-                            <div className="text-[13px] font-medium text-gray-900">NVIDIA Jetson Orin</div>
-                            <div className="text-[11px] text-gray-500">SKU: CPU-NV-ORIN</div>
+                            <div className="text-[13px] font-medium text-gray-900 dark:text-white">NVIDIA Jetson Orin</div>
+                            <div className="text-[11px] text-gray-500 dark:text-gray-400">SKU: CPU-NV-ORIN</div>
                           </div>
                         </div>
-                        <div className="text-[13px] font-medium">1x</div>
+                        <div className="text-[13px] font-medium text-gray-900 dark:text-white">1x</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Right Panel */}
-                  <div className="w-52 bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-                    <div className="text-[12px] font-medium text-gray-900 mb-4">Thông tin đơn hàng</div>
+                  <div className="w-52 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                    <div className="text-[12px] font-medium text-gray-900 dark:text-white mb-4">Thông tin đơn hàng</div>
                     <div className="space-y-3">
                       <div>
                         <div className="text-[11px] text-gray-400">Khách hàng</div>
-                        <div className="text-[13px] text-gray-900">Bộ Quốc phòng</div>
+                        <div className="text-[13px] text-gray-900 dark:text-white">Bộ Quốc phòng</div>
                       </div>
                       <div>
                         <div className="text-[11px] text-gray-400">NDAA Status</div>
                         <div className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                          <span className="text-[13px] text-gray-900">Compliant</span>
+                          <span className="text-[13px] text-gray-900 dark:text-white">Compliant</span>
                         </div>
                       </div>
                       <div>
                         <div className="text-[11px] text-gray-400">Trạng thái</div>
                         <div className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-                          <span className="text-[13px] text-gray-900">Đang lắp ráp</span>
+                          <span className="text-[13px] text-gray-900 dark:text-white">Đang lắp ráp</span>
                         </div>
                       </div>
                     </div>
@@ -254,12 +254,12 @@ function HeroSection() {
             </div>
 
             {/* Floating Settings Panel */}
-            <div className="absolute -left-4 top-1/4 w-48 bg-white rounded-xl border border-gray-100 shadow-xl p-4 hidden lg:block">
+            <div className="absolute -left-4 top-1/4 w-48 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-xl p-4 hidden lg:block">
               <div className="flex items-center gap-2 mb-4">
                 <Plane className="w-4 h-4 text-gray-400" />
-                <span className="text-[12px] font-medium text-gray-900">Dòng sản phẩm</span>
+                <span className="text-[12px] font-medium text-gray-900 dark:text-white">Dòng sản phẩm</span>
               </div>
-              <div className="space-y-2 text-[11px] text-gray-500">
+              <div className="space-y-2 text-[11px] text-gray-500 dark:text-gray-400">
                 {['HERA X8 Pro', 'HERA X6 Lite', 'HERA Cargo', 'HERA Survey', 'Linh kiện'].map((item) => (
                   <div key={item} className="py-1">{item}</div>
                 ))}
@@ -291,9 +291,9 @@ function PartnersSection() {
   ];
 
   return (
-    <section className="py-16 border-t border-gray-100 overflow-hidden">
+    <section className="py-16 border-t border-gray-100 dark:border-gray-800 overflow-hidden">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 mb-8">
-        <p className="text-[15px] text-gray-500 text-center">
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 text-center">
           Tin tưởng bởi các nhà cung cấp linh kiện hàng không hàng đầu thế giới
         </p>
       </div>
@@ -301,8 +301,8 @@ function PartnersSection() {
       {/* Marquee Container */}
       <div className="relative group">
         {/* Gradient Overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white dark:from-gray-900 to-transparent z-10 pointer-events-none" />
 
         {/* Scrolling Content - Two identical rows for seamless loop */}
         <div
@@ -317,7 +317,7 @@ function PartnersSection() {
               key={`first-${index}`}
               className="flex-shrink-0"
             >
-              <span className="text-[18px] lg:text-[22px] font-semibold text-gray-300 hover:text-gray-500 transition-colors whitespace-nowrap tracking-tight cursor-default">
+              <span className="text-[18px] lg:text-[22px] font-semibold text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors whitespace-nowrap tracking-tight cursor-default">
                 {partner}
               </span>
             </div>
@@ -328,7 +328,7 @@ function PartnersSection() {
               key={`second-${index}`}
               className="flex-shrink-0"
             >
-              <span className="text-[18px] lg:text-[22px] font-semibold text-gray-300 hover:text-gray-500 transition-colors whitespace-nowrap tracking-tight cursor-default">
+              <span className="text-[18px] lg:text-[22px] font-semibold text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors whitespace-nowrap tracking-tight cursor-default">
                 {partner}
               </span>
             </div>
@@ -368,12 +368,12 @@ function FeaturesSection() {
   ];
 
   return (
-    <section className="py-24 border-t border-gray-100">
+    <section className="py-24 border-t border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-start">
           {/* Left Content */}
           <div>
-            <h2 className="text-[36px] lg:text-[44px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900">
+            <h2 className="text-[36px] lg:text-[44px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900 dark:text-white">
               Sản xuất drone
               <br />
               chuyên nghiệp, chuẩn quân sự
@@ -383,13 +383,13 @@ function FeaturesSection() {
               {features.map((feature, index) => (
                 <div
                   key={feature.title}
-                  className={`py-6 ${index !== features.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  className={`py-6 ${index !== features.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
                 >
-                  <h3 className="text-[16px] font-medium text-gray-900 mb-2">
+                  <h3 className="text-[16px] font-medium text-gray-900 dark:text-white mb-2">
                     {feature.title}
                   </h3>
                   {index === 0 && (
-                    <p className="text-[15px] text-gray-500 leading-relaxed">
+                    <p className="text-[15px] text-gray-500 dark:text-gray-400 leading-relaxed">
                       {feature.description}
                     </p>
                   )}
@@ -399,16 +399,16 @@ function FeaturesSection() {
           </div>
 
           {/* Right Product Card */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-[18px] font-medium text-gray-900">HERA X8 Professional</h3>
+                <h3 className="text-[18px] font-medium text-gray-900 dark:text-white">HERA X8 Professional</h3>
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[11px] font-medium">
+                  <span className="flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded text-[11px] font-medium">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                     Sẵn sàng
                   </span>
-                  <button className="text-gray-400 hover:text-gray-600">•••</button>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">•••</button>
                 </div>
               </div>
             </div>
@@ -416,30 +416,30 @@ function FeaturesSection() {
             <div className="p-6 space-y-6">
               {/* Description */}
               <div className="grid grid-cols-[120px_1fr] gap-4 text-[14px]">
-                <span className="text-gray-500">Mô tả</span>
-                <span className="text-gray-900">Heavy-lift octocopter chuyên nghiệp với AI tích hợp. Payload 15kg, thời gian bay 45 phút.</span>
+                <span className="text-gray-500 dark:text-gray-400">Mô tả</span>
+                <span className="text-gray-900 dark:text-white">Heavy-lift octocopter chuyên nghiệp với AI tích hợp. Payload 15kg, thời gian bay 45 phút.</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-4 text-[14px]">
-                <span className="text-gray-500">Giá bán</span>
-                <span className="text-gray-900 font-semibold">$28,500</span>
+                <span className="text-gray-500 dark:text-gray-400">Giá bán</span>
+                <span className="text-gray-900 dark:text-white font-semibold">$28,500</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-4 text-[14px]">
-                <span className="text-gray-500">SKU</span>
-                <span className="text-gray-900 font-mono text-[13px]">HERA-X8-PRO-2024</span>
+                <span className="text-gray-500 dark:text-gray-400">SKU</span>
+                <span className="text-gray-900 dark:text-white font-mono text-[13px]">HERA-X8-PRO-2024</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-4 text-[14px]">
-                <span className="text-gray-500">NDAA</span>
-                <span className="flex items-center gap-1 text-emerald-600">
+                <span className="text-gray-500 dark:text-gray-400">NDAA</span>
+                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="w-4 h-4" />
                   Compliant
                 </span>
               </div>
 
               {/* BOM Summary */}
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[14px] font-medium text-gray-900">Linh kiện chính</span>
-                  <button className="text-gray-400 hover:text-gray-600">•••</button>
+                  <span className="text-[14px] font-medium text-gray-900 dark:text-white">Linh kiện chính</span>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">•••</button>
                 </div>
                 <div className="space-y-2">
                   {[
@@ -449,32 +449,32 @@ function FeaturesSection() {
                     { name: 'FLIR Boson Thermal', qty: '1x' },
                   ].map((item) => (
                     <div key={item.name} className="flex justify-between text-[13px]">
-                      <span className="text-gray-600">{item.name}</span>
-                      <span className="text-gray-900 font-medium">{item.qty}</span>
+                      <span className="text-gray-600 dark:text-gray-400">{item.name}</span>
+                      <span className="text-gray-900 dark:text-white font-medium">{item.qty}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Configurations */}
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-[14px] font-medium text-gray-900">Cấu hình</span>
-                  <button className="text-gray-400 hover:text-gray-600">•••</button>
+                  <span className="text-[14px] font-medium text-gray-900 dark:text-white">Cấu hình</span>
+                  <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">•••</button>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-4">
-                    <span className="text-[14px] text-gray-500 w-20">Camera</span>
+                    <span className="text-[14px] text-gray-500 dark:text-gray-400 w-20">Camera</span>
                     <div className="flex gap-2">
-                      <span className="px-3 py-1 bg-gray-100 rounded text-[13px] text-gray-700">Thermal</span>
-                      <span className="px-3 py-1 bg-gray-100 rounded text-[13px] text-gray-700">RGB 4K</span>
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-[13px] text-gray-700 dark:text-gray-300">Thermal</span>
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-[13px] text-gray-700 dark:text-gray-300">RGB 4K</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-[14px] text-gray-500 w-20">Payload</span>
+                    <span className="text-[14px] text-gray-500 dark:text-gray-400 w-20">Payload</span>
                     <div className="flex gap-2">
-                      <span className="px-3 py-1 bg-gray-100 rounded text-[13px] text-gray-700">Survey</span>
-                      <span className="px-3 py-1 bg-gray-100 rounded text-[13px] text-gray-700">Cargo</span>
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-[13px] text-gray-700 dark:text-gray-300">Survey</span>
+                      <span className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-[13px] text-gray-700 dark:text-gray-300">Cargo</span>
                     </div>
                   </div>
                 </div>
@@ -501,23 +501,23 @@ function PlatformSection() {
   ];
 
   return (
-    <section className="py-24 border-t border-gray-100">
+    <section className="py-24 border-t border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         {/* Header */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
           <div>
-            <div className="flex items-center gap-2 text-[14px] text-gray-500 mb-4">
+            <div className="flex items-center gap-2 text-[14px] text-gray-500 dark:text-gray-400 mb-4">
               <Layers className="w-4 h-4" />
               <span>Kiến trúc hệ thống</span>
             </div>
-            <h2 className="text-[36px] lg:text-[44px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900">
+            <h2 className="text-[36px] lg:text-[44px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900 dark:text-white">
               Nền tảng sản xuất UAV
               <br />
               hoàn toàn tùy biến
             </h2>
           </div>
           <div className="lg:pt-12">
-            <p className="text-[17px] text-gray-500 leading-relaxed">
+            <p className="text-[17px] text-gray-500 dark:text-gray-400 leading-relaxed">
               Từ quản lý BOM đa cấp đến theo dõi linh kiện - hệ thống được thiết kế
               cho độ phức tạp của sản xuất drone chuyên nghiệp.
             </p>
@@ -525,17 +525,17 @@ function PlatformSection() {
         </div>
 
         {/* Platform Illustration - Light Technical Diagram */}
-        <div className="bg-white rounded-3xl p-8 lg:p-12 overflow-hidden border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 lg:p-12 overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="grid lg:grid-cols-[200px_1fr_200px] gap-6 items-start">
             {/* Left - BOM Hierarchy */}
             <div className="hidden lg:block">
               <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-4">BOM STRUCTURE</div>
               <div className="space-y-1">
                 {systemLayers.map((layer, i) => (
-                  <div key={layer.name} className="flex items-center gap-2 py-2 border-l-2 border-gray-200 pl-3" style={{ marginLeft: i * 12 }}>
-                    <div className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                  <div key={layer.name} className="flex items-center gap-2 py-2 border-l-2 border-gray-200 dark:border-gray-600 pl-3" style={{ marginLeft: i * 12 }}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`} />
                     <div>
-                      <div className="text-[10px] font-mono text-gray-600 font-medium">{layer.name}</div>
+                      <div className="text-[10px] font-mono text-gray-600 dark:text-gray-300 font-medium">{layer.name}</div>
                     </div>
                   </div>
                 ))}
@@ -545,19 +545,19 @@ function PlatformSection() {
             {/* Center - Technical Schematic */}
             <div className="relative">
               {/* Title Bar */}
-              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-600">
                 <div>
                   <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">DRAWING NO. HERA-X8-001-REV.C</div>
-                  <div className="text-[18px] font-medium text-gray-900 tracking-tight mt-1">HERA X8 Professional UAV</div>
+                  <div className="text-[18px] font-medium text-gray-900 dark:text-white tracking-tight mt-1">HERA X8 Professional UAV</div>
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] font-mono text-gray-400">SCALE 1:25</div>
-                  <div className="text-[10px] font-mono text-emerald-600 font-medium">APPROVED</div>
+                  <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-medium">APPROVED</div>
                 </div>
               </div>
 
               {/* Technical Drawing Area */}
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <svg viewBox="0 0 600 320" className="w-full h-auto">
                   {/* Fine grid */}
                   <defs>
@@ -655,14 +655,14 @@ function PlatformSection() {
               </div>
 
               {/* Bottom specs bar */}
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 text-[10px] font-mono">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 text-[10px] font-mono">
                 <div className="flex gap-6">
-                  <span className="text-gray-400">MATERIAL: <span className="text-gray-600 font-medium">CF/AL 7075-T6</span></span>
-                  <span className="text-gray-400">TOLERANCE: <span className="text-gray-600 font-medium">±0.5mm</span></span>
+                  <span className="text-gray-400">MATERIAL: <span className="text-gray-600 dark:text-gray-300 font-medium">CF/AL 7075-T6</span></span>
+                  <span className="text-gray-400">TOLERANCE: <span className="text-gray-600 dark:text-gray-300 font-medium">±0.5mm</span></span>
                 </div>
                 <div className="flex gap-6">
-                  <span className="text-gray-400">WEIGHT: <span className="text-gray-600 font-medium">12.4 kg</span></span>
-                  <span className="text-emerald-600 font-medium">NDAA §889 COMPLIANT</span>
+                  <span className="text-gray-400">WEIGHT: <span className="text-gray-600 dark:text-gray-300 font-medium">12.4 kg</span></span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">NDAA §889 COMPLIANT</span>
                 </div>
               </div>
             </div>
@@ -671,25 +671,25 @@ function PlatformSection() {
             <div className="hidden lg:block">
               <div className="text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-4">SPECIFICATIONS</div>
               <div className="space-y-3">
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wider">Max Payload</div>
-                  <div className="text-[20px] font-semibold text-gray-900">15 <span className="text-[12px] text-gray-400 font-normal">kg</span></div>
+                  <div className="text-[20px] font-semibold text-gray-900 dark:text-white">15 <span className="text-[12px] text-gray-400 font-normal">kg</span></div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wider">Flight Time</div>
-                  <div className="text-[20px] font-semibold text-gray-900">45 <span className="text-[12px] text-gray-400 font-normal">min</span></div>
+                  <div className="text-[20px] font-semibold text-gray-900 dark:text-white">45 <span className="text-[12px] text-gray-400 font-normal">min</span></div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wider">Max Speed</div>
-                  <div className="text-[20px] font-semibold text-gray-900">72 <span className="text-[12px] text-gray-400 font-normal">km/h</span></div>
+                  <div className="text-[20px] font-semibold text-gray-900 dark:text-white">72 <span className="text-[12px] text-gray-400 font-normal">km/h</span></div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="text-[9px] text-gray-400 uppercase tracking-wider">BOM Items</div>
-                  <div className="text-[20px] font-semibold text-gray-900">847</div>
+                  <div className="text-[20px] font-semibold text-gray-900 dark:text-white">847</div>
                 </div>
-                <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <div className="text-[9px] text-emerald-600 uppercase tracking-wider font-medium">Compliance</div>
-                  <div className="text-[14px] font-semibold text-emerald-700">NDAA • ITAR</div>
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <div className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-medium">Compliance</div>
+                  <div className="text-[14px] font-semibold text-emerald-700 dark:text-emerald-300">NDAA • ITAR</div>
                 </div>
               </div>
             </div>
@@ -707,8 +707,8 @@ function PlatformSection() {
           ].map((item) => (
             <div key={item.title} className="p-4">
               <item.icon className="w-5 h-5 text-gray-400 mb-3" />
-              <h3 className="text-[14px] font-medium text-gray-900 mb-1">{item.title}</h3>
-              <p className="text-[13px] text-gray-500 leading-relaxed">{item.desc}</p>
+              <h3 className="text-[14px] font-medium text-gray-900 dark:text-white mb-1">{item.title}</h3>
+              <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -725,18 +725,18 @@ function FrameworkSection() {
   const tabs = ['BOM & Cấu trúc', 'Work Orders', 'Inventory', 'QC & Testing', 'Báo cáo'];
 
   return (
-    <section className="py-24 border-t border-gray-100">
+    <section className="py-24 border-t border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-0">
           {/* Left - Drone Blueprint Illustration (Light Theme) */}
-          <div className="bg-gray-50 rounded-l-3xl p-8 lg:p-12 flex items-center justify-center min-h-[500px] border border-gray-200 border-r-0">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-l-3xl p-8 lg:p-12 flex items-center justify-center min-h-[500px] border border-gray-200 dark:border-gray-700 border-r-0">
             <div className="relative w-full max-w-md">
               {/* Blueprint Grid Background */}
               <div className="absolute inset-0">
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                   <defs>
                     <pattern id="gridLight" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
+                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5" className="dark:stroke-gray-700"/>
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#gridLight)" />
@@ -824,7 +824,7 @@ function FrameworkSection() {
           </div>
 
           {/* Right - Content */}
-          <div className="bg-white rounded-r-3xl p-12 lg:p-16 border border-l-0 border-gray-100">
+          <div className="bg-white dark:bg-gray-800 rounded-r-3xl p-12 lg:p-16 border border-l-0 border-gray-100 dark:border-gray-700">
             {/* Tabs */}
             <div className="flex flex-wrap gap-2 mb-12">
               {tabs.map((tab, i) => (
@@ -832,8 +832,8 @@ function FrameworkSection() {
                   key={tab}
                   className={`px-4 py-2 rounded-lg text-[14px] font-medium transition-all ${
                     i === 0
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-500 hover:text-gray-900'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   {tab}
@@ -842,21 +842,21 @@ function FrameworkSection() {
             </div>
 
             {/* Content */}
-            <div className="flex items-center gap-2 text-[14px] text-gray-500 mb-4">
+            <div className="flex items-center gap-2 text-[14px] text-gray-500 dark:text-gray-400 mb-4">
               <Workflow className="w-4 h-4" />
               <span>Quy trình sản xuất</span>
             </div>
-            <h2 className="text-[32px] lg:text-[40px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900 mb-6">
+            <h2 className="text-[32px] lg:text-[40px] font-medium leading-[1.15] tracking-[-0.02em] text-gray-900 dark:text-white mb-6">
               Tùy biến mọi
               <br />
               quy trình sản xuất
             </h2>
-            <p className="text-[16px] text-gray-500 leading-relaxed mb-8">
+            <p className="text-[16px] text-gray-500 dark:text-gray-400 leading-relaxed mb-8">
               Hệ thống linh hoạt cho phép bạn tùy chỉnh quy trình sản xuất drone
               theo yêu cầu riêng. Từ quản lý BOM, work orders, kiểm tra chất lượng
               đến truy xuất nguồn gốc hoàn toàn.
             </p>
-            <a href="#" className="inline-flex items-center gap-2 text-[15px] font-medium text-blue-600 hover:text-blue-700">
+            <a href="#" className="inline-flex items-center gap-2 text-[15px] font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
               Xem tài liệu kỹ thuật
               <ArrowRight className="w-4 h-4" />
             </a>
@@ -880,16 +880,16 @@ function StatsSection() {
   ];
 
   return (
-    <section className="py-16 border-t border-gray-100">
+    <section className="py-16 border-t border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {stats.map((stat) => (
             <div key={stat.label}>
               <div className="flex items-center gap-2 mb-2">
                 <stat.icon className="w-4 h-4 text-gray-400" />
-                <span className="text-[24px] lg:text-[28px] font-medium text-gray-900">{stat.value}</span>
+                <span className="text-[24px] lg:text-[28px] font-medium text-gray-900 dark:text-white">{stat.value}</span>
               </div>
-              <p className="text-[14px] text-gray-500">{stat.label}</p>
+              <p className="text-[14px] text-gray-500 dark:text-gray-400">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -904,10 +904,10 @@ function StatsSection() {
 
 function CTASection() {
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-gray-50 dark:bg-gray-800/50">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-          <h2 className="text-[28px] lg:text-[36px] font-medium leading-[1.2] tracking-[-0.02em] text-gray-900">
+          <h2 className="text-[28px] lg:text-[36px] font-medium leading-[1.2] tracking-[-0.02em] text-gray-900 dark:text-white">
             Sẵn sàng nâng cấp quy trình
             <br />
             sản xuất drone của bạn?
@@ -915,13 +915,13 @@ function CTASection() {
           <div className="flex items-center gap-3">
             <Link
               href="/docs"
-              className="px-5 py-3 text-[14px] font-medium text-gray-700 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"
+              className="px-5 py-3 text-[14px] font-medium text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-gray-300 dark:hover:border-gray-500 transition-all bg-white dark:bg-gray-800"
             >
               Xem tài liệu
             </Link>
             <Link
               href="/login"
-              className="px-5 py-3 text-[14px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all"
+              className="px-5 py-3 text-[14px] font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               Đăng ký demo
             </Link>
@@ -945,14 +945,14 @@ function Footer() {
   };
 
   return (
-    <footer className="py-16 border-t border-gray-100">
+    <footer className="py-16 border-t border-gray-100 dark:border-gray-800">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Logo */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-7 h-7 bg-black rounded-md flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white tracking-tight">RTR</span>
+              <div className="w-7 h-7 bg-black dark:bg-white rounded-md flex items-center justify-center">
+                <span className="text-[10px] font-bold text-white dark:text-gray-900 tracking-tight">RTR</span>
               </div>
             </Link>
           </div>
@@ -960,11 +960,11 @@ function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title}>
-              <h3 className="text-[14px] font-medium text-gray-900 mb-4">{title}</h3>
+              <h3 className="text-[14px] font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link}>
-                    <a href="#" className="text-[14px] text-gray-500 hover:text-gray-900 transition-colors">
+                    <a href="#" className="text-[14px] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
                       {link}
                     </a>
                   </li>
@@ -975,14 +975,14 @@ function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-[14px] font-medium text-gray-900 mb-4">Bản tin</h3>
+            <h3 className="text-[14px] font-medium text-gray-900 dark:text-white mb-4">Bản tin</h3>
             <div className="flex">
               <input
                 type="email"
                 placeholder="Email của bạn"
-                className="flex-1 px-3 py-2 text-[14px] border border-gray-200 rounded-l-lg focus:outline-none focus:border-gray-300"
+                className="flex-1 px-3 py-2 text-[14px] border border-gray-200 dark:border-gray-700 rounded-l-lg focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400"
               />
-              <button className="px-4 py-2 text-[14px] font-medium text-gray-700 border border-l-0 border-gray-200 rounded-r-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+              <button className="px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-200 border border-l-0 border-gray-200 dark:border-gray-700 rounded-r-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">
                 Đăng ký
               </button>
             </div>
@@ -993,7 +993,7 @@ function Footer() {
             {/* Social */}
             <div className="flex items-center gap-4 mt-6">
               {['Discord', 'X', 'LinkedIn', 'GitHub'].map((social) => (
-                <a key={social} href="#" className="text-gray-400 hover:text-gray-600 transition-colors">
+                <a key={social} href="#" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                   <span className="text-[12px]">{social[0]}</span>
                 </a>
               ))}
@@ -1002,13 +1002,13 @@ function Footer() {
         </div>
 
         {/* Bottom */}
-        <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-gray-400">
             © 2024 RTR MRP. Đã đăng ký bản quyền.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-[13px] text-gray-400 hover:text-gray-600">Điều khoản</a>
-            <a href="#" className="text-[13px] text-gray-400 hover:text-gray-600">Bảo mật</a>
+            <a href="#" className="text-[13px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Điều khoản</a>
+            <a href="#" className="text-[13px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Bảo mật</a>
           </div>
         </div>
       </div>
@@ -1022,7 +1022,7 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900 antialiased">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white antialiased">
       <LandingHeader />
       <main>
         <HeroSection />
