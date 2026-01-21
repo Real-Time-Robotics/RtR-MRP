@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Users, Mail, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Users, Mail, Eye, Edit2, Trash2, Phone, MapPin, CreditCard, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
@@ -129,56 +129,23 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     toast.info('Tính năng import đang được phát triển');
   };
 
-  // Column definitions for DataTable
+  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
   const columns: Column<Customer>[] = useMemo(() => [
+    // ===== BASIC INFO SECTION =====
     {
       key: 'code',
-      header: 'Mã',
+      header: 'Mã KH',
       width: '100px',
       sortable: true,
+      sticky: 'left',
       render: (value) => <span className="font-mono font-medium">{value}</span>,
     },
     {
       key: 'name',
       header: 'Tên khách hàng',
-      width: '180px',
+      width: '200px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
-    },
-    {
-      key: 'type',
-      header: 'Loại',
-      width: '100px',
-      render: (value) => (
-        <Badge variant="secondary" className="text-[10px] px-1 py-0">
-          {value || 'Other'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'contact',
-      header: 'Liên hệ',
-      width: '180px',
-      render: (_, row) => (
-        <div className="space-y-0.5">
-          {row.contactName && <div className="text-xs">{row.contactName}</div>}
-          {row.contactEmail && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Mail className="h-3 w-3" />
-              {row.contactEmail}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'creditLimit',
-      header: 'Hạn mức',
-      width: '100px',
-      align: 'right',
-      type: 'currency',
-      sortable: true,
-      render: (value) => value ? <span className="font-medium">${value.toLocaleString()}</span> : <span className="text-muted-foreground">-</span>,
     },
     {
       key: 'status',
@@ -191,17 +158,102 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
           variant={value === 'active' ? 'default' : 'secondary'}
           className={cn(
             value === 'active' && 'bg-green-100 text-green-700',
+            value === 'inactive' && 'bg-gray-100 text-gray-600',
+            value === 'pending' && 'bg-yellow-100 text-yellow-700',
             'text-[10px] px-1 py-0'
           )}
         >
-          {value === 'active' ? 'Hoạt động' : 'Ngưng'}
+          {value === 'active' ? 'Hoạt động' : value === 'inactive' ? 'Ngưng' : 'Chờ duyệt'}
         </Badge>
       ),
     },
     {
+      key: 'type',
+      header: 'Loại KH',
+      width: '110px',
+      sortable: true,
+      render: (value) => value ? (
+        <Badge variant="secondary" className="text-[10px] px-1 py-0">
+          {value}
+        </Badge>
+      ) : '-',
+    },
+    {
+      key: 'country',
+      header: 'Quốc gia',
+      width: '100px',
+      sortable: true,
+      hidden: true,
+      render: (value) => value || '-',
+    },
+
+    // ===== CONTACT INFO SECTION =====
+    {
+      key: 'contactName',
+      header: 'Người liên hệ',
+      width: '150px',
+      render: (value) => value || '-',
+    },
+    {
+      key: 'contactPhone',
+      header: 'Số điện thoại',
+      width: '120px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="font-mono text-xs">{value}</span>
+      ) : '-',
+    },
+    {
+      key: 'contactEmail',
+      header: 'Email',
+      width: '180px',
+      render: (value) => value ? (
+        <a href={`mailto:${value}`} className="text-blue-600 hover:underline text-xs">
+          {value}
+        </a>
+      ) : '-',
+    },
+    {
+      key: 'billingAddress',
+      header: 'Địa chỉ thanh toán',
+      width: '200px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="text-xs truncate" title={value}>{value}</span>
+      ) : '-',
+    },
+
+    // ===== FINANCE SECTION =====
+    {
+      key: 'paymentTerms',
+      header: 'Điều khoản TT',
+      width: '110px',
+      sortable: true,
+      hidden: true,
+      render: (value) => value ? (
+        <Badge variant="outline" className="text-[10px] px-1 py-0">
+          {value}
+        </Badge>
+      ) : '-',
+    },
+    {
+      key: 'creditLimit',
+      header: 'Hạn mức (USD)',
+      width: '120px',
+      align: 'right',
+      type: 'currency',
+      sortable: true,
+      render: (value) => value ? (
+        <span className="font-mono text-xs font-medium">${value.toLocaleString()}</span>
+      ) : '-',
+    },
+
+    // ===== ACTIONS =====
+    {
       key: 'actions',
       header: '',
       width: '50px',
+      sticky: 'right',
       render: (_, row) => (
         <ActionDropdown
           items={[
@@ -281,6 +333,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             pageSize={20}
             searchable={false}
             stickyHeader
+            columnToggle
             excelMode={{
               enabled: true,
               showRowNumbers: true,

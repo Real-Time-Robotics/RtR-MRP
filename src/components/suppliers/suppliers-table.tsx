@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Star, CheckCircle, XCircle, Building2, AlertTriangle, Shield } from 'lucide-react';
+import { Star, CheckCircle, XCircle, Building2, AlertTriangle, Shield, User, Mail, Phone, MapPin, CreditCard, Clock, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SupplierFormDialog } from '@/components/suppliers/supplier-form-dialog';
@@ -213,67 +213,23 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   // Get unique countries for filter
   const countries = Array.from(new Set(suppliers.map((s) => s.country))).sort();
 
-  // Column definitions for DataTable
+  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
   const columns: Column<Supplier>[] = useMemo(() => [
+    // ===== BASIC INFO SECTION =====
     {
       key: 'code',
       header: 'Mã NCC',
       width: '100px',
       sortable: true,
+      sticky: 'left',
       render: (value) => <span className="font-mono font-medium">{value}</span>,
     },
     {
       key: 'name',
       header: 'Tên nhà cung cấp',
-      width: '180px',
+      width: '200px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
-    },
-    {
-      key: 'country',
-      header: 'Quốc gia',
-      width: '100px',
-      sortable: true,
-    },
-    {
-      key: 'rating',
-      header: 'Rating',
-      width: '80px',
-      align: 'center',
-      render: (value) => (
-        <div className="flex items-center justify-center gap-0.5">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Star
-              key={star}
-              className={cn(
-                'h-3 w-3',
-                star <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'
-              )}
-            />
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: 'leadTimeDays',
-      header: 'Lead Time',
-      width: '80px',
-      align: 'right',
-      sortable: true,
-      render: (value) => <span className="text-xs">{value} ngày</span>,
-    },
-    {
-      key: 'ndaaCompliant',
-      header: 'NDAA',
-      width: '70px',
-      align: 'center',
-      render: (value) => (
-        value ? (
-          <CheckCircle className="h-3 w-3 text-green-500 mx-auto" />
-        ) : (
-          <XCircle className="h-3 w-3 text-red-500 mx-auto" />
-        )
-      ),
     },
     {
       key: 'status',
@@ -286,17 +242,131 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
           variant={value === 'active' ? 'default' : 'secondary'}
           className={cn(
             value === 'active' && 'bg-green-100 text-green-700',
+            value === 'inactive' && 'bg-gray-100 text-gray-600',
+            value === 'pending' && 'bg-yellow-100 text-yellow-700',
             'text-[10px] px-1 py-0'
           )}
         >
-          {value === 'active' ? 'Active' : 'Inactive'}
+          {value === 'active' ? 'Hoạt động' : value === 'inactive' ? 'Ngưng' : 'Chờ duyệt'}
         </Badge>
       ),
     },
     {
+      key: 'country',
+      header: 'Quốc gia',
+      width: '100px',
+      sortable: true,
+    },
+    {
+      key: 'category',
+      header: 'Danh mục',
+      width: '120px',
+      sortable: true,
+      hidden: true,
+      render: (value) => value || '-',
+    },
+
+    // ===== CONTACT INFO SECTION =====
+    {
+      key: 'contactName',
+      header: 'Người liên hệ',
+      width: '150px',
+      hidden: true,
+      render: (value) => value || '-',
+    },
+    {
+      key: 'contactPhone',
+      header: 'Số điện thoại',
+      width: '120px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="font-mono text-xs">{value}</span>
+      ) : '-',
+    },
+    {
+      key: 'contactEmail',
+      header: 'Email',
+      width: '180px',
+      hidden: true,
+      render: (value) => value ? (
+        <a href={`mailto:${value}`} className="text-blue-600 hover:underline text-xs">
+          {value}
+        </a>
+      ) : '-',
+    },
+    {
+      key: 'address',
+      header: 'Địa chỉ',
+      width: '200px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="text-xs truncate" title={value}>{value}</span>
+      ) : '-',
+    },
+
+    // ===== BUSINESS TERMS SECTION =====
+    {
+      key: 'paymentTerms',
+      header: 'Điều khoản TT',
+      width: '100px',
+      sortable: true,
+      hidden: true,
+      render: (value) => value ? (
+        <Badge variant="outline" className="text-[10px] px-1 py-0">
+          {value}
+        </Badge>
+      ) : '-',
+    },
+    {
+      key: 'leadTimeDays',
+      header: 'Lead Time',
+      width: '90px',
+      align: 'right',
+      sortable: true,
+      render: (value) => (
+        <span className="text-xs font-mono">{value} ngày</span>
+      ),
+    },
+    {
+      key: 'rating',
+      header: 'Đánh giá',
+      width: '100px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <div className="flex items-center justify-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              className={cn(
+                'h-3 w-3',
+                star <= (value || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'
+              )}
+            />
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'ndaaCompliant',
+      header: 'NDAA',
+      width: '70px',
+      align: 'center',
+      render: (value) => (
+        value ? (
+          <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+        ) : (
+          <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+        )
+      ),
+    },
+
+    // ===== ACTIONS =====
+    {
       key: 'actions',
       header: '',
       width: '50px',
+      sticky: 'right',
       render: (_, row) => (
         <ActionDropdown
           items={createSupplierActions(
@@ -380,6 +450,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             pageSize={20}
             searchable={false}
             stickyHeader
+            columnToggle
             excelMode={{
               enabled: true,
               showRowNumbers: true,

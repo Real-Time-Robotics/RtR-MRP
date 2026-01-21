@@ -317,15 +317,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     await changeImpact.checkImpact('inventory', rowId, changes);
   };
 
+  // Column definitions - SONG ÁNH 1:1 với InventoryItem interface
   const columns: Column<InventoryItem>[] = useMemo(() => [
+    // ===== PART INFO SECTION =====
     {
       key: 'partNumber',
-      header: 'Part Number',
+      header: 'Mã Part',
       width: '120px',
       sortable: true,
+      sticky: 'left',
       render: (value, row) => (
         <div className="flex items-center gap-2">
-          <Link href={`/inventory/${row.id}`} className="font-medium text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href={`/inventory/${row.id}`} className="font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline">
             {value}
           </Link>
           {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
@@ -333,8 +336,31 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       )
     },
     {
+      key: 'name',
+      header: 'Tên Part',
+      width: '180px',
+      sortable: true,
+      render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'category',
+      header: 'Danh mục',
+      width: '120px',
+      sortable: true,
+      hidden: true,
+    },
+    {
+      key: 'unit',
+      header: 'Đơn vị',
+      width: '70px',
+      align: 'center',
+      hidden: true,
+    },
+
+    // ===== QUANTITY SECTION =====
+    {
       key: 'quantity',
-      header: 'Quantity',
+      header: 'Tồn kho',
       width: '100px',
       align: 'right',
       type: 'number',
@@ -351,12 +377,24 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       )
     },
     {
+      key: 'reserved',
+      header: 'Đã giữ',
+      width: '90px',
+      align: 'right',
+      type: 'number',
+      hidden: true,
+      render: (value) => <span className="text-amber-600">{value}</span>,
+    },
+    {
       key: 'available',
-      header: 'Available',
+      header: 'Khả dụng',
       width: '100px',
       align: 'right',
       type: 'number',
+      render: (value) => <span className="text-green-600 font-medium">{value}</span>,
     },
+
+    // ===== PLANNING SECTION =====
     {
       key: 'safetyStock',
       header: 'Safety Stock',
@@ -408,20 +446,34 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         />
       )
     },
+
+    // ===== STATUS & COST SECTION =====
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       width: '120px',
       align: 'center',
+      sortable: true,
       render: (_, row) => <StockStatusBadge status={row.status} />
     },
     {
       key: 'unitCost',
-      header: 'Cost',
+      header: 'Đơn giá',
       width: '100px',
       align: 'right',
+      type: 'currency',
+      sortable: true,
       render: (val) => formatCurrency(val)
-    }
+    },
+
+    // ===== WAREHOUSE SECTION =====
+    {
+      key: 'warehouseName',
+      header: 'Kho',
+      width: '120px',
+      hidden: true,
+      render: (value) => value || 'Mặc định',
+    },
   ], [inventory]);
 
   return (
@@ -463,6 +515,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
           pagination
           pageSize={20}
           stickyHeader
+          columnToggle
           excelMode={{
             enabled: true,
             showRowNumbers: true,

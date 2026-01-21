@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Calendar, FileText, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
@@ -234,13 +234,15 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     },
   ];
 
-  // Column definitions for DataTable
+  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
   const columns: Column<SalesOrder>[] = useMemo(() => [
+    // ===== HEADER INFO SECTION =====
     {
       key: 'orderNumber',
-      header: 'Order #',
+      header: 'Số đơn hàng',
       width: '120px',
       sortable: true,
+      sticky: 'left',
       render: (value, row) => (
         <Link href={`/orders/${row.id}`} className="font-mono font-medium text-primary hover:underline">
           {value}
@@ -250,10 +252,25 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     {
       key: 'customer',
       header: 'Khách hàng',
-      width: '150px',
+      width: '180px',
       sortable: true,
-      render: (value) => value?.name || '-',
+      render: (value) => value ? (
+        <div>
+          <span className="font-medium">{value.name}</span>
+          <span className="text-xs text-muted-foreground ml-1">({value.code})</span>
+        </div>
+      ) : '-',
     },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '110px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <OrderStatusBadge status={value} />,
+    },
+
+    // ===== DATE INFO SECTION =====
     {
       key: 'orderDate',
       header: 'Ngày đặt',
@@ -269,41 +286,73 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       render: (value) => formatDateShort(value),
     },
     {
+      key: 'promisedDate',
+      header: 'Ngày cam kết',
+      width: '100px',
+      sortable: true,
+      hidden: true,
+      render: (value) => value ? formatDateShort(value) : '-',
+    },
+
+    // ===== PRIORITY SECTION =====
+    {
       key: 'priority',
       header: 'Ưu tiên',
+      width: '90px',
+      align: 'center',
+      sortable: true,
+      render: (value) => (
+        <span className={cn(
+          'capitalize text-xs font-medium px-2 py-0.5 rounded',
+          value === 'urgent' && 'bg-red-100 text-red-700',
+          value === 'high' && 'bg-amber-100 text-amber-700',
+          value === 'normal' && 'bg-blue-100 text-blue-700',
+          value === 'low' && 'bg-gray-100 text-gray-600'
+        )}>
+          {value === 'urgent' ? 'Khẩn' : value === 'high' ? 'Cao' : value === 'low' ? 'Thấp' : 'Bình thường'}
+        </span>
+      ),
+    },
+
+    // ===== LINE ITEMS SECTION =====
+    {
+      key: 'lines',
+      header: 'Số dòng',
       width: '80px',
       align: 'center',
       render: (value) => (
-        <span className={cn(
-          'capitalize text-xs',
-          value === 'urgent' && 'text-red-600 font-medium',
-          value === 'high' && 'text-amber-600'
-        )}>
-          {value}
-        </span>
+        <span className="font-mono text-xs">{value?.length || 0} items</span>
       ),
     },
     {
       key: 'totalAmount',
-      header: 'Giá trị',
-      width: '100px',
+      header: 'Tổng tiền',
+      width: '120px',
       align: 'right',
       type: 'currency',
       sortable: true,
-      render: (value) => formatCurrency(value || 0),
+      render: (value) => (
+        <span className="font-mono font-medium">${(value || 0).toLocaleString()}</span>
+      ),
     },
+
+    // ===== NOTES SECTION =====
     {
-      key: 'status',
-      header: 'Trạng thái',
-      width: '110px',
-      align: 'center',
-      sortable: true,
-      render: (value) => <OrderStatusBadge status={value} />,
+      key: 'notes',
+      header: 'Ghi chú',
+      width: '200px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="text-xs truncate" title={value}>{value}</span>
+      ) : '-',
     },
+
+    // ===== ACTIONS =====
     {
       key: 'actions',
       header: '',
       width: '50px',
+      sticky: 'right',
       render: (_, row) => <ActionDropdown items={createOrderActions(row)} />,
     },
   ], []);
@@ -387,6 +436,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             pageSize={20}
             searchable={false}
             stickyHeader
+            columnToggle
             excelMode={{
               enabled: true,
               showRowNumbers: true,

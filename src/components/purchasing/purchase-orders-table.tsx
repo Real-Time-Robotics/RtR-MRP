@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Truck } from 'lucide-react';
+import { Truck, DollarSign, FileText, Calendar, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
@@ -261,13 +261,15 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     },
   ];
 
-  // Column definitions for DataTable
+  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
   const columns: Column<PurchaseOrder>[] = useMemo(() => [
+    // ===== HEADER INFO SECTION =====
     {
       key: 'poNumber',
-      header: 'PO #',
+      header: 'Số PO',
       width: '120px',
       sortable: true,
+      sticky: 'left',
       render: (value, row) => (
         <Link href={`/purchasing/${row.id}`} className="font-mono font-medium text-primary hover:underline">
           {value}
@@ -277,9 +279,22 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     {
       key: 'supplier',
       header: 'Nhà cung cấp',
-      width: '150px',
+      width: '180px',
       sortable: true,
-      render: (value) => value?.name || '-',
+      render: (value) => value ? (
+        <div>
+          <span className="font-medium">{value.name}</span>
+          <span className="text-xs text-muted-foreground ml-1">({value.code})</span>
+        </div>
+      ) : '-',
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '110px',
+      align: 'center',
+      sortable: true,
+      render: (value) => <POStatusBadge status={value} />,
     },
     {
       key: 'orderDate',
@@ -296,33 +311,55 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       render: (value) => formatDateShort(value),
     },
     {
-      key: 'lines',
-      header: 'Items',
-      width: '70px',
+      key: 'currency',
+      header: 'Tiền tệ',
+      width: '80px',
       align: 'center',
-      render: (value) => value?.length || 0,
+      hidden: true,
+      render: (value) => value || 'USD',
+    },
+
+    // ===== LINE ITEMS SECTION =====
+    {
+      key: 'lines',
+      header: 'Số dòng',
+      width: '80px',
+      align: 'center',
+      render: (value) => (
+        <span className="font-mono text-xs">{value?.length || 0} items</span>
+      ),
     },
     {
       key: 'totalAmount',
-      header: 'Giá trị',
-      width: '100px',
+      header: 'Tổng tiền',
+      width: '120px',
       align: 'right',
       type: 'currency',
       sortable: true,
-      render: (value) => formatCurrency(value || 0),
+      render: (value, row) => (
+        <span className="font-mono font-medium">
+          {row.currency === 'VND' ? '₫' : '$'}{(value || 0).toLocaleString()}
+        </span>
+      ),
     },
+
+    // ===== NOTES SECTION =====
     {
-      key: 'status',
-      header: 'Trạng thái',
-      width: '110px',
-      align: 'center',
-      sortable: true,
-      render: (value) => <POStatusBadge status={value} />,
+      key: 'notes',
+      header: 'Ghi chú',
+      width: '200px',
+      hidden: true,
+      render: (value) => value ? (
+        <span className="text-xs truncate" title={value}>{value}</span>
+      ) : '-',
     },
+
+    // ===== ACTIONS =====
     {
       key: 'actions',
       header: '',
       width: '50px',
+      sticky: 'right',
       render: (_, row) => <ActionDropdown items={createPOActions(row)} />,
     },
   ], []);
@@ -395,6 +432,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             pageSize={20}
             searchable={false}
             stickyHeader
+            columnToggle
             excelMode={{
               enabled: true,
               showRowNumbers: true,
