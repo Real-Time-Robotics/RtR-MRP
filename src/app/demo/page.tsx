@@ -276,7 +276,7 @@ export default function DemoPage() {
             <span>{t('Demo Environment', 'Môi trường Demo')}</span>
           </div>
 
-          <h1 className={`text-3xl md:text-4xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-3xl md:text-4xl font-bold mb-4 ${darkMode ? '!text-white' : '!text-gray-900'}`}>
             {t('RTR-MRP Demo', 'Hệ thống RTR-MRP Demo')}
           </h1>
 
@@ -324,10 +324,10 @@ export default function DemoPage() {
                       <role.icon className={`w-5 h-5 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
                     </div>
                     <div>
-                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-semibold ${darkMode ? '!text-white' : '!text-gray-900'}`}>
                         {lang === 'en' ? role.title : role.titleVi}
                       </h3>
-                      <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                      <p className={`text-xs ${darkMode ? '!text-gray-400' : '!text-gray-500'}`}>
                         {lang === 'en' ? role.description : role.descriptionVi}
                       </p>
                     </div>
@@ -401,10 +401,10 @@ export default function DemoPage() {
       <section className="py-12 px-6 mt-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-xl font-bold mb-2 ${darkMode ? '!text-white' : '!text-gray-900'}`}>
               {t('Permission Matrix', 'Ma trận phân quyền')}
             </h2>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm ${darkMode ? '!text-gray-400' : '!text-gray-600'}`}>
               {t(
                 'Access levels comparison across system modules',
                 'So sánh cấp độ truy cập trên các modules'
