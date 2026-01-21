@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -553,17 +554,11 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                               control={form.control}
                               name={`lines.${index}.quantity`}
                               render={({ field }) => (
-                                <Input
-                                  type="number"
+                                <NumberInput
                                   min={1}
-                                  value={field.value ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    field.onChange(val === '' ? 1 : parseInt(val, 10) || 1);
-                                  }}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                  ref={field.ref}
+                                  emptyValue={1}
+                                  value={field.value}
+                                  onChange={field.onChange}
                                 />
                               )}
                             />
@@ -573,18 +568,12 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                               control={form.control}
                               name={`lines.${index}.unitPrice`}
                               render={({ field }) => (
-                                <Input
-                                  type="number"
+                                <NumberInput
                                   min={0}
-                                  step={0.01}
-                                  value={field.value ?? ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    field.onChange(val === '' ? 0 : parseFloat(val) || 0);
-                                  }}
-                                  onBlur={field.onBlur}
-                                  name={field.name}
-                                  ref={field.ref}
+                                  allowDecimal={true}
+                                  emptyValue={0}
+                                  value={field.value}
+                                  onChange={field.onChange}
                                 />
                               )}
                             />

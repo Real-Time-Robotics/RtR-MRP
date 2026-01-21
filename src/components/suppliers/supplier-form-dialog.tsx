@@ -13,6 +13,7 @@ import {
     FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
@@ -382,19 +383,13 @@ export function SupplierFormDialog({
                                         <FormLabel>Lead Time (ngày)</FormLabel>
                                         <FormControl>
                                             <div className="relative">
-                                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                                <Input
+                                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                                <NumberInput
                                                     className="pl-9"
-                                                    type="number"
                                                     min={0}
-                                                    value={field.value ?? ''}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
-                                                    }}
-                                                    onBlur={field.onBlur}
-                                                    name={field.name}
-                                                    ref={field.ref}
+                                                    emptyValue={0}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
                                                 />
                                             </div>
                                         </FormControl>
@@ -411,18 +406,15 @@ export function SupplierFormDialog({
                                         <FormLabel>Đánh giá (0-5)</FormLabel>
                                         <FormControl>
                                             <div className="relative">
-                                                <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                                <Input
+                                                <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                                                <NumberInput
                                                     className="pl-9"
-                                                    type="number"
                                                     min={0}
                                                     max={5}
-                                                    step={0.1}
-                                                    {...field}
-                                                    value={field.value ?? ''}
-                                                    onChange={(e) =>
-                                                        field.onChange(e.target.value ? parseFloat(e.target.value) : null)
-                                                    }
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
                                                 />
                                             </div>
                                         </FormControl>
