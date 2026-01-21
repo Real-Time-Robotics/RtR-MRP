@@ -1,10 +1,59 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-01-21 (Vietnam Time)
-> **Session:** Critical Bug Fixes - Part Form & Leading Zeros
+> **Last Updated:** 2026-01-21 21:50 (Vietnam Time)
+> **Session:** Dark Mode Fixes + Critical Bug Fixes
 
 ---
 
-## 🔥 SESSION 21/01/2026 - CRITICAL BUG FIXES
+## 🔥 SESSION 21/01/2026 (Evening) - DARK MODE FIXES
+
+### Dark Mode Issues Fixed
+
+| Issue | Page | Status |
+|-------|------|--------|
+| Landing page dark mode | `src/app/page.tsx` | ✅ FIXED |
+| Demo page dark mode | `src/app/demo/page.tsx` | ✅ FIXED |
+
+### Landing Page Dark Mode (`src/app/page.tsx`)
+**Problem:** Toàn bộ landing page hardcode light colors, không support dark mode
+
+**Solution:** Added `dark:` Tailwind variants cho tất cả sections:
+- LandingHeader
+- HeroSection (title, buttons, dashboard preview)
+- PartnersSection
+- FeaturesSection
+- PlatformSection
+- FrameworkSection
+- StatsSection, CTASection, Footer
+
+**Commit:** `18c0851` - fix(ui): Add dark mode support to landing page
+
+### Demo Page Dark Mode (`src/app/demo/page.tsx`)
+**Problem:** Title và role card headers không hiển thị trong dark mode (có gradient effect override)
+
+**Root Cause:** CSS gradient styles đang override text colors
+
+**Solution:** Dùng inline styles để force reset:
+```jsx
+style={{
+  color: darkMode ? '#ffffff' : '#111827',
+  WebkitTextFillColor: darkMode ? '#ffffff' : '#111827',
+  background: 'none'
+}}
+```
+
+**Fixed elements:**
+- Header "RTR-MRP" text
+- Title "Hệ thống RTR-MRP Demo"
+- Role card titles (Quản trị viên, Quản lý, Nhân viên, Người xem)
+- Permission Matrix heading
+
+**Commits:**
+- `302b71e` - fix(ui): Fix dark mode text visibility on demo page
+- `7f93a0c` - fix(ui): Force reset gradient styles on demo page dark mode
+
+---
+
+## 🔥 SESSION 21/01/2026 (Earlier) - CRITICAL BUG FIXES
 
 ### Bugs Fixed This Session
 
@@ -123,24 +172,29 @@ Claude sẽ đọc file này và nắm được toàn bộ ngữ cảnh để ti
 - Performance thresholds: 15s cho heavy pages
 
 ### Recent Commits
-1. `eb2746b` - fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
-2. `67b86cf` - docs: Update HANDOVER.md with session 21/01 changes
-3. `592a821` - fix(ui): 3 UI improvements - Demo badge, Update popup, Mobile back button
-4. `3709d24` - feat(tables): Implement SONG ÁNH 1:1 for all data tables
-5. `a2d55e6` - feat(parts): Implement full column mapping (SONG ÁNH 1:1)
-6. `32a94c0` - fix: Customer feedback bug fixes (6 issues)
+1. `7f93a0c` - fix(ui): Force reset gradient styles on demo page dark mode
+2. `302b71e` - fix(ui): Fix dark mode text visibility on demo page
+3. `18c0851` - fix(ui): Add dark mode support to landing page
+4. `eb2746b` - fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
+5. `67b86cf` - docs: Update HANDOVER.md with session 21/01 changes
+6. `592a821` - fix(ui): 3 UI improvements - Demo badge, Update popup, Mobile back button
 
 ---
 
 ## ⚠️ PENDING / CẦN THEO DÕI
 
-### 1. P0 Manual Testing (14 tests) - KHẨN CẤP
+### 1. Verify Dark Mode Fixes - CẦN TEST
+- **Landing page:** https://rtr-mrp.onrender.com - verify dark mode
+- **Demo page:** https://rtr-mrp.onrender.com/demo - verify text hiển thị
+- Toggle dark/light mode để kiểm tra
+
+### 2. P0 Manual Testing (14 tests)
 - **Bug #7:** Part Form CREATE/UPDATE - cần verify trên browser
 - **Bug #1:** Leading Zeros - cần verify trên browser
 - **Bug #4, #5:** Supplier message, PO quantity - cần verify
 - Chạy `npm run dev` và test manual theo QA Checklist
 
-### 2. E2E Tests (44 tests failed)
+### 3. E2E Tests (44 tests failed)
 - **Production module:** 53% pass rate
 - **MRP module:** 91% pass rate
 - Chạy `npm run test:e2e` để xem chi tiết
@@ -247,5 +301,5 @@ src/
 
 ---
 
-*Cập nhật lần cuối: 2026-01-21*
+*Cập nhật lần cuối: 2026-01-21 21:50*
 *Dự án: RTR-MRP - Material Requirements Planning System*
