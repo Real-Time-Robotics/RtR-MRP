@@ -86,7 +86,7 @@ function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
 
   return (
     // COMPACT: gap-4 → gap-2, mb-6 → mb-3
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 shrink-0">
       <Card className="border-gray-200 dark:border-mrp-border">
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">

@@ -419,7 +419,7 @@ function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn(
-      'overflow-hidden min-w-0',
+      'overflow-hidden min-w-0 flex flex-col',
       isExcelMode
         ? 'bg-white dark:bg-slate-950 rounded-md border border-[#217346]/30 dark:border-[#70AD47]/30'
         : 'bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800',
@@ -427,7 +427,7 @@ function DataTable<T extends Record<string, any>>({
     )}>
       {/* Excel Title Bar */}
       {isExcelMode && excelConfig.sheetName && (
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#217346] dark:bg-slate-800 rounded-t-md">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#217346] dark:bg-slate-800 rounded-t-md shrink-0">
           <Database className="h-3.5 w-3.5 text-white" />
           <span className="text-xs font-medium text-white">{excelConfig.sheetName}</span>
           <span className="ml-auto text-[10px] text-white/70 font-mono">
@@ -438,7 +438,7 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Header */}
       {(searchable || columnToggle || headerActions) && (
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 shrink-0">
           {/* Search */}
           {searchable && (
             <div className="relative flex-1 max-w-sm">
@@ -470,8 +470,7 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div
-        className={cn('overflow-auto', maxHeight && `max-h-[${maxHeight}]`)}
-        style={{ maxHeight }}
+        className="flex-1 min-h-0 overflow-auto"
       >
         <table className="w-full table-fixed">
           <thead className={cn(stickyHeader && 'sticky top-0 z-10')}>
@@ -709,7 +708,7 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Excel-style Status Bar */}
       {isExcelMode && excelConfig.showFooter && (
-        <div className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
           <span className="text-[10px] text-slate-400 font-mono">
             {selectedKeys.size > 0 ? `${selectedKeys.size} selected • ` : ''}{sortedData.length} rows
           </span>
