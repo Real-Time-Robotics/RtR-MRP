@@ -86,7 +86,7 @@ export default function CertificatesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Certificates of Conformance"
+        title="Chứng nhận phù hợp"
         description="Generate and manage CoC documents for customers"
       />
 
@@ -95,13 +95,13 @@ export default function CertificatesPage() {
         <div className="flex items-center gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="issued">Issued</SelectItem>
+              <SelectItem value="issued">Đã cấp</SelectItem>
               <SelectItem value="voided">Voided</SelectItem>
             </SelectContent>
           </Select>

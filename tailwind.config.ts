@@ -224,17 +224,17 @@ const config: Config = {
   			display: ['var(--font-jetbrains-mono)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
   		},
   		fontSize: {
-  			'display-xl': ['3rem', { lineHeight: '3.5rem', letterSpacing: '-0.02em', fontWeight: '600' }],
-  			'display-lg': ['2.25rem', { lineHeight: '2.75rem', letterSpacing: '-0.02em', fontWeight: '600' }],
-  			'heading-1': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.01em', fontWeight: '600' }],
-  			'heading-2': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.01em', fontWeight: '600' }],
-  			'heading-3': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '0', fontWeight: '500' }],
-  			'heading-4': ['1.125rem', { lineHeight: '1.5rem', letterSpacing: '0', fontWeight: '500' }],
-  			'body-lg': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0', fontWeight: '400' }],
-  			'body': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0', fontWeight: '400' }],
-  			'body-sm': ['0.8125rem', { lineHeight: '1.125rem', letterSpacing: '0', fontWeight: '400' }],
-  			'caption': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em', fontWeight: '500' }],
-  			'overline': ['0.6875rem', { lineHeight: '0.875rem', letterSpacing: '0.05em', fontWeight: '600' }],
+  			'display-xl': ['3rem', { lineHeight: '3.5rem', letterSpacing: '-0.02em', fontWeight: '700' }],
+  			'display-lg': ['2.25rem', { lineHeight: '2.75rem', letterSpacing: '-0.02em', fontWeight: '700' }],
+  			'heading-1': ['1.875rem', { lineHeight: '2.25rem', letterSpacing: '-0.01em', fontWeight: '700' }],
+  			'heading-2': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.01em', fontWeight: '700' }],
+  			'heading-3': ['1.25rem', { lineHeight: '1.75rem', letterSpacing: '0', fontWeight: '600' }],
+  			'heading-4': ['1.125rem', { lineHeight: '1.5rem', letterSpacing: '0', fontWeight: '600' }],
+  			'body-lg': ['1rem', { lineHeight: '1.5rem', letterSpacing: '0', fontWeight: '500' }],
+  			'body': ['0.875rem', { lineHeight: '1.25rem', letterSpacing: '0', fontWeight: '500' }],
+  			'body-sm': ['0.8125rem', { lineHeight: '1.125rem', letterSpacing: '0', fontWeight: '500' }],
+  			'caption': ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.01em', fontWeight: '600' }],
+  			'overline': ['0.6875rem', { lineHeight: '0.875rem', letterSpacing: '0.05em', fontWeight: '700' }],
   		},
 
   		// Extended Spacing
@@ -267,13 +267,13 @@ const config: Config = {
 
   		// Extended Shadows
   		boxShadow: {
-  			'xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-  			'card': '0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.04)',
-  			'card-hover': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04)',
-  			'primary': '0 4px 14px 0 rgb(59 130 246 / 0.3)',
-  			'success': '0 4px 14px 0 rgb(16 185 129 / 0.3)',
-  			'warning': '0 4px 14px 0 rgb(245 158 11 / 0.3)',
-  			'danger': '0 4px 14px 0 rgb(239 68 68 / 0.3)',
+  			'xs': '0 1px 2px 0 rgb(0 0 0 / 0.08)',
+  			'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.08)',
+  			'card-hover': '0 10px 20px -3px rgb(0 0 0 / 0.15), 0 4px 8px -2px rgb(0 0 0 / 0.1)',
+  			'primary': '0 4px 14px 0 rgb(37 99 235 / 0.4)',
+  			'success': '0 4px 14px 0 rgb(5 150 105 / 0.4)',
+  			'warning': '0 4px 14px 0 rgb(217 119 6 / 0.4)',
+  			'danger': '0 4px 14px 0 rgb(220 38 38 / 0.4)',
   		},
 
   		// Z-Index Scale

@@ -21,7 +21,7 @@ export function MrpSummaryCards({
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-lg">
-            <Package className="h-5 w-5 text-blue-600" />
+            <Package className="h-5 w-5 text-blue-700" />
           </div>
           <div>
             <p className="text-2xl font-bold">{totalParts}</p>
@@ -33,7 +33,7 @@ export function MrpSummaryCards({
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-red-100 rounded-lg">
-            <ShoppingCart className="h-5 w-5 text-red-600" />
+            <ShoppingCart className="h-5 w-5 text-red-700" />
           </div>
           <div>
             <p className="text-2xl font-bold">{purchaseSuggestions}</p>
@@ -45,7 +45,7 @@ export function MrpSummaryCards({
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-amber-100 rounded-lg">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <AlertTriangle className="h-5 w-5 text-amber-700" />
           </div>
           <div>
             <p className="text-2xl font-bold">{expediteAlerts}</p>
@@ -57,7 +57,7 @@ export function MrpSummaryCards({
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-green-100 rounded-lg">
-            <Clock className="h-5 w-5 text-green-600" />
+            <Clock className="h-5 w-5 text-green-700" />
           </div>
           <div>
             <p className="text-2xl font-bold">{deferSuggestions}</p>

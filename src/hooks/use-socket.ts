@@ -38,7 +38,7 @@ interface UseSocketReturn {
 }
 
 export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
-  const { autoConnect = true } = options;
+  const { autoConnect = false } = options;
   const { data: session } = useSession();
   const socketRef = useRef<TypedSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);

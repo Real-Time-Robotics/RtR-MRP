@@ -21,7 +21,7 @@ import {
 // =============================================================================
 
 const createPOSchema = z.object({
-  poNumber: z.string().min(1, 'Số PO là bắt buộc'),
+  poNumber: z.string().optional(),
   supplierId: z.string().min(1, 'Nhà cung cấp là bắt buộc'),
   orderDate: z.string().or(z.date()),
   expectedDate: z.string().or(z.date()),
@@ -115,9 +115,22 @@ async function postHandler(
     return validationErrorResponse(errors);
   }
 
+  // Auto-generate PO number if not provided or empty
+  let poNumber = validation.data.poNumber;
+  if (!poNumber || poNumber.trim() === '') {
+    const year = new Date().getFullYear();
+    const prefix = `PO-${year}-`;
+    const lastPO = await prisma.purchaseOrder.findFirst({
+      where: { poNumber: { startsWith: prefix } },
+      orderBy: { poNumber: 'desc' },
+    });
+    const lastSeq = lastPO ? parseInt(lastPO.poNumber.replace(prefix, '')) || 0 : 0;
+    poNumber = `${prefix}${String(lastSeq + 1).padStart(3, '0')}`;
+  }
+
   // Check unique PO number
   const exists = await prisma.purchaseOrder.findUnique({
-    where: { poNumber: validation.data.poNumber },
+    where: { poNumber },
   });
   if (exists) return errorResponse('Số PO đã tồn tại', 409);
 
@@ -127,7 +140,7 @@ async function postHandler(
   });
   if (!supplier) return errorResponse('Nhà cung cấp không tồn tại', 400);
 
-  const { lines, ...orderData } = validation.data;
+  const { lines, poNumber: _ignored, ...orderData } = validation.data;
 
   // Calculate total
   let totalAmount = 0;
@@ -138,6 +151,7 @@ async function postHandler(
   const order = await prisma.purchaseOrder.create({
     data: {
       ...orderData,
+      poNumber,
       orderDate: new Date(orderData.orderDate),
       expectedDate: new Date(orderData.expectedDate),
       totalAmount,

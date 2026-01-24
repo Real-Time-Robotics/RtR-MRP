@@ -103,7 +103,7 @@ export default function NewFinalInspectionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tạo Final Inspection"
+        title="Tạo phiếu kiểm tra cuối cùng"
         description="Kiểm tra chất lượng cuối cùng trước khi xuất hàng"
         backHref="/quality/final"
       />

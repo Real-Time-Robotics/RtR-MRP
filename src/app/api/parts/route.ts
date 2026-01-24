@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       logApi(request, 400, session.user?.id, 'Validation error');
       return queryResult.response;
     }
-    const { category, lifecycleStatus, makeOrBuy, ndaaCompliant, includeRelations, search } = queryResult.data;
+    const { category, lifecycleStatus, makeOrBuy, ndaaCompliant, includeRelations, search, supplierId } = queryResult.data;
 
     // Parse pagination params
     const params = parsePaginationParams(request);
@@ -46,6 +46,9 @@ export async function GET(request: NextRequest) {
     if (makeOrBuy) where.makeOrBuy = makeOrBuy;
     if (ndaaCompliant) {
       where.ndaaCompliant = ndaaCompliant === "true";
+    }
+    if (supplierId) {
+      where.partSuppliers = { some: { supplierId } };
     }
     if (search) {
       where.OR = SEARCH_FIELDS.map(field => ({
@@ -146,6 +149,18 @@ export async function POST(request: NextRequest) {
         // ROOT LEVEL FIELDS - Keep in sync with nested relations for queries
         // (Same pattern as Update API for consistency)
         unitCost: data.unitCost ?? 0,
+        standardCost: data.standardCost,
+        averageCost: data.averageCost,
+        landedCost: data.landedCost,
+        freightPercent: data.freightPercent,
+        dutyPercent: data.dutyPercent,
+        overheadPercent: data.overheadPercent,
+        priceBreakQty1: data.priceBreakQty1,
+        priceBreakCost1: data.priceBreakCost1,
+        priceBreakQty2: data.priceBreakQty2,
+        priceBreakCost2: data.priceBreakCost2,
+        priceBreakQty3: data.priceBreakQty3,
+        priceBreakCost3: data.priceBreakCost3,
         weightKg: data.weightKg,
         lengthMm: data.lengthMm,
         widthMm: data.widthMm,
@@ -169,6 +184,21 @@ export async function POST(request: NextRequest) {
         rohsCompliant: data.rohsCompliant ?? true,
         reachCompliant: data.reachCompliant ?? true,
         drawingNumber: data.drawingNumber,
+        drawingUrl: data.drawingUrl,
+        datasheetUrl: data.datasheetUrl,
+        subCategory: data.subCategory,
+        partType: data.partType,
+        buyerCode: data.buyerCode,
+        standardPack: data.standardPack ?? 1,
+        hsCode: data.hsCode,
+        eccn: data.eccn,
+        lotControl: data.lotControl ?? false,
+        serialControl: data.serialControl ?? false,
+        shelfLifeDays: data.shelfLifeDays,
+        inspectionRequired: data.inspectionRequired ?? true,
+        inspectionPlan: data.inspectionPlan,
+        aqlLevel: data.aqlLevel,
+        certificateRequired: data.certificateRequired ?? false,
         revisionDate: data.revisionDate ? new Date(data.revisionDate) : undefined,
         isCritical: data.isCritical ?? false,
 
@@ -272,7 +302,35 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(part, { status: 201 });
+    // Create PartSupplier relation if primarySupplierId is provided
+    if (data.primarySupplierId) {
+      await prisma.partSupplier.create({
+        data: {
+          partId: part.id,
+          supplierId: data.primarySupplierId,
+          isPreferred: true,
+          unitPrice: data.unitCost ?? 0,
+          leadTimeDays: data.leadTimeDays ?? 0,
+          minOrderQty: data.moq ?? 1,
+        },
+      });
+    }
+
+    // Re-fetch with supplier included
+    const result = data.primarySupplierId
+      ? await prisma.part.findUnique({
+          where: { id: part.id },
+          include: {
+            costs: true,
+            planning: true,
+            specs: true,
+            compliance: true,
+            partSuppliers: { include: { supplier: true } },
+          },
+        })
+      : part;
+
+    return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
     console.error("[Part Create] Failed to create part:", error);
     console.error("[Part Create] Error details:", {

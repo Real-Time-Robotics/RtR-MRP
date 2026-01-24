@@ -14,28 +14,28 @@
 
   /* Background colors - HIGH CONTRAST INDUSTRIAL */
   --bg-primary: 255 255 255;      /* white */
-  --bg-secondary: 245 246 247;    /* darker gray for contrast */
-  --bg-tertiary: 235 236 240;     /* even darker for visual separation */
+  --bg-secondary: 243 244 246;    /* slightly darker for contrast */
+  --bg-tertiary: 229 231 235;     /* stronger visual separation */
   --bg-elevated: 255 255 255;     /* white */
   --bg-overlay: 0 0 0;            /* for overlays */
 
-  /* Surface colors - MORE VISIBLE SEPARATION */
+  /* Surface colors - BOLD SEPARATION */
   --surface-1: 255 255 255;
-  --surface-2: 245 246 247;
-  --surface-3: 235 236 240;
-  --surface-4: 215 218 224;
+  --surface-2: 243 244 246;
+  --surface-3: 229 231 235;
+  --surface-4: 209 213 219;
 
-  /* Text colors - HIGH CONTRAST */
-  --text-primary: 10 15 25;       /* near black for maximum readability */
-  --text-secondary: 55 65 80;     /* darker secondary text */
-  --text-tertiary: 100 110 125;   /* still readable tertiary */
-  --text-muted: 140 145 155;      /* muted but visible */
+  /* Text colors - MAXIMUM CONTRAST */
+  --text-primary: 5 10 20;        /* near-pure black */
+  --text-secondary: 35 45 60;     /* bold secondary text */
+  --text-tertiary: 75 85 100;     /* strong readable tertiary */
+  --text-muted: 107 114 128;      /* gray-500 level - still legible */
   --text-inverse: 255 255 255;    /* white */
 
-  /* Border colors - MUCH MORE VISIBLE */
-  --border-primary: 195 200 210;  /* clearly visible borders */
-  --border-secondary: 175 180 195; /* secondary borders darker */
-  --border-focus: 37 99 235;      /* blue-600 for stronger focus */
+  /* Border colors - BOLD & DEFINED */
+  --border-primary: 185 190 200;  /* strong visible borders */
+  --border-secondary: 160 168 185; /* bolder secondary borders */
+  --border-focus: 29 78 216;      /* blue-700 for bold focus */
 
   /* Primary colors (Blue) */
   --primary-50: 239 246 255;
@@ -88,34 +88,34 @@
   --transition-duration: 200ms;
   --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Sidebar - HIGH CONTRAST */
+  /* Sidebar - BOLD */
   --sidebar-bg: 255 255 255;
-  --sidebar-border: 195 200 210;
-  --sidebar-item-hover: 235 236 240;
-  --sidebar-item-active: 219 234 254;
+  --sidebar-border: 185 190 200;
+  --sidebar-item-hover: 229 231 235;
+  --sidebar-item-active: 199 224 254;
 
-  /* Cards - HIGH CONTRAST */
+  /* Cards - BOLD */
   --card-bg: 255 255 255;
-  --card-border: 195 200 210;
-  --card-hover: 240 241 245;
+  --card-border: 185 190 200;
+  --card-hover: 235 237 242;
 
-  /* Inputs - HIGH CONTRAST */
+  /* Inputs - BOLD */
   --input-bg: 255 255 255;
-  --input-border: 175 180 195;
-  --input-focus-ring: 37 99 235;
-  --input-placeholder: 120 125 140;
+  --input-border: 160 168 185;
+  --input-focus-ring: 29 78 216;
+  --input-placeholder: 107 114 128;
 
-  /* Tables - HIGH CONTRAST */
-  --table-header-bg: 235 236 240;
-  --table-row-hover: 240 241 245;
-  --table-border: 195 200 210;
+  /* Tables - BOLD */
+  --table-header-bg: 229 231 235;
+  --table-row-hover: 235 237 242;
+  --table-border: 185 190 200;
 
-  /* Shadows - MORE VISIBLE */
+  /* Shadows - BOLD & DEFINED */
   --shadow-color: 0 0 0;
-  --shadow-sm: 0 1px 2px 0 rgb(var(--shadow-color) / 0.08);
-  --shadow-md: 0 4px 6px -1px rgb(var(--shadow-color) / 0.12), 0 2px 4px -2px rgb(var(--shadow-color) / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(var(--shadow-color) / 0.12), 0 4px 6px -4px rgb(var(--shadow-color) / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(var(--shadow-color) / 0.12), 0 8px 10px -6px rgb(var(--shadow-color) / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(var(--shadow-color) / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(var(--shadow-color) / 0.15), 0 2px 4px -2px rgb(var(--shadow-color) / 0.12);
+  --shadow-lg: 0 10px 15px -3px rgb(var(--shadow-color) / 0.15), 0 4px 6px -4px rgb(var(--shadow-color) / 0.12);
+  --shadow-xl: 0 20px 25px -5px rgb(var(--shadow-color) / 0.15), 0 8px 10px -6px rgb(var(--shadow-color) / 0.12);
 }
 
 /* =============================================================================

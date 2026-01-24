@@ -68,10 +68,15 @@ async function putHandler(
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
-  const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
+  const existing = await prisma.purchaseOrder.findUnique({
+    where: { id },
+    include: { lines: true },
+  });
   if (!existing) return notFoundResponse('Đơn mua hàng');
 
-  if (!['draft', 'pending', 'confirmed'].includes(existing.status)) {
+  // Allow status change to "received" from "confirmed"/"in_progress"
+  // But block general edits on already received/cancelled POs
+  if (!['draft', 'pending', 'confirmed', 'in_progress'].includes(existing.status)) {
     return errorResponse('Không thể chỉnh sửa PO ở trạng thái này', 400);
   }
 
@@ -153,6 +158,79 @@ async function putHandler(
       },
     });
   });
+
+  // === INVENTORY UPDATE: When PO status changes to "received" ===
+  const isBeingReceived =
+    validation.data.status === 'received' && existing.status !== 'received';
+
+  if (isBeingReceived) {
+    // Get PO lines (use updated order lines if available, else existing)
+    const poLines = order.lines || existing.lines;
+
+    if (poLines.length > 0) {
+      // Find default warehouse (first active warehouse)
+      let defaultWarehouse = await prisma.warehouse.findFirst({
+        where: { status: 'active' },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      // Create a default warehouse if none exists
+      if (!defaultWarehouse) {
+        defaultWarehouse = await prisma.warehouse.create({
+          data: {
+            code: 'WH-MAIN',
+            name: 'Kho chính',
+            status: 'active',
+          },
+        });
+      }
+
+      // Update inventory for each PO line
+      for (const line of poLines) {
+        const existingInventory = await prisma.inventory.findFirst({
+          where: { partId: line.partId, warehouseId: defaultWarehouse.id },
+        });
+
+        if (existingInventory) {
+          await prisma.inventory.update({
+            where: { id: existingInventory.id },
+            data: {
+              quantity: existingInventory.quantity + line.quantity,
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          await prisma.inventory.create({
+            data: {
+              partId: line.partId,
+              warehouseId: defaultWarehouse.id,
+              quantity: line.quantity,
+              reservedQty: 0,
+              locationCode: 'RECEIVING',
+            },
+          });
+        }
+
+        // Create audit log
+        try {
+          await prisma.lotTransaction.create({
+            data: {
+              lotNumber: `PO-RCV-${existing.poNumber}-${line.lineNumber || Date.now()}`,
+              partId: line.partId,
+              transactionType: 'PO_RECEIVED',
+              quantity: line.quantity,
+              previousQty: existingInventory?.quantity ?? 0,
+              newQty: (existingInventory?.quantity ?? 0) + line.quantity,
+              userId: user.id || 'system',
+              notes: `Nhận hàng từ PO: ${existing.poNumber}`,
+            },
+          });
+        } catch {
+          // Skip audit log if it fails (non-critical)
+        }
+      }
+    }
+  }
 
   return successResponse(order);
 }

@@ -60,7 +60,7 @@ const poLineSchema = z.object({
 });
 
 const purchaseOrderSchema = z.object({
-  poNumber: z.string().min(1, 'Số PO là bắt buộc').max(50),
+  poNumber: z.string().max(50),
   supplierId: z.string().min(1, 'Nhà cung cấp là bắt buộc'),
   orderDate: z.string().min(1, 'Ngày đặt hàng là bắt buộc'),
   expectedDate: z.string().min(1, 'Ngày dự kiến là bắt buộc'),
@@ -161,17 +161,26 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
     name: 'lines',
   });
 
-  // Fetch suppliers and parts
+  // Watch supplierId to filter parts
+  const watchedSupplierId = form.watch('supplierId');
+
+  // Fetch suppliers on open
   useEffect(() => {
     if (open) {
       fetchSuppliers();
-      fetchParts();
     }
   }, [open]);
 
+  // Fetch parts when supplier changes
+  useEffect(() => {
+    if (open) {
+      fetchParts(watchedSupplierId);
+    }
+  }, [open, watchedSupplierId]);
+
   const fetchSuppliers = async () => {
     try {
-      const res = await fetch('/api/suppliers?status=active');
+      const res = await fetch('/api/suppliers?status=active&limit=100');
       if (res.ok) {
         const result = await res.json();
         setSuppliers(result.data || []);
@@ -181,9 +190,15 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
     }
   };
 
-  const fetchParts = async () => {
+  const fetchParts = async (supplierId?: string) => {
     try {
-      const res = await fetch('/api/parts?makeOrBuy=BUY');
+      const params = new URLSearchParams({ limit: '100' });
+      if (supplierId) {
+        params.set('supplierId', supplierId);
+      } else {
+        params.set('makeOrBuy', 'BUY');
+      }
+      const res = await fetch(`/api/parts?${params}`);
       if (res.ok) {
         const result = await res.json();
         setParts(result.data || []);
@@ -213,7 +228,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         originalValuesRef.current = { status: order.status };
       } else {
         form.reset({
-          poNumber: `PO-${Date.now().toString().slice(-6)}`,
+          poNumber: '',
           supplierId: initialData?.supplierId || '',
           orderDate: initialData?.orderDate || format(new Date(), 'yyyy-MM-dd'),
           expectedDate: initialData?.expectedDate || format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
@@ -330,7 +345,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                   <FormItem>
                     <FormLabel>Số PO *</FormLabel>
                     <FormControl>
-                      <Input placeholder="PO-001" {...field} disabled={isEditing} />
+                      <Input placeholder="Tự động (PO-2026-001)" {...field} disabled={isEditing} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -37,30 +37,30 @@
   :root {
     /* Shadcn UI Variables - HIGH CONTRAST INDUSTRIAL */
     --background: 0 0% 97%;
-    --foreground: 222 47% 8%;
+    --foreground: 222 47% 6%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 8%;
+    --card-foreground: 222 47% 6%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 8%;
-    --primary: 217 91% 50%;
+    --popover-foreground: 222 47% 6%;
+    --primary: 217 91% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 14% 92%;
-    --secondary-foreground: 222 47% 8%;
+    --secondary-foreground: 222 47% 6%;
     --muted: 220 14% 92%;
-    --muted-foreground: 220 13% 35%;
+    --muted-foreground: 220 16% 28%;
     --accent: 220 14% 90%;
-    --accent-foreground: 222 47% 8%;
-    --destructive: 0 84% 55%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 78%;
-    --input: 220 13% 75%;
-    --ring: 217 91% 50%;
+    --border: 220 13% 75%;
+    --input: 220 13% 72%;
+    --ring: 217 91% 45%;
     --radius: 0; /* Industrial Precision: Sharp edges */
 
     /* Custom colors */
-    --success: 142 71% 40%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 45%;
+    --warning: 38 95% 42%;
     --warning-foreground: 0 0% 100%;
 
     /* Chart colors */
@@ -283,6 +283,9 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -462,33 +465,33 @@
    Only applies when NOT in dark mode
    ============================================================================= */
 
-/* Light mode specific hover states - More visible */
+/* Light mode specific hover states - BOLD & VIVID */
 :root:not(.dark) .hover\:bg-muted:hover {
-  background-color: hsl(220 14% 88%) !important;
+  background-color: hsl(220 14% 85%) !important;
 }
 
 :root:not(.dark) .hover\:bg-accent:hover {
-  background-color: hsl(220 14% 86%) !important;
+  background-color: hsl(220 14% 83%) !important;
 }
 
-/* Buttons - More visible hover states in light mode */
+/* Buttons - Strong hover states in light mode */
 :root:not(.dark) button:hover {
-  filter: brightness(0.96);
+  filter: brightness(0.92);
 }
 
-/* Cards - More visible borders and shadows */
+/* Cards - Bold borders and shadows */
 :root:not(.dark) [data-slot="card"] {
-  border-color: hsl(220 13% 78%);
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  border-color: hsl(220 13% 75%);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
 :root:not(.dark) [data-slot="card"]:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.12), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.15), 0 3px 6px -3px rgb(0 0 0 / 0.12);
 }
 
-/* Table rows - More visible hover in light mode */
+/* Table rows - Strong hover in light mode */
 :root:not(.dark) tbody tr:hover {
-  background-color: hsl(220 14% 95%) !important;
+  background-color: hsl(220 14% 93%) !important;
 }
 
 /* Input fields - Darker borders for visibility */
@@ -542,34 +545,115 @@
   border-color: hsl(220 13% 80%);
 }
 
-/* Sidebar items - Higher contrast hover/active */
+/* Sidebar items - BOLD hover/active */
 :root:not(.dark) [data-sidebar="menu-button"]:hover {
-  background-color: hsl(220 14% 90%);
+  background-color: hsl(220 14% 88%);
 }
 
 :root:not(.dark) [data-sidebar="menu-button"][data-active="true"] {
-  background-color: hsl(217 91% 95%);
-  border-left: 3px solid hsl(217 91% 50%);
+  background-color: hsl(217 91% 93%);
+  border-left: 3px solid hsl(217 91% 45%);
+  font-weight: 600;
 }
 
-/* Tabs - More visible active state */
+/* Tabs - Bold active state */
 :root:not(.dark) [role="tab"][data-state="active"] {
-  border-bottom: 2px solid hsl(217 91% 50%);
-  color: hsl(217 91% 45%);
+  border-bottom: 3px solid hsl(217 91% 45%);
+  color: hsl(217 91% 40%);
+  font-weight: 600;
 }
 
-/* Badges - Higher contrast */
+/* Badges - Bold contrast */
 :root:not(.dark) [data-slot="badge"] {
-  border: 1px solid hsl(220 13% 75%);
+  border: 1px solid hsl(220 13% 70%);
+  font-weight: 600;
 }
 
 /* Select/Dropdown triggers */
 :root:not(.dark) [data-slot="select-trigger"],
 :root:not(.dark) [role="combobox"] {
-  border-color: hsl(220 13% 78%);
+  border-color: hsl(220 13% 72%);
 }
 
 :root:not(.dark) [data-slot="select-trigger"]:hover,
 :root:not(.dark) [role="combobox"]:hover {
-  border-color: hsl(220 13% 65%);
+  border-color: hsl(220 13% 55%);
+}
+
+/* =============================================================================
+   ICON COLOR ENHANCEMENT - Vivid, Saturated Icons
+   Strengthens the bg-[color]-100/text-[color]-600 pattern globally
+   ============================================================================= */
+
+/* Blue icons - More vivid */
+:root:not(.dark) .text-blue-500 { color: #2563EB !important; }
+:root:not(.dark) .text-blue-600 { color: #1D4ED8 !important; }
+:root:not(.dark) .bg-blue-50 { background-color: #DBEAFE !important; }
+:root:not(.dark) .bg-blue-100 { background-color: #C5D9F8 !important; }
+
+/* Green icons - More vivid */
+:root:not(.dark) .text-green-500 { color: #059669 !important; }
+:root:not(.dark) .text-green-600 { color: #047857 !important; }
+:root:not(.dark) .bg-green-50 { background-color: #D1FAE5 !important; }
+:root:not(.dark) .bg-green-100 { background-color: #BBF7D0 !important; }
+
+/* Amber/Warning icons - More vivid */
+:root:not(.dark) .text-amber-500 { color: #D97706 !important; }
+:root:not(.dark) .text-amber-600 { color: #B45309 !important; }
+:root:not(.dark) .bg-amber-50 { background-color: #FEF3C7 !important; }
+:root:not(.dark) .bg-amber-100 { background-color: #FDE68A !important; }
+
+/* Red/Danger icons - More vivid */
+:root:not(.dark) .text-red-500 { color: #DC2626 !important; }
+:root:not(.dark) .text-red-600 { color: #B91C1C !important; }
+:root:not(.dark) .bg-red-50 { background-color: #FEE2E2 !important; }
+:root:not(.dark) .bg-red-100 { background-color: #FECACA !important; }
+
+/* Purple icons - More vivid */
+:root:not(.dark) .text-purple-500 { color: #7C3AED !important; }
+:root:not(.dark) .text-purple-600 { color: #6D28D9 !important; }
+:root:not(.dark) .bg-purple-50 { background-color: #EDE9FE !important; }
+:root:not(.dark) .bg-purple-100 { background-color: #DDD6FE !important; }
+
+/* Cyan icons - More vivid */
+:root:not(.dark) .text-cyan-500 { color: #0891B2 !important; }
+:root:not(.dark) .text-cyan-600 { color: #0E7490 !important; }
+
+/* =============================================================================
+   GLOBAL TYPOGRAPHY ENHANCEMENT - Bolder, Sharper Text
+   ============================================================================= */
+
+/* All headings bolder */
+:root:not(.dark) h1, :root:not(.dark) h2, :root:not(.dark) h3,
+:root:not(.dark) h4, :root:not(.dark) h5, :root:not(.dark) h6 {
+  font-weight: 700;
+  color: hsl(222 47% 6%);
+}
+
+/* Card titles bolder */
+:root:not(.dark) [data-slot="card-title"] {
+  font-weight: 700;
+}
+
+/* Page titles/descriptions */
+:root:not(.dark) .text-muted-foreground {
+  color: hsl(220 16% 28%);
+}
+
+/* Labels bolder */
+:root:not(.dark) label {
+  font-weight: 600;
+  color: hsl(222 47% 10%);
+}
+
+/* Table header text */
+:root:not(.dark) th {
+  font-weight: 700;
+  color: hsl(222 47% 6%);
+  letter-spacing: -0.01em;
+}
+
+/* Navigation items bolder */
+:root:not(.dark) nav a, :root:not(.dark) [data-sidebar="menu-button"] {
+  font-weight: 500;
 }

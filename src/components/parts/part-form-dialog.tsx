@@ -34,7 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Save, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Save, CheckCircle2, FilePenLine } from 'lucide-react';
 import {
     partSchema,
     PartFormData,
@@ -47,11 +47,12 @@ import {
 
 // Define which fields belong to which tab
 const TAB_FIELDS: Record<string, (keyof PartFormData)[]> = {
-    basic: ['partNumber', 'name', 'description', 'category', 'unit', 'unitCost', 'isCritical'],
-    physical: ['weightKg', 'lengthMm', 'widthMm', 'heightMm', 'material', 'color'],
-    engineering: ['revision', 'revisionDate', 'drawingNumber', 'manufacturer', 'manufacturerPn', 'lifecycleStatus'],
-    procurement: ['makeOrBuy', 'leadTimeDays', 'moq', 'orderMultiple', 'minStockLevel', 'reorderPoint', 'safetyStock', 'maxStock'],
-    compliance: ['countryOfOrigin', 'ndaaCompliant', 'itarControlled', 'rohsCompliant', 'reachCompliant'],
+    basic: ['partNumber', 'name', 'description', 'category', 'subCategory', 'partType', 'unit', 'unitCost', 'standardCost', 'averageCost', 'landedCost', 'freightPercent', 'dutyPercent', 'overheadPercent', 'priceBreakQty1', 'priceBreakCost1', 'priceBreakQty2', 'priceBreakCost2', 'priceBreakQty3', 'priceBreakCost3', 'isCritical'],
+    physical: ['weightKg', 'lengthMm', 'widthMm', 'heightMm', 'volumeCm3', 'material', 'color'],
+    engineering: ['revision', 'revisionDate', 'drawingNumber', 'drawingUrl', 'datasheetUrl', 'manufacturer', 'manufacturerPn', 'lifecycleStatus'],
+    procurement: ['primarySupplierId', 'makeOrBuy', 'procurementType', 'buyerCode', 'leadTimeDays', 'moq', 'orderMultiple', 'standardPack', 'minStockLevel', 'reorderPoint', 'safetyStock', 'maxStock'],
+    compliance: ['countryOfOrigin', 'hsCode', 'eccn', 'ndaaCompliant', 'itarControlled', 'rohsCompliant', 'reachCompliant'],
+    quality: ['lotControl', 'serialControl', 'shelfLifeDays', 'inspectionRequired', 'inspectionPlan', 'aqlLevel', 'certificateRequired'],
 };
 
 interface PartFormDialogProps {
@@ -82,11 +83,35 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // Track if we should close after save (for "Save & Close" action)
     const [closeAfterSave, setCloseAfterSave] = useState(false);
 
+    // Suppliers list for dropdown
+    const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string; code: string }>>([]);
+
     // 1. Setup Form Hook
     const form = useForm<PartFormData>({
         resolver: zodResolver(partSchema) as any,
         defaultValues: defaultPartValues,
     });
+
+    // Watch required fields to determine form completeness
+    const watchedPartNumber = form.watch('partNumber');
+    const watchedName = form.watch('name');
+    const watchedCategory = form.watch('category');
+    const watchedUnit = form.watch('unit');
+
+    // Form is complete when all required fields across all tabs are filled
+    const isFormComplete = useMemo(() => {
+        return !!(
+            watchedPartNumber?.trim() &&
+            watchedName?.trim() &&
+            watchedCategory &&
+            watchedUnit?.trim()
+        );
+    }, [watchedPartNumber, watchedName, watchedCategory, watchedUnit]);
+
+    // Can save draft when at least partNumber is filled
+    const canSaveDraft = useMemo(() => {
+        return !!(watchedPartNumber?.trim());
+    }, [watchedPartNumber]);
 
     // Setup Change Impact Hook
     const changeImpact = useChangeImpact({
@@ -114,7 +139,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
             // Number fields that must be sent as numbers (not null/undefined)
             const requiredNumberFields = ['unitCost', 'leadTimeDays', 'moq', 'minStockLevel', 'reorderPoint'];
-            const optionalNumberFields = ['weightKg', 'lengthMm', 'widthMm', 'heightMm', 'orderMultiple', 'maxStock', 'safetyStock'];
+            const optionalNumberFields = ['weightKg', 'lengthMm', 'widthMm', 'heightMm', 'volumeCm3', 'orderMultiple', 'standardPack', 'maxStock', 'safetyStock', 'shelfLifeDays', 'standardCost', 'averageCost', 'landedCost', 'freightPercent', 'dutyPercent', 'overheadPercent', 'priceBreakQty1', 'priceBreakCost1', 'priceBreakQty2', 'priceBreakCost2', 'priceBreakQty3', 'priceBreakCost3'];
 
             Object.entries(data).forEach(([key, value]) => {
                 // Convert empty strings to null
@@ -215,7 +240,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                 setCloseAfterSave(false);
             }
         },
-        successMessage: formMode === 'edit' ? 'Cập nhật part thành công!' : 'Tạo part thành công!',
+        successMessage: isFormComplete
+            ? (formMode === 'edit' ? 'Cập nhật part thành công!' : 'Tạo part thành công!')
+            : 'Lưu nháp thành công!',
     });
 
     // Check if a specific tab has dirty (changed) fields
@@ -279,6 +306,23 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
         await changeImpact.checkImpact('part', savedPartId, changes);
     };
 
+    // Handle draft save (bypasses full validation, only requires partNumber)
+    const handleDraftSave = async () => {
+        const partNumber = form.getValues('partNumber');
+        if (!partNumber?.trim()) {
+            form.setError('partNumber', { type: 'manual', message: 'Mã part là bắt buộc để lưu nháp' });
+            setActiveTab('basic');
+            return;
+        }
+        setCloseAfterSave(false);
+        const data = form.getValues();
+        // Set defaults for API-required fields that may be empty in draft
+        if (!data.name?.trim()) {
+            data.name = `[Nháp] ${partNumber}`;
+        }
+        performSave(data);
+    };
+
     // 3. Reset form when Modal opens or Part changes
     useEffect(() => {
         if (open) {
@@ -296,38 +340,68 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                     name: part.name,
                     description: part.description || '',
                     category: part.category as PartFormData['category'],
+                    subCategory: (part as any).subCategory ?? null,
+                    partType: (part as any).partType ?? null,
                     unit: part.unit,
                     // Cost: prefer nested, fallback to root
                     unitCost: costs?.unitCost ?? part.unitCost ?? 0,
+                    standardCost: costs?.standardCost ?? (part as any).standardCost ?? null,
+                    averageCost: costs?.averageCost ?? (part as any).averageCost ?? null,
+                    landedCost: costs?.landedCost ?? (part as any).landedCost ?? null,
+                    freightPercent: costs?.freightPercent ?? (part as any).freightPercent ?? null,
+                    dutyPercent: costs?.dutyPercent ?? (part as any).dutyPercent ?? null,
+                    overheadPercent: costs?.overheadPercent ?? (part as any).overheadPercent ?? null,
+                    priceBreakQty1: costs?.priceBreakQty1 ?? (part as any).priceBreakQty1 ?? null,
+                    priceBreakCost1: costs?.priceBreakCost1 ?? (part as any).priceBreakCost1 ?? null,
+                    priceBreakQty2: costs?.priceBreakQty2 ?? (part as any).priceBreakQty2 ?? null,
+                    priceBreakCost2: costs?.priceBreakCost2 ?? (part as any).priceBreakCost2 ?? null,
+                    priceBreakQty3: costs?.priceBreakQty3 ?? (part as any).priceBreakQty3 ?? null,
+                    priceBreakCost3: costs?.priceBreakCost3 ?? (part as any).priceBreakCost3 ?? null,
                     // Physical: prefer nested specs, fallback to root
                     weightKg: specs?.weightKg ?? part.weightKg ?? null,
                     lengthMm: specs?.lengthMm ?? part.lengthMm ?? null,
                     widthMm: specs?.widthMm ?? part.widthMm ?? null,
                     heightMm: specs?.heightMm ?? part.heightMm ?? null,
+                    volumeCm3: specs?.volumeCm3 ?? (part as any).volumeCm3 ?? null,
                     material: specs?.material ?? part.material ?? '',
                     color: specs?.color ?? part.color ?? '',
                     // Procurement: prefer nested planning, fallback to root
+                    primarySupplierId: (part as any).partSuppliers?.[0]?.supplierId ?? (part as any).primarySupplierId ?? null,
                     makeOrBuy: (planning?.makeOrBuy ?? part.makeOrBuy ?? 'BUY') as 'MAKE' | 'BUY' | 'BOTH',
                     procurementType: planning?.procurementType ?? part.procurementType ?? '',
+                    buyerCode: planning?.buyerCode ?? (part as any).buyerCode ?? null,
                     leadTimeDays: planning?.leadTimeDays ?? part.leadTimeDays ?? 0,
                     moq: planning?.moq ?? part.moq ?? 1,
                     orderMultiple: planning?.orderMultiple ?? part.orderMultiple ?? null,
+                    standardPack: planning?.standardPack ?? (part as any).standardPack ?? null,
                     // Inventory: prefer nested planning, fallback to root
                     minStockLevel: planning?.minStockLevel ?? part.minStockLevel ?? 0,
                     reorderPoint: planning?.reorderPoint ?? part.reorderPoint ?? 0,
-                    maxStock: planning?.maxStock ?? null, // maxStock ONLY exists in planning
+                    maxStock: planning?.maxStock ?? null,
                     safetyStock: planning?.safetyStock ?? part.safetyStock ?? null,
                     isCritical: part.isCritical ?? false,
                     // Compliance: prefer nested compliance, fallback to root
                     countryOfOrigin: compliance?.countryOfOrigin ?? part.countryOfOrigin ?? '',
+                    hsCode: compliance?.hsCode ?? (part as any).hsCode ?? null,
+                    eccn: compliance?.eccn ?? (part as any).eccn ?? null,
                     ndaaCompliant: compliance?.ndaaCompliant ?? part.ndaaCompliant ?? true,
                     itarControlled: compliance?.itarControlled ?? part.itarControlled ?? false,
                     rohsCompliant: compliance?.rohsCompliant ?? part.rohsCompliant ?? true,
                     reachCompliant: compliance?.reachCompliant ?? part.reachCompliant ?? true,
+                    // Quality Control
+                    lotControl: (part as any).lotControl ?? false,
+                    serialControl: (part as any).serialControl ?? false,
+                    shelfLifeDays: (part as any).shelfLifeDays ?? null,
+                    inspectionRequired: (part as any).inspectionRequired ?? true,
+                    inspectionPlan: (part as any).inspectionPlan ?? null,
+                    aqlLevel: (part as any).aqlLevel ?? null,
+                    certificateRequired: (part as any).certificateRequired ?? false,
                     // Engineering
                     revision: part.revision ?? 'A',
                     revisionDate: part.revisionDate ? new Date(part.revisionDate).toISOString().split('T')[0] : null,
                     drawingNumber: specs?.drawingNumber ?? part.drawingNumber ?? '',
+                    drawingUrl: specs?.drawingUrl ?? (part as any).drawingUrl ?? null,
+                    datasheetUrl: specs?.datasheetUrl ?? (part as any).datasheetUrl ?? null,
                     manufacturer: specs?.manufacturer ?? part.manufacturer ?? '',
                     manufacturerPn: specs?.manufacturerPn ?? part.manufacturerPn ?? '',
                     lifecycleStatus: (part.lifecycleStatus ?? 'ACTIVE') as PartFormData['lifecycleStatus'],
@@ -362,6 +436,19 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, part, form]);
 
+    // Fetch suppliers list when dialog opens
+    useEffect(() => {
+        if (open) {
+            fetch('/api/suppliers?limit=100')
+                .then(res => res.json())
+                .then(result => {
+                    const items = result.data || result.items || [];
+                    setSuppliers(items.map((s: any) => ({ id: s.id, name: s.name, code: s.code })));
+                })
+                .catch(err => console.error('Failed to fetch suppliers:', err));
+        }
+    }, [open]);
+
     return (
         <>
         <FormModal
@@ -391,33 +478,33 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                         Hủy
                     </Button>
                     <div className="flex gap-2">
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => {
-                                setCloseAfterSave(false);
-                                form.handleSubmit(handleSubmitWithImpactCheck)();
-                            }}
-                            disabled={isSubmitting || changeImpact.loading}
-                        >
-                            {(isSubmitting || changeImpact.loading) && !closeAfterSave && (
-                                <Save className="h-4 w-4 mr-1 animate-spin" />
-                            )}
-                            Lưu
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => {
-                                setCloseAfterSave(true);
-                                form.handleSubmit(handleSubmitWithImpactCheck)();
-                            }}
-                            disabled={isSubmitting || changeImpact.loading}
-                        >
-                            {(isSubmitting || changeImpact.loading) && closeAfterSave && (
-                                <Save className="h-4 w-4 mr-1 animate-spin" />
-                            )}
-                            Lưu & Đóng
-                        </Button>
+                        {!isFormComplete ? (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={handleDraftSave}
+                                disabled={!canSaveDraft || isSubmitting || changeImpact.loading}
+                            >
+                                {(isSubmitting || changeImpact.loading) && (
+                                    <FilePenLine className="h-4 w-4 mr-1 animate-spin" />
+                                )}
+                                Lưu nháp
+                            </Button>
+                        ) : (
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    setCloseAfterSave(true);
+                                    form.handleSubmit(handleSubmitWithImpactCheck)();
+                                }}
+                                disabled={isSubmitting || changeImpact.loading}
+                            >
+                                {(isSubmitting || changeImpact.loading) && (
+                                    <Save className="h-4 w-4 mr-1 animate-spin" />
+                                )}
+                                Lưu & Đóng
+                            </Button>
+                        )}
                     </div>
                 </div>
             }
@@ -430,14 +517,14 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                             <div className="mb-3 flex items-center gap-2">
                                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Part da luu: {savedPartId}
+                                    Part đã lưu: {savedPartId}
                                 </Badge>
                                 <span className="text-sm text-muted-foreground">
-                                    Tiep tuc nhap cac tab khac
+                                    Tiếp tục nhập các tab khác
                                 </span>
                             </div>
                         )}
-                        <TabsList className="grid grid-cols-5 w-full dark:bg-slate-800">
+                        <TabsList className="grid grid-cols-6 w-full dark:bg-slate-800">
                             <TabsTrigger value="basic">
                                 Cơ bản{dirtyTabs.includes('basic') ? ' *' : ''}
                             </TabsTrigger>
@@ -449,6 +536,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                             </TabsTrigger>
                             <TabsTrigger value="procurement">
                                 Mua hàng{dirtyTabs.includes('procurement') ? ' *' : ''}
+                            </TabsTrigger>
+                            <TabsTrigger value="quality">
+                                Chất lượng{dirtyTabs.includes('quality') ? ' *' : ''}
                             </TabsTrigger>
                             <TabsTrigger value="compliance">
                                 Tuân thủ{dirtyTabs.includes('compliance') ? ' *' : ''}
@@ -561,6 +651,271 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                 />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="standardCost"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Giá chuẩn (USD)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="averageCost"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Giá trung bình (USD)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="landedCost"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Giá nhập kho (USD)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="freightPercent"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Cước vận chuyển (%)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="dutyPercent"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Thuế nhập khẩu (%)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="overheadPercent"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Chi phí gián tiếp (%)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Chiết khấu theo SL (Price Breaks)</label>
+                                <div className="grid grid-cols-6 gap-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakQty1"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="SL 1"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakCost1"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        allowDecimal={true}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Giá 1"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakQty2"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="SL 2"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakCost2"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        allowDecimal={true}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Giá 2"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakQty3"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="SL 3"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="priceBreakCost3"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl>
+                                                    <NumberInput
+                                                        min={0}
+                                                        allowDecimal={true}
+                                                        emptyValue={null}
+                                                        value={field.value}
+                                                        onChange={field.onChange}
+                                                        placeholder="Giá 3"
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="subCategory"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Danh mục phụ</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Ví dụ: IC, Resistor..." {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="partType"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Loại Part</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Ví dụ: SMD, Through-hole..." {...field} value={field.value || ''} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -699,19 +1054,41 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 />
                             </div>
 
-                            <FormField
-                                control={form.control}
-                                name="color"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Màu sắc</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Black, White, Silver..." {...field} value={field.value || ''} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="volumeCm3"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Thể tích (cm³)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    allowDecimal={true}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Màu sắc</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Black, White, Silver..." {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             {/* Tab-level actions */}
                             <div className="flex justify-end gap-2 pt-4 border-t">
@@ -776,6 +1153,36 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="drawingUrl"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Link bản vẽ</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="https://..." {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="datasheetUrl"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Link Datasheet</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="https://..." {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <FormField
@@ -851,7 +1258,36 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
                         {/* Procurement Tab */}
                         <TabsContent value="procurement" className="space-y-4 mt-4">
-                            <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="primarySupplierId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nhà cung cấp chính</FormLabel>
+                                        <Select
+                                            onValueChange={(val) => field.onChange(val === '__none__' ? null : val)}
+                                            value={field.value || '__none__'}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Chọn nhà cung cấp..." />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="__none__">-- Không chọn --</SelectItem>
+                                                {suppliers.map((s) => (
+                                                    <SelectItem key={s.id} value={s.id}>
+                                                        {s.code} - {s.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="grid grid-cols-3 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="makeOrBuy"
@@ -877,6 +1313,36 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
                                 <FormField
                                     control={form.control}
+                                    name="procurementType"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Loại mua hàng</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="STOCK, MTO..." {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="buyerCode"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mã người mua</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Buyer code" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
                                     name="leadTimeDays"
                                     render={({ field }) => (
                                         <FormItem>
@@ -885,6 +1351,25 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                 <NumberInput
                                                     min={0}
                                                     emptyValue={0}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="standardPack"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Đóng gói tiêu chuẩn</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={1}
+                                                    emptyValue={null}
                                                     value={field.value}
                                                     onChange={field.onChange}
                                                 />
@@ -1031,6 +1516,139 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                             </div>
                         </TabsContent>
 
+                        {/* Quality Control Tab */}
+                        <TabsContent value="quality" className="space-y-4 mt-4">
+                            <div className="space-y-3">
+                                <FormField
+                                    control={form.control}
+                                    name="lotControl"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <div className="space-y-0.5">
+                                                <FormLabel>Kiểm soát Lot</FormLabel>
+                                                <FormDescription>Yêu cầu theo dõi theo lô</FormDescription>
+                                            </div>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="serialControl"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <div className="space-y-0.5">
+                                                <FormLabel>Kiểm soát Serial</FormLabel>
+                                                <FormDescription>Yêu cầu theo dõi số serial</FormDescription>
+                                            </div>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="inspectionRequired"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <div className="space-y-0.5">
+                                                <FormLabel>Yêu cầu kiểm tra</FormLabel>
+                                                <FormDescription>Part cần kiểm tra chất lượng khi nhận</FormDescription>
+                                            </div>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="certificateRequired"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <div className="space-y-0.5">
+                                                <FormLabel>Yêu cầu chứng chỉ</FormLabel>
+                                                <FormDescription>Part cần chứng chỉ kèm theo</FormDescription>
+                                            </div>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="shelfLifeDays"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Hạn sử dụng (ngày)</FormLabel>
+                                            <FormControl>
+                                                <NumberInput
+                                                    min={0}
+                                                    emptyValue={null}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="inspectionPlan"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Kế hoạch kiểm tra</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="IP-001" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="aqlLevel"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mức AQL</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="II" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormDescription>Acceptable Quality Level</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+
+                            {/* Tab-level actions */}
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => resetTab('quality')}
+                                    disabled={!isTabDirty('quality') || isSubmitting}
+                                >
+                                    <RotateCcw className="h-4 w-4 mr-1" />
+                                    Reset Tab
+                                </Button>
+                            </div>
+                        </TabsContent>
+
                         {/* Compliance Tab */}
                         <TabsContent value="compliance" className="space-y-4 mt-4">
                             <FormField
@@ -1056,6 +1674,38 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     </FormItem>
                                 )}
                             />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="hsCode"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Mã HS</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="8542.31" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormDescription>Harmonized System Code</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="eccn"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>ECCN</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="EAR99" {...field} value={field.value || ''} />
+                                            </FormControl>
+                                            <FormDescription>Export Control Classification</FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <div className="space-y-3">
                                 <FormField

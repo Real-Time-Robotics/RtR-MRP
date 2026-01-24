@@ -104,7 +104,7 @@ export default function NewInProcessInspectionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tạo In-Process Inspection"
+        title="Tạo phiếu kiểm tra trong sản xuất"
         description="Kiểm tra chất lượng trong quá trình sản xuất"
         backHref="/quality/in-process"
       />

@@ -352,6 +352,7 @@ export const PartQuerySchema = BaseQuerySchema.extend({
   makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']).optional(),
   ndaaCompliant: z.enum(['true', 'false']).optional(),
   includeRelations: z.enum(['true', 'false']).optional(),
+  supplierId: z.string().max(50).optional(),
 });
 
 export const PartCreateSchema = z.object({
@@ -416,6 +417,7 @@ export const PartCreateSchema = z.object({
   serialControl: z.preprocess((v) => v ?? false, z.boolean()),
   shelfLifeDays: z.number().int().min(0).nullish(),
   inspectionRequired: z.preprocess((v) => v ?? true, z.boolean()),
+  inspectionPlan: z.string().max(100).nullish(),
   aqlLevel: z.string().max(10).nullish(),
   certificateRequired: z.preprocess((v) => v ?? false, z.boolean()),
   rohsCompliant: z.preprocess((v) => v ?? true, z.boolean()),
@@ -423,6 +425,8 @@ export const PartCreateSchema = z.object({
   // Additional fields for full compatibility with Update API
   revisionDate: z.string().nullish(), // ISO date string from frontend
   isCritical: z.preprocess((v) => v ?? false, z.boolean()),
+  // Supplier
+  primarySupplierId: z.string().max(50).nullish(),
 });
 
 // =============================================================================

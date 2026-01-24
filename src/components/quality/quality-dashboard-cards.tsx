@@ -51,7 +51,7 @@ export function QualityDashboardCards({
             )}
           </div>
           <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-            <TrendingUp className="h-6 w-6 text-green-600" />
+            <TrendingUp className="h-6 w-6 text-green-700" />
           </div>
         </div>
       </Card>
@@ -63,7 +63,7 @@ export function QualityDashboardCards({
             <p className="text-2xl font-bold">{pendingInspections}</p>
           </div>
           <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-            <ClipboardCheck className="h-6 w-6 text-blue-600" />
+            <ClipboardCheck className="h-6 w-6 text-blue-700" />
           </div>
         </div>
       </Card>
@@ -75,7 +75,7 @@ export function QualityDashboardCards({
             <p className="text-2xl font-bold text-amber-600">{openNCRs}</p>
           </div>
           <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-            <AlertTriangle className="h-6 w-6 text-amber-600" />
+            <AlertTriangle className="h-6 w-6 text-amber-700" />
           </div>
         </div>
       </Card>
@@ -87,7 +87,7 @@ export function QualityDashboardCards({
             <p className="text-2xl font-bold text-purple-600">{openCAPAs}</p>
           </div>
           <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-            <Wrench className="h-6 w-6 text-purple-600" />
+            <Wrench className="h-6 w-6 text-purple-700" />
           </div>
         </div>
       </Card>

@@ -6,7 +6,10 @@ import { z } from "zod";
 
 // Validation schema for Inspection creation
 const InspectionCreateSchema = z.object({
-  type: z.enum(["receiving", "in_process", "final"]),
+  type: z.preprocess(
+    (v) => (typeof v === 'string' ? v.toUpperCase() : v),
+    z.enum(["RECEIVING", "IN_PROCESS", "FINAL"])
+  ),
   planId: z.string().optional().nullable(),
   partId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),

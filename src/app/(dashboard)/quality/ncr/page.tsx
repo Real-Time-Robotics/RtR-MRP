@@ -62,13 +62,13 @@ export default function NCRListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Non-Conformance Reports"
-        description="Track and manage quality non-conformances"
+        title="Báo cáo không phù hợp (NCR)"
+        description="Theo dõi và quản lý các lỗi chất lượng"
         actions={
           <Button asChild>
             <Link href="/quality/ncr/new">
               <Plus className="h-4 w-4 mr-2" />
-              Create NCR
+              Tạo NCR
             </Link>
           </Button>
         }
@@ -79,22 +79,22 @@ export default function NCRListPage() {
         <div className="flex items-center gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="under_review">Under Review</SelectItem>
-              <SelectItem value="pending_disposition">Pending Disposition</SelectItem>
-              <SelectItem value="disposition_approved">Approved</SelectItem>
-              <SelectItem value="in_rework">In Rework</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="open">Mở</SelectItem>
+              <SelectItem value="under_review">Đang xem xét</SelectItem>
+              <SelectItem value="pending_disposition">Chờ xử lý</SelectItem>
+              <SelectItem value="disposition_approved">Đã duyệt</SelectItem>
+              <SelectItem value="in_rework">Đang sửa</SelectItem>
+              <SelectItem value="completed">Hoàn thành</SelectItem>
+              <SelectItem value="closed">Đã đóng</SelectItem>
             </SelectContent>
           </Select>
 
           <Badge variant="secondary" className="ml-auto">
-            {ncrs.length} NCRs
+            {ncrs.length} NCR
           </Badge>
         </div>
       </Card>
@@ -108,8 +108,8 @@ export default function NCRListPage() {
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
             <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No NCRs found</p>
-            <p className="text-sm">NCRs will appear here when quality issues are reported</p>
+            <p className="text-lg font-medium">Chưa có NCR nào</p>
+            <p className="text-sm">NCR sẽ hiển thị khi có báo cáo lỗi chất lượng</p>
           </div>
         </Card>
       ) : (

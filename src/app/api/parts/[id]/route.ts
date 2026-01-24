@@ -77,7 +77,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Part not found" }, { status: 404 });
     }
 
-    return NextResponse.json(part);
+    // Map primary supplier from partSuppliers relation for detail page
+    const primarySupplier = part.partSuppliers?.[0]?.supplier ?? null;
+
+    return NextResponse.json({
+      ...part,
+      supplier: primarySupplier,
+    });
   } catch (error) {
     console.error("Failed to fetch part:", error);
     return NextResponse.json(
@@ -122,6 +128,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         // ROOT LEVEL FIELDS - Keep in sync with nested relations for backwards compatibility
         unitCost: data.unitCost ?? 0,
+        standardCost: data.standardCost,
+        averageCost: data.averageCost,
+        landedCost: data.landedCost,
+        freightPercent: data.freightPercent,
+        dutyPercent: data.dutyPercent,
+        overheadPercent: data.overheadPercent,
+        priceBreakQty1: data.priceBreakQty1,
+        priceBreakCost1: data.priceBreakCost1,
+        priceBreakQty2: data.priceBreakQty2,
+        priceBreakCost2: data.priceBreakCost2,
+        priceBreakQty3: data.priceBreakQty3,
+        priceBreakCost3: data.priceBreakCost3,
         weightKg: data.weightKg,
         lengthMm: data.lengthMm,
         widthMm: data.widthMm,
@@ -147,6 +165,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         revision: data.revision ?? "A",
         revisionDate: data.revisionDate ? new Date(data.revisionDate) : undefined,
         drawingNumber: data.drawingNumber,
+        drawingUrl: data.drawingUrl,
+        datasheetUrl: data.datasheetUrl,
+        subCategory: data.subCategory,
+        partType: data.partType,
+        buyerCode: data.buyerCode,
+        standardPack: data.standardPack,
+        hsCode: data.hsCode,
+        eccn: data.eccn,
+        lotControl: data.lotControl,
+        serialControl: data.serialControl,
+        shelfLifeDays: data.shelfLifeDays,
+        inspectionRequired: data.inspectionRequired,
+        inspectionPlan: data.inspectionPlan,
+        aqlLevel: data.aqlLevel,
+        certificateRequired: data.certificateRequired,
 
         status: "active",
         lifecycleStatus: data.lifecycleStatus,
@@ -310,7 +343,41 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    return NextResponse.json(part);
+    // Update primary supplier if primarySupplierId is provided
+    if (data.primarySupplierId !== undefined) {
+      // Remove existing preferred supplier
+      await prisma.partSupplier.deleteMany({
+        where: { partId: id, isPreferred: true },
+      });
+
+      // Create new preferred supplier if not null
+      if (data.primarySupplierId) {
+        await prisma.partSupplier.create({
+          data: {
+            partId: id,
+            supplierId: data.primarySupplierId,
+            isPreferred: true,
+            unitPrice: data.unitCost ?? 0,
+            leadTimeDays: data.leadTimeDays ?? 0,
+            minOrderQty: data.moq ?? 1,
+          },
+        });
+      }
+    }
+
+    // Re-fetch with updated suppliers
+    const updatedPart = await prisma.part.findUnique({
+      where: { id },
+      include: {
+        costs: true,
+        planning: true,
+        specs: true,
+        compliance: true,
+        partSuppliers: { include: { supplier: true } },
+      },
+    });
+
+    return NextResponse.json(updatedPart);
   } catch (error) {
     console.error("Failed to update part:", error);
     return NextResponse.json(

@@ -19,10 +19,10 @@ interface KPICardProps {
 }
 
 const variantStyles = {
-  default: "bg-primary/10 text-primary",
-  success: "bg-green-100 text-green-600",
-  warning: "bg-amber-100 text-amber-600",
-  danger: "bg-red-100 text-red-600",
+  default: "bg-primary/20 text-primary",
+  success: "bg-green-100 text-green-700",
+  warning: "bg-amber-100 text-amber-700",
+  danger: "bg-red-100 text-red-700",
 };
 
 const iconMap = {

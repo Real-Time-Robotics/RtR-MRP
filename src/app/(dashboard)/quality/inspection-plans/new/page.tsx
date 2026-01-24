@@ -25,9 +25,9 @@ interface Part {
 }
 
 const TYPE_OPTIONS = [
-  { value: "RECEIVING", label: "Receiving Inspection" },
-  { value: "IN_PROCESS", label: "In-Process Inspection" },
-  { value: "FINAL", label: "Final Inspection" },
+  { value: "RECEIVING", label: "Kiểm tra nhận hàng" },
+  { value: "IN_PROCESS", label: "Kiểm tra trong SX" },
+  { value: "FINAL", label: "Kiểm tra cuối cùng" },
 ];
 
 export default function NewInspectionPlanPage() {

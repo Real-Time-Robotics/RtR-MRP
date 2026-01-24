@@ -62,9 +62,9 @@ export default function FinalInspectionPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "passed":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Passed</Badge>;
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Đạt</Badge>;
       case "failed":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Không đạt</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -73,14 +73,14 @@ export default function FinalInspectionPage() {
   const columns: Column<FinalInspection>[] = useMemo(() => [
     {
       key: 'workOrderNumber',
-      header: 'Work Order',
+      header: 'Lệnh SX',
       width: '120px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {
       key: 'product',
-      header: 'Product',
+      header: 'Sản phẩm',
       width: '200px',
       render: (_, row) => (
         <div>
@@ -91,26 +91,26 @@ export default function FinalInspectionPage() {
     },
     {
       key: 'serialNumber',
-      header: 'Serial Number',
+      header: 'Số serial',
       width: '140px',
       sortable: true,
       render: (value) => <span className="font-mono">{value}</span>,
     },
     {
       key: 'inspectedBy',
-      header: 'Inspector',
+      header: 'Người KT',
       width: '120px',
       sortable: true,
     },
     {
       key: 'inspectionDate',
-      header: 'Date',
+      header: 'Ngày',
       width: '100px',
       sortable: true,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       width: '100px',
       align: 'center',
       sortable: true,
@@ -118,16 +118,16 @@ export default function FinalInspectionPage() {
     },
     {
       key: 'certificateIssued',
-      header: 'Certificate',
+      header: 'Chứng nhận',
       width: '100px',
       align: 'center',
       render: (value) => (
         value ? (
           <Badge className="bg-purple-100 text-purple-800">
-            <Award className="h-3 w-3 mr-1" />Issued
+            <Award className="h-3 w-3 mr-1" />Đã cấp
           </Badge>
         ) : (
-          <Badge variant="secondary">Pending</Badge>
+          <Badge variant="secondary">Chờ</Badge>
         )
       ),
     },
@@ -136,13 +136,13 @@ export default function FinalInspectionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Final Inspection"
-        description="Quality inspections before product shipment"
+        title="Kiểm tra cuối cùng"
+        description="Kiểm tra chất lượng trước khi xuất hàng"
         actions={
           <Button asChild>
             <Link href="/quality/final/new">
               <Plus className="h-4 w-4 mr-2" />
-              New Inspection
+              Tạo mới
             </Link>
           </Button>
         }
@@ -156,7 +156,7 @@ export default function FinalInspectionPage() {
               <ClipboardCheck className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-2xl font-bold">18</p>
-                <p className="text-sm text-muted-foreground">Total Inspections</p>
+                <p className="text-sm text-muted-foreground">Tổng phiếu</p>
               </div>
             </div>
           </CardContent>
@@ -167,7 +167,7 @@ export default function FinalInspectionPage() {
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold">16</p>
-                <p className="text-sm text-muted-foreground">Passed</p>
+                <p className="text-sm text-muted-foreground">Đạt</p>
               </div>
             </div>
           </CardContent>
@@ -178,7 +178,7 @@ export default function FinalInspectionPage() {
               <XCircle className="h-8 w-8 text-red-500" />
               <div>
                 <p className="text-2xl font-bold">2</p>
-                <p className="text-sm text-muted-foreground">Failed</p>
+                <p className="text-sm text-muted-foreground">Không đạt</p>
               </div>
             </div>
           </CardContent>
@@ -189,7 +189,7 @@ export default function FinalInspectionPage() {
               <Award className="h-8 w-8 text-purple-500" />
               <div>
                 <p className="text-2xl font-bold">88.9%</p>
-                <p className="text-sm text-muted-foreground">Pass Rate</p>
+                <p className="text-sm text-muted-foreground">Tỷ lệ đạt</p>
               </div>
             </div>
           </CardContent>
@@ -199,14 +199,14 @@ export default function FinalInspectionPage() {
       {/* Inspections Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Final Inspections</CardTitle>
+          <CardTitle>Phiếu kiểm tra gần đây</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <DataTable
             data={inspections}
             columns={columns}
             keyField="id"
-            emptyMessage="No inspections found"
+            emptyMessage="Chưa có phiếu kiểm tra"
             pagination
             pageSize={20}
             searchable={false}

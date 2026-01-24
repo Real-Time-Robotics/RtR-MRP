@@ -98,10 +98,10 @@ export default function CAPAListPage() {
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="open">Open</SelectItem>
               <SelectItem value="root_cause_analysis">RCA</SelectItem>
               <SelectItem value="action_planning">Planning</SelectItem>

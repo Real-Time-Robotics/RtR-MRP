@@ -48,7 +48,7 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
               {kpis.pendingOrdersValue}
             </p>
           </div>
-          <div className="h-10 w-10 flex items-center justify-center bg-info-cyan/10 dark:bg-info-cyan-dim">
+          <div className="h-10 w-10 flex items-center justify-center bg-info-cyan/20 dark:bg-info-cyan-dim">
             <Package className="h-5 w-5 text-info-cyan" />
           </div>
         </div>
@@ -106,7 +106,7 @@ export function DashboardKPICards({ kpis }: DashboardContentProps) {
               {kpis.activePOsValue}
             </p>
           </div>
-          <div className="h-10 w-10 flex items-center justify-center bg-info-cyan/10 dark:bg-info-cyan-dim">
+          <div className="h-10 w-10 flex items-center justify-center bg-info-cyan/20 dark:bg-info-cyan-dim">
             <ClipboardList className="h-5 w-5 text-info-cyan" />
           </div>
         </div>

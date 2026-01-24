@@ -62,11 +62,11 @@ export default function InProcessInspectionPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "passed":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Passed</Badge>;
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Đạt</Badge>;
       case "failed":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Failed</Badge>;
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Không đạt</Badge>;
       case "in_progress":
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />In Progress</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Đang KT</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -75,7 +75,7 @@ export default function InProcessInspectionPage() {
   const columns: Column<Inspection>[] = useMemo(() => [
     {
       key: 'workOrderNumber',
-      header: 'Work Order',
+      header: 'Lệnh SX',
       width: '120px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
@@ -93,32 +93,32 @@ export default function InProcessInspectionPage() {
     },
     {
       key: 'operation',
-      header: 'Operation',
+      header: 'Công đoạn',
       width: '100px',
       sortable: true,
     },
     {
       key: 'quantity',
-      header: 'Quantity',
+      header: 'Số lượng',
       width: '80px',
       align: 'center',
       sortable: true,
     },
     {
       key: 'inspectedBy',
-      header: 'Inspector',
+      header: 'Người kiểm tra',
       width: '120px',
       sortable: true,
     },
     {
       key: 'inspectionDate',
-      header: 'Date',
+      header: 'Ngày',
       width: '100px',
       sortable: true,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: 'Trạng thái',
       width: '110px',
       align: 'center',
       sortable: true,
@@ -129,13 +129,13 @@ export default function InProcessInspectionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="In-Process Inspection"
-        description="Quality inspections during manufacturing operations"
+        title="Kiểm tra trong sản xuất"
+        description="Kiểm tra chất lượng trong quá trình sản xuất"
         actions={
           <Button asChild>
             <Link href="/quality/in-process/new">
               <Plus className="h-4 w-4 mr-2" />
-              New Inspection
+              Tạo mới
             </Link>
           </Button>
         }
@@ -149,7 +149,7 @@ export default function InProcessInspectionPage() {
               <ClipboardCheck className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-2xl font-bold">24</p>
-                <p className="text-sm text-muted-foreground">Total Inspections</p>
+                <p className="text-sm text-muted-foreground">Tổng phiếu</p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +160,7 @@ export default function InProcessInspectionPage() {
               <CheckCircle className="h-8 w-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold">20</p>
-                <p className="text-sm text-muted-foreground">Passed</p>
+                <p className="text-sm text-muted-foreground">Đạt</p>
               </div>
             </div>
           </CardContent>
@@ -171,7 +171,7 @@ export default function InProcessInspectionPage() {
               <XCircle className="h-8 w-8 text-red-500" />
               <div>
                 <p className="text-2xl font-bold">2</p>
-                <p className="text-sm text-muted-foreground">Failed</p>
+                <p className="text-sm text-muted-foreground">Không đạt</p>
               </div>
             </div>
           </CardContent>
@@ -182,7 +182,7 @@ export default function InProcessInspectionPage() {
               <Clock className="h-8 w-8 text-yellow-500" />
               <div>
                 <p className="text-2xl font-bold">2</p>
-                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-sm text-muted-foreground">Đang kiểm tra</p>
               </div>
             </div>
           </CardContent>
@@ -192,14 +192,14 @@ export default function InProcessInspectionPage() {
       {/* Inspections Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent In-Process Inspections</CardTitle>
+          <CardTitle>Phiếu kiểm tra gần đây</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <DataTable
             data={inspections}
             columns={columns}
             keyField="id"
-            emptyMessage="No inspections found"
+            emptyMessage="Chưa có phiếu kiểm tra"
             pagination
             pageSize={20}
             searchable={false}

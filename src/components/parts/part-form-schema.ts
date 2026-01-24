@@ -48,21 +48,41 @@ export const partSchema = z.object({
     category: z.enum(CATEGORY_ENUM, { message: 'Danh mục là bắt buộc' }),
     unit: z.string().min(1, 'Đơn vị là bắt buộc'),
     unitCost: z.coerce.number().min(0, 'Giá phải >= 0'),
+    standardCost: z.coerce.number().min(0).optional().nullable(),
+    averageCost: z.coerce.number().min(0).optional().nullable(),
+    landedCost: z.coerce.number().min(0).optional().nullable(),
+    freightPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+    dutyPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+    overheadPercent: z.coerce.number().min(0).max(100).optional().nullable(),
+    priceBreakQty1: z.coerce.number().int().min(0).optional().nullable(),
+    priceBreakCost1: z.coerce.number().min(0).optional().nullable(),
+    priceBreakQty2: z.coerce.number().int().min(0).optional().nullable(),
+    priceBreakCost2: z.coerce.number().min(0).optional().nullable(),
+    priceBreakQty3: z.coerce.number().int().min(0).optional().nullable(),
+    priceBreakCost3: z.coerce.number().min(0).optional().nullable(),
+
+    // Basic (additional)
+    subCategory: z.string().max(100).optional().nullable(),
+    partType: z.string().max(50).optional().nullable(),
 
     // Physical
     weightKg: z.coerce.number().min(0).optional().nullable(),
     lengthMm: z.coerce.number().min(0).optional().nullable(),
     widthMm: z.coerce.number().min(0).optional().nullable(),
     heightMm: z.coerce.number().min(0).optional().nullable(),
+    volumeCm3: z.coerce.number().min(0).optional().nullable(),
     material: z.string().max(100).optional().nullable(),
     color: z.string().max(50).optional().nullable(),
 
     // Procurement
+    primarySupplierId: z.string().optional().nullable(),
     makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']),
     procurementType: z.string().optional().nullable(),
+    buyerCode: z.string().max(50).optional().nullable(),
     leadTimeDays: z.coerce.number().int().min(0),
     moq: z.coerce.number().int().min(1),
     orderMultiple: z.coerce.number().int().min(1).optional().nullable(),
+    standardPack: z.coerce.number().int().min(1).optional().nullable(),
 
     // Inventory
     minStockLevel: z.coerce.number().int().min(0),
@@ -73,15 +93,28 @@ export const partSchema = z.object({
 
     // Compliance
     countryOfOrigin: z.string().max(50).optional().nullable(),
+    hsCode: z.string().max(20).optional().nullable(),
+    eccn: z.string().max(20).optional().nullable(),
     ndaaCompliant: z.boolean(),
     itarControlled: z.boolean(),
     rohsCompliant: z.boolean(),
     reachCompliant: z.boolean(),
 
+    // Quality Control
+    lotControl: z.boolean(),
+    serialControl: z.boolean(),
+    shelfLifeDays: z.coerce.number().int().min(0).optional().nullable(),
+    inspectionRequired: z.boolean(),
+    inspectionPlan: z.string().max(100).optional().nullable(),
+    aqlLevel: z.string().max(20).optional().nullable(),
+    certificateRequired: z.boolean(),
+
     // Engineering
     revision: z.string().max(20),
     revisionDate: z.string().optional().nullable(), // ISO date string
     drawingNumber: z.string().max(100).optional().nullable(),
+    drawingUrl: z.string().max(500).optional().nullable(),
+    datasheetUrl: z.string().max(500).optional().nullable(),
     manufacturer: z.string().max(100).optional().nullable(),
     manufacturerPn: z.string().max(100).optional().nullable(),
     lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']),
@@ -95,23 +128,41 @@ export const defaultPartValues: PartFormData = {
     name: '',
     description: '',
     category: 'COMPONENT',
+    subCategory: null,
+    partType: null,
     unit: 'EA',
     unitCost: 0,
+    standardCost: null,
+    averageCost: null,
+    landedCost: null,
+    freightPercent: null,
+    dutyPercent: null,
+    overheadPercent: null,
+    priceBreakQty1: null,
+    priceBreakCost1: null,
+    priceBreakQty2: null,
+    priceBreakCost2: null,
+    priceBreakQty3: null,
+    priceBreakCost3: null,
 
     // Physical
     weightKg: null,
     lengthMm: null,
     widthMm: null,
     heightMm: null,
+    volumeCm3: null,
     material: null,
     color: null,
 
     // Procurement
+    primarySupplierId: null,
     makeOrBuy: 'BUY',
     procurementType: null,
+    buyerCode: null,
     leadTimeDays: 0,
     moq: 1,
     orderMultiple: null,
+    standardPack: null,
 
     // Inventory
     minStockLevel: 0,
@@ -122,15 +173,28 @@ export const defaultPartValues: PartFormData = {
 
     // Compliance
     countryOfOrigin: null,
+    hsCode: null,
+    eccn: null,
     ndaaCompliant: true,
     itarControlled: false,
     rohsCompliant: true,
     reachCompliant: true,
 
+    // Quality Control
+    lotControl: false,
+    serialControl: false,
+    shelfLifeDays: null,
+    inspectionRequired: true,
+    inspectionPlan: null,
+    aqlLevel: null,
+    certificateRequired: false,
+
     // Engineering
     revision: 'A',
     revisionDate: null,
     drawingNumber: null,
+    drawingUrl: null,
+    datasheetUrl: null,
     manufacturer: null,
     manufacturerPn: null,
     lifecycleStatus: 'ACTIVE',

@@ -99,7 +99,7 @@ function NavItem({
       {/* Icon */}
       <span className={cn(
         'flex-shrink-0 transition-colors',
-        isActive ? 'text-info-cyan' : 'text-gray-500 dark:text-mrp-text-muted group-hover:text-info-cyan'
+        isActive ? 'text-info-cyan' : 'text-gray-600 dark:text-mrp-text-muted group-hover:text-info-cyan'
       )}>
         {item.icon}
       </span>
@@ -109,8 +109,8 @@ function NavItem({
         <>
           {/* COMPACT: text-xs → text-[11px] */}
           <span className={cn(
-            'flex-1 text-[11px] font-medium font-mono tracking-wider truncate',
-            isActive ? 'text-gray-900 dark:text-mrp-text-primary' : 'text-gray-600 dark:text-mrp-text-secondary group-hover:text-gray-900 dark:group-hover:text-mrp-text-primary'
+            'flex-1 text-[11px] font-semibold font-mono tracking-wider truncate',
+            isActive ? 'text-gray-900 dark:text-mrp-text-primary' : 'text-gray-700 dark:text-mrp-text-secondary group-hover:text-gray-900 dark:group-hover:text-mrp-text-primary'
           )}>
             {language === 'vi' ? item.labelVi : item.label}
           </span>

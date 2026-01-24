@@ -66,13 +66,13 @@ export interface KPICardProps {
 }
 
 const iconColors = {
-  primary: 'bg-primary-100 text-primary-600',
-  success: 'bg-success-100 text-success-600',
-  warning: 'bg-warning-100 text-warning-600',
-  danger: 'bg-danger-100 text-danger-600',
-  info: 'bg-info-100 text-info-600',
-  purple: 'bg-purple-100 text-purple-600',
-  cyan: 'bg-cyan-100 text-cyan-600',
+  primary: 'bg-primary-100 text-primary-700',
+  success: 'bg-success-100 text-success-700',
+  warning: 'bg-warning-100 text-warning-700',
+  danger: 'bg-danger-100 text-danger-700',
+  info: 'bg-info-100 text-info-700',
+  purple: 'bg-purple-100 text-purple-700',
+  cyan: 'bg-cyan-100 text-cyan-700',
 };
 
 const sparklineColors = {

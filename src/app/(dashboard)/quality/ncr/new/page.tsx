@@ -25,29 +25,29 @@ interface Part {
 }
 
 const SOURCE_OPTIONS = [
-  { value: "RECEIVING", label: "Receiving Inspection" },
-  { value: "IN_PROCESS", label: "In-Process Inspection" },
-  { value: "FINAL", label: "Final Inspection" },
-  { value: "CUSTOMER", label: "Customer Complaint" },
-  { value: "INTERNAL", label: "Internal Audit" },
-  { value: "SUPPLIER", label: "Supplier Issue" },
+  { value: "RECEIVING", label: "Kiểm tra nhận hàng" },
+  { value: "IN_PROCESS", label: "Kiểm tra trong SX" },
+  { value: "FINAL", label: "Kiểm tra cuối cùng" },
+  { value: "CUSTOMER", label: "Khiếu nại khách hàng" },
+  { value: "INTERNAL", label: "Kiểm toán nội bộ" },
+  { value: "SUPPLIER", label: "Lỗi nhà cung cấp" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "critical", label: "Critical" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
+  { value: "critical", label: "Nghiêm trọng" },
+  { value: "high", label: "Cao" },
+  { value: "medium", label: "Trung bình" },
+  { value: "low", label: "Thấp" },
 ];
 
 const DEFECT_CATEGORIES = [
-  { value: "DIMENSIONAL", label: "Dimensional" },
-  { value: "VISUAL", label: "Visual/Cosmetic" },
-  { value: "FUNCTIONAL", label: "Functional" },
-  { value: "MATERIAL", label: "Material" },
-  { value: "DOCUMENTATION", label: "Documentation" },
-  { value: "PACKAGING", label: "Packaging" },
-  { value: "OTHER", label: "Other" },
+  { value: "DIMENSIONAL", label: "Kích thước" },
+  { value: "VISUAL", label: "Ngoại quan" },
+  { value: "FUNCTIONAL", label: "Chức năng" },
+  { value: "MATERIAL", label: "Vật liệu" },
+  { value: "DOCUMENTATION", label: "Tài liệu" },
+  { value: "PACKAGING", label: "Đóng gói" },
+  { value: "OTHER", label: "Khác" },
 ];
 
 export default function NewNCRPage() {

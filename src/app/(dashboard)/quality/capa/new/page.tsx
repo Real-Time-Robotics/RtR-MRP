@@ -19,23 +19,23 @@ import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
 
 const TYPE_OPTIONS = [
-  { value: "CORRECTIVE", label: "Corrective Action" },
-  { value: "PREVENTIVE", label: "Preventive Action" },
+  { value: "CORRECTIVE", label: "Hành động khắc phục" },
+  { value: "PREVENTIVE", label: "Hành động phòng ngừa" },
 ];
 
 const SOURCE_OPTIONS = [
-  { value: "NCR", label: "Non-Conformance Report" },
-  { value: "AUDIT", label: "Internal Audit" },
-  { value: "CUSTOMER", label: "Customer Complaint" },
-  { value: "PROCESS", label: "Process Improvement" },
-  { value: "OTHER", label: "Other" },
+  { value: "NCR", label: "Báo cáo NCR" },
+  { value: "AUDIT", label: "Kiểm toán nội bộ" },
+  { value: "CUSTOMER", label: "Khiếu nại khách hàng" },
+  { value: "PROCESS", label: "Cải tiến quy trình" },
+  { value: "OTHER", label: "Khác" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "critical", label: "Critical" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
+  { value: "critical", label: "Nghiêm trọng" },
+  { value: "high", label: "Cao" },
+  { value: "medium", label: "Trung bình" },
+  { value: "low", label: "Thấp" },
 ];
 
 export default function NewCAPAPage() {

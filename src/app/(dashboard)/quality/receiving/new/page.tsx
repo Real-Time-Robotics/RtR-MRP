@@ -86,8 +86,7 @@ export default function NewReceivingInspectionPage() {
       });
 
       if (res.ok) {
-        const inspection = await res.json();
-        router.push(`/quality/receiving/${inspection.id}`);
+        router.push('/quality/receiving');
       } else {
         const error = await res.json();
         alert(error.error || "Failed to create inspection");
@@ -103,7 +102,7 @@ export default function NewReceivingInspectionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tạo Receiving Inspection"
+        title="Tạo phiếu kiểm tra nhận hàng"
         description="Kiểm tra chất lượng nguyên vật liệu nhận về"
         backHref="/quality/receiving"
       />

@@ -66,13 +66,13 @@ export default function ReceivingInspectionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Receiving Inspections"
-        description="Inspect incoming materials from suppliers"
+        title="Kiểm tra nhận hàng"
+        description="Kiểm tra chất lượng nguyên vật liệu nhận từ nhà cung cấp"
         actions={
           <Button asChild>
             <Link href="/quality/receiving/new">
               <Plus className="h-4 w-4 mr-2" />
-              New Inspection
+              Tạo mới
             </Link>
           </Button>
         }
@@ -83,19 +83,19 @@ export default function ReceivingInspectionsPage() {
         <div className="flex items-center gap-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="on_hold">On Hold</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="pending">Chờ xử lý</SelectItem>
+              <SelectItem value="in_progress">Đang kiểm tra</SelectItem>
+              <SelectItem value="completed">Hoàn thành</SelectItem>
+              <SelectItem value="on_hold">Tạm dừng</SelectItem>
             </SelectContent>
           </Select>
 
           <Badge variant="secondary" className="ml-auto">
-            {inspections.length} inspections
+            {inspections.length} phiếu kiểm tra
           </Badge>
         </div>
       </Card>
@@ -109,12 +109,12 @@ export default function ReceivingInspectionsPage() {
         <Card className="p-12">
           <div className="text-center text-muted-foreground">
             <Download className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No receiving inspections found</p>
-            <p className="text-sm">Create an inspection when receiving materials</p>
+            <p className="text-lg font-medium">Chưa có phiếu kiểm tra nhận hàng</p>
+            <p className="text-sm">Tạo phiếu kiểm tra khi nhận nguyên vật liệu</p>
             <Button asChild className="mt-4">
               <Link href="/quality/receiving/new">
                 <Plus className="h-4 w-4 mr-2" />
-                New Inspection
+                Tạo mới
               </Link>
             </Button>
           </div>
