@@ -1,6 +1,132 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-01-21 21:50 (Vietnam Time)
-> **Session:** Dark Mode Fixes + Critical Bug Fixes
+> **Last Updated:** 2026-01-24 10:30 (Vietnam Time)
+> **Session:** UI Contrast + Feature Enhancements + Bug Fixes
+
+---
+
+## 🔥 SESSION 24/01/2026 - UI CONTRAST + FEATURES + FIXES
+
+### Commits
+- `233899c` - fix: Inventory grid scroll not working
+- `95eb36b` - feat: UI contrast improvements, supplier filter, PO auto-number, quality module fixes
+
+### 1. UI Contrast & Boldness Improvements
+**Yêu cầu:** Khách hàng đánh giá giao diện chuyên nghiệp nhưng quá nhạt, cần đậm hơn, sắc nét hơn.
+
+**Thay đổi:**
+| Item | Before | After |
+|------|--------|-------|
+| Body font-weight | 400 | 500 |
+| Heading font-weight | 500-600 | 600-700 |
+| Muted foreground | 35% lightness | 28% lightness |
+| Icon text color | -600 shade | -700 shade |
+| Icon background opacity | 10% | 20% |
+| Button hover | brightness(0.96) | brightness(0.92) |
+| Card hover shadow | opacity 0.08 | opacity 0.15 |
+| Sidebar labels | font-medium, gray-600 | font-semibold, gray-700 |
+
+**Files:**
+- `src/app/globals.css` - CSS variables, icon color overrides, typography enhancements
+- `src/styles/theme.css` - Text/border/shadow contrast values
+- `tailwind.config.ts` - Font weights, box shadows
+- `src/components/dashboard/kpi-card.tsx` - Icon variant colors
+- `src/components/quality/quality-dashboard-cards.tsx` - Icon colors
+- `src/components/mrp/mrp-summary-cards.tsx` - Icon colors
+- `src/components/ui-v2/kpi-card.tsx` - iconColors map
+- `src/components/dashboard/alerts-panel.tsx` - Alert config colors
+- `src/components/dashboard/dashboard-content.tsx` - KPI icon backgrounds
+- `src/components/layout/minimalist-sidebar.tsx` - Sidebar text/icon contrast
+
+### 2. Supplier Dropdown in Part Form
+**Feature:** Thêm dropdown chọn nhà cung cấp chính trong Part form (tab Procurement)
+
+**Logic:**
+- Fetch suppliers từ `/api/suppliers?limit=100` khi dialog mở
+- Tạo PartSupplier relation khi create/update Part
+- `isPreferred: true`, kèm `unitPrice`, `leadTimeDays`, `minOrderQty`
+
+**Files:**
+- `src/components/parts/part-form-dialog.tsx` - UI dropdown + fetch logic
+- `src/app/api/parts/route.ts` (POST) - Create PartSupplier relation
+- `src/app/api/parts/[id]/route.ts` (PUT) - Update preferred supplier
+- `src/lib/validations/additional-schemas.ts` - `primarySupplierId` validation
+
+### 3. PO Received → Inventory Update
+**Feature:** Khi PO status → "received", tự động cộng quantity vào inventory
+
+**Logic:**
+- Tìm/tạo default warehouse
+- Loop qua PO lines → upsert Inventory record (cộng quantity)
+- Tạo LotTransaction audit log cho mỗi line
+
+**File:** `src/app/api/purchase-orders/[id]/route.ts` (PUT)
+
+### 4. PO Auto-Number Format
+**Feature:** PO number tự động theo format `PO-YYYY-NNN` (tuần tự)
+
+**Logic:**
+- Query last PO with prefix `PO-{year}-`
+- Extract sequence → increment → format 3 digits
+- Frontend: placeholder "Tự động (PO-2026-001)"
+
+**Files:**
+- `src/app/api/purchase-orders/route.ts` (POST) - Auto-generation logic
+- `src/components/forms/purchase-order-form.tsx` - Optional PO number field
+
+### 5. PO Part Filter by Supplier
+**Feature:** Khi chọn supplier trong PO form, dropdown Part tự lọc theo supplier đó
+
+**Logic:**
+- `fetchParts(supplierId)` → `/api/parts?supplierId=xxx`
+- API filter: `partSuppliers: { some: { supplierId } }`
+
+**Files:**
+- `src/components/forms/purchase-order-form.tsx` - Watch supplierId, re-fetch parts
+- `src/app/api/parts/route.ts` (GET) - supplierId filter
+- `src/lib/validations/additional-schemas.ts` - PartQuerySchema + supplierId
+
+### 6. Receiving Inspection Fixes
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| Validation error "Dữ liệu không hợp lệ" | Form sends "RECEIVING" (uppercase), schema expects lowercase | `z.preprocess` to uppercase |
+| Detail page 404 | Route `/quality/receiving/[id]` không tồn tại | Created page + API route |
+| React `use()` error | `use(params)` không work trong React version này | Dùng `useParams()` hook |
+| Update failed "completedAt" | Model có `inspectedAt`, không có `completedAt` | Đổi thành `inspectedAt` |
+
+**New Files:**
+- `src/app/(dashboard)/quality/receiving/[id]/page.tsx` - Detail page
+- `src/app/api/quality/inspections/[id]/route.ts` - GET + PUT API
+
+### 7. Vietnamese Localization (Quality Module)
+**Scope:** 14 files, 56+ strings translated from English → Vietnamese
+
+**Pages updated:**
+- in-process/page.tsx, in-process/new/page.tsx
+- final/page.tsx, final/new/page.tsx
+- ncr/page.tsx, ncr/new/page.tsx
+- capa/page.tsx, capa/new/page.tsx
+- certificates/page.tsx
+- inspection-plans/page.tsx, inspection-plans/new/page.tsx
+- receiving/page.tsx, receiving/new/page.tsx
+
+### 8. Inventory Grid Scroll Fix
+**Problem:** Bảng Smart Inventory Grid không cuộn được, hàng bị cắt dưới viewport
+
+**Root Cause:** `maxHeight: calc(100vh - 200px)` không tính đủ header/stats (~370px). Parent `overflow-hidden` cắt content.
+
+**Fix:**
+- DataTable outer: thêm `flex flex-col`
+- Scroll container: `flex-1 min-h-0 overflow-auto` (thay vì hardcoded maxHeight)
+- Thêm `shrink-0` cho title bar, search, status bar, stats cards
+
+**Files:**
+- `src/components/ui-v2/data-table.tsx`
+- `src/components/inventory/inventory-table.tsx`
+
+### 9. Socket Auto-Connect Disabled
+**Problem:** Socket.IO client retry liên tục đến `/api/socket` (404) gây spam console
+
+**Fix:** Đổi `autoConnect` default từ `true` → `false` trong `src/hooks/use-socket.ts`
 
 ---
 
@@ -172,29 +298,43 @@ Claude sẽ đọc file này và nắm được toàn bộ ngữ cảnh để ti
 - Performance thresholds: 15s cho heavy pages
 
 ### Recent Commits
-1. `7f93a0c` - fix(ui): Force reset gradient styles on demo page dark mode
-2. `302b71e` - fix(ui): Fix dark mode text visibility on demo page
-3. `18c0851` - fix(ui): Add dark mode support to landing page
-4. `eb2746b` - fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
-5. `67b86cf` - docs: Update HANDOVER.md with session 21/01 changes
-6. `592a821` - fix(ui): 3 UI improvements - Demo badge, Update popup, Mobile back button
+1. `233899c` - fix: Inventory grid scroll not working
+2. `95eb36b` - feat: UI contrast improvements, supplier filter, PO auto-number, quality module fixes
+3. `f1837aa` - docs: Update HANDOVER-SESSION.md with dark mode fixes
+4. `7f93a0c` - fix(ui): Force reset gradient styles on demo page dark mode
+5. `302b71e` - fix(ui): Fix dark mode text visibility on demo page
+6. `18c0851` - fix(ui): Add dark mode support to landing page
+7. `eb2746b` - fix: Critical bug fixes - Part Form CREATE/UPDATE mode & Leading Zeros
 
 ---
 
 ## ⚠️ PENDING / CẦN THEO DÕI
 
-### 1. Verify Dark Mode Fixes - CẦN TEST
-- **Landing page:** https://rtr-mrp.onrender.com - verify dark mode
-- **Demo page:** https://rtr-mrp.onrender.com/demo - verify text hiển thị
-- Toggle dark/light mode để kiểm tra
+### 1. Verify UI Contrast - CẦN TEST
+- Kiểm tra font bolder, icon vivid hơn, hover mạnh hơn
+- So sánh light mode vs dark mode
+- Đặc biệt: sidebar, cards, tables, badges
 
-### 2. P0 Manual Testing (14 tests)
-- **Bug #7:** Part Form CREATE/UPDATE - cần verify trên browser
-- **Bug #1:** Leading Zeros - cần verify trên browser
-- **Bug #4, #5:** Supplier message, PO quantity - cần verify
-- Chạy `npm run dev` và test manual theo QA Checklist
+### 2. Verify Inventory Grid Scroll
+- Mở `/inventory` → kiểm tra bảng có thể cuộn
+- 16+ records nên có scrollbar trong grid
 
-### 3. E2E Tests (44 tests failed)
+### 3. Verify PO Features
+- Tạo PO mới → kiểm tra auto-number format PO-2026-001
+- Chọn supplier → parts dropdown lọc theo supplier
+- Chuyển PO status "received" → check inventory cập nhật
+
+### 4. Verify Receiving Inspection Flow
+- Tạo inspection mới → không lỗi validation
+- Click item trong list → detail page hiện
+- Bắt đầu kiểm tra → PASS/FAIL → hoàn thành
+
+### 5. Socket.IO Route (Optional)
+- `/api/socket` route chưa tồn tại
+- Socket client đã tắt auto-connect
+- Nếu cần real-time: implement Socket.IO server route
+
+### 6. E2E Tests (44 tests failed)
 - **Production module:** 53% pass rate
 - **MRP module:** 91% pass rate
 - Chạy `npm run test:e2e` để xem chi tiết
@@ -301,5 +441,5 @@ src/
 
 ---
 
-*Cập nhật lần cuối: 2026-01-21 21:50*
+*Cập nhật lần cuối: 2026-01-24 10:30*
 *Dự án: RTR-MRP - Material Requirements Planning System*
