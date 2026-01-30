@@ -1,0 +1,227 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { dashboardService, widgetService } from '@/lib/analytics';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+// =============================================================================
+// WIDGET API - UPDATE, DELETE, GET DATA
+// =============================================================================
+
+const updateWidgetSchema = z.object({
+  widgetType: z.enum(['kpi', 'chart-line', 'chart-bar', 'chart-pie', 'chart-area', 'chart-donut', 'gauge', 'table', 'sparkline', 'heatmap']).optional(),
+  title: z.string().min(1).max(100).optional(),
+  titleVi: z.string().max(100).optional(),
+  dataSource: z.enum(['inventory', 'sales', 'production', 'quality', 'financial', 'supplier', 'mrp', 'custom']).optional(),
+  metric: z.string().optional(),
+  queryConfig: z.object({
+    metrics: z.array(z.string()).optional(),
+    dimensions: z.array(z.string()).optional(),
+    filters: z.array(z.any()).optional(),
+    groupBy: z.array(z.string()).optional(),
+    orderBy: z.array(z.any()).optional(),
+    limit: z.number().optional(),
+    dateRange: z.any().optional(),
+  }).optional(),
+  displayConfig: z.object({
+    colors: z.array(z.string()).optional(),
+    showLegend: z.boolean().optional(),
+    legendPosition: z.enum(['top', 'bottom', 'left', 'right']).optional(),
+    showGrid: z.boolean().optional(),
+    showLabels: z.boolean().optional(),
+    showValues: z.boolean().optional(),
+    showTrend: z.boolean().optional(),
+    formatter: z.enum(['number', 'currency', 'percent']).optional(),
+    animation: z.boolean().optional(),
+    stacked: z.boolean().optional(),
+    curved: z.boolean().optional(),
+  }).optional(),
+  gridX: z.number().min(0).max(11).optional(),
+  gridY: z.number().min(0).optional(),
+  gridW: z.number().min(1).max(12).optional(),
+  gridH: z.number().min(1).max(12).optional(),
+  refreshInterval: z.number().min(0).optional(),
+  drillDownConfig: z.any().optional(),
+});
+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+// GET /api/analytics/widgets/[id] - Get widget data
+export async function GET(request: NextRequest, context: RouteContext) {
+  const startTime = Date.now();
+  const { id } = await context.params;
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get widget
+    const widget = await prisma.dashboardWidget.findUnique({
+      where: { id },
+      include: {
+        dashboard: {
+          select: { userId: true, isPublic: true },
+        },
+      },
+    });
+
+    if (!widget) {
+      return NextResponse.json(
+        { success: false, error: 'Widget not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check access
+    if (!widget.dashboard.isPublic && widget.dashboard.userId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    // Fetch widget data
+    const widgetData = await widgetService.getWidgetData(widget as any);
+
+    return NextResponse.json({
+      success: true,
+      data: widgetData,
+      timestamp: new Date().toISOString(),
+      took: Date.now() - startTime,
+    });
+  } catch (error) {
+    console.error('Error fetching widget data:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch widget data' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/analytics/widgets/[id] - Update widget
+export async function PUT(request: NextRequest, context: RouteContext) {
+  const startTime = Date.now();
+  const { id } = await context.params;
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get widget and check ownership
+    const widget = await prisma.dashboardWidget.findUnique({
+      where: { id },
+      include: {
+        dashboard: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!widget) {
+      return NextResponse.json(
+        { success: false, error: 'Widget not found' },
+        { status: 404 }
+      );
+    }
+
+    if (widget.dashboard.userId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = updateWidgetSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parsed.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const updated = await dashboardService.updateWidget(id, parsed.data as any);
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      timestamp: new Date().toISOString(),
+      took: Date.now() - startTime,
+    });
+  } catch (error) {
+    console.error('Error updating widget:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to update widget' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/analytics/widgets/[id] - Delete widget
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  const startTime = Date.now();
+  const { id } = await context.params;
+
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Get widget and check ownership
+    const widget = await prisma.dashboardWidget.findUnique({
+      where: { id },
+      include: {
+        dashboard: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!widget) {
+      return NextResponse.json(
+        { success: false, error: 'Widget not found' },
+        { status: 404 }
+      );
+    }
+
+    if (widget.dashboard.userId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+
+    await dashboardService.removeWidget(id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Widget deleted',
+      timestamp: new Date().toISOString(),
+      took: Date.now() - startTime,
+    });
+  } catch (error) {
+    console.error('Error deleting widget:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete widget' },
+      { status: 500 }
+    );
+  }
+}

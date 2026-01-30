@@ -619,6 +619,260 @@ export async function exportQualityRecords(format: ExportFormat = 'xlsx'): Promi
   return exportData({ format, entity: 'quality-records' });
 }
 
+// =============================================================================
+// DASHBOARD EXPORT (PDF with Charts)
+// =============================================================================
+
+export interface DashboardExportOptions {
+  dashboardId: string;
+  title: string;
+  description?: string;
+  widgets: {
+    id: string;
+    title: string;
+    type: string;
+    imageData?: string; // Base64 encoded chart image
+    tableData?: { columns: { key: string; label: string }[]; rows: Record<string, any>[] };
+    kpiData?: { value: string; trend?: string; status?: string };
+  }[];
+  dateRange?: { from: string; to: string };
+  generatedBy?: string;
+}
+
+export function generateDashboardPDF(options: DashboardExportOptions): string {
+  const { title, description, widgets, dateRange, generatedBy } = options;
+
+  // Generate HTML content with embedded chart images
+  const widgetContent = widgets.map((widget, index) => {
+    let content = '';
+
+    if (widget.kpiData) {
+      // KPI Widget
+      const statusColor = widget.kpiData.status === 'critical' ? '#EF4444' :
+                         widget.kpiData.status === 'warning' ? '#F59E0B' : '#10B981';
+      content = `
+        <div class="kpi-widget">
+          <div class="kpi-value" style="color: ${statusColor}">${escapeHtml(widget.kpiData.value)}</div>
+          ${widget.kpiData.trend ? `<div class="kpi-trend">${escapeHtml(widget.kpiData.trend)}</div>` : ''}
+        </div>
+      `;
+    } else if (widget.imageData) {
+      // Chart Widget with image
+      content = `
+        <div class="chart-image">
+          <img src="${widget.imageData}" alt="${escapeHtml(widget.title)}" style="max-width: 100%; height: auto;" />
+        </div>
+      `;
+    } else if (widget.tableData) {
+      // Table Widget
+      const headerCells = widget.tableData.columns.map(c => `<th>${escapeHtml(c.label)}</th>`).join('');
+      const dataRows = widget.tableData.rows.slice(0, 10).map(row =>
+        `<tr>${widget.tableData!.columns.map(c => `<td>${escapeHtml(String(row[c.key] ?? ''))}</td>`).join('')}</tr>`
+      ).join('');
+      content = `
+        <table class="data-table">
+          <thead><tr>${headerCells}</tr></thead>
+          <tbody>${dataRows}</tbody>
+        </table>
+        ${widget.tableData.rows.length > 10 ? `<p class="more-rows">...và ${widget.tableData.rows.length - 10} dòng khác</p>` : ''}
+      `;
+    }
+
+    return `
+      <div class="widget" style="page-break-inside: avoid;">
+        <h3 class="widget-title">${escapeHtml(widget.title)}</h3>
+        ${content}
+      </div>
+    `;
+  }).join('\n');
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #4F46E5;
+    }
+    .header h1 {
+      color: #4F46E5;
+      margin: 0 0 10px 0;
+      font-size: 24px;
+    }
+    .header .description {
+      color: #666;
+      font-size: 14px;
+      margin: 5px 0;
+    }
+    .header .meta {
+      color: #999;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .widgets-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+    .widget {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    .widget-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .kpi-widget {
+      text-align: center;
+      padding: 20px;
+    }
+    .kpi-value {
+      font-size: 32px;
+      font-weight: bold;
+    }
+    .kpi-trend {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .chart-image {
+      text-align: center;
+    }
+    .chart-image img {
+      max-height: 200px;
+      object-fit: contain;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .data-table th {
+      background: #4F46E5;
+      color: white;
+      padding: 8px 6px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .data-table td {
+      padding: 6px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .data-table tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    .more-rows {
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      color: #999;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${escapeHtml(title)}</h1>
+    ${description ? `<p class="description">${escapeHtml(description)}</p>` : ''}
+    <div class="meta">
+      ${dateRange ? `Kỳ: ${escapeHtml(dateRange.from)} - ${escapeHtml(dateRange.to)} | ` : ''}
+      Xuất lúc: ${new Date().toLocaleString('vi-VN')}
+      ${generatedBy ? ` | Bởi: ${escapeHtml(generatedBy)}` : ''}
+    </div>
+  </div>
+
+  <div class="widgets-grid">
+    ${widgetContent}
+  </div>
+
+  <div class="footer">
+    RTR MRP System - Báo cáo Dashboard được tạo tự động
+  </div>
+</body>
+</html>`;
+
+  return html;
+}
+
+export interface ChartExportOptions {
+  title: string;
+  chartElement: HTMLElement;
+  format: 'png' | 'jpeg';
+  quality?: number;
+}
+
+// Note: This function must be called from client-side code with access to DOM
+export async function exportChartToImage(options: ChartExportOptions): Promise<string> {
+  const { chartElement, format, quality = 1.0 } = options;
+
+  // Dynamic import for client-side only
+  const html2canvas = (await import('html2canvas')).default;
+
+  const canvas = await html2canvas(chartElement, {
+    backgroundColor: '#ffffff',
+    scale: 2, // Higher resolution
+    logging: false,
+    useCORS: true,
+  });
+
+  return canvas.toDataURL(`image/${format}`, quality);
+}
+
+// Email delivery placeholder (to be implemented with actual email service)
+export interface EmailDeliveryOptions {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  attachments: {
+    filename: string;
+    content: string; // Base64
+    contentType: string;
+  }[];
+}
+
+export async function deliverReportByEmail(options: EmailDeliveryOptions): Promise<{ success: boolean; error?: string }> {
+  // TODO: Implement with actual email service (nodemailer, SendGrid, etc.)
+  console.log('Email delivery requested:', {
+    to: options.to,
+    subject: options.subject,
+    attachmentsCount: options.attachments.length,
+  });
+
+  // Placeholder - in production, integrate with email service
+  return { success: true };
+}
+
 export default {
   exportData,
   exportSalesOrders,
@@ -628,4 +882,7 @@ export default {
   exportCustomers,
   exportWorkOrders,
   exportQualityRecords,
+  generateDashboardPDF,
+  exportChartToImage,
+  deliverReportByEmail,
 };
