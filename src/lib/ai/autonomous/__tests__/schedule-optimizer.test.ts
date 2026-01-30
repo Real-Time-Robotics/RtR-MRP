@@ -2,9 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   ScheduleOptimizer,
   getScheduleOptimizer,
-  OptimizationConfig,
+  OptimizationResult,
 } from '../schedule-optimizer';
-import { ScheduleResult, ScheduleSuggestion } from '../scheduling-engine';
+import {
+  WorkOrderScheduleInfo,
+  WorkCenterCapacityInfo,
+  SchedulingAlgorithm,
+} from '../scheduling-engine';
 
 // Mock prisma with proper default export
 vi.mock('@/lib/prisma', () => {
@@ -18,46 +22,64 @@ vi.mock('@/lib/prisma', () => {
 describe('ScheduleOptimizer', () => {
   let optimizer: ScheduleOptimizer;
 
-  const createTestSuggestion = (
-    overrides: Partial<ScheduleSuggestion> = {}
-  ): ScheduleSuggestion => ({
-    workOrderId: 'wo-1',
-    workOrderNumber: 'WO-001',
-    currentStartDate: new Date(),
-    currentEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    suggestedStartDate: new Date(),
-    suggestedEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  const createTestWorkOrder = (
+    overrides: Partial<WorkOrderScheduleInfo> = {}
+  ): WorkOrderScheduleInfo => ({
+    id: 'wo-1',
+    woNumber: 'WO-001',
+    productId: 'prod-1',
+    productName: 'Test Product',
+    productCode: 'SKU-001',
+    quantity: 100,
+    completedQty: 0,
+    remainingQty: 100,
+    priority: 'normal',
+    status: 'pending',
+    salesOrderId: null,
+    salesOrderNumber: null,
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    plannedStart: null,
+    plannedEnd: null,
+    actualStart: null,
     workCenterId: 'wc-1',
     workCenterName: 'Work Center 1',
-    priority: 50,
-    reason: 'Test reason',
-    confidence: 85,
-    impact: {
-      onTimeDeliveryChange: 5,
-      utilizationChange: 3,
-      costChange: -100,
+    estimatedDuration: 8,
+    operations: [],
+    materialStatus: {
+      allAvailable: true,
+      availablePercentage: 100,
+      shortages: [],
+      expectedReadyDate: null,
     },
+    predecessors: [],
+    successors: [],
     ...overrides,
   });
 
-  const createTestScheduleResult = (
-    overrides: Partial<ScheduleResult> = {}
-  ): ScheduleResult => ({
-    id: 'schedule-1',
-    status: 'success',
-    algorithm: 'balanced_load',
-    generatedAt: new Date(),
-    horizonDays: 30,
-    suggestions: [createTestSuggestion()],
-    metrics: {
-      totalWorkOrders: 10,
-      scheduledWorkOrders: 10,
-      utilizationRate: 75,
-      onTimeDeliveryRate: 90,
-      averageLeadTime: 5,
-      conflicts: 2,
-    },
-    conflicts: [],
+  const createTestCapacity = (
+    overrides: Partial<WorkCenterCapacityInfo> = {}
+  ): WorkCenterCapacityInfo => ({
+    id: 'wc-1',
+    code: 'WC-001',
+    name: 'Work Center 1',
+    type: 'machine',
+    capacityPerDay: 8,
+    efficiency: 1.0,
+    workingHoursStart: '08:00',
+    workingHoursEnd: '17:00',
+    breakMinutes: 60,
+    workingDays: [1, 2, 3, 4, 5],
+    maxConcurrentJobs: 1,
+    dailyCapacity: Array.from({ length: 14 }, (_, i) => ({
+      date: new Date(Date.now() + i * 24 * 60 * 60 * 1000),
+      availableHours: 8,
+      scheduledHours: 0,
+      remainingHours: 8,
+      utilization: 0,
+      scheduledWorkOrders: [],
+      isHoliday: false,
+      maintenanceHours: 0,
+    })),
     ...overrides,
   });
 
@@ -74,87 +96,58 @@ describe('ScheduleOptimizer', () => {
     });
   });
 
-  describe('optimizeSchedule', () => {
-    it('should optimize schedule with default config', async () => {
-      const schedule = createTestScheduleResult();
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'balanced_load',
-        maxIterations: 10,
-        populationSize: 10,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+  describe('optimize', () => {
+    it('should optimize with balanced_load algorithm', async () => {
+      const workOrders = [createTestWorkOrder()];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'balanced_load');
 
       expect(result).toBeDefined();
-      expect(result.status).toBe('success');
+      expect(result.algorithm).toBe('balanced_load');
+      expect(result.schedule).toBeDefined();
+      expect(Array.isArray(result.schedule)).toBe(true);
     });
 
-    it('should preserve suggestion structure', async () => {
-      const schedule = createTestScheduleResult({
-        suggestions: [
-          createTestSuggestion({ workOrderId: 'wo-1' }),
-          createTestSuggestion({ workOrderId: 'wo-2' }),
-        ],
-      });
+    it('should preserve work order structure', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1' }),
+        createTestWorkOrder({ id: 'wo-2' }),
+      ];
+      const capacities = [createTestCapacity()];
 
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'priority_first',
-        maxIterations: 5,
-        populationSize: 5,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+      const result = await optimizer.optimize(workOrders, capacities, 'priority_first');
 
-      expect(result.suggestions).toBeDefined();
-      expect(Array.isArray(result.suggestions)).toBe(true);
+      expect(result.schedule).toBeDefined();
+      expect(Array.isArray(result.schedule)).toBe(true);
     });
 
-    it('should handle empty suggestions', async () => {
-      const schedule = createTestScheduleResult({ suggestions: [] });
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'balanced_load',
-        maxIterations: 10,
-        populationSize: 10,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+    it('should handle empty work orders', async () => {
+      const workOrders: WorkOrderScheduleInfo[] = [];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'balanced_load');
 
       expect(result).toBeDefined();
-      expect(result.suggestions).toHaveLength(0);
+      expect(result.schedule).toHaveLength(0);
     });
   });
 
   describe('optimization algorithms', () => {
-    const algorithms = [
+    const algorithms: SchedulingAlgorithm[] = [
       'priority_first',
       'due_date_first',
       'shortest_first',
       'setup_minimize',
       'balanced_load',
-    ] as const;
+    ];
 
     algorithms.forEach((algorithm) => {
       it(`should support ${algorithm} algorithm`, async () => {
-        const schedule = createTestScheduleResult();
-        const result = await optimizer.optimizeSchedule(schedule, {
-          algorithm,
-          maxIterations: 5,
-          populationSize: 5,
-          targetMetrics: {
-            onTimeDelivery: 0.95,
-            utilizationRate: 0.85,
-            setupTimeReduction: 0.1,
-          },
-        });
+        const workOrders = [createTestWorkOrder()];
+        const capacities = [createTestCapacity()];
+
+        const result = await optimizer.optimize(workOrders, capacities, algorithm);
 
         expect(result.algorithm).toBe(algorithm);
       });
@@ -163,24 +156,14 @@ describe('ScheduleOptimizer', () => {
 
   describe('genetic algorithm', () => {
     it('should run genetic algorithm optimization', async () => {
-      const schedule = createTestScheduleResult({
-        suggestions: [
-          createTestSuggestion({ workOrderId: 'wo-1', priority: 80 }),
-          createTestSuggestion({ workOrderId: 'wo-2', priority: 60 }),
-          createTestSuggestion({ workOrderId: 'wo-3', priority: 40 }),
-        ],
-      });
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', priority: 'critical' }),
+        createTestWorkOrder({ id: 'wo-2', priority: 'high' }),
+        createTestWorkOrder({ id: 'wo-3', priority: 'normal' }),
+      ];
+      const capacities = [createTestCapacity()];
 
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'genetic',
-        maxIterations: 10,
-        populationSize: 10,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+      const result = await optimizer.optimize(workOrders, capacities, 'genetic');
 
       expect(result).toBeDefined();
       expect(result.algorithm).toBe('genetic');
@@ -189,81 +172,80 @@ describe('ScheduleOptimizer', () => {
 
   describe('metrics calculation', () => {
     it('should calculate optimization metrics', async () => {
-      const schedule = createTestScheduleResult();
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'balanced_load',
-        maxIterations: 10,
-        populationSize: 10,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+      const workOrders = [createTestWorkOrder()];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'balanced_load');
 
       expect(result.metrics).toBeDefined();
-      expect(result.metrics.utilizationRate).toBeDefined();
-      expect(result.metrics.onTimeDeliveryRate).toBeDefined();
+      expect(result.metrics.utilizationScore).toBeDefined();
+      expect(result.metrics.makespan).toBeDefined();
     });
   });
 
   describe('edge cases', () => {
-    it('should handle single suggestion', async () => {
-      const schedule = createTestScheduleResult({
-        suggestions: [createTestSuggestion()],
-      });
+    it('should handle single work order', async () => {
+      const workOrders = [createTestWorkOrder()];
+      const capacities = [createTestCapacity()];
 
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'balanced_load',
-        maxIterations: 5,
-        populationSize: 5,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+      const result = await optimizer.optimize(workOrders, capacities, 'balanced_load');
 
       expect(result).toBeDefined();
     });
 
-    it('should handle very low iterations', async () => {
-      const schedule = createTestScheduleResult();
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'genetic',
-        maxIterations: 1,
-        populationSize: 2,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+    it('should handle work orders with same priority', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', priority: 'normal' }),
+        createTestWorkOrder({ id: 'wo-2', priority: 'normal' }),
+        createTestWorkOrder({ id: 'wo-3', priority: 'normal' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'priority_first');
 
       expect(result).toBeDefined();
     });
 
-    it('should handle suggestions with same priority', async () => {
-      const schedule = createTestScheduleResult({
-        suggestions: [
-          createTestSuggestion({ workOrderId: 'wo-1', priority: 50 }),
-          createTestSuggestion({ workOrderId: 'wo-2', priority: 50 }),
-          createTestSuggestion({ workOrderId: 'wo-3', priority: 50 }),
-        ],
-      });
+    it('should handle multiple work centers', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', workCenterId: 'wc-1' }),
+        createTestWorkOrder({ id: 'wo-2', workCenterId: 'wc-2' }),
+      ];
+      const capacities = [
+        createTestCapacity({ id: 'wc-1', name: 'Work Center 1' }),
+        createTestCapacity({ id: 'wc-2', name: 'Work Center 2' }),
+      ];
 
-      const result = await optimizer.optimizeSchedule(schedule, {
-        algorithm: 'priority_first',
-        maxIterations: 5,
-        populationSize: 5,
-        targetMetrics: {
-          onTimeDelivery: 0.95,
-          utilizationRate: 0.85,
-          setupTimeReduction: 0.1,
-        },
-      });
+      const result = await optimizer.optimize(workOrders, capacities, 'balanced_load');
 
       expect(result).toBeDefined();
+      expect(result.schedule.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('compareAlgorithms', () => {
+    it('should compare multiple algorithms', async () => {
+      const workOrders = [createTestWorkOrder()];
+      const capacities = [createTestCapacity()];
+
+      const results = await optimizer.compareAlgorithms(workOrders, capacities);
+
+      expect(results).toBeDefined();
+      expect(results.size).toBeGreaterThan(0);
+    });
+  });
+
+  describe('findBestAlgorithm', () => {
+    it('should find the best performing algorithm', async () => {
+      const workOrders = [createTestWorkOrder()];
+      const capacities = [createTestCapacity()];
+
+      const results = await optimizer.compareAlgorithms(workOrders, capacities);
+      const best = optimizer.findBestAlgorithm(results);
+
+      expect(best).toBeDefined();
+      expect(best.algorithm).toBeDefined();
+      expect(best.result).toBeDefined();
     });
   });
 });
