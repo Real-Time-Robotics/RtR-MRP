@@ -525,7 +525,7 @@ class DashboardService {
     const dashboard = await this.createDashboard(userId, {
       name: name || template.name,
       description: template.description || undefined,
-      layout: template.layout as DashboardLayout,
+      layout: template.layout as unknown as DashboardLayout,
     });
 
     // Add widgets from template

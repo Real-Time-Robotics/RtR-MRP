@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Layout } from "react-grid-layout";
+
+// Define layout item type compatible with react-grid-layout
+interface LayoutItem {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,7 +148,7 @@ export function DashboardBuilder({
   });
 
   // Handle layout change from grid
-  const handleLayoutChange = useCallback((layout: Layout[]) => {
+  const handleLayoutChange = useCallback((layout: any[]) => {
     setDashboard((prev) => ({
       ...prev,
       widgets: prev.widgets.map((widget) => {

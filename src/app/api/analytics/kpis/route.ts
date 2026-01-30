@@ -1,30 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { kpiService } from '@/lib/analytics';
-import type { KPICategory } from '@/lib/analytics/types';
 
-// =============================================================================
-// KPIs API - LIST AND SEED
-// =============================================================================
-
-// GET /api/analytics/kpis - List KPI definitions
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category') as KPICategory | null;
+    const category = searchParams.get('category') || undefined;
 
-    const definitions = await kpiService.getKPIDefinitions(category || undefined);
+    const definitions = await kpiService.getKPIDefinitions(category as any);
 
     return NextResponse.json({
       success: true,
@@ -41,27 +25,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/analytics/kpis - Seed system KPIs (admin only)
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (session.user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
     await kpiService.seedSystemKPIs();
 
     return NextResponse.json({

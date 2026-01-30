@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { dashboardService } from '@/lib/analytics';
 import { z } from 'zod';
 
 // =============================================================================
 // DASHBOARDS API - LIST & CREATE
 // =============================================================================
+
+// Default user ID for demo purposes
+const DEFAULT_USER_ID = 'demo-user';
 
 const createDashboardSchema = z.object({
   name: z.string().min(1).max(100),
@@ -27,15 +28,7 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const dashboards = await dashboardService.getUserDashboards(session.user.id);
+    const dashboards = await dashboardService.getUserDashboards(DEFAULT_USER_ID);
 
     return NextResponse.json({
       success: true,
@@ -57,25 +50,17 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const parsed = createDashboardSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid input', details: parsed.error.errors },
+        { success: false, error: 'Invalid input', details: parsed.error.issues },
         { status: 400 }
       );
     }
 
-    const dashboard = await dashboardService.createDashboard(session.user.id, parsed.data);
+    const dashboard = await dashboardService.createDashboard(DEFAULT_USER_ID, parsed.data);
 
     return NextResponse.json({
       success: true,

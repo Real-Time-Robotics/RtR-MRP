@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { test, expect, Page } from '@playwright/test';
+import { testCredentials } from '../fixtures/test-data';
 
 // =============================================================================
 // TEST HELPERS
@@ -12,10 +13,13 @@ import { test, expect, Page } from '@playwright/test';
 
 async function login(page: Page) {
   await page.goto('/login');
-  await page.fill('input[name="email"]', 'demo@rtr-mrp.com');
-  await page.fill('input[name="password"]', 'demo123');
+  await page.waitForLoadState('domcontentloaded');
+
+  // Use correct credentials from test-data
+  await page.fill('input[name="email"]', testCredentials.admin.email);
+  await page.fill('input[name="password"]', testCredentials.admin.password);
   await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(dashboard)?$/);
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15000 });
 }
 
 async function navigateToForecastDashboard(page: Page) {

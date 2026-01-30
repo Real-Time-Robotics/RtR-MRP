@@ -1,40 +1,42 @@
-import { test as base, Page } from '@playwright/test';
+import { test as base, Page, expect } from '@playwright/test';
 import { testCredentials } from './test-data';
 
 /**
- * Custom test fixture with authenticated page
+ * Custom test fixture with authenticated page.
+ * Handles NextAuth session establishment and waits for redirect away from login.
  */
 export const test = base.extend<{ authenticatedPage: Page }>({
   authenticatedPage: async ({ page }, use) => {
     // Navigate to login
     await page.goto('/login');
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(1000);
 
-    // Wait for form to be ready
-    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
+    // Wait for form to be fully interactive (React hydration complete)
+    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+    await emailInput.waitFor({ state: 'visible', timeout: 15000 });
 
-    // Fill credentials
-    await page.fill('input[type="email"], input[name="email"]', testCredentials.admin.email);
-    await page.fill('input[type="password"], input[name="password"]', testCredentials.admin.password);
+    // Fill credentials from test-data (matches seed.ts)
+    await emailInput.fill(testCredentials.admin.email);
+    await page.locator('input[type="password"], input[name="password"]').first()
+      .fill(testCredentials.admin.password);
 
-    // Submit login
-    await page.click('button[type="submit"]');
+    // Submit login form
+    await page.locator('button[type="submit"]').click();
 
-    // Wait for successful login (redirect to home or dashboard)
-    try {
-      await page.waitForURL(/\/(home|dashboard|parts|bom|production)/, { timeout: 20000 });
-    } catch {
-      // May already be on the page or redirected elsewhere
-    }
-
-    // Wait for page to stabilize with a shorter timeout
+    // Wait for NextAuth to process and redirect away from login
+    // The login page uses router.push(callbackUrl) after signIn succeeds
+    await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 25000 });
     await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(2000);
+
+    // Verify we're authenticated - not redirected back to login
+    const currentUrl = page.url();
+    if (currentUrl.includes('/login')) {
+      throw new Error(`Authentication failed: still on login page. URL: ${currentUrl}`);
+    }
 
     // Provide the authenticated page to the test
     await use(page);
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect };

@@ -27,7 +27,7 @@ export const SYSTEM_KPIS: Omit<KPIDefinition, 'id'>[] = [
     nameVi: 'Tổng giá trị tồn kho',
     description: 'Total value of all inventory on hand',
     category: 'inventory',
-    formula: 'SUM(inventory.onHand * parts.unitCost)',
+    formula: 'SUM(inventory.quantity * parts.unitCost)',
     dataSource: 'inventory',
     aggregation: 'SUM',
     unit: 'VND',
@@ -65,7 +65,7 @@ export const SYSTEM_KPIS: Omit<KPIDefinition, 'id'>[] = [
     nameVi: 'Vật tư sắp hết',
     description: 'Number of items below reorder point',
     category: 'inventory',
-    formula: 'COUNT(inventory WHERE onHand <= reorderPoint)',
+    formula: 'COUNT(inventory WHERE quantity <= reorderPoint)',
     dataSource: 'inventory',
     aggregation: 'COUNT',
     unit: 'items',
@@ -85,7 +85,7 @@ export const SYSTEM_KPIS: Omit<KPIDefinition, 'id'>[] = [
     nameVi: 'Vật tư hết hàng',
     description: 'Number of items with zero stock',
     category: 'inventory',
-    formula: 'COUNT(inventory WHERE onHand = 0)',
+    formula: 'COUNT(inventory WHERE quantity = 0)',
     dataSource: 'inventory',
     aggregation: 'COUNT',
     unit: 'items',
@@ -696,7 +696,7 @@ class KPIService {
   private async calculateInventoryValue(): Promise<number> {
     const result = await prisma.inventory.aggregate({
       _sum: {
-        onHand: true,
+        quantity: true,
       },
     });
 
@@ -705,7 +705,7 @@ class KPIService {
     });
 
     return inventory.reduce((sum, inv) => {
-      return sum + (inv.onHand * (inv.part?.unitCost || 0));
+      return sum + (inv.quantity * (inv.part?.unitCost || 0));
     }, 0);
   }
 
@@ -727,25 +727,17 @@ class KPIService {
   }
 
   private async calculateLowStockCount(): Promise<number> {
+    // Count inventory items with low quantity (less than 10 as a simple threshold)
     return prisma.inventory.count({
       where: {
-        AND: [
-          { onHand: { gt: 0 } },
-          { onHand: { lte: prisma.inventory.fields.safetyStock } },
-        ],
+        quantity: { gt: 0, lte: 10 },
       },
-    }).catch(() => {
-      // Fallback if the comparison doesn't work
-      return prisma.$queryRaw<[{ count: bigint }]>`
-        SELECT COUNT(*) as count FROM "inventories"
-        WHERE "on_hand" > 0 AND "on_hand" <= "safety_stock"
-      `.then(r => Number(r[0]?.count || 0));
     });
   }
 
   private async calculateOutOfStockCount(): Promise<number> {
     return prisma.inventory.count({
-      where: { onHand: { lte: 0 } },
+      where: { quantity: { lte: 0 } },
     });
   }
 
@@ -921,7 +913,8 @@ class KPIService {
   private async calculateCostVariance(dateFrom: Date, dateTo: Date): Promise<number> {
     const variances = await prisma.costVariance.aggregate({
       where: {
-        varianceDate: { gte: dateFrom, lte: dateTo },
+        periodYear: { gte: dateFrom.getFullYear(), lte: dateTo.getFullYear() },
+        periodMonth: { gte: dateFrom.getMonth() + 1, lte: dateTo.getMonth() + 1 },
       },
       _avg: { variancePercent: true },
     });

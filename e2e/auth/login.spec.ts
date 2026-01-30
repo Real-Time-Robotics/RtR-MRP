@@ -19,24 +19,21 @@ test.describe('Authentication', () => {
   });
 
   test('should login with valid credentials', async ({ page }) => {
-    // Fill credentials
-    await page.fill('input[type="email"], input[name="email"]', testCredentials.admin.email);
-    await page.fill('input[type="password"], input[name="password"]', testCredentials.admin.password);
+    // Fill credentials (matches seed.ts admin user)
+    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+    await emailInput.fill(testCredentials.admin.email);
+    await page.locator('input[type="password"], input[name="password"]').first()
+      .fill(testCredentials.admin.password);
 
     // Click login
-    await page.click('button[type="submit"]');
+    await page.locator('button[type="submit"]').click();
 
-    // Wait for navigation - may go to home, dashboard, or other protected page
-    try {
-      await page.waitForURL(/\/(home|dashboard|parts|bom|production)/, { timeout: 15000 });
-    } catch {
-      // May already be redirected or on different page
-    }
+    // Wait for redirect away from login page (NextAuth session established)
+    await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 25000 });
 
-    // Verify we're not on login page anymore (successful login)
+    // Verify we're on a protected page
     const currentUrl = page.url();
-    // Either redirected away from login, or login with error
-    expect(currentUrl).toBeTruthy();
+    expect(currentUrl).not.toContain('/login');
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
@@ -58,12 +55,13 @@ test.describe('Authentication', () => {
   test('should redirect to login when not authenticated', async ({ page }) => {
     // Clear any existing session
     await page.context().clearCookies();
+    await page.context().clearPermissions();
 
     // Try to access protected page
     await page.goto('/parts');
 
-    // Should redirect to login
-    await page.waitForURL(/\/login/, { timeout: 10000 });
+    // Should redirect to login (middleware or client-side check)
+    await page.waitForURL(url => url.pathname.includes('/login'), { timeout: 15000 });
     expect(page.url()).toContain('login');
   });
 

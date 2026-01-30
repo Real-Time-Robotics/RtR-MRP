@@ -244,7 +244,7 @@ export function ChartWidget({
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={chartData}
+            data={chartData as any}
             dataKey="value"
             nameKey="name"
             cx="50%"
@@ -254,7 +254,7 @@ export function ChartWidget({
             paddingAngle={2}
             isAnimationActive={animation}
             onClick={(data) => onDrillDown?.(data)}
-            label={showLabels ? ({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)` : false}
+            label={showLabels ? ({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)` : false}
             labelLine={showLabels}
           >
             {chartData.map((entry, index) => (

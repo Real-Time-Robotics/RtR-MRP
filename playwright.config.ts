@@ -41,7 +41,7 @@ export default defineConfig({
   grepInvert: process.env.TEST_GREP_INVERT ? new RegExp(process.env.TEST_GREP_INVERT) : undefined,
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3010',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
@@ -54,48 +54,65 @@ export default defineConfig({
   },
 
   projects: [
-    // Desktop browsers - exclude mobile tests
+    // Setup project: authenticates once and saves session for dependent projects
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    // Auth spec tests run with empty state (they test login flow itself)
+    {
+      name: 'auth-tests',
+      use: { ...devices['Desktop Chrome'], storageState: { cookies: [], origins: [] } },
+      testMatch: ['**/auth/*.spec.ts'],
+    },
+    // Desktop browsers - depend on setup for authenticated storageState
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      testIgnore: ['**/mobile/**'],
+      use: { ...devices['Desktop Chrome'], storageState: './e2e/.auth/admin.json' },
+      testIgnore: ['**/mobile/**', '**/auth/**'],
+      dependencies: ['setup'],
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-      testIgnore: ['**/mobile/**'],
+      use: { ...devices['Desktop Firefox'], storageState: './e2e/.auth/admin.json' },
+      testIgnore: ['**/mobile/**', '**/auth/**'],
+      dependencies: ['setup'],
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-      testIgnore: ['**/mobile/**'],
+      use: { ...devices['Desktop Safari'], storageState: './e2e/.auth/admin.json' },
+      testIgnore: ['**/mobile/**', '**/auth/**'],
+      dependencies: ['setup'],
     },
 
     // Mobile devices - only run mobile tests
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Pixel 5'], storageState: './e2e/.auth/admin.json' },
       testMatch: ['**/mobile/**'],
+      dependencies: ['setup'],
     },
     {
       name: 'Mobile Safari',
-      use: { ...devices['iPhone 13'] },
+      use: { ...devices['iPhone 13'], storageState: './e2e/.auth/admin.json' },
       testMatch: ['**/mobile/**'],
+      dependencies: ['setup'],
     },
 
     // Tablet
     {
       name: 'iPad',
-      use: { ...devices['iPad Pro 11'] },
-      testIgnore: ['**/mobile/**'],
+      use: { ...devices['iPad Pro 11'], storageState: './e2e/.auth/admin.json' },
+      testIgnore: ['**/mobile/**', '**/auth/**'],
+      dependencies: ['setup'],
     },
   ],
 
-  // Run local dev server before tests
+  // Run local dev server before tests on dedicated port
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    command: 'npx next dev --port 3010',
+    url: 'http://localhost:3010',
+    reuseExistingServer: false,
     timeout: 120000,
     env: {
       SKIP_RATE_LIMIT: 'true',

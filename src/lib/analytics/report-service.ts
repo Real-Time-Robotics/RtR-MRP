@@ -40,7 +40,7 @@ class ReportService {
       data: {
         reportId,
         generatedBy: 'system', // TODO: get from session
-        parameters: { ...report.filters, ...parameters },
+        parameters: { ...(report.filters as Record<string, any> || {}), ...parameters },
         format,
         status: 'generating',
         recipients: recipients as any,
@@ -277,7 +277,7 @@ class ReportService {
           reportId: schedule.reportId,
           format: schedule.outputFormat as ReportFormat,
           parameters: schedule.parameters as Record<string, any>,
-          recipients: schedule.recipients as ReportRecipient[],
+          recipients: schedule.recipients as unknown as ReportRecipient[],
           sendEmail: true,
         });
 

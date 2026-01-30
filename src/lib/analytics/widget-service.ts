@@ -194,6 +194,7 @@ class WidgetService {
     // Group by week
     const grouped = new Map<string, { completed: number; planned: number }>();
     workOrders.forEach(wo => {
+      if (!wo.plannedStart) return;
       const date = new Date(wo.plannedStart);
       const weekStart = this.getWeekStart(date);
       const key = weekStart.toISOString().split('T')[0];
@@ -275,7 +276,7 @@ class WidgetService {
     const grouped = new Map<string, number>();
     inventory.forEach(inv => {
       const category = inv.part?.category || 'Other';
-      grouped.set(category, (grouped.get(category) || 0) + (inv.onHand * (inv.part?.unitCost || 0)));
+      grouped.set(category, (grouped.get(category) || 0) + (inv.quantity * (inv.part?.unitCost || 0)));
     });
 
     return Array.from(grouped.entries()).map(([category, value]) => ({
@@ -324,19 +325,19 @@ class WidgetService {
 
     const sales = await prisma.salesOrderLine.findMany({
       where: {
-        salesOrder: {
+        order: {
           orderDate: { gte: dateRange.from, lte: dateRange.to },
         },
       },
       include: {
-        part: { select: { category: true } },
+        product: { select: { name: true } },
       },
     });
 
     const grouped = new Map<string, number>();
     sales.forEach(line => {
-      const category = line.part?.category || 'Other';
-      grouped.set(category, (grouped.get(category) || 0) + (line.totalPrice || 0));
+      const productName = line.product?.name || 'Other';
+      grouped.set(productName, (grouped.get(productName) || 0) + (line.lineTotal || 0));
     });
 
     return Array.from(grouped.entries())
@@ -389,7 +390,7 @@ class WidgetService {
     const grouped = new Map<string, number>();
     inventory.forEach(inv => {
       const category = inv.part?.category || 'Other';
-      grouped.set(category, (grouped.get(category) || 0) + (inv.onHand * (inv.part?.unitCost || 0)));
+      grouped.set(category, (grouped.get(category) || 0) + (inv.quantity * (inv.part?.unitCost || 0)));
     });
 
     return Array.from(grouped.entries())
@@ -499,7 +500,7 @@ class WidgetService {
 
     const workOrders = await prisma.workOrder.findMany({
       where: filters,
-      include: { productPart: { select: { partNumber: true, name: true } } },
+      include: { product: { select: { sku: true, name: true } } },
       orderBy: { plannedStart: 'desc' },
       take: limit,
     });
@@ -514,8 +515,8 @@ class WidgetService {
         { key: 'status', label: 'Trạng thái', width: 100 },
       ],
       rows: workOrders.map(wo => ({
-        orderNumber: wo.orderNumber,
-        productName: wo.productPart?.name || wo.productPart?.partNumber || '',
+        orderNumber: wo.woNumber,
+        productName: wo.product?.name || wo.product?.sku || '',
         quantity: wo.quantity,
         completedQty: wo.completedQty || 0,
         progress: `${Math.round(((wo.completedQty || 0) / wo.quantity) * 100)}%`,
@@ -552,7 +553,7 @@ class WidgetService {
   private async getInventoryTableData(config: WidgetQueryConfig, limit: number) {
     const inventory = await prisma.inventory.findMany({
       include: { part: { select: { partNumber: true, name: true, unitCost: true } } },
-      orderBy: { onHand: 'asc' },
+      orderBy: { quantity: 'asc' },
       take: limit,
     });
 
@@ -560,16 +561,14 @@ class WidgetService {
       columns: [
         { key: 'partNumber', label: 'Mã vật tư', width: 120 },
         { key: 'partName', label: 'Tên vật tư', width: 200 },
-        { key: 'onHand', label: 'Tồn kho', width: 100 },
-        { key: 'safetyStock', label: 'Tồn an toàn', width: 100 },
+        { key: 'quantity', label: 'Tồn kho', width: 100 },
         { key: 'status', label: 'Trạng thái', width: 100 },
       ],
       rows: inventory.map(inv => ({
         partNumber: inv.part?.partNumber || '',
         partName: inv.part?.name || '',
-        onHand: inv.onHand,
-        safetyStock: inv.safetyStock,
-        status: inv.onHand <= 0 ? 'Hết hàng' : inv.onHand <= inv.safetyStock ? 'Sắp hết' : 'Đủ hàng',
+        quantity: inv.quantity,
+        status: inv.quantity <= 0 ? 'Hết hàng' : inv.quantity <= 10 ? 'Sắp hết' : 'Đủ hàng',
       })),
     };
   }

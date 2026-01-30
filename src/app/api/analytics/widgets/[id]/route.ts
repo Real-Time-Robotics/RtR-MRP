@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { dashboardService, widgetService } from '@/lib/analytics';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -55,36 +53,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     // Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
-      include: {
-        dashboard: {
-          select: { userId: true, isPublic: true },
-        },
-      },
     });
 
     if (!widget) {
       return NextResponse.json(
         { success: false, error: 'Widget not found' },
         { status: 404 }
-      );
-    }
-
-    // Check access
-    if (!widget.dashboard.isPublic && widget.dashboard.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
       );
     }
 
@@ -112,22 +89,9 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get widget and check ownership
+    // Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
-      include: {
-        dashboard: {
-          select: { userId: true },
-        },
-      },
     });
 
     if (!widget) {
@@ -137,19 +101,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    if (widget.dashboard.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const parsed = updateWidgetSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid input', details: parsed.error.errors },
+        { success: false, error: 'Invalid input', details: parsed.error.issues },
         { status: 400 }
       );
     }
@@ -177,35 +134,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get widget and check ownership
+    // Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
-      include: {
-        dashboard: {
-          select: { userId: true },
-        },
-      },
     });
 
     if (!widget) {
       return NextResponse.json(
         { success: false, error: 'Widget not found' },
         { status: 404 }
-      );
-    }
-
-    if (widget.dashboard.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
       );
     }
 

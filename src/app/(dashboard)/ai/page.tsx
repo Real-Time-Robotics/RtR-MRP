@@ -22,6 +22,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
 import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnomalyAlerts } from "@/components/ml/anomaly-alerts";
+import { OptimizationSuggestions } from "@/components/ml/optimization-suggestions";
 
 interface ModelStatus {
   modelId: string;
@@ -197,11 +199,80 @@ export default function AiDashboardPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="insights" className="space-y-4">
+      <Tabs defaultValue="ml-realtime" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="ml-realtime">ML Real-time</TabsTrigger>
           <TabsTrigger value="insights">AI Insights</TabsTrigger>
           <TabsTrigger value="models">Model Status</TabsTrigger>
         </TabsList>
+
+        {/* ML Real-time Tab - Connected to ML Service */}
+        <TabsContent value="ml-realtime" className="space-y-4">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <AnomalyAlerts />
+            <OptimizationSuggestions />
+          </div>
+
+          {/* Quick Links to ML Features */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => router.push("/ai/forecast")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-medium">Forecast</p>
+                  <p className="text-xs text-muted-foreground">Demand prediction</p>
+                </div>
+              </div>
+            </Card>
+            <Card
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => router.push("/ai/lead-time")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <Truck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="font-medium">Lead Time</p>
+                  <p className="text-xs text-muted-foreground">Supplier predictions</p>
+                </div>
+              </div>
+            </Card>
+            <Card
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => router.push("/ai/supplier-risk")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="font-medium">Supplier Risk</p>
+                  <p className="text-xs text-muted-foreground">Risk analysis</p>
+                </div>
+              </div>
+            </Card>
+            <Card
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => router.push("/ai/simulation")}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                  <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="font-medium">Simulation</p>
+                  <p className="text-xs text-muted-foreground">What-if analysis</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="insights" className="space-y-4">
           {/* Quick Stats */}

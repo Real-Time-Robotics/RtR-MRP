@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { cn } from '@/lib/utils';
+import { PendingApprovals } from '@/components/workflow';
 
 // =============================================================================
 // TYPES
@@ -296,6 +297,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -314,6 +316,23 @@ export default function HomePage() {
         setLoading(false);
       }
     };
+
+    // Fetch current user ID for workflow approvals
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const session = await res.json();
+          if (session?.user?.id) {
+            setUserId(session.user.id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user session:', err);
+      }
+    };
+
+    fetchUser();
     fetchStats();
   }, []);
 
@@ -488,6 +507,13 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Pending Approvals - Workflow */}
+      {userId && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          <PendingApprovals userId={userId} />
+        </div>
+      )}
 
       {/* Quick Actions & Summary - COMPACT: gap-6 → gap-2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">

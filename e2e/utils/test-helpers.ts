@@ -14,20 +14,22 @@ export async function login(page: Page, email?: string, password?: string) {
   await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for login form
-  await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 });
+  // Wait for login form to be interactive
+  const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+  await emailInput.waitFor({ state: 'visible', timeout: 10000 });
 
-  // Fill credentials
-  await page.fill('input[type="email"], input[name="email"]', email || 'admin@rtr.vn');
-  await page.fill('input[type="password"], input[name="password"]', password || 'admin123');
+  // Fill credentials - default to seed.ts admin credentials
+  await emailInput.fill(email || 'admin@rtr.com');
+  await page.locator('input[type="password"], input[name="password"]').first().fill(password || 'admin123456@');
 
   // Click login button
-  await page.click('button[type="submit"]');
+  await page.locator('button[type="submit"]').click();
 
-  // Wait for navigation to complete
-  await page.waitForURL('**/home', { timeout: 15000 }).catch(() => {
-    // May redirect to dashboard or other page
+  // Wait for NextAuth session to establish and redirect
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 20000 }).catch(() => {
+    // May already be on target page
   });
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**

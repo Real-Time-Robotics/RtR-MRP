@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
+import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -12,13 +13,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { DateRangeConfig } from "@/lib/analytics/types";
 
 export interface DateRangePickerProps {
@@ -48,10 +42,7 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>({
     from: value?.from ? new Date(value.from) : undefined,
     to: value?.to ? new Date(value.to) : undefined,
   });
@@ -64,13 +55,10 @@ export function DateRangePicker({
     setIsOpen(false);
   };
 
-  const handleCustomRangeSelect = (range: { from?: Date; to?: Date } | undefined) => {
+  const handleCustomRangeSelect = (range: DateRange | undefined) => {
     if (!range) return;
 
-    setSelectedRange({
-      from: range.from,
-      to: range.to,
-    });
+    setSelectedRange(range);
 
     if (range.from && range.to) {
       onChange({
@@ -142,8 +130,8 @@ export function DateRangePicker({
             </p>
             <Calendar
               mode="range"
-              selected={selectedRange as any}
-              onSelect={handleCustomRangeSelect as any}
+              selected={selectedRange}
+              onSelect={handleCustomRangeSelect}
               numberOfMonths={2}
               locale={vi}
             />

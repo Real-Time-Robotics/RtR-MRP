@@ -177,10 +177,15 @@ test.describe('Customer Data Integrity Tests @data-integrity @customers', () => 
     const modal = page.locator('[role="dialog"]');
     await expect(modal).toBeVisible();
 
-    await modal.locator('input[name="customerCode"]').first().fill(uniqueId);
+    await modal.locator('input[name="code"]').first().fill(uniqueId);
     await modal.locator('input[name="name"]').first().fill('Credit Limit Test');
 
-    const creditInput = modal.locator('input[name="creditLimit"]').first();
+    // Find creditLimit by label since NumberInput doesn't have name prop
+    let creditInput = modal.locator('input[name="creditLimit"]').first();
+    if (!(await creditInput.isVisible().catch(() => false))) {
+      // Fallback to label-based selector
+      creditInput = modal.locator('label:has-text("Credit"), label:has-text("Hạn mức")').first().locator('..').locator('input').first();
+    }
     if (await creditInput.isVisible().catch(() => false)) {
       await creditInput.clear();
       await creditInput.fill(String(creditLimit));
@@ -348,10 +353,15 @@ test.describe('Supplier Data Integrity Tests @data-integrity @suppliers', () => 
     const modal = page.locator('[role="dialog"]');
     await expect(modal).toBeVisible();
 
-    await modal.locator('input[name="supplierCode"]').first().fill(uniqueId);
+    await modal.locator('input[name="code"]').first().fill(uniqueId);
     await modal.locator('input[name="name"]').first().fill('Lead Time Test Supplier');
 
-    const leadInput = modal.locator('input[name="leadTimeDays"]').first();
+    // Find leadTimeDays by label since NumberInput doesn't have name prop
+    let leadInput = modal.locator('input[name="leadTimeDays"]').first();
+    if (!(await leadInput.isVisible().catch(() => false))) {
+      // Fallback to label-based selector
+      leadInput = modal.locator('label:has-text("Lead Time"), label:has-text("Thời gian")').first().locator('..').locator('input').first();
+    }
     if (await leadInput.isVisible().catch(() => false)) {
       await leadInput.clear();
       await leadInput.fill(String(leadTime));
