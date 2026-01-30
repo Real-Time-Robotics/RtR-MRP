@@ -1,0 +1,307 @@
+/**
+ * Notification Service - Handles workflow notification delivery
+ * Supports in-app and email notifications
+ */
+
+import { prisma } from '@/lib/prisma';
+import { NotificationChannel } from '@prisma/client';
+
+export interface NotificationPayload {
+  recipientId: string;
+  type: string;
+  title: string;
+  message: string;
+  channel?: NotificationChannel;
+  actionUrl?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BulkNotificationPayload {
+  recipientIds: string[];
+  type: string;
+  title: string;
+  message: string;
+  channel?: NotificationChannel;
+  actionUrl?: string;
+}
+
+/**
+ * Notification Service - manages notification delivery
+ */
+export class NotificationService {
+  /**
+   * Send a notification to a single recipient
+   */
+  async sendNotification(
+    instanceId: string,
+    payload: NotificationPayload
+  ): Promise<{ success: boolean; notificationId?: string; error?: string }> {
+    try {
+      const notification = await prisma.workflowNotification.create({
+        data: {
+          instanceId,
+          recipientId: payload.recipientId,
+          type: payload.type,
+          channel: payload.channel || 'IN_APP',
+          title: payload.title,
+          message: payload.message,
+          actionUrl: payload.actionUrl,
+          sentAt: new Date(),
+          deliveryStatus: 'sent',
+        },
+      });
+
+      // If email channel, trigger email sending
+      if (payload.channel === 'EMAIL') {
+        await this.sendEmailNotification(payload);
+      }
+
+      return { success: true, notificationId: notification.id };
+    } catch (error) {
+      console.error('[NotificationService] Send error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send notification',
+      };
+    }
+  }
+
+  /**
+   * Send notifications to multiple recipients
+   */
+  async sendBulkNotifications(
+    instanceId: string,
+    payload: BulkNotificationPayload
+  ): Promise<{ success: boolean; count: number }> {
+    try {
+      const notifications = payload.recipientIds.map(recipientId => ({
+        instanceId,
+        recipientId,
+        type: payload.type,
+        channel: payload.channel || ('IN_APP' as NotificationChannel),
+        title: payload.title,
+        message: payload.message,
+        actionUrl: payload.actionUrl,
+        sentAt: new Date(),
+        deliveryStatus: 'sent',
+      }));
+
+      const result = await prisma.workflowNotification.createMany({
+        data: notifications,
+      });
+
+      return { success: true, count: result.count };
+    } catch (error) {
+      console.error('[NotificationService] Bulk send error:', error);
+      return { success: false, count: 0 };
+    }
+  }
+
+  /**
+   * Mark notification as read
+   */
+  async markAsRead(notificationId: string): Promise<boolean> {
+    try {
+      await prisma.workflowNotification.update({
+        where: { id: notificationId },
+        data: { readAt: new Date() },
+      });
+      return true;
+    } catch (error) {
+      console.error('[NotificationService] Mark read error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userId: string): Promise<number> {
+    try {
+      const result = await prisma.workflowNotification.updateMany({
+        where: {
+          recipientId: userId,
+          readAt: null,
+        },
+        data: { readAt: new Date() },
+      });
+      return result.count;
+    } catch (error) {
+      console.error('[NotificationService] Mark all read error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get unread notifications for a user
+   */
+  async getUnreadNotifications(userId: string, limit = 20) {
+    return prisma.workflowNotification.findMany({
+      where: {
+        recipientId: userId,
+        readAt: null,
+      },
+      include: {
+        instance: {
+          include: {
+            workflow: { select: { name: true, code: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  /**
+   * Get all notifications for a user with pagination
+   */
+  async getNotifications(
+    userId: string,
+    options: { page?: number; limit?: number; unreadOnly?: boolean } = {}
+  ) {
+    const { page = 1, limit = 20, unreadOnly = false } = options;
+    const skip = (page - 1) * limit;
+
+    const where = {
+      recipientId: userId,
+      ...(unreadOnly ? { readAt: null } : {}),
+    };
+
+    const [notifications, total] = await Promise.all([
+      prisma.workflowNotification.findMany({
+        where,
+        include: {
+          instance: {
+            include: {
+              workflow: { select: { name: true, code: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.workflowNotification.count({ where }),
+    ]);
+
+    return {
+      notifications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get unread count for a user
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    return prisma.workflowNotification.count({
+      where: {
+        recipientId: userId,
+        readAt: null,
+      },
+    });
+  }
+
+  /**
+   * Send reminder notifications for overdue approvals
+   */
+  async sendOverdueReminders(): Promise<{ sent: number; errors: number }> {
+    let sent = 0;
+    let errors = 0;
+
+    try {
+      // Find overdue pending approvals
+      const overdueApprovals = await prisma.workflowApproval.findMany({
+        where: {
+          decision: 'PENDING',
+          dueDate: {
+            lt: new Date(),
+          },
+          reminderCount: {
+            lt: 3, // Max 3 reminders
+          },
+        },
+        include: {
+          instance: {
+            include: {
+              workflow: true,
+            },
+          },
+          approver: true,
+          step: true,
+        },
+      });
+
+      for (const approval of overdueApprovals) {
+        try {
+          await this.sendNotification(approval.instanceId, {
+            recipientId: approval.approverId,
+            type: 'REMINDER',
+            title: `Overdue Approval: ${approval.instance.workflow.name}`,
+            message: `Your approval for ${approval.step.name} is overdue. Please review as soon as possible.`,
+            actionUrl: `/approvals/${approval.instanceId}`,
+          });
+
+          await prisma.workflowApproval.update({
+            where: { id: approval.id },
+            data: {
+              reminderCount: { increment: 1 },
+              lastReminderAt: new Date(),
+            },
+          });
+
+          sent++;
+        } catch {
+          errors++;
+        }
+      }
+    } catch (error) {
+      console.error('[NotificationService] Reminder error:', error);
+    }
+
+    return { sent, errors };
+  }
+
+  /**
+   * Delete old notifications (cleanup)
+   */
+  async cleanupOldNotifications(daysOld = 90): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+    const result = await prisma.workflowNotification.deleteMany({
+      where: {
+        createdAt: { lt: cutoffDate },
+        readAt: { not: null },
+      },
+    });
+
+    return result.count;
+  }
+
+  // Private: Send email notification (stub - implement with actual email service)
+  private async sendEmailNotification(payload: NotificationPayload): Promise<void> {
+    // Get user email
+    const user = await prisma.user.findUnique({
+      where: { id: payload.recipientId },
+      select: { email: true, name: true },
+    });
+
+    if (!user?.email) {
+      console.warn('[NotificationService] No email for user:', payload.recipientId);
+      return;
+    }
+
+    // TODO: Integrate with actual email service (SendGrid, SES, etc.)
+    console.log('[NotificationService] Would send email to:', user.email, payload);
+  }
+}
+
+// Export singleton instance
+export const notificationService = new NotificationService();
