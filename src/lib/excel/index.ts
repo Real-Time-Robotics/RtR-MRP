@@ -59,3 +59,39 @@ export {
   type MappingConfig,
   type MappingResult,
 } from "./mapper";
+
+// AI Mapper exports
+export {
+  aiDetectEntityType,
+  aiSuggestMappings,
+  aiEnhancedAutoMapping,
+  shouldUseAI,
+  type AIColumnSuggestion,
+  type AIEntitySuggestion,
+  type AIMapperOptions,
+} from "./ai-mapper";
+
+// AI Validator exports
+export {
+  aiDetectDataIssues,
+  quickValidateData,
+  type DataIssue,
+  type DataIssueCategory,
+  type DataIssuesSummary,
+  type AIValidationResult,
+  type AISuggestion,
+  type AIValidatorOptions,
+} from "./ai-validator";
+
+// Duplicate Detector exports
+export {
+  checkDuplicates,
+  aiSuggestDuplicateResolution,
+  getIdentifierField as getDuplicateIdentifierField,
+  hasAnyDuplicates,
+  type DuplicateMatch,
+  type DuplicateResolution,
+  type DuplicateCheckResult,
+  type DuplicateCheckOptions,
+  type AIDuplicateResolution,
+} from "./duplicate-detector";

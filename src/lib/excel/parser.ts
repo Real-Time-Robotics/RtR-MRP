@@ -183,7 +183,16 @@ export function getSheetPreview(
   return sheet.data.slice(0, maxRows);
 }
 
-// Detect entity type from headers
+// Normalize header for matching (supports Vietnamese diacritics)
+function normalizeHeaderForMatching(header: string): string {
+  return header
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove Vietnamese diacritics
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Detect entity type from headers (supports English and Vietnamese)
 export function detectEntityType(
   headers: string[]
 ): {
@@ -191,66 +200,106 @@ export function detectEntityType(
   confidence: number;
   matchedHeaders: string[];
 } {
-  const normalizedHeaders = headers.map((h) =>
-    h.toLowerCase().replace(/[^a-z0-9]/g, "")
-  );
+  const normalizedHeaders = headers.map(normalizeHeaderForMatching);
 
+  // Entity patterns with both English and Vietnamese keywords
   const entityPatterns: Record<string, { required: string[]; optional: string[] }> = {
     parts: {
-      required: ["partnumber", "name"],
+      required: [
+        // English
+        "partnumber", "partno", "itemcode", "itemnumber",
+        // Vietnamese (normalized - no diacritics)
+        "masp", "masanpham", "malinhkien", "mavattu", "mahang"
+      ],
       optional: [
-        "category",
-        "description",
-        "unit",
-        "unitcost",
-        "cost",
-        "price",
-        "weight",
-        "safetystock",
-        "reorderpoint",
+        // English
+        "category", "description", "unit", "unitcost", "cost", "price",
+        "weight", "safetystock", "reorderpoint", "name",
+        // Vietnamese
+        "ten", "tensp", "tensanpham", "danhmuc", "loai", "mota",
+        "donvi", "dongia", "gia", "trongluong", "tonantoan"
       ],
     },
     suppliers: {
-      required: ["code", "name"],
+      required: [
+        // English
+        "suppliercode", "vendorcode", "supplierid",
+        // Vietnamese
+        "mancc", "manhacungcap", "mavendor"
+      ],
       optional: [
-        "country",
-        "contact",
-        "email",
-        "phone",
-        "address",
-        "leadtime",
-        "rating",
+        // English
+        "country", "contact", "email", "phone", "address", "leadtime", "rating", "name",
+        // Vietnamese
+        "ten", "tenncc", "tennhacungcap", "quocgia", "dienthoai", "diachi",
+        "thoigiangiao", "danhgia"
       ],
     },
     inventory: {
-      required: ["partnumber"],
+      required: [
+        // English
+        "partnumber", "partno", "itemcode",
+        // Vietnamese
+        "masp", "masanpham", "mavattu", "mahang"
+      ],
       optional: [
-        "warehouse",
-        "quantity",
-        "qty",
-        "location",
-        "lotnumber",
-        "lot",
-        "expiry",
+        // English
+        "warehouse", "quantity", "qty", "location", "lotnumber", "lot", "expiry", "stock",
+        // Vietnamese
+        "kho", "makho", "soluong", "sl", "tonkho", "vitri", "solo", "malo",
+        "hansudung", "ngayhethan"
       ],
     },
     products: {
-      required: ["sku", "name"],
-      optional: ["description", "price", "baseprice", "assemblyhours", "testinghours"],
+      required: [
+        // English
+        "sku", "productcode", "productsku",
+        // Vietnamese - products often use same as parts
+        "masp", "masanpham", "mathanhpham"
+      ],
+      optional: [
+        // English
+        "description", "price", "baseprice", "assemblyhours", "testinghours", "name",
+        // Vietnamese
+        "ten", "tensp", "tensanpham", "mota", "gia", "giaban", "giolaprap", "giokiemtra"
+      ],
     },
     customers: {
-      required: ["code", "name"],
-      optional: ["type", "country", "contact", "email", "phone", "creditlimit"],
+      required: [
+        // English
+        "customercode", "custcode", "accountnumber",
+        // Vietnamese
+        "makh", "makhachhang", "sotaikhoan"
+      ],
+      optional: [
+        // English
+        "type", "country", "contact", "email", "phone", "creditlimit", "name",
+        // Vietnamese
+        "ten", "tenkh", "tenkhachhang", "loai", "quocgia", "dienthoai",
+        "hanmuctindung", "hanmuc"
+      ],
     },
     bom: {
-      required: ["productsku", "partnumber", "quantity"],
-      optional: ["version", "level", "module", "position", "scraprate"],
+      required: [
+        // English - BOM needs parent + child + qty
+        "productsku", "parentsku", "assembly",
+        // Vietnamese
+        "matp", "mathanhpham", "spcha"
+      ],
+      optional: [
+        // English
+        "partnumber", "component", "quantity", "qty", "version", "level", "module", "position", "scraprate",
+        // Vietnamese
+        "malk", "malinhkien", "vattu", "spcon", "soluong", "sl", "dinhmuc",
+        "phienban", "capdo", "vitri", "tylehao"
+      ],
     },
   };
 
   let bestMatch: { type: string; score: number; matched: string[] } | null = null;
 
   for (const [entityType, patterns] of Object.entries(entityPatterns)) {
+    // Check if any required pattern matches
     const matchedRequired = patterns.required.filter((req) =>
       normalizedHeaders.some(
         (h) => h.includes(req) || req.includes(h)
@@ -263,10 +312,11 @@ export function detectEntityType(
       )
     );
 
-    // All required fields must match
-    if (matchedRequired.length === patterns.required.length) {
+    // At least one required field must match (relaxed for Vietnamese headers)
+    if (matchedRequired.length >= 1) {
+      // Calculate score based on matches
       const score =
-        matchedRequired.length * 2 +
+        matchedRequired.length * 3 + // Required fields weighted more
         matchedOptional.length +
         (normalizedHeaders.length > 0
           ? (matchedRequired.length + matchedOptional.length) /
@@ -284,9 +334,14 @@ export function detectEntityType(
   }
 
   if (bestMatch) {
+    // Confidence based on total matches vs patterns
+    const totalPatterns = entityPatterns[bestMatch.type].required.length +
+      entityPatterns[bestMatch.type].optional.length;
+    const matchRatio = bestMatch.matched.length / Math.min(totalPatterns, normalizedHeaders.length);
+
     return {
       entityType: bestMatch.type,
-      confidence: Math.min(bestMatch.score / 5, 1),
+      confidence: Math.min(matchRatio + 0.3, 1), // Boost confidence slightly
       matchedHeaders: bestMatch.matched,
     };
   }

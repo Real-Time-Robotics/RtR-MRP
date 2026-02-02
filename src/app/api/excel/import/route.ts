@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import {
   parseFile,
   autoDetectMappings,
+  detectEntityType,
 } from "@/lib/excel";
 
 // POST - Upload and parse file, create import job
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const entityType = formData.get("entityType") as string | null;
+    const useAI = formData.get("useAI") !== "false"; // Default to true
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -47,13 +49,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-detect mappings if entity type is provided
-    let mappings = null;
-    const detectedType = entityType;
+    // Detect entity type if not provided
+    let detectedType = entityType;
+    let entityDetectionResult = null;
 
-    if (entityType) {
-      const detected = autoDetectMappings(sheet.headers, entityType);
+    if (!entityType) {
+      // Use rule-based detection (now supports Vietnamese)
+      const detection = detectEntityType(sheet.headers);
+      detectedType = detection.entityType;
+      entityDetectionResult = {
+        entityType: detection.entityType,
+        confidence: detection.confidence,
+        matchedHeaders: detection.matchedHeaders,
+        source: "rules",
+        needsAIConfirmation: detection.confidence < 0.7,
+      };
+    }
+
+    // Auto-detect mappings
+    let mappings = null;
+    let mappingResult = null;
+
+    if (detectedType) {
+      const detected = autoDetectMappings(sheet.headers, detectedType);
       mappings = detected.mappings;
+      mappingResult = {
+        mappings: detected.mappings,
+        unmappedColumns: detected.unmappedColumns,
+        missingRequiredFields: detected.missingRequiredFields,
+        hasUnmappedColumns: detected.unmappedColumns.length > 0,
+        needsAISuggestions: useAI && detected.unmappedColumns.length > 0,
+      };
     }
 
     // Create import job
@@ -82,8 +108,17 @@ export async function POST(request: NextRequest) {
       })),
       activeSheet: parseResult.activeSheet,
       entityType: detectedType,
+      entityDetection: entityDetectionResult,
       mappings,
+      mappingResult,
       preview: sheet.data.slice(0, 10),
+      // AI enhancement hints
+      aiHints: {
+        canUseAI: useAI,
+        needsEntityConfirmation: entityDetectionResult?.needsAIConfirmation,
+        needsMappingSuggestions: mappingResult?.needsAISuggestions,
+        aiEndpoint: "/api/excel/import/ai",
+      },
     });
   } catch (error) {
     console.error("Import upload error:", error);
