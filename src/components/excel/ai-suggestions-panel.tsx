@@ -38,6 +38,7 @@ interface DataIssue {
   issue: string;
   suggestion: string;
   severity: "error" | "warning" | "info";
+  category?: string; // Optional for backward compatibility
 }
 
 interface DuplicateMatch {
@@ -48,7 +49,7 @@ interface DuplicateMatch {
     identifier: string;
     name?: string;
   };
-  matchType: "exact" | "similar";
+  matchType: "exact" | "similar" | "potential";
   similarity?: number;
 }
 
@@ -424,7 +425,7 @@ export function AISuggestionsPanel({
                               </code>
                             </div>
                             <p className="text-xs text-gray-600 mt-1">
-                              {dup.matchType === "exact" ? "Trùng chính xác" : "Tương tự"} với:{" "}
+                              {dup.matchType === "exact" ? "Trùng chính xác" : dup.matchType === "similar" ? "Tương tự" : "Có thể trùng"} với:{" "}
                               <span className="font-medium">{dup.existingRecord.identifier}</span>
                               {dup.existingRecord.name && ` (${dup.existingRecord.name})`}
                             </p>

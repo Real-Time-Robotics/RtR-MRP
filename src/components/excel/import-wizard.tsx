@@ -1,7 +1,7 @@
 "use client";
 
 // src/components/excel/import-wizard.tsx
-// Multi-Step Import Wizard Component
+// Multi-Step Import Wizard Component with AI Integration
 
 import { useState, useCallback } from "react";
 import {
@@ -15,10 +15,13 @@ import {
   Loader2,
   AlertCircle,
   Check,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FileUpload } from "./file-upload";
 import { ColumnMapper } from "./column-mapper";
+import { AISuggestionsPanel } from "./ai-suggestions-panel";
+import { useAIImport } from "@/hooks/use-ai-import";
 
 interface ImportStep {
   id: number;
@@ -27,20 +30,20 @@ interface ImportStep {
 }
 
 const STEPS: ImportStep[] = [
-  { id: 1, name: "Upload File", icon: Upload },
-  { id: 2, name: "Select Type", icon: FileCheck },
-  { id: 3, name: "Map Columns", icon: Columns },
-  { id: 4, name: "Validate", icon: CheckCircle },
+  { id: 1, name: "Tải file", icon: Upload },
+  { id: 2, name: "Chọn loại", icon: FileCheck },
+  { id: 3, name: "Mapping cột", icon: Columns },
+  { id: 4, name: "Kiểm tra", icon: CheckCircle },
   { id: 5, name: "Import", icon: Play },
 ];
 
 const ENTITY_TYPES = [
-  { value: "parts", label: "Parts", description: "Import part master data" },
-  { value: "suppliers", label: "Suppliers", description: "Import supplier information" },
-  { value: "products", label: "Products", description: "Import product catalog" },
-  { value: "customers", label: "Customers", description: "Import customer data" },
-  { value: "inventory", label: "Inventory", description: "Import stock levels" },
-  { value: "bom", label: "Bill of Materials", description: "Import BOM structures" },
+  { value: "parts", label: "Linh kiện", description: "Import dữ liệu linh kiện / vật tư" },
+  { value: "suppliers", label: "Nhà cung cấp", description: "Import thông tin nhà cung cấp" },
+  { value: "products", label: "Sản phẩm", description: "Import danh mục sản phẩm" },
+  { value: "customers", label: "Khách hàng", description: "Import dữ liệu khách hàng" },
+  { value: "inventory", label: "Tồn kho", description: "Import số liệu tồn kho" },
+  { value: "bom", label: "BOM", description: "Import định mức vật tư (BOM)" },
 ];
 
 interface FieldDefinition {
@@ -98,12 +101,18 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
   } | null>(null);
 
   const [targetFields, setTargetFields] = useState<FieldDefinition[]>([]);
+  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [duplicateActions, setDuplicateActions] = useState<Record<number, string>>({});
+
+  // AI Import Hook
+  const aiImport = useAIImport();
 
   // Handle file selection and upload
   const handleFileSelect = useCallback(async (file: File) => {
     setSelectedFile(file);
     setError(null);
     setIsLoading(true);
+    aiImport.reset();
 
     try {
       const formData = new FormData();
@@ -122,12 +131,17 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
       const result = await response.json();
       setParseResult(result);
       setCurrentStep(2);
+
+      // Trigger AI entity detection
+      if (result.sheets?.[0]?.headers && result.preview) {
+        aiImport.analyzeFile(result.sheets[0].headers, result.preview);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [aiImport]);
 
   // Handle entity type selection
   const handleEntityTypeSelect = useCallback(async (type: string) => {
@@ -160,6 +174,15 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
           if (result.mappings) {
             setMappings(result.mappings);
           }
+
+          // Trigger AI column mapping for unmapped columns
+          const headers = result.sheets?.[0]?.headers || [];
+          const mappedColumns = result.mappings?.map((m: ColumnMapping) => m.sourceColumn) || [];
+          const unmappedColumns = headers.filter((h: string) => !mappedColumns.includes(h));
+
+          if (unmappedColumns.length > 0 && result.preview) {
+            aiImport.suggestMappings(unmappedColumns, type, result.preview);
+          }
         }
       }
 
@@ -169,12 +192,53 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFile, parseResult]);
+  }, [selectedFile, parseResult, aiImport]);
 
   // Handle mapping change
   const handleMappingChange = useCallback((newMappings: ColumnMapping[]) => {
     setMappings(newMappings);
   }, []);
+
+  // Handle AI column suggestion acceptance
+  const handleAcceptColumnSuggestion = useCallback((suggestion: { sourceColumn: string; suggestedField: string | null }) => {
+    if (!suggestion.suggestedField) return;
+
+    const newMapping: ColumnMapping = {
+      sourceColumn: suggestion.sourceColumn,
+      targetField: suggestion.suggestedField,
+    };
+
+    setMappings((prev) => {
+      // Check if this source column is already mapped
+      const exists = prev.find((m) => m.sourceColumn === suggestion.sourceColumn);
+      if (exists) {
+        return prev.map((m) =>
+          m.sourceColumn === suggestion.sourceColumn ? newMapping : m
+        );
+      }
+      return [...prev, newMapping];
+    });
+  }, []);
+
+  // Handle AI duplicate action
+  const handleDuplicateAction = useCallback((row: number, action: string) => {
+    setDuplicateActions((prev) => ({
+      ...prev,
+      [row]: action,
+    }));
+  }, []);
+
+  // Refresh AI analysis
+  const handleRefreshAI = useCallback(async () => {
+    if (!parseResult?.preview || !entityType) return;
+
+    await aiImport.runFullAnalysis(
+      parseResult.sheets?.[0]?.headers || [],
+      parseResult.preview,
+      entityType,
+      mappings
+    );
+  }, [parseResult, entityType, mappings, aiImport]);
 
   // Validate data
   const handleValidate = useCallback(async () => {
@@ -200,15 +264,22 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         throw new Error(data.error || "Validation failed");
       }
 
-      // For now, just move to next step
-      // In a full implementation, we would validate the data on the server
-      setCurrentStep(5);
+      // Run AI validation and duplicate check
+      if (parseResult?.preview && mappings.length > 0) {
+        await Promise.all([
+          aiImport.validateImportData(parseResult.preview, entityType, mappings),
+          aiImport.checkForDuplicates(parseResult.preview, entityType),
+        ]);
+      }
+
+      // Move to validation step to show results
+      setCurrentStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Validation failed");
     } finally {
       setIsLoading(false);
     }
-  }, [parseResult, mappings, entityType, updateMode]);
+  }, [parseResult, mappings, entityType, updateMode, aiImport]);
 
   // Process import
   const handleImport = useCallback(async () => {
@@ -254,7 +325,9 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
       case 3:
         return mappings.length > 0;
       case 4:
-        return validationErrors.filter((e) => e.severity === "error").length === 0;
+        // Allow proceeding if no critical errors
+        const criticalErrors = aiImport.dataIssues.filter((i) => i.severity === "error").length;
+        return criticalErrors === 0 || validationErrors.filter((e) => e.severity === "error").length === 0;
       case 5:
         return importResult !== null;
       default:
@@ -271,6 +344,10 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
       setCurrentStep(currentStep + 1);
     }
   };
+
+  // Check if AI is currently loading
+  const isAILoading = aiImport.isAnalyzing || aiImport.isDetectingEntity ||
+    aiImport.isMappingColumns || aiImport.isValidating || aiImport.isCheckingDuplicates;
 
   const handleBack = () => {
     if (currentStep > 1) {
@@ -344,9 +421,9 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         {/* Step 1: Upload */}
         {currentStep === 1 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Upload Your File</h3>
+            <h3 className="text-lg font-semibold">Tải file lên</h3>
             <p className="text-gray-600">
-              Select an Excel (.xlsx, .xls) or CSV file to import.
+              Chọn file Excel (.xlsx, .xls) hoặc CSV để import.
             </p>
             <FileUpload onFileSelect={handleFileSelect} disabled={isLoading} />
           </div>
@@ -355,27 +432,74 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         {/* Step 2: Select Type */}
         {currentStep === 2 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Select Data Type</h3>
+            <h3 className="text-lg font-semibold">Chọn loại dữ liệu</h3>
             <p className="text-gray-600">
-              Choose what type of data you are importing.
+              Chọn loại dữ liệu bạn muốn import.
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {ENTITY_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => handleEntityTypeSelect(type.value)}
-                  disabled={isLoading}
-                  className={cn(
-                    "p-4 border rounded-lg text-left transition-colors hover:border-blue-500",
-                    entityType === type.value
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200"
+
+            {/* AI Entity Suggestion */}
+            {aiImport.entitySuggestion && (
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium text-purple-900">AI Đề xuất</span>
+                  {aiImport.isDetectingEntity && (
+                    <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
                   )}
+                </div>
+                <p className="text-sm text-purple-800 mb-2">
+                  Dựa trên phân tích headers và dữ liệu mẫu, AI nhận diện đây là dữ liệu{" "}
+                  <span className="font-semibold">
+                    {ENTITY_TYPES.find((t) => t.value === aiImport.entitySuggestion?.entityType)?.label ||
+                      aiImport.entitySuggestion.entityType}
+                  </span>{" "}
+                  với độ tin cậy{" "}
+                  <span className="font-semibold">
+                    {Math.round((aiImport.entitySuggestion.confidence || 0) * 100)}%
+                  </span>
+                </p>
+                {aiImport.entitySuggestion.reasoning && (
+                  <p className="text-xs text-purple-600">
+                    💡 {aiImport.entitySuggestion.reasoning}
+                  </p>
+                )}
+                <button
+                  onClick={() => handleEntityTypeSelect(aiImport.entitySuggestion!.entityType)}
+                  className="mt-3 flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                 >
-                  <p className="font-medium">{type.label}</p>
-                  <p className="text-sm text-gray-500">{type.description}</p>
+                  <Check className="w-4 h-4" />
+                  Sử dụng đề xuất này
                 </button>
-              ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {ENTITY_TYPES.map((type) => {
+                const isAISuggested = aiImport.entitySuggestion?.entityType === type.value;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => handleEntityTypeSelect(type.value)}
+                    disabled={isLoading}
+                    className={cn(
+                      "p-4 border rounded-lg text-left transition-colors hover:border-blue-500 relative",
+                      entityType === type.value
+                        ? "border-blue-500 bg-blue-50"
+                        : isAISuggested
+                        ? "border-purple-300 bg-purple-50/50"
+                        : "border-gray-200"
+                    )}
+                  >
+                    {isAISuggested && (
+                      <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-purple-600 text-white text-xs rounded-full">
+                        AI
+                      </span>
+                    )}
+                    <p className="font-medium">{type.label}</p>
+                    <p className="text-sm text-gray-500">{type.description}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -383,14 +507,42 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         {/* Step 3: Map Columns */}
         {currentStep === 3 && parseResult && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Map Columns</h3>
-            <p className="text-gray-600">
-              Match your file columns to the system fields.
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Mapping cột dữ liệu</h3>
+                <p className="text-gray-600">
+                  Ghép nối các cột trong file với trường dữ liệu hệ thống.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAIPanel(!showAIPanel)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors",
+                  showAIPanel
+                    ? "bg-purple-100 text-purple-700"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                {showAIPanel ? "Ẩn AI" : "Hiện AI"}
+              </button>
+            </div>
+
+            {/* AI Suggestions Panel for Column Mapping */}
+            {showAIPanel && (
+              <AISuggestionsPanel
+                columnSuggestions={aiImport.columnSuggestions}
+                onAcceptColumnSuggestion={handleAcceptColumnSuggestion}
+                isLoading={aiImport.isMappingColumns}
+                onRefresh={handleRefreshAI}
+                collapsible={true}
+                defaultExpanded={aiImport.columnSuggestions.length > 0}
+              />
+            )}
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Update Mode
+                Chế độ cập nhật
               </label>
               <select
                 value={updateMode}
@@ -399,9 +551,9 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
                 }
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               >
-                <option value="insert">Insert new records only</option>
-                <option value="update">Update existing records only</option>
-                <option value="upsert">Insert or update (upsert)</option>
+                <option value="insert">Chỉ thêm bản ghi mới</option>
+                <option value="update">Chỉ cập nhật bản ghi đã có</option>
+                <option value="upsert">Thêm mới hoặc cập nhật (upsert)</option>
               </select>
             </div>
 
@@ -415,27 +567,104 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
           </div>
         )}
 
-        {/* Step 4: Validate (now skipped, goes directly to step 5) */}
+        {/* Step 4: Validate & Review */}
+        {currentStep === 4 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Kiểm tra dữ liệu</h3>
+            <p className="text-gray-600">
+              Xem xét các vấn đề được phát hiện trước khi import.
+            </p>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-2xl font-bold text-blue-700">
+                  {parseResult?.sheets[0]?.rowCount || 0}
+                </p>
+                <p className="text-sm text-blue-600">Tổng số dòng</p>
+              </div>
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-2xl font-bold text-green-700">
+                  {aiImport.summary?.newRecords || parseResult?.sheets[0]?.rowCount || 0}
+                </p>
+                <p className="text-sm text-green-600">Bản ghi mới</p>
+              </div>
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-2xl font-bold text-orange-700">
+                  {aiImport.duplicates.length}
+                </p>
+                <p className="text-sm text-orange-600">Trùng lặp</p>
+              </div>
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-2xl font-bold text-red-700">
+                  {aiImport.summary?.errors || 0}
+                </p>
+                <p className="text-sm text-red-600">Lỗi</p>
+              </div>
+            </div>
+
+            {/* AI Suggestions Panel with Issues and Duplicates */}
+            <AISuggestionsPanel
+              dataIssues={aiImport.dataIssues}
+              duplicates={aiImport.duplicates}
+              duplicateResolutions={aiImport.duplicateResolutions}
+              onAcceptDuplicateAction={handleDuplicateAction}
+              isLoading={aiImport.isValidating || aiImport.isCheckingDuplicates}
+              onRefresh={handleRefreshAI}
+              collapsible={false}
+              defaultExpanded={true}
+            />
+
+            {/* Warning if there are errors */}
+            {(aiImport.summary?.errors || 0) > 0 && (
+              <div className="flex items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Có {aiImport.summary?.errors} lỗi cần xử lý</p>
+                  <p className="text-sm">
+                    Bạn vẫn có thể tiếp tục import, nhưng các dòng có lỗi sẽ bị bỏ qua.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* No issues message */}
+            {aiImport.dataIssues.length === 0 && aiImport.duplicates.length === 0 && (
+              <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
+                <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Dữ liệu hợp lệ!</p>
+                  <p className="text-sm">
+                    Không phát hiện vấn đề nào. Bạn có thể tiếp tục import.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Step 5: Import */}
         {currentStep === 5 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Import Data</h3>
+            <h3 className="text-lg font-semibold">Import dữ liệu</h3>
 
             {!importResult && (
               <>
                 <p className="text-gray-600">
-                  Ready to import {parseResult?.sheets[0]?.rowCount || 0} rows.
+                  Sẵn sàng import {parseResult?.sheets[0]?.rowCount || 0} dòng dữ liệu.
                 </p>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Import Summary</h4>
+                  <h4 className="font-medium mb-2">Tóm tắt Import</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>File: {parseResult?.fileName}</li>
-                    <li>Entity Type: {entityType}</li>
-                    <li>Rows: {parseResult?.sheets[0]?.rowCount || 0}</li>
-                    <li>Mode: {updateMode}</li>
-                    <li>Mappings: {mappings.length} columns</li>
+                    <li><span className="text-gray-500">File:</span> {parseResult?.fileName}</li>
+                    <li><span className="text-gray-500">Loại dữ liệu:</span> {ENTITY_TYPES.find((t) => t.value === entityType)?.label || entityType}</li>
+                    <li><span className="text-gray-500">Số dòng:</span> {parseResult?.sheets[0]?.rowCount || 0}</li>
+                    <li><span className="text-gray-500">Chế độ:</span> {updateMode === "insert" ? "Thêm mới" : updateMode === "update" ? "Cập nhật" : "Thêm/Cập nhật"}</li>
+                    <li><span className="text-gray-500">Số cột mapping:</span> {mappings.length}</li>
+                    {aiImport.duplicates.length > 0 && (
+                      <li><span className="text-gray-500">Bản ghi trùng:</span> {aiImport.duplicates.length} (sẽ xử lý theo cài đặt)</li>
+                    )}
                   </ul>
                 </div>
 
@@ -447,12 +676,12 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Importing...
+                      Đang import...
                     </>
                   ) : (
                     <>
                       <Play className="w-4 h-4" />
-                      Start Import
+                      Bắt đầu Import
                     </>
                   )}
                 </button>
@@ -471,17 +700,17 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
                 >
                   <h4 className="font-medium mb-2">
                     {importResult.errors.length === 0
-                      ? "Import Completed Successfully!"
-                      : "Import Completed with Errors"}
+                      ? "Import hoàn tất thành công!"
+                      : "Import hoàn tất với một số lỗi"}
                   </h4>
                   <ul className="text-sm space-y-1">
-                    <li>Processed: {importResult.processed} rows</li>
+                    <li>Đã xử lý: {importResult.processed} dòng</li>
                     <li className="text-green-700">
-                      Successful: {importResult.success} rows
+                      Thành công: {importResult.success} dòng
                     </li>
                     {importResult.errors.length > 0 && (
                       <li className="text-red-700">
-                        Errors: {importResult.errors.length} rows
+                        Lỗi: {importResult.errors.length} dòng
                       </li>
                     )}
                   </ul>
@@ -490,14 +719,14 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
                 {importResult.errors.length > 0 && (
                   <div className="border rounded-lg overflow-hidden">
                     <div className="bg-red-50 px-4 py-2 border-b">
-                      <h5 className="font-medium text-red-700">Error Details</h5>
+                      <h5 className="font-medium text-red-700">Chi tiết lỗi</h5>
                     </div>
                     <div className="max-h-60 overflow-y-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-4 py-2 text-left">Row</th>
-                            <th className="px-4 py-2 text-left">Error</th>
+                            <th className="px-4 py-2 text-left">Dòng</th>
+                            <th className="px-4 py-2 text-left">Lỗi</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -512,6 +741,19 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                )}
+
+                {/* Success Action Buttons */}
+                {importResult.errors.length === 0 && onClose && (
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={onClose}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Check className="w-4 h-4" />
+                      Đóng
+                    </button>
                   </div>
                 )}
               </div>
@@ -535,17 +777,36 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
           className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          Quay lại
         </button>
 
         {currentStep < 5 && currentStep !== 2 && (
           <button
             onClick={handleNext}
-            disabled={!canProceed() || isLoading}
+            disabled={!canProceed() || isLoading || isAILoading}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            Next
-            <ArrowRight className="w-4 h-4" />
+            {isAILoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Đang phân tích...
+              </>
+            ) : currentStep === 3 ? (
+              <>
+                Kiểm tra
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : currentStep === 4 ? (
+              <>
+                Tiếp tục Import
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Tiếp theo
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         )}
       </div>

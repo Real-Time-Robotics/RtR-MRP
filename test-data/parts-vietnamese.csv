@@ -1,0 +1,6 @@
+Mã SP,Tên,Mô tả,Đơn giá,Đơn vị,Danh mục,Trạng thái
+LK-001,Linh kiện A,Mô tả linh kiện A,150000,cái,Electronics,active
+LK-002,Linh kiện B,Mô tả linh kiện B,250000,cái,Mechanical,active
+LK-003,Linh kiện C,Mô tả linh kiện C,75000,cái,Electronics,active
+VT-001,Vật tư X,Mô tả vật tư X,50000,kg,Raw Material,active
+VT-002,Vật tư Y,Mô tả vật tư Y,80000,m,Raw Material,active
