@@ -21,7 +21,7 @@ const createScheduleSchema = z.object({
   timeOfDay: z.string().regex(/^\d{2}:\d{2}$/),
   format: z.enum(['PDF', 'EXCEL', 'BOTH']),
   recipients: z.array(z.string().email()).min(1),
-  filters: z.record(z.unknown()).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
 });
 
 const updateScheduleSchema = z.object({
@@ -33,7 +33,7 @@ const updateScheduleSchema = z.object({
   timeOfDay: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   format: z.string().optional(),
   recipients: z.array(z.string().email()).optional(),
-  filters: z.record(z.unknown()).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
   enabled: z.boolean().optional(),
 });
 
