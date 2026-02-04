@@ -58,12 +58,12 @@ export async function createReportSchedule(input: CreateScheduleInput) {
   if (!savedReport) {
     savedReport = await prisma.savedReport.create({
       data: {
-        name: template.name,
-        nameVi: template.nameVi,
+        name: `${template.name} (${template.nameVi})`,
         description: template.description,
         type: template.category.toUpperCase(),
+        category: template.category,
         userId: input.userId,
-        configuration: {
+        filters: {
           templateId: input.templateId,
           columns: template.columns,
           query: template.query,
