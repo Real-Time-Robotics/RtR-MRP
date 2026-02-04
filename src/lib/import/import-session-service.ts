@@ -254,7 +254,7 @@ export async function failImportSession(sessionId: string, errors: unknown[]) {
     data: {
       status: 'FAILED',
       completedAt: new Date(),
-      validationErrors: errors,
+      validationErrors: errors as object[],
     },
   });
 }
