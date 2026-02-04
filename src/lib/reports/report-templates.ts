@@ -158,9 +158,9 @@ export function getReportTemplate(templateId: string): ReportTemplateConfig | un
 }
 
 /**
- * Get templates by category
+ * Get scheduled templates by category
  */
-export function getTemplatesByCategory(category: string): ReportTemplateConfig[] {
+export function getScheduledTemplatesByCategory(category: string): ReportTemplateConfig[] {
   return SCHEDULED_REPORT_TEMPLATES.filter((t) => t.category === category);
 }
 
