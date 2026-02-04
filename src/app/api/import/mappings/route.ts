@@ -15,7 +15,7 @@ import { z } from 'zod';
 const createMappingSchema = z.object({
   name: z.string().min(1).max(100),
   targetType: z.string().min(1),
-  mapping: z.record(z.string()),
+  mapping: z.record(z.string(), z.string()),
 });
 
 // GET /api/import/mappings - Get saved mappings
