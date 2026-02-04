@@ -14,7 +14,7 @@ import { z } from 'zod';
 // Validation schema
 const updateViewSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  filters: z.record(z.unknown()).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
   sort: z.object({
     column: z.string(),
     direction: z.enum(['asc', 'desc']),
@@ -22,7 +22,7 @@ const updateViewSchema = z.object({
   columns: z.object({
     visible: z.array(z.string()),
     order: z.array(z.string()).optional(),
-    widths: z.record(z.number()).optional(),
+    widths: z.record(z.string(), z.number()).optional(),
   }).optional(),
   isDefault: z.boolean().optional(),
   isShared: z.boolean().optional(),
