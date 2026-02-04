@@ -203,8 +203,8 @@ export async function logImportRow(sessionId: string, entry: ImportLogEntry) {
       status: entry.status,
       entityType: entry.entityType,
       entityId: entry.entityId,
-      data: entry.data,
-      errors: entry.errors,
+      data: entry.data as object,
+      errors: entry.errors ?? [],
     },
   });
 }
@@ -220,8 +220,8 @@ export async function logImportBatch(sessionId: string, entries: ImportLogEntry[
       status: entry.status,
       entityType: entry.entityType,
       entityId: entry.entityId,
-      data: entry.data,
-      errors: entry.errors,
+      data: entry.data as object,
+      errors: entry.errors ?? [],
     })),
   });
 }
