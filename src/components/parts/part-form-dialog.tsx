@@ -34,7 +34,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Save, CheckCircle2, FilePenLine } from 'lucide-react';
+import { RotateCcw, Save, CheckCircle2, FilePenLine, ChevronRight } from 'lucide-react';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import {
     partSchema,
     PartFormData,
@@ -45,6 +46,9 @@ import {
     COUNTRIES
 } from './part-form-schema';
 
+// Tab order for navigation
+const TAB_ORDER = ['basic', 'physical', 'engineering', 'procurement', 'quality', 'compliance'] as const;
+
 // Define which fields belong to which tab
 const TAB_FIELDS: Record<string, (keyof PartFormData)[]> = {
     basic: ['partNumber', 'name', 'description', 'category', 'subCategory', 'partType', 'unit', 'unitCost', 'standardCost', 'averageCost', 'landedCost', 'freightPercent', 'dutyPercent', 'overheadPercent', 'priceBreakQty1', 'priceBreakCost1', 'priceBreakQty2', 'priceBreakCost2', 'priceBreakQty3', 'priceBreakCost3', 'isCritical'],
@@ -53,6 +57,26 @@ const TAB_FIELDS: Record<string, (keyof PartFormData)[]> = {
     procurement: ['primarySupplierId', 'makeOrBuy', 'procurementType', 'buyerCode', 'leadTimeDays', 'moq', 'orderMultiple', 'standardPack', 'minStockLevel', 'reorderPoint', 'safetyStock', 'maxStock'],
     compliance: ['countryOfOrigin', 'hsCode', 'eccn', 'ndaaCompliant', 'itarControlled', 'rohsCompliant', 'reachCompliant'],
     quality: ['lotControl', 'serialControl', 'shelfLifeDays', 'inspectionRequired', 'inspectionPlan', 'aqlLevel', 'certificateRequired'],
+};
+
+// Required fields per tab (fields that must be filled before moving to next tab)
+const TAB_REQUIRED_FIELDS: Record<string, (keyof PartFormData)[]> = {
+    basic: ['partNumber', 'name', 'category', 'unit'],
+    physical: ['weightKg'],
+    engineering: ['manufacturer', 'manufacturerPn'],
+    procurement: ['primarySupplierId', 'leadTimeDays', 'moq'],
+    quality: [], // All have defaults
+    compliance: ['countryOfOrigin'],
+};
+
+// Tab display names
+const TAB_NAMES: Record<string, string> = {
+    basic: 'Cơ bản',
+    physical: 'Vật lý',
+    engineering: 'Kỹ thuật',
+    procurement: 'Mua hàng',
+    quality: 'Chất lượng',
+    compliance: 'Tuân thủ',
 };
 
 interface PartFormDialogProps {
@@ -86,6 +110,9 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // Suppliers list for dropdown
     const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
+    // Manufacturers list for dropdown
+    const [manufacturers, setManufacturers] = useState<ComboboxOption[]>([]);
+
     // 1. Setup Form Hook
     const form = useForm<PartFormData>({
         resolver: zodResolver(partSchema) as any,
@@ -93,25 +120,76 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     });
 
     // Watch required fields to determine form completeness
+    // Basic tab
     const watchedPartNumber = form.watch('partNumber');
     const watchedName = form.watch('name');
     const watchedCategory = form.watch('category');
     const watchedUnit = form.watch('unit');
+    // Physical tab
+    const watchedWeightKg = form.watch('weightKg');
+    // Engineering tab
+    const watchedManufacturer = form.watch('manufacturer');
+    const watchedManufacturerPn = form.watch('manufacturerPn');
+    // Procurement tab
+    const watchedPrimarySupplierId = form.watch('primarySupplierId');
+    const watchedLeadTimeDays = form.watch('leadTimeDays');
+    const watchedMoq = form.watch('moq');
+    // Compliance tab
+    const watchedCountryOfOrigin = form.watch('countryOfOrigin');
+
+    // Check if a specific tab's required fields are filled
+    const isTabComplete = (tabName: string): boolean => {
+        const requiredFields = TAB_REQUIRED_FIELDS[tabName] || [];
+        if (requiredFields.length === 0) return true;
+
+        const values = form.getValues();
+        return requiredFields.every((field) => {
+            const value = values[field];
+            if (typeof value === 'string') return value.trim() !== '';
+            // For numbers: leadTimeDays can be 0, moq must be >= 1, weightKg must be > 0
+            if (typeof value === 'number') {
+                if (field === 'leadTimeDays') return value >= 0;
+                if (field === 'moq') return value >= 1;
+                return value > 0;
+            }
+            return value !== null && value !== undefined;
+        });
+    };
+
+    // Check if current tab's required fields are filled
+    const isCurrentTabComplete = useMemo(() => {
+        return isTabComplete(activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeTab, watchedPartNumber, watchedName, watchedCategory, watchedUnit,
+        watchedWeightKg, watchedManufacturer, watchedManufacturerPn,
+        watchedPrimarySupplierId, watchedLeadTimeDays, watchedMoq, watchedCountryOfOrigin]);
 
     // Form is complete when all required fields across all tabs are filled
     const isFormComplete = useMemo(() => {
-        return !!(
-            watchedPartNumber?.trim() &&
-            watchedName?.trim() &&
-            watchedCategory &&
-            watchedUnit?.trim()
-        );
-    }, [watchedPartNumber, watchedName, watchedCategory, watchedUnit]);
+        return TAB_ORDER.every((tab) => isTabComplete(tab));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [watchedPartNumber, watchedName, watchedCategory, watchedUnit,
+        watchedWeightKg, watchedManufacturer, watchedManufacturerPn,
+        watchedPrimarySupplierId, watchedLeadTimeDays, watchedMoq, watchedCountryOfOrigin]);
 
     // Can save draft when at least partNumber is filled
     const canSaveDraft = useMemo(() => {
         return !!(watchedPartNumber?.trim());
     }, [watchedPartNumber]);
+
+    // Get current tab index
+    const currentTabIndex = TAB_ORDER.indexOf(activeTab as typeof TAB_ORDER[number]);
+    const isLastTab = currentTabIndex === TAB_ORDER.length - 1;
+
+    // Navigate to next tab
+    const goToNextTab = () => {
+        if (!isLastTab) {
+            setActiveTab(TAB_ORDER[currentTabIndex + 1]);
+        }
+    };
+
+    // Get the name of the next tab (for button label)
+    const nextTabName = !isLastTab ? TAB_NAMES[TAB_ORDER[currentTabIndex + 1]] : null;
 
     // Setup Change Impact Hook
     const changeImpact = useChangeImpact({
@@ -234,8 +312,8 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                 };
             }
 
-            // Only close if closeAfterSave is true
-            if (closeAfterSave) {
+            // Close dialog after successful save if form is complete
+            if (closeAfterSave || isFormComplete) {
                 onOpenChange(false);
                 setCloseAfterSave(false);
             }
@@ -449,6 +527,19 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
         }
     }, [open]);
 
+    // Fetch manufacturers list when dialog opens
+    useEffect(() => {
+        if (open) {
+            fetch('/api/parts/manufacturers')
+                .then(res => res.json())
+                .then(result => {
+                    const items = result.data || [];
+                    setManufacturers(items.map((m: string) => ({ value: m, label: m })));
+                })
+                .catch(err => console.error('Failed to fetch manufacturers:', err));
+        }
+    }, [open]);
+
     return (
         <>
         <FormModal
@@ -478,31 +569,54 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                         Hủy
                     </Button>
                     <div className="flex gap-2">
-                        {!isFormComplete ? (
+                        {/* Show "Lưu nháp" when form is not complete and partNumber exists */}
+                        {!isFormComplete && canSaveDraft && (
                             <Button
                                 type="button"
-                                variant="secondary"
+                                variant="outline"
                                 onClick={handleDraftSave}
-                                disabled={!canSaveDraft || isSubmitting || changeImpact.loading}
+                                disabled={isSubmitting || changeImpact.loading}
                             >
                                 {(isSubmitting || changeImpact.loading) && (
                                     <FilePenLine className="h-4 w-4 mr-1 animate-spin" />
                                 )}
                                 Lưu nháp
                             </Button>
-                        ) : (
+                        )}
+
+                        {/* Main action button: "Tiếp theo" or "Lưu" */}
+                        {isFormComplete ? (
+                            // All required fields filled - show Save button
                             <Button
                                 type="button"
-                                onClick={() => {
-                                    setCloseAfterSave(true);
-                                    form.handleSubmit(handleSubmitWithImpactCheck)();
-                                }}
+                                onClick={() => form.handleSubmit(handleSubmitWithImpactCheck)()}
                                 disabled={isSubmitting || changeImpact.loading}
                             >
-                                {(isSubmitting || changeImpact.loading) && (
+                                {(isSubmitting || changeImpact.loading) ? (
                                     <Save className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4 mr-1" />
                                 )}
-                                Lưu & Đóng
+                                Lưu
+                            </Button>
+                        ) : isCurrentTabComplete && !isLastTab ? (
+                            // Current tab complete, not last tab - show Next button
+                            <Button
+                                type="button"
+                                onClick={goToNextTab}
+                                disabled={isSubmitting || changeImpact.loading}
+                            >
+                                Tiếp theo: {nextTabName}
+                                <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                        ) : (
+                            // Current tab not complete - show disabled button with hint
+                            <Button
+                                type="button"
+                                disabled
+                                variant="secondary"
+                            >
+                                Điền các trường bắt buộc (*)
                             </Button>
                         )}
                     </div>
@@ -962,7 +1076,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="weightKg"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Trọng lượng (kg)</FormLabel>
+                                            <FormLabel>Trọng lượng (kg) *</FormLabel>
                                             <FormControl>
                                                 <NumberInput
                                                     min={0}
@@ -1190,9 +1304,16 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="manufacturer"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Nhà sản xuất</FormLabel>
+                                            <FormLabel>Nhà sản xuất *</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="Nhà sản xuất" {...field} value={field.value || ''} />
+                                                <Combobox
+                                                    options={manufacturers}
+                                                    value={field.value || ''}
+                                                    onValueChange={field.onChange}
+                                                    placeholder="Chọn nhà sản xuất..."
+                                                    searchPlaceholder="Tìm nhà sản xuất..."
+                                                    emptyText="Không tìm thấy nhà sản xuất"
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -1204,7 +1325,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="manufacturerPn"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Mã NSX</FormLabel>
+                                            <FormLabel>Mã NSX *</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="MPN" {...field} value={field.value || ''} />
                                             </FormControl>
@@ -1263,25 +1384,21 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 name="primarySupplierId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Nhà cung cấp chính</FormLabel>
-                                        <Select
-                                            onValueChange={(val) => field.onChange(val === '__none__' ? null : val)}
-                                            value={field.value || '__none__'}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn nhà cung cấp..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="__none__">-- Không chọn --</SelectItem>
-                                                {suppliers.map((s) => (
-                                                    <SelectItem key={s.id} value={s.id}>
-                                                        {s.code} - {s.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormLabel>Nhà cung cấp chính *</FormLabel>
+                                        <FormControl>
+                                            <Combobox
+                                                options={suppliers.map((s) => ({
+                                                    value: s.id,
+                                                    label: `${s.code} - ${s.name}`,
+                                                }))}
+                                                value={field.value || ''}
+                                                onValueChange={(val) => field.onChange(val || null)}
+                                                placeholder="Chọn nhà cung cấp..."
+                                                searchPlaceholder="Tìm nhà cung cấp..."
+                                                emptyText="Không tìm thấy nhà cung cấp"
+                                                allowCreate={false}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -1346,7 +1463,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="leadTimeDays"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Thời gian giao hàng (ngày)</FormLabel>
+                                            <FormLabel>Thời gian giao hàng (ngày) *</FormLabel>
                                             <FormControl>
                                                 <NumberInput
                                                     min={0}
@@ -1386,7 +1503,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                     name="moq"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>SL đặt tối thiểu (MOQ)</FormLabel>
+                                            <FormLabel>SL đặt tối thiểu (MOQ) *</FormLabel>
                                             <FormControl>
                                                 <NumberInput
                                                     min={1}
@@ -1656,7 +1773,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                 name="countryOfOrigin"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Xuất xứ</FormLabel>
+                                        <FormLabel>Xuất xứ *</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value || ''}>
                                             <FormControl>
                                                 <SelectTrigger>

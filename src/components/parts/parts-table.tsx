@@ -205,11 +205,14 @@ export function PartsTable() {
 
       const response = await fetch(`/api/parts?${params.toString()}`);
       const result = await response.json();
+      console.log('[PartsTable] API Response:', { params: params.toString(), result });
 
       if (response.ok) {
         // Ensure we have an array and each part has required fields with defaults
         // Flatten nested relations (planning, costs, specs, compliance) for display
         const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
+        console.log('[PartsTable] Parts array:', partsArray);
+        console.log('[PartsTable] First part:', partsArray[0]);
         const normalizedParts = partsArray.map((p: any) => ({
           ...p,
           // Basic
