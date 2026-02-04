@@ -84,8 +84,8 @@ export async function createReportSchedule(input: CreateScheduleInput) {
       recipients: input.recipients.map((email) => ({
         email,
         type: 'to',
-      })),
-      parameters: input.filters,
+      })) as object[],
+      parameters: (input.filters ?? {}) as object,
       isActive: true,
       nextRunAt,
       createdBy: input.userId,
@@ -124,9 +124,9 @@ export async function updateReportSchedule(
   if (input.timeOfDay !== undefined) updateData.time = input.timeOfDay;
   if (input.format !== undefined) updateData.outputFormat = input.format.toLowerCase();
   if (input.recipients !== undefined) {
-    updateData.recipients = input.recipients.map((email) => ({ email, type: 'to' }));
+    updateData.recipients = input.recipients.map((email) => ({ email, type: 'to' })) as object[];
   }
-  if (input.filters !== undefined) updateData.parameters = input.filters;
+  if (input.filters !== undefined) updateData.parameters = input.filters as object;
   if (input.enabled !== undefined) updateData.isActive = input.enabled;
 
   // Recalculate next run time if schedule changed
