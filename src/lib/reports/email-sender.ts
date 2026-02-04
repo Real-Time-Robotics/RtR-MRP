@@ -1,7 +1,7 @@
 // src/lib/reports/email-sender.ts
 // Report Email Sender - Send scheduled reports via email
+// Note: nodemailer is optional. If not installed, emails will be logged to console.
 
-import nodemailer from 'nodemailer';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -21,11 +21,42 @@ interface ReportEmailOptions {
   mrpUrl?: string;
 }
 
-// Email transporter (configure based on environment)
-let transporter: nodemailer.Transporter | null = null;
+interface MailOptions {
+  from: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  html: string;
+  attachments?: { filename: string; content: Buffer; contentType: string }[];
+}
 
-function getTransporter(): nodemailer.Transporter {
+interface Transporter {
+  sendMail(options: MailOptions): Promise<{ messageId: string }>;
+}
+
+// Nodemailer module (loaded dynamically)
+let nodemailerModule: { createTransport: (config: object) => Transporter } | null = null;
+let transporter: Transporter | null = null;
+
+// Try to load nodemailer dynamically (only on server-side)
+async function loadNodemailer(): Promise<boolean> {
+  if (typeof window !== 'undefined') return false;
+  if (nodemailerModule) return true;
+
+  try {
+    // Dynamic import to avoid bundling issues
+    nodemailerModule = await eval('import("nodemailer")');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function getTransporter(): Promise<Transporter> {
   if (transporter) return transporter;
+
+  const hasNodemailer = await loadNodemailer();
 
   // Use environment variables for configuration
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -34,22 +65,22 @@ function getTransporter(): nodemailer.Transporter {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  if (!user || !pass) {
-    console.warn('SMTP credentials not configured. Email sending will be simulated.');
+  if (!hasNodemailer || !user || !pass) {
+    console.warn('[EmailSender] SMTP not configured or nodemailer not installed. Email sending will be simulated.');
     // Return a mock transporter for development
     return {
-      sendMail: async (options: nodemailer.SendMailOptions) => {
+      sendMail: async (options: MailOptions) => {
         console.log('[MOCK EMAIL]', {
           to: options.to,
           subject: options.subject,
-          attachments: options.attachments?.map((a: { filename: string }) => a.filename),
+          attachments: options.attachments?.map((a) => a.filename),
         });
         return { messageId: `mock-${Date.now()}` };
       },
-    } as unknown as nodemailer.Transporter;
+    };
   }
 
-  transporter = nodemailer.createTransport({
+  transporter = nodemailerModule!.createTransport({
     host,
     port,
     secure,
@@ -150,9 +181,9 @@ export async function sendReportEmail(options: ReportEmailOptions): Promise<{
   error?: string;
 }> {
   try {
-    const transport = getTransporter();
+    const transport = await getTransporter();
 
-    const mailOptions: nodemailer.SendMailOptions = {
+    const mailOptions: MailOptions = {
       from: `"RTR-MRP Reports" <${process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@rtr-mrp.local'}>`,
       to: options.to,
       cc: options.cc,
@@ -190,11 +221,11 @@ export async function sendTestEmail(to: string): Promise<{
   error?: string;
 }> {
   try {
-    const transport = getTransporter();
+    const transport = await getTransporter();
 
-    const mailOptions: nodemailer.SendMailOptions = {
+    const mailOptions: MailOptions = {
       from: `"RTR-MRP" <${process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@rtr-mrp.local'}>`,
-      to,
+      to: [to],
       subject: '✅ [RTR-MRP] Test Email',
       html: `
         <div style="font-family: 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
