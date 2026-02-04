@@ -35,7 +35,10 @@ export async function GET(
         );
       }
 
-      return new NextResponse(file.buffer, {
+      // Convert Buffer to Uint8Array for NextResponse compatibility
+      const uint8Array = new Uint8Array(file.buffer);
+
+      return new NextResponse(uint8Array, {
         headers: {
           'Content-Type': file.mimeType,
           'Content-Disposition': `attachment; filename="${file.fileName}"`,
