@@ -886,6 +886,14 @@ model User {
   analyticsDashboards AnalyticsDashboard[]
   savedReports        SavedReport[]
 
+  // Sprint 3: Import & Views relations
+  importSessions ImportSession[] @relation("ImportSessionUser")
+  importMappings ImportMapping[] @relation("ImportMappingUser")
+  savedViews     SavedView[]     @relation("SavedViewUser")
+
+  // Extended notification settings (JSON for flexibility)
+  notificationSettings Json?
+
   @@index([tenantId])
   @@map("users")
 }
@@ -5405,4 +5413,168 @@ model DashboardTemplate {
   @@index([category])
   @@index([isActive])
   @@map("dashboard_templates")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//                    SPRINT 3 MODELS
+// ═══════════════════════════════════════════════════════════════════
+
+// ============ AI SMART IMPORT ============
+
+// Import Session - Track import sessions
+model ImportSession {
+  id            String    @id @default(cuid())
+  fileName      String
+  fileSize      Int
+  fileType      String    // xlsx, csv, xls
+  detectedType  String    // PARTS, BOM, SUPPLIERS, INVENTORY, PURCHASE_ORDERS, UNKNOWN
+  confidence    Float     // 0.0 - 1.0
+  status        String    // ANALYZING, MAPPED, VALIDATING, IMPORTING, COMPLETED, FAILED, ROLLED_BACK
+  totalRows     Int       @default(0)
+  successRows   Int       @default(0)
+  failedRows    Int       @default(0)
+  skippedRows   Int       @default(0)
+  columnMapping Json      // { excelCol: systemField, ... }
+  validationErrors Json?  // Array of { row, col, message }
+  importedBy    String    // userId
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  rollbackAt    DateTime?
+
+  logs          ImportLog[]
+  user          User      @relation("ImportSessionUser", fields: [importedBy], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([importedBy])
+  @@index([status])
+  @@index([detectedType])
+  @@index([createdAt])
+  @@map("import_sessions")
+}
+
+// Import Log - Detailed import log entries
+model ImportLog {
+  id          String        @id @default(cuid())
+  sessionId   String
+  session     ImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  rowNumber   Int
+  status      String        // SUCCESS, FAILED, SKIPPED, DUPLICATE, MERGED
+  entityType  String        // Part, Supplier, BOM, etc.
+  entityId    String?       // Created/updated record ID
+  data        Json          // Original row data
+  errors      Json?         // Error details if failed
+  createdAt   DateTime      @default(now())
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([entityType])
+  @@map("import_logs")
+}
+
+// Import Mapping - Saved column mappings for reuse
+model ImportMapping {
+  id           String    @id @default(cuid())
+  name         String    // User-given name: "NCC ABC format"
+  targetType   String    // PARTS, BOM, SUPPLIERS, etc.
+  mapping      Json      // Saved column mapping
+  usageCount   Int       @default(0)
+  lastUsedAt   DateTime?
+  createdBy    String
+
+  user         User      @relation("ImportMappingUser", fields: [createdBy], references: [id])
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([targetType])
+  @@index([createdBy])
+  @@index([usageCount])
+  @@map("import_mappings")
+}
+
+// ============ BACKUP & RECOVERY ============
+
+// Backup - Track database backups
+model Backup {
+  id          String    @id @default(cuid())
+  name        String    // "Auto backup 2026-02-04 07:00"
+  type        String    // AUTO, MANUAL, PRE_UPDATE
+  status      String    // IN_PROGRESS, COMPLETED, FAILED
+  filePath    String?   // Path to backup file
+  fileSize    Int?      // Bytes
+  tables      Int?      // Number of tables backed up
+  records     Int?      // Total records
+  duration    Int?      // Seconds taken
+  error       String?
+  createdBy   String    // userId or "SYSTEM"
+  createdAt   DateTime  @default(now())
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("backups")
+}
+
+// Backup Schedule - Auto-backup configuration
+model BackupSchedule {
+  id          String    @id @default(cuid())
+  enabled     Boolean   @default(true)
+  frequency   String    // DAILY, WEEKLY
+  timeOfDay   String    // "02:00" (run at 2 AM)
+  retention   Int       @default(30) // Keep last N backups
+  updatedBy   String
+  updatedAt   DateTime  @updatedAt
+
+  @@map("backup_schedules")
+}
+
+// ============ SAVED VIEWS / FILTERS ============
+
+// Saved View - User-saved filter configurations
+model SavedView {
+  id        String   @id @default(cuid())
+  name      String   // "PO chờ duyệt tháng này"
+  entity    String   // parts, purchase_orders, work_orders, etc.
+  filters   Json     // { status: 'pending', dateRange: [...] }
+  columns   Json?    // Which columns visible + order
+  sortBy    String?
+  sortOrder String?  // ASC, DESC
+  isDefault Boolean  @default(false)
+  isShared  Boolean  @default(false) // Visible to all users
+  createdBy String
+
+  user      User     @relation("SavedViewUser", fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([entity])
+  @@index([createdBy])
+  @@index([isShared])
+  @@map("saved_views")
+}
+
+// ============ REPORT HISTORY (Extended) ============
+
+// Report History - Track generated reports
+model ReportHistory {
+  id           String    @id @default(cuid())
+  scheduleId   String?
+  templateId   String
+  generatedBy  String    // userId or "SYSTEM"
+  format       String    // PDF, EXCEL, BOTH
+  fileUrl      String?   // Stored file path
+  fileSize     Int?
+  recipients   Json?     // Email recipients
+  sentAt       DateTime?
+  status       String    // GENERATED, SENT, FAILED
+  error        String?
+  createdAt    DateTime  @default(now())
+
+  @@index([templateId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("report_history")
 }

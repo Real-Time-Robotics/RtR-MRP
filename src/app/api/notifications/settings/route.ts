@@ -1,0 +1,159 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+// =============================================================================
+// NOTIFICATION SETTINGS API
+// =============================================================================
+
+const notificationSettingsSchema = z.object({
+  email: z.object({
+    enabled: z.boolean(),
+    onOrder: z.boolean(),
+    onStock: z.boolean(),
+    onQuality: z.boolean(),
+    onMention: z.boolean(),
+    onApproval: z.boolean(),
+  }).optional(),
+  push: z.object({
+    enabled: z.boolean(),
+  }).optional(),
+  inApp: z.object({
+    sound: z.boolean(),
+    desktop: z.boolean(),
+  }).optional(),
+  digest: z.object({
+    enabled: z.boolean(),
+    frequency: z.enum(['daily', 'weekly', 'never']),
+  }).optional(),
+});
+
+// GET /api/notifications/settings - Get user notification settings
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    // Get user's notification settings
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        notificationSettings: true,
+        notifyOnMention: true,
+        notifyOnReply: true,
+        notifyByEmail: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Parse stored settings or use defaults
+    const storedSettings = user.notificationSettings as Record<string, unknown> | null;
+
+    const settings = {
+      email: {
+        enabled: user.notifyByEmail ?? true,
+        onOrder: storedSettings?.emailOnOrder ?? true,
+        onStock: storedSettings?.emailOnStock ?? true,
+        onQuality: storedSettings?.emailOnQuality ?? true,
+        onMention: user.notifyOnMention ?? true,
+        onApproval: storedSettings?.emailOnApproval ?? true,
+      },
+      push: {
+        enabled: storedSettings?.pushEnabled ?? false,
+      },
+      inApp: {
+        sound: storedSettings?.inAppSound ?? true,
+        desktop: storedSettings?.inAppDesktop ?? true,
+      },
+      digest: {
+        enabled: storedSettings?.digestEnabled ?? false,
+        frequency: (storedSettings?.digestFrequency as 'daily' | 'weekly' | 'never') ?? 'never',
+      },
+    };
+
+    return NextResponse.json({
+      success: true,
+      data: settings,
+    });
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch notification settings' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/notifications/settings - Update user notification settings
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const body = await request.json();
+    const parsed = notificationSettingsSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const settings = parsed.data;
+
+    // Get current settings
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationSettings: true },
+    });
+
+    const currentSettings = (user?.notificationSettings as Record<string, unknown>) || {};
+
+    // Merge settings
+    const mergedSettings = {
+      ...currentSettings,
+      emailOnOrder: settings.email?.onOrder ?? currentSettings.emailOnOrder,
+      emailOnStock: settings.email?.onStock ?? currentSettings.emailOnStock,
+      emailOnQuality: settings.email?.onQuality ?? currentSettings.emailOnQuality,
+      emailOnApproval: settings.email?.onApproval ?? currentSettings.emailOnApproval,
+      pushEnabled: settings.push?.enabled ?? currentSettings.pushEnabled,
+      inAppSound: settings.inApp?.sound ?? currentSettings.inAppSound,
+      inAppDesktop: settings.inApp?.desktop ?? currentSettings.inAppDesktop,
+      digestEnabled: settings.digest?.enabled ?? currentSettings.digestEnabled,
+      digestFrequency: settings.digest?.frequency ?? currentSettings.digestFrequency,
+    };
+
+    // Update user settings
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        notifyByEmail: settings.email?.enabled,
+        notifyOnMention: settings.email?.onMention,
+        notificationSettings: mergedSettings,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Settings updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to update notification settings' },
+      { status: 500 }
+    );
+  }
+}

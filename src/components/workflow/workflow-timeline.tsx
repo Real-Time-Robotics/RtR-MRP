@@ -17,6 +17,7 @@ import {
   Forward,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { SLAIndicator } from './sla-indicator';
 
 interface WorkflowStep {
   stepNumber: number;
@@ -241,9 +242,16 @@ export function WorkflowTimeline({ instanceId }: WorkflowTimelineProps) {
           {instance.dueDate && (
             <div>
               <p className="text-xs text-muted-foreground">Due Date</p>
-              <p className={`font-medium ${new Date(instance.dueDate) < new Date() ? 'text-red-600' : ''}`}>
-                {format(new Date(instance.dueDate), 'MMM d, yyyy HH:mm')}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className={`font-medium ${new Date(instance.dueDate) < new Date() ? 'text-red-600' : ''}`}>
+                  {format(new Date(instance.dueDate), 'MMM d, yyyy HH:mm')}
+                </p>
+                <SLAIndicator
+                  dueDate={instance.dueDate}
+                  completedAt={instance.completedAt}
+                  size="sm"
+                />
+              </div>
             </div>
           )}
           {instance.completedAt && (

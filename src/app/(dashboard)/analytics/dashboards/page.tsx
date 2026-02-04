@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, LayoutTemplate, Search, LayoutDashboard } from "lucide-react";
+import { Plus, LayoutTemplate, Search, LayoutDashboard, Lock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,10 +21,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardCard } from "@/components/analytics/dashboards/DashboardCard";
 import type { Dashboard, DashboardTemplate } from "@/lib/analytics/types";
+import { cn } from "@/lib/utils";
+
+interface Permissions {
+  canCreate: boolean;
+  canEdit: boolean;
+  canShare: boolean;
+  canDelete: boolean;
+  canViewAll: boolean;
+}
+
+interface Features {
+  canCustomizeWidgets: boolean;
+  canExportData: boolean;
+  canScheduleReports: boolean;
+  canAccessRawData: boolean;
+}
 
 export default function DashboardsPage() {
   const router = useRouter();
@@ -33,6 +55,22 @@ export default function DashboardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("updatedAt");
 
+  // Role-based permissions
+  const [permissions, setPermissions] = useState<Permissions>({
+    canCreate: true,
+    canEdit: true,
+    canShare: true,
+    canDelete: true,
+    canViewAll: false,
+  });
+  const [features, setFeatures] = useState<Features>({
+    canCustomizeWidgets: true,
+    canExportData: true,
+    canScheduleReports: false,
+    canAccessRawData: false,
+  });
+  const [canCreateMore, setCanCreateMore] = useState(true);
+
   // Create dialog state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"blank" | "template">("blank");
@@ -41,23 +79,33 @@ export default function DashboardsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Fetch dashboards
+  // Fetch dashboards and permissions
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dashRes, templatesRes] = await Promise.all([
+        const [dashRes, templatesRes, permissionsRes] = await Promise.all([
           fetch("/api/analytics/dashboards"),
-          fetch("/api/analytics/templates"),
+          fetch("/api/analytics/dashboards?action=templates"),
+          fetch("/api/analytics/dashboards?action=permissions"),
         ]);
 
         const dashData = await dashRes.json();
         const templatesData = await templatesRes.json();
+        const permissionsData = await permissionsRes.json();
 
         if (dashData.success) {
           setDashboards(dashData.data);
+          if (dashData.permissions) {
+            setPermissions(dashData.permissions);
+          }
         }
         if (templatesData.success) {
           setTemplates(templatesData.data);
+        }
+        if (permissionsData.success) {
+          setPermissions(permissionsData.data.permissions);
+          setFeatures(permissionsData.data.features);
+          setCanCreateMore(permissionsData.data.canCreate);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -98,12 +146,12 @@ export default function DashboardsPage() {
       let response;
 
       if (createMode === "template" && selectedTemplate) {
-        response = await fetch("/api/analytics/templates", {
+        response = await fetch("/api/analytics/dashboards", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            templateId: selectedTemplate,
             name: newName,
+            fromTemplateId: selectedTemplate,
           }),
         });
       } else {
@@ -122,6 +170,9 @@ export default function DashboardsPage() {
       if (data.success) {
         // Navigate to edit the new dashboard
         router.push(`/analytics/dashboards/${data.data.id}/edit`);
+      } else {
+        console.error("Error creating dashboard:", data.error);
+        alert(data.error || "Không thể tạo dashboard");
       }
     } catch (error) {
       console.error("Error creating dashboard:", error);
@@ -136,10 +187,19 @@ export default function DashboardsPage() {
   };
 
   const handleEdit = (id: string) => {
+    if (!permissions.canEdit) {
+      alert("Bạn không có quyền chỉnh sửa dashboard");
+      return;
+    }
     router.push(`/analytics/dashboards/${id}/edit`);
   };
 
   const handleDelete = async (id: string) => {
+    if (!permissions.canDelete) {
+      alert("Bạn không có quyền xóa dashboard");
+      return;
+    }
+
     if (!confirm("Bạn có chắc muốn xóa dashboard này?")) return;
 
     try {
@@ -147,8 +207,12 @@ export default function DashboardsPage() {
         method: "DELETE",
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (data.success) {
         setDashboards((prev) => prev.filter((d) => d.id !== id));
+      } else {
+        alert(data.error || "Không thể xóa dashboard");
       }
     } catch (error) {
       console.error("Error deleting dashboard:", error);
@@ -176,21 +240,52 @@ export default function DashboardsPage() {
     }
   };
 
+  const canCreate = permissions.canCreate && canCreateMore;
+
   return (
     <div className="container py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboards</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <LayoutDashboard className="w-6 h-6" />
+            Dashboards
+          </h1>
           <p className="text-muted-foreground">
             Quản lý và xem các dashboard phân tích
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Tạo Dashboard
-        </Button>
+        {canCreate ? (
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo Dashboard
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button disabled variant="outline">
+                <Lock className="h-4 w-4 mr-2" />
+                Tạo Dashboard
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!permissions.canCreate
+                ? "Bạn không có quyền tạo dashboard"
+                : "Bạn đã đạt giới hạn số dashboard"}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
+
+      {/* Permission Notice */}
+      {!permissions.canEdit && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+          <Shield className="w-4 h-4 text-amber-600" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            Bạn đang ở chế độ chỉ xem. Liên hệ quản trị viên nếu cần quyền chỉnh sửa.
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-4">
@@ -231,12 +326,16 @@ export default function DashboardsPage() {
           <LayoutDashboard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium">Chưa có dashboard nào</h3>
           <p className="text-muted-foreground mb-4">
-            Tạo dashboard đầu tiên để bắt đầu theo dõi các chỉ số quan trọng
+            {canCreate
+              ? "Tạo dashboard đầu tiên để bắt đầu theo dõi các chỉ số quan trọng"
+              : "Liên hệ quản trị viên để được cấp quyền tạo dashboard"}
           </p>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Tạo Dashboard
-          </Button>
+          {canCreate && (
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Tạo Dashboard
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -245,8 +344,8 @@ export default function DashboardsPage() {
               key={dashboard.id}
               dashboard={dashboard}
               onSelect={handleSelect}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onEdit={permissions.canEdit ? handleEdit : undefined}
+              onDelete={permissions.canDelete ? handleDelete : undefined}
               onSetDefault={handleSetDefault}
             />
           ))}
@@ -278,6 +377,7 @@ export default function DashboardsPage() {
                 variant={createMode === "template" ? "default" : "outline"}
                 className="flex-1"
                 onClick={() => setCreateMode("template")}
+                disabled={templates.length === 0}
               >
                 <LayoutTemplate className="h-4 w-4 mr-2" />
                 Từ mẫu
@@ -295,11 +395,23 @@ export default function DashboardsPage() {
                   <SelectContent>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
-                        {template.nameVi || template.name}
+                        <div className="flex items-center gap-2">
+                          <span>{template.nameVi || template.name}</span>
+                          {template.usageCount > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {template.usageCount} lượt dùng
+                            </Badge>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {templates.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Không có mẫu nào khả dụng cho vai trò của bạn
+                  </p>
+                )}
               </div>
             )}
 
@@ -331,7 +443,11 @@ export default function DashboardsPage() {
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!newName.trim() || isCreating}
+              disabled={
+                !newName.trim() ||
+                isCreating ||
+                (createMode === "template" && !selectedTemplate)
+              }
             >
               {isCreating ? "Đang tạo..." : "Tạo Dashboard"}
             </Button>

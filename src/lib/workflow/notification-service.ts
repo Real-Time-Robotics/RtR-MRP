@@ -5,6 +5,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { NotificationChannel } from '@prisma/client';
+import { emailService } from '@/lib/email/email-service';
 
 export interface NotificationPayload {
   recipientId: string;
@@ -285,21 +286,123 @@ export class NotificationService {
     return result.count;
   }
 
-  // Private: Send email notification (stub - implement with actual email service)
+  /**
+   * Send email notification using the email service
+   */
   private async sendEmailNotification(payload: NotificationPayload): Promise<void> {
-    // Get user email
-    const user = await prisma.user.findUnique({
-      where: { id: payload.recipientId },
-      select: { email: true, name: true },
-    });
+    try {
+      // Get user email
+      const user = await prisma.user.findUnique({
+        where: { id: payload.recipientId },
+        select: { email: true, name: true },
+      });
 
-    if (!user?.email) {
-      console.warn('[NotificationService] No email for user:', payload.recipientId);
-      return;
+      if (!user?.email) {
+        console.warn('[NotificationService] No email for user:', payload.recipientId);
+        return;
+      }
+
+      // Determine email type and send appropriate template
+      const recipientName = user.name || 'User';
+
+      switch (payload.type) {
+        case 'APPROVAL_REQUEST':
+          await emailService.sendWorkflowApproval(
+            user.email,
+            recipientName,
+            {
+              workflowName: payload.title,
+              instanceId: payload.metadata?.instanceId as string || '',
+              stepName: payload.metadata?.stepName as string || 'Approval',
+              submittedBy: payload.metadata?.submittedBy as string || 'System',
+            }
+          );
+          break;
+
+        case 'REMINDER':
+          await emailService.sendOverdueReminder(
+            user.email,
+            recipientName,
+            {
+              workflowName: payload.title,
+              instanceId: payload.metadata?.instanceId as string || '',
+              stepName: payload.metadata?.stepName as string || 'Approval',
+              dueDate: payload.metadata?.dueDate as string || new Date().toISOString(),
+            }
+          );
+          break;
+
+        case 'ALERT':
+          await emailService.sendAlertNotification(
+            user.email,
+            recipientName,
+            {
+              alertType: payload.metadata?.alertType as string || 'System',
+              title: payload.title,
+              message: payload.message,
+              severity: (payload.metadata?.severity as 'low' | 'medium' | 'high' | 'critical') || 'medium',
+              actionUrl: payload.actionUrl,
+            }
+          );
+          break;
+
+        default:
+          // Generic email for other notification types
+          await emailService.send({
+            to: user.email,
+            subject: payload.title,
+            html: `
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta charset="utf-8">
+                <style>
+                  body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                  .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                  .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+                  .content { padding: 20px; background: #f9fafb; }
+                  .button { display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-top: 16px; }
+                  .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="header">
+                    <h1>RTR-MRP Notification</h1>
+                  </div>
+                  <div class="content">
+                    <p>Hi ${recipientName},</p>
+                    <h2>${payload.title}</h2>
+                    <p>${payload.message}</p>
+                    ${payload.actionUrl ? `<a href="${payload.actionUrl}" class="button">View Details</a>` : ''}
+                  </div>
+                  <div class="footer">
+                    <p>This is an automated message from RTR-MRP System.</p>
+                  </div>
+                </div>
+              </body>
+              </html>
+            `,
+            text: `
+Hi ${recipientName},
+
+${payload.title}
+
+${payload.message}
+
+${payload.actionUrl ? `View details at: ${payload.actionUrl}` : ''}
+
+This is an automated message from RTR-MRP System.
+            `,
+          });
+          break;
+      }
+
+      console.log('[NotificationService] Email sent successfully to:', user.email);
+    } catch (error) {
+      console.error('[NotificationService] Failed to send email:', error);
+      // Don't throw - email failure shouldn't block notification creation
     }
-
-    // TODO: Integrate with actual email service (SendGrid, SES, etc.)
-    console.log('[NotificationService] Would send email to:', user.email, payload);
   }
 }
 

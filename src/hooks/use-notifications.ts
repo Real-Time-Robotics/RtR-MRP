@@ -21,6 +21,7 @@ export interface Notification {
   contextUrl?: string | null;
   isRead: boolean;
   readAt?: Date | null;
+  isArchived?: boolean;
   createdAt: Date;
 }
 
@@ -36,6 +37,8 @@ interface UseNotificationsReturn {
   error: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  archiveNotification: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
   requestBrowserPermission: () => Promise<void>;
 }
@@ -188,6 +191,50 @@ export function useNotifications(
     }
   }, []);
 
+  // Delete notification
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete notification');
+      }
+
+      // Update local state
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error('Failed to delete notification:', err);
+      throw err;
+    }
+  }, []);
+
+  // Archive notification
+  const archiveNotification = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isArchived: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to archive notification');
+      }
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, isArchived: true } : n
+        )
+      );
+    } catch (err) {
+      console.error('Failed to archive notification:', err);
+      throw err;
+    }
+  }, []);
+
   // Request browser notification permission
   const requestBrowserPermission = useCallback(async () => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -202,6 +249,8 @@ export function useNotifications(
     error,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    archiveNotification,
     refresh: fetchNotifications,
     requestBrowserPermission,
   };

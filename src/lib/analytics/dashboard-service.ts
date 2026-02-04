@@ -17,6 +17,16 @@ import type {
   WidgetType,
   DataSource,
 } from './types';
+import type { UserRole } from '@/lib/roles';
+import {
+  getRoleDashboardConfig,
+  canAccessTemplate,
+  hasPermission,
+  getDefaultTemplateForRole,
+  getAllowedTemplatesForRole,
+  canCreateMoreDashboards,
+  type RoleDashboardConfig,
+} from './role-dashboard-mapping';
 
 // =============================================================================
 // DEFAULT CONFIGURATIONS
@@ -567,6 +577,162 @@ class DashboardService {
         },
       });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Role-Based Dashboard Access
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get the default dashboard for a user based on their role
+   * If no dashboard exists, auto-provision one from the role's default template
+   */
+  async getDefaultDashboardForRole(userId: string, userRole: UserRole): Promise<Dashboard | null> {
+    // First try to get existing default dashboard
+    const existingDefault = await this.getDefaultDashboard(userId);
+    if (existingDefault) {
+      return existingDefault;
+    }
+
+    // Auto-provision from role's default template
+    return this.autoProvisionDashboard(userId, userRole);
+  }
+
+  /**
+   * Auto-provision a dashboard for a user based on their role's default template
+   */
+  async autoProvisionDashboard(userId: string, userRole: UserRole): Promise<Dashboard | null> {
+    const config = getRoleDashboardConfig(userRole);
+    const defaultTemplateId = config.defaultTemplate;
+
+    // Check if template exists
+    const template = await prisma.dashboardTemplate.findUnique({
+      where: { id: defaultTemplateId },
+    });
+
+    if (!template) {
+      // Seed templates if not exists
+      await this.seedTemplates();
+    }
+
+    try {
+      const dashboard = await this.createFromTemplate(userId, defaultTemplateId);
+      // Set as default
+      await this.updateDashboard(dashboard.id, { isDefault: true });
+      return this.getDashboard(dashboard.id);
+    } catch (error) {
+      console.error('Failed to auto-provision dashboard:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a user with given role can access a specific template
+   */
+  canUserAccessTemplate(userRole: UserRole, templateId: string): boolean {
+    return canAccessTemplate(userRole, templateId);
+  }
+
+  /**
+   * Get permissions for a user's role
+   */
+  getUserPermissions(userRole: UserRole): RoleDashboardConfig['permissions'] {
+    const config = getRoleDashboardConfig(userRole);
+    return config.permissions;
+  }
+
+  /**
+   * Get all features available for a user's role
+   */
+  getUserFeatures(userRole: UserRole): RoleDashboardConfig['features'] {
+    const config = getRoleDashboardConfig(userRole);
+    return config.features;
+  }
+
+  /**
+   * Get templates filtered by user's role
+   */
+  async getTemplatesForRole(userRole: UserRole, category?: string): Promise<DashboardTemplate[]> {
+    const allowedTemplates = getAllowedTemplatesForRole(userRole);
+
+    const where: any = {
+      isActive: true,
+      id: { in: allowedTemplates }
+    };
+
+    if (category) {
+      where.category = category;
+    }
+
+    const templates = await prisma.dashboardTemplate.findMany({
+      where,
+      orderBy: [{ isDefault: 'desc' }, { usageCount: 'desc' }],
+    });
+
+    return templates.map(t => this.toTemplate(t));
+  }
+
+  /**
+   * Check if a user can create more dashboards based on their role limits
+   */
+  async canUserCreateDashboard(userId: string, userRole: UserRole): Promise<boolean> {
+    const config = getRoleDashboardConfig(userRole);
+
+    if (!config.permissions.canCreate) {
+      return false;
+    }
+
+    if (config.maxDashboards === -1) {
+      return true; // Unlimited
+    }
+
+    const currentCount = await prisma.analyticsDashboard.count({
+      where: { userId },
+    });
+
+    return canCreateMoreDashboards(userRole, currentCount);
+  }
+
+  /**
+   * Validate dashboard action based on role permissions
+   */
+  validateRolePermission(
+    userRole: UserRole,
+    action: 'create' | 'edit' | 'delete' | 'share' | 'viewAll'
+  ): boolean {
+    const permissionMap = {
+      create: 'canCreate',
+      edit: 'canEdit',
+      delete: 'canDelete',
+      share: 'canShare',
+      viewAll: 'canViewAll',
+    } as const;
+
+    return hasPermission(userRole, permissionMap[action]);
+  }
+
+  /**
+   * Get dashboards with role-based filtering
+   */
+  async getUserDashboardsWithRole(userId: string, userRole: UserRole): Promise<Dashboard[]> {
+    const config = getRoleDashboardConfig(userRole);
+
+    let dashboards: Dashboard[];
+
+    if (config.permissions.canViewAll) {
+      // Can view all public dashboards
+      dashboards = await this.getUserDashboards(userId);
+    } else {
+      // Can only view own dashboards
+      const ownDashboards = await prisma.analyticsDashboard.findMany({
+        where: { userId },
+        include: { widgets: true },
+        orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+      });
+      dashboards = ownDashboards.map(d => this.toDashboard(d));
+    }
+
+    return dashboards;
   }
 
   // ---------------------------------------------------------------------------

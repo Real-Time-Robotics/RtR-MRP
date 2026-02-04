@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ChevronUp,
   ChevronDown,
@@ -264,7 +264,10 @@ function DataTable<T extends Record<string, any>>({
     new Set(columns.filter((c) => !c.hidden).map((c) => c.key))
   );
 
-
+  // Reset to page 1 when data changes (e.g., after search/filter from server)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data.length]);
 
   // Get cell value
   const getCellValue = useCallback((row: T, column: Column<T>) => {
@@ -470,7 +473,7 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div
-        className="flex-1 min-h-0 overflow-auto"
+        className="flex-1 min-h-[200px] overflow-auto"
       >
         <table className="w-full table-fixed">
           <thead className={cn(stickyHeader && 'sticky top-0 z-10')}>
@@ -583,7 +586,7 @@ function DataTable<T extends Record<string, any>>({
                   <tr
                     key={rowKey}
                     className={cn(
-                      'transition-colors last:border-0',
+                      'transition-colors',
                       isExcelMode
                         ? cn(
                             'border-b border-slate-200 dark:border-slate-800',
@@ -591,7 +594,7 @@ function DataTable<T extends Record<string, any>>({
                             isSelected && 'bg-[#E2EFDA]/50 dark:bg-[#217346]/15'
                           )
                         : cn(
-                            'border-b border-slate-100 dark:border-slate-800',
+                            'border-b border-slate-100 dark:border-slate-800 last:border-0',
                             striped && rowIndex % 2 === 1 && 'bg-slate-50/50 dark:bg-slate-900/30',
                             isSelected && 'bg-primary-50 dark:bg-primary-900/20',
                             'hover:bg-slate-50 dark:hover:bg-slate-800/50'

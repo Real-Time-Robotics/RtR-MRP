@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -25,9 +26,13 @@ import {
   Factory,
   AlertCircle,
   ClipboardCheck,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { SLAIndicator } from './sla-indicator';
+import { cn } from '@/lib/utils';
 
 interface PendingApproval {
   id: string;
@@ -54,6 +59,7 @@ interface PendingApproval {
 interface PendingApprovalsProps {
   userId: string;
   onApprovalComplete?: () => void;
+  enableBulkActions?: boolean;
 }
 
 const entityIcons: Record<string, React.ElementType> = {
@@ -66,17 +72,29 @@ const entityIcons: Record<string, React.ElementType> = {
   ENGINEERING_CHANGE: AlertTriangle,
 };
 
-export function PendingApprovals({ userId, onApprovalComplete }: PendingApprovalsProps) {
+export function PendingApprovals({
+  userId,
+  onApprovalComplete,
+  enableBulkActions = true,
+}: PendingApprovalsProps) {
   const { toast } = useToast();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Selection state for bulk actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
 
   // Dialog state
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [comments, setComments] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Bulk action dialog
+  const [bulkActionType, setBulkActionType] = useState<'approve' | 'reject' | null>(null);
+  const [bulkComments, setBulkComments] = useState('');
 
   const loadApprovals = useCallback(async () => {
     setLoading(true);
@@ -88,6 +106,7 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
 
       const data = await res.json();
       setApprovals(data.approvals || []);
+      setSelectedIds(new Set()); // Clear selection on reload
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load approvals');
     } finally {
@@ -103,8 +122,8 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
     if (!selectedApproval || !actionType) return;
     if (actionType === 'reject' && !comments.trim()) {
       toast({
-        title: 'Error',
-        description: 'Comments are required when rejecting',
+        title: 'Lỗi',
+        description: 'Vui lòng nhập lý do từ chối',
         variant: 'destructive',
       });
       return;
@@ -129,8 +148,8 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
       }
 
       toast({
-        title: actionType === 'approve' ? 'Approved' : 'Rejected',
-        description: `${selectedApproval.instance.workflow.name} has been ${actionType}d`,
+        title: actionType === 'approve' ? 'Đã phê duyệt' : 'Đã từ chối',
+        description: `${selectedApproval.instance.workflow.name} đã được ${actionType === 'approve' ? 'phê duyệt' : 'từ chối'}`,
       });
 
       setSelectedApproval(null);
@@ -140,8 +159,67 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
       onApprovalComplete?.();
     } catch (err) {
       toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to submit decision',
+        title: 'Lỗi',
+        description: err instanceof Error ? err.message : 'Không thể xử lý yêu cầu',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (selectedIds.size === 0 || !bulkActionType) return;
+    if (bulkActionType === 'reject' && !bulkComments.trim()) {
+      toast({
+        title: 'Lỗi',
+        description: 'Vui lòng nhập lý do từ chối',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const selectedApprovals = approvals.filter((a) => selectedIds.has(a.id));
+      const bulkPayload = {
+        approverId: userId,
+        approvals: selectedApprovals.map((a) => ({
+          instanceId: a.instanceId,
+          decision: bulkActionType,
+          comments: bulkComments.trim() || undefined,
+        })),
+      };
+
+      const res = await fetch('/api/workflows/approvals/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bulkPayload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to process bulk action');
+      }
+
+      const result = await res.json();
+
+      toast({
+        title: result.success ? 'Thành công' : 'Hoàn tất với lỗi',
+        description: `${result.summary.successful}/${result.summary.total} yêu cầu đã được xử lý`,
+        variant: result.success ? 'default' : 'destructive',
+      });
+
+      setBulkActionType(null);
+      setBulkComments('');
+      setSelectedIds(new Set());
+      setBulkMode(false);
+      loadApprovals();
+      onApprovalComplete?.();
+    } catch (err) {
+      toast({
+        title: 'Lỗi',
+        description: err instanceof Error ? err.message : 'Không thể xử lý yêu cầu hàng loạt',
         variant: 'destructive',
       });
     } finally {
@@ -155,6 +233,26 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
     setComments('');
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === approvals.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(approvals.map((a) => a.id)));
+    }
+  };
+
   const isOverdue = (dueDate: string | null) => {
     if (!dueDate) return false;
     return new Date(dueDate) < new Date();
@@ -166,7 +264,7 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Pending Approvals
+            Chờ phê duyệt
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -186,14 +284,38 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Pending Approvals
+              Chờ phê duyệt
               {approvals.length > 0 && (
                 <Badge variant="destructive">{approvals.length}</Badge>
               )}
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadApprovals} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex items-center gap-2">
+              {enableBulkActions && approvals.length > 1 && (
+                <Button
+                  variant={bulkMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setBulkMode(!bulkMode);
+                    setSelectedIds(new Set());
+                  }}
+                >
+                  {bulkMode ? (
+                    <>
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Hủy
+                    </>
+                  ) : (
+                    <>
+                      <CheckSquare className="w-4 h-4 mr-1" />
+                      Chọn nhiều
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={loadApprovals} disabled={loading}>
+                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -204,70 +326,127 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
             </div>
           )}
 
+          {/* Bulk Action Bar */}
+          {bulkMode && selectedIds.size > 0 && (
+            <div className="flex items-center justify-between p-3 mb-4 bg-muted rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  Đã chọn {selectedIds.size} mục
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => setBulkActionType('approve')}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Phê duyệt tất cả
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => setBulkActionType('reject')}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Từ chối tất cả
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Select All */}
+          {bulkMode && approvals.length > 0 && (
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+              <Checkbox
+                checked={selectedIds.size === approvals.length}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">
+                Chọn tất cả ({approvals.length})
+              </span>
+            </div>
+          )}
+
           {approvals.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
-              <p className="font-medium">All caught up!</p>
-              <p className="text-sm">No pending approvals</p>
+              <p className="font-medium">Đã xử lý hết!</p>
+              <p className="text-sm">Không có yêu cầu chờ phê duyệt</p>
             </div>
           ) : (
             <div className="space-y-3">
               {approvals.map((approval) => {
                 const Icon = entityIcons[approval.instance.entityType] || FileText;
                 const overdue = isOverdue(approval.dueDate);
+                const isSelected = selectedIds.has(approval.id);
 
                 return (
                   <div
                     key={approval.id}
-                    className={`p-4 border rounded-lg ${
-                      overdue ? 'border-red-200 bg-red-50 dark:bg-red-950/50' : 'hover:bg-muted/50'
-                    }`}
+                    className={cn(
+                      'p-4 border rounded-lg transition-colors',
+                      overdue ? 'border-red-200 bg-red-50 dark:bg-red-950/50' : 'hover:bg-muted/50',
+                      bulkMode && isSelected && 'border-primary bg-primary/5'
+                    )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${overdue ? 'bg-red-100' : 'bg-muted'}`}>
-                          <Icon className={`w-5 h-5 ${overdue ? 'text-red-600' : ''}`} />
+                        {bulkMode && (
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelection(approval.id)}
+                            className="mt-1"
+                          />
+                        )}
+                        <div className={cn('p-2 rounded-lg', overdue ? 'bg-red-100' : 'bg-muted')}>
+                          <Icon className={cn('w-5 h-5', overdue && 'text-red-600')} />
                         </div>
                         <div>
                           <p className="font-medium">{approval.instance.workflow.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            Step {approval.step.stepNumber}: {approval.step.name}
+                            Bước {approval.step.stepNumber}: {approval.step.name}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge variant="outline" className="text-xs">
                               {approval.instance.entityType.replace('_', ' ')}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(approval.requestedAt), { addSuffix: true })}
                             </span>
-                            {overdue && (
-                              <Badge variant="destructive" className="text-xs">
-                                Overdue
-                              </Badge>
+                            {approval.dueDate && (
+                              <SLAIndicator
+                                dueDate={approval.dueDate}
+                                size="sm"
+                                showCountdown={true}
+                              />
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="bg-green-600 hover:bg-green-700"
-                          onClick={() => openDialog(approval, 'approve')}
-                        >
-                          <CheckCircle className="w-4 h-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => openDialog(approval, 'reject')}
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
-                      </div>
+                      {!bulkMode && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => openDialog(approval, 'approve')}
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Duyệt
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => openDialog(approval, 'reject')}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Từ chối
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -277,7 +456,7 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
         </CardContent>
       </Card>
 
-      {/* Approval Dialog */}
+      {/* Single Approval Dialog */}
       <Dialog open={!!selectedApproval} onOpenChange={() => setSelectedApproval(null)}>
         <DialogContent>
           <DialogHeader>
@@ -287,7 +466,7 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
               ) : (
                 <XCircle className="w-5 h-5 text-red-600" />
               )}
-              {actionType === 'approve' ? 'Approve' : 'Reject'} Request
+              {actionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} yêu cầu
             </DialogTitle>
           </DialogHeader>
 
@@ -302,15 +481,15 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
 
               <div>
                 <label className="text-sm font-medium">
-                  Comments {actionType === 'reject' && <span className="text-red-500">*</span>}
+                  Ghi chú {actionType === 'reject' && <span className="text-red-500">*</span>}
                 </label>
                 <Textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
                   placeholder={
                     actionType === 'reject'
-                      ? 'Please provide a reason for rejection...'
-                      : 'Optional comments...'
+                      ? 'Vui lòng nhập lý do từ chối...'
+                      : 'Ghi chú tùy chọn...'
                   }
                   rows={3}
                   className="mt-1"
@@ -321,14 +500,71 @@ export function PendingApprovals({ userId, onApprovalComplete }: PendingApproval
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedApproval(null)}>
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={handleSubmitDecision}
               disabled={submitting || (actionType === 'reject' && !comments.trim())}
               className={actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
             >
-              {submitting ? 'Submitting...' : actionType === 'approve' ? 'Approve' : 'Reject'}
+              {submitting ? 'Đang xử lý...' : actionType === 'approve' ? 'Phê duyệt' : 'Từ chối'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Action Dialog */}
+      <Dialog open={!!bulkActionType} onOpenChange={() => setBulkActionType(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {bulkActionType === 'approve' ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : (
+                <XCircle className="w-5 h-5 text-red-600" />
+              )}
+              {bulkActionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} {selectedIds.size} yêu cầu
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm">
+                Bạn sắp {bulkActionType === 'approve' ? 'phê duyệt' : 'từ chối'}{' '}
+                <strong>{selectedIds.size}</strong> yêu cầu cùng lúc.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">
+                Ghi chú chung {bulkActionType === 'reject' && <span className="text-red-500">*</span>}
+              </label>
+              <Textarea
+                value={bulkComments}
+                onChange={(e) => setBulkComments(e.target.value)}
+                placeholder={
+                  bulkActionType === 'reject'
+                    ? 'Vui lòng nhập lý do từ chối chung...'
+                    : 'Ghi chú tùy chọn cho tất cả...'
+                }
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkActionType(null)}>
+              Hủy
+            </Button>
+            <Button
+              onClick={handleBulkAction}
+              disabled={submitting || (bulkActionType === 'reject' && !bulkComments.trim())}
+              className={bulkActionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+            >
+              {submitting
+                ? 'Đang xử lý...'
+                : `${bulkActionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} ${selectedIds.size} yêu cầu`}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { dashboardService, widgetService } from '@/lib/analytics';
+import type { UserRole } from '@/lib/roles';
 import { z } from 'zod';
 
 // =============================================================================
-// DASHBOARD API - GET, UPDATE, DELETE
+// DASHBOARD API - GET, UPDATE, DELETE WITH ROLE-BASED ACCESS
 // =============================================================================
 
 const updateDashboardSchema = z.object({
@@ -30,12 +32,33 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const userRole = (session.user as any).role as UserRole || 'user';
+    const permissions = dashboardService.getUserPermissions(userRole);
+
     const dashboard = await dashboardService.getDashboard(id);
 
     if (!dashboard) {
       return NextResponse.json(
         { success: false, error: 'Dashboard not found' },
         { status: 404 }
+      );
+    }
+
+    // Check access permission
+    const isOwner = dashboard.userId === userId;
+    const isPublic = dashboard.isPublic;
+    const canViewAll = permissions.canViewAll;
+
+    if (!isOwner && !isPublic && !canViewAll) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: Cannot access this dashboard' },
+        { status: 403 }
       );
     }
 
@@ -53,6 +76,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       data: {
         ...dashboard,
         widgetData,
+      },
+      permissions: {
+        canEdit: isOwner && permissions.canEdit,
+        canDelete: isOwner && permissions.canDelete,
+        canShare: isOwner && permissions.canShare,
       },
       timestamp: new Date().toISOString(),
       took: Date.now() - startTime,
@@ -72,12 +100,36 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const userRole = (session.user as any).role as UserRole || 'user';
+    const permissions = dashboardService.getUserPermissions(userRole);
+
     // Check existence
     const existing = await dashboardService.getDashboard(id);
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Dashboard not found' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership and edit permission
+    if (existing.userId !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: You do not own this dashboard' },
+        { status: 403 }
+      );
+    }
+
+    if (!permissions.canEdit) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: You cannot edit dashboards' },
+        { status: 403 }
       );
     }
 
@@ -88,6 +140,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { success: false, error: 'Invalid input', details: parsed.error.issues },
         { status: 400 }
+      );
+    }
+
+    // Check share permission if trying to make public
+    if (parsed.data.isPublic && !permissions.canShare) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: You cannot share dashboards' },
+        { status: 403 }
       );
     }
 
@@ -114,12 +174,36 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const userRole = (session.user as any).role as UserRole || 'user';
+    const permissions = dashboardService.getUserPermissions(userRole);
+
     // Check existence
     const existing = await dashboardService.getDashboard(id);
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Dashboard not found' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership and delete permission
+    if (existing.userId !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: You do not own this dashboard' },
+        { status: 403 }
+      );
+    }
+
+    if (!permissions.canDelete) {
+      return NextResponse.json(
+        { success: false, error: 'Permission denied: You cannot delete dashboards' },
+        { status: 403 }
       );
     }
 

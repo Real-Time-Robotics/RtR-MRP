@@ -1,0 +1,138 @@
+/**
+ * Bulk Workflow Approvals API
+ * POST - Submit multiple approval decisions at once
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { workflowEngine } from '@/lib/workflow';
+
+interface BulkApprovalItem {
+  instanceId: string;
+  decision: 'approve' | 'reject';
+  comments?: string;
+}
+
+interface BulkApprovalResult {
+  instanceId: string;
+  success: boolean;
+  status?: string;
+  error?: string;
+}
+
+// POST /api/workflows/approvals/bulk - Submit bulk approval decisions
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { approvals, approverId } = body as {
+      approvals: BulkApprovalItem[];
+      approverId: string;
+    };
+
+    if (!approvals || !Array.isArray(approvals) || approvals.length === 0) {
+      return NextResponse.json(
+        { error: 'Missing or empty approvals array' },
+        { status: 400 }
+      );
+    }
+
+    if (!approverId) {
+      return NextResponse.json(
+        { error: 'Missing required field: approverId' },
+        { status: 400 }
+      );
+    }
+
+    // Validate all approvals before processing
+    for (const approval of approvals) {
+      if (!approval.instanceId || !approval.decision) {
+        return NextResponse.json(
+          { error: 'Each approval must have instanceId and decision' },
+          { status: 400 }
+        );
+      }
+
+      if (!['approve', 'reject'].includes(approval.decision)) {
+        return NextResponse.json(
+          { error: `Invalid decision for instance ${approval.instanceId}` },
+          { status: 400 }
+        );
+      }
+
+      if (approval.decision === 'reject' && !approval.comments) {
+        return NextResponse.json(
+          { error: `Comments required for rejection of instance ${approval.instanceId}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Process all approvals
+    const results: BulkApprovalResult[] = [];
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const approval of approvals) {
+      try {
+        let result;
+        if (approval.decision === 'approve') {
+          result = await workflowEngine.approveStep({
+            instanceId: approval.instanceId,
+            approverId,
+            comments: approval.comments,
+          });
+        } else {
+          result = await workflowEngine.rejectStep({
+            instanceId: approval.instanceId,
+            approverId,
+            comments: approval.comments!,
+          });
+        }
+
+        if (result.success) {
+          successCount++;
+          results.push({
+            instanceId: approval.instanceId,
+            success: true,
+            status: result.status,
+          });
+        } else {
+          failCount++;
+          results.push({
+            instanceId: approval.instanceId,
+            success: false,
+            error: result.error,
+          });
+        }
+      } catch (error) {
+        failCount++;
+        results.push({
+          instanceId: approval.instanceId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: failCount === 0,
+      summary: {
+        total: approvals.length,
+        successful: successCount,
+        failed: failCount,
+      },
+      results,
+    });
+  } catch (error) {
+    console.error('[API] Bulk approval error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process bulk approvals' },
+      { status: 500 }
+    );
+  }
+}

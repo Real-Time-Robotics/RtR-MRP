@@ -263,6 +263,8 @@ export interface ReportRecipient {
   email: string;
   name?: string;
   type: 'to' | 'cc' | 'bcc';
+  userId?: string;
+  attachReport?: boolean;
 }
 
 export interface ReportSchedule {
