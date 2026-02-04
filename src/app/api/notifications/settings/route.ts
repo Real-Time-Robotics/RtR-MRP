@@ -119,20 +119,19 @@ export async function PUT(request: NextRequest) {
       select: { notificationSettings: true },
     });
 
-    const currentSettings = (user?.notificationSettings as Record<string, unknown>) || {};
+    const currentSettings = (user?.notificationSettings as Record<string, boolean | string | null>) || {};
 
-    // Merge settings
-    const mergedSettings = {
-      ...currentSettings,
-      emailOnOrder: settings.email?.onOrder ?? currentSettings.emailOnOrder,
-      emailOnStock: settings.email?.onStock ?? currentSettings.emailOnStock,
-      emailOnQuality: settings.email?.onQuality ?? currentSettings.emailOnQuality,
-      emailOnApproval: settings.email?.onApproval ?? currentSettings.emailOnApproval,
-      pushEnabled: settings.push?.enabled ?? currentSettings.pushEnabled,
-      inAppSound: settings.inApp?.sound ?? currentSettings.inAppSound,
-      inAppDesktop: settings.inApp?.desktop ?? currentSettings.inAppDesktop,
-      digestEnabled: settings.digest?.enabled ?? currentSettings.digestEnabled,
-      digestFrequency: settings.digest?.frequency ?? currentSettings.digestFrequency,
+    // Merge settings with explicit types for Prisma JSON compatibility
+    const mergedSettings: Record<string, boolean | string | null> = {
+      emailOnOrder: settings.email?.onOrder ?? (currentSettings.emailOnOrder as boolean) ?? true,
+      emailOnStock: settings.email?.onStock ?? (currentSettings.emailOnStock as boolean) ?? true,
+      emailOnQuality: settings.email?.onQuality ?? (currentSettings.emailOnQuality as boolean) ?? true,
+      emailOnApproval: settings.email?.onApproval ?? (currentSettings.emailOnApproval as boolean) ?? true,
+      pushEnabled: settings.push?.enabled ?? (currentSettings.pushEnabled as boolean) ?? false,
+      inAppSound: settings.inApp?.sound ?? (currentSettings.inAppSound as boolean) ?? true,
+      inAppDesktop: settings.inApp?.desktop ?? (currentSettings.inAppDesktop as boolean) ?? true,
+      digestEnabled: settings.digest?.enabled ?? (currentSettings.digestEnabled as boolean) ?? false,
+      digestFrequency: settings.digest?.frequency ?? (currentSettings.digestFrequency as string) ?? 'never',
     };
 
     // Update user settings
