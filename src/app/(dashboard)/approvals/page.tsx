@@ -146,7 +146,7 @@ export default function ApprovalsPage() {
 
     const now = new Date();
     return pendingApprovals.filter((a) => {
-      if (!a.dueDate) return quickFilter === 'all';
+      if (!a.dueDate) return false; // No due date means not urgent or overdue
       const hoursRemaining = differenceInHours(new Date(a.dueDate), now);
 
       if (quickFilter === 'urgent') {

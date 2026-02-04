@@ -3,25 +3,30 @@
 // Abstraction layer for email sending with multiple provider support
 // =============================================================================
 
+// Note: nodemailer is optional. If not installed, emails will be logged to console.
+// To enable actual email sending, install nodemailer: npm install nodemailer
+
 // Nodemailer types - we use dynamic import to make it optional
 interface NodemailerTransporter {
-  sendMail(options: any): Promise<{ messageId: string }>;
+  sendMail(options: unknown): Promise<{ messageId: string }>;
   verify(): Promise<void>;
 }
 
 type NodemailerModule = {
-  createTransport(options: any): NodemailerTransporter;
+  createTransport(options: unknown): NodemailerTransporter;
 };
 
 // Will be loaded dynamically if available
 let nodemailer: NodemailerModule | null = null;
 
-// Try to load nodemailer if it's installed
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  nodemailer = require('nodemailer');
-} catch {
-  console.warn('[EmailService] nodemailer not installed. Email sending will be simulated.');
+// Only try to load nodemailer on server-side and if explicitly configured
+if (typeof window === 'undefined' && process.env.EMAIL_PROVIDER) {
+  try {
+    // Dynamic import to avoid bundling issues
+    nodemailer = eval('require')('nodemailer');
+  } catch {
+    // nodemailer not installed - this is fine, emails will be logged
+  }
 }
 
 // =============================================================================
