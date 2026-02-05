@@ -1,22 +1,14 @@
 // =============================================================================
-// MRP API ROUTES
-// API endpoints for MRP operations
-// TODO: Connect to Prisma database for production
+// MRP SALES ORDERS API ROUTES
+// API endpoints for getting sales orders for MRP planning
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-interface MRPRequest {
-  orderIds: string[];
-  options?: {
-    includeSafetyStock: boolean;
-    planningHorizon: number; // days
-  };
-}
 
 interface MRPResponse {
   success: boolean;
@@ -36,67 +28,81 @@ export async function GET(request: NextRequest): Promise<NextResponse<MRPRespons
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
 
-    // TODO: Replace with Prisma query
-    // const orders = await prisma.salesOrder.findMany({
-    //   where: {
-    //     status: status ? { in: status.split(',') } : undefined,
-    //     requiredDate: {
-    //       gte: fromDate ? new Date(fromDate) : undefined,
-    //       lte: toDate ? new Date(toDate) : undefined,
-    //     },
-    //   },
-    //   include: {
-    //     customer: true,
-    //     items: {
-    //       include: {
-    //         part: true,
-    //       },
-    //     },
-    //   },
-    //   orderBy: { requiredDate: 'asc' },
-    // });
+    // Build where clause dynamically
+    const where: any = {};
 
-    // Mock data for now
-    const orders = [
-      {
-        id: '1',
-        orderNumber: 'SO-2025-001',
-        customer: { id: 'c1', name: 'ABC Manufacturing', code: 'ABC' },
-        orderDate: '2025-01-02',
-        requiredDate: '2025-01-15',
-        status: 'Confirmed',
-        totalValue: 150000000,
-        items: [
-          { id: 'i1', partId: 'fg1', partNumber: 'FG-PRD-A1', partName: 'Sản phẩm Model A1', quantity: 10, unitPrice: 15000000 },
-        ],
-      },
-      {
-        id: '2',
-        orderNumber: 'SO-2025-002',
-        customer: { id: 'c2', name: 'XYZ Industries', code: 'XYZ' },
-        orderDate: '2025-01-02',
-        requiredDate: '2025-01-20',
-        status: 'Confirmed',
-        totalValue: 92500000,
-        items: [
-          { id: 'i2', partId: 'fg2', partNumber: 'FG-PRD-A2', partName: 'Sản phẩm Model A2', quantity: 5, unitPrice: 18500000 },
-        ],
-      },
-      {
-        id: '3',
-        orderNumber: 'SO-2025-003',
-        customer: { id: 'c3', name: 'Đông Á Group', code: 'DAG' },
-        orderDate: '2025-01-03',
-        requiredDate: '2025-01-25',
-        status: 'Pending',
-        totalValue: 180000000,
-        items: [
-          { id: 'i3', partId: 'fg3', partNumber: 'FG-PRD-B1', partName: 'Sản phẩm Model B1', quantity: 15, unitPrice: 12000000 },
-        ],
-      },
-    ];
+    // Filter by status - default to confirmed and in_production orders for MRP
+    if (status) {
+      where.status = { in: status.split(',') };
+    } else {
+      where.status = { in: ['confirmed', 'in_production', 'pending'] };
+    }
 
-    return NextResponse.json({ success: true, data: orders });
+    // Filter by date range
+    if (fromDate || toDate) {
+      where.requiredDate = {};
+      if (fromDate) {
+        where.requiredDate.gte = new Date(fromDate);
+      }
+      if (toDate) {
+        where.requiredDate.lte = new Date(toDate);
+      }
+    }
+
+    const orders = await prisma.salesOrder.findMany({
+      where,
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+        lines: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { requiredDate: 'asc' },
+    });
+
+    // Transform to match expected format
+    const formattedOrders = orders.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customer: {
+        id: order.customer.id,
+        name: order.customer.name,
+        code: order.customer.code,
+      },
+      orderDate: order.orderDate.toISOString().split('T')[0],
+      requiredDate: order.requiredDate.toISOString().split('T')[0],
+      promisedDate: order.promisedDate?.toISOString().split('T')[0],
+      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      priority: order.priority,
+      totalValue: order.totalAmount || order.lines.reduce((sum, line) => sum + (line.lineTotal || 0), 0),
+      currency: order.currency,
+      items: order.lines.map(line => ({
+        id: line.id,
+        productId: line.productId,
+        partNumber: line.product.sku,
+        partName: line.product.name,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        lineTotal: line.lineTotal,
+        status: line.status,
+      })),
+    }));
+
+    return NextResponse.json({ success: true, data: formattedOrders });
   } catch (error) {
     console.error('[MRP API] Error fetching orders:', error);
     return NextResponse.json(

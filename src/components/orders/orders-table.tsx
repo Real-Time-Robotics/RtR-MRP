@@ -98,13 +98,13 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   });
 
   // Fetch orders
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (searchTerm?: string, statusFilter?: string, priorityFilter?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
-      if (filters.priority !== 'all') params.set('priority', filters.priority);
+      if (searchTerm) params.set('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+      if (priorityFilter && priorityFilter !== 'all') params.set('priority', priorityFilter);
 
       const response = await fetch(`/api/sales-orders?${params.toString()}`);
       const result = await response.json();
@@ -118,11 +118,15 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, []);
 
+  // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    const timeoutId = setTimeout(() => {
+      fetchOrders(search, filters.status, filters.priority);
+    }, search ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [search, filters.status, filters.priority, fetchOrders]);
 
   // Handlers
   const handleAdd = () => {
@@ -141,11 +145,11 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   };
 
   const handleFormSuccess = () => {
-    fetchOrders();
+    fetchOrders(search, filters.status, filters.priority);
   };
 
   const handleDeleteSuccess = () => {
-    fetchOrders();
+    fetchOrders(search, filters.status, filters.priority);
     setSelectedIds(new Set());
   };
 
@@ -170,7 +174,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         toast.success(`Đã xóa/hủy ${selectedIds.size} đơn hàng`);
       }
 
-      fetchOrders();
+      fetchOrders(search, filters.status, filters.priority);
       setSelectedIds(new Set());
     } catch (error) {
       toast.error('Có lỗi xảy ra');
@@ -385,7 +389,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchOrders}
+            onRefresh={() => fetchOrders(search, filters.status, filters.priority)}
             addPermission="orders:create"
             deletePermission="orders:delete"
             addLabel="Tạo đơn hàng"

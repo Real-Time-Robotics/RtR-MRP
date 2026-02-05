@@ -45,12 +45,22 @@ export async function GET(request: NextRequest) {
     if (!queryResult.success) {
       return queryResult.response;
     }
-    const { partId, warehouseId, status } = queryResult.data;
+    const { partId, warehouseId, status, search } = queryResult.data;
 
     // Build where clause
     const where: Record<string, unknown> = {};
     if (partId) where.partId = partId;
     if (warehouseId) where.warehouseId = warehouseId;
+
+    // Add search filter for partNumber or name
+    if (search) {
+      where.part = {
+        OR: [
+          { partNumber: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' } },
+        ],
+      };
+    }
 
     const inventoryData = await prisma.inventory.findMany({
       where,

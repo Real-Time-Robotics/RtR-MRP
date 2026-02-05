@@ -127,12 +127,12 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   });
 
   // Fetch orders
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (searchTerm?: string, statusFilter?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
+      if (searchTerm) params.set('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
       const response = await fetch(`/api/purchase-orders?${params.toString()}`);
       const result = await response.json();
@@ -146,11 +146,15 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, []);
 
+  // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    const timeoutId = setTimeout(() => {
+      fetchOrders(search, filters.status);
+    }, search ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [search, filters.status, fetchOrders]);
 
   // Handlers
   const handleAdd = () => {
@@ -169,11 +173,11 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   };
 
   const handleFormSuccess = () => {
-    fetchOrders();
+    fetchOrders(search, filters.status);
   };
 
   const handleDeleteSuccess = () => {
-    fetchOrders();
+    fetchOrders(search, filters.status);
     setSelectedIds(new Set());
   };
 
@@ -198,7 +202,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
         toast.success(`Đã xóa/hủy ${selectedIds.size} PO`);
       }
 
-      fetchOrders();
+      fetchOrders(search, filters.status);
       setSelectedIds(new Set());
     } catch (error) {
       toast.error('Có lỗi xảy ra');
@@ -391,7 +395,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchOrders}
+            onRefresh={() => fetchOrders(search, filters.status)}
             addPermission="purchasing:create"
             deletePermission="orders:delete"
             addLabel="Tạo PO"

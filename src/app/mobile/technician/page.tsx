@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Timer,
   Activity,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -51,53 +52,99 @@ interface CurrentTask {
   progress: number;
 }
 
-// Mock data
-const mockStats: TechnicianStats = {
-  pendingTasks: 5,
-  completedToday: 3,
-  downtimeReports: 2,
-  equipmentAssigned: 8,
+// Default empty state
+const defaultStats: TechnicianStats = {
+  pendingTasks: 0,
+  completedToday: 0,
+  downtimeReports: 0,
+  equipmentAssigned: 0,
 };
-
-const mockCurrentTask: CurrentTask | null = {
-  id: '1',
-  equipmentCode: 'CNC-001',
-  equipmentName: 'CNC Mill #1',
-  type: 'Bảo trì định kỳ',
-  startTime: '08:30',
-  progress: 65,
-};
-
-const mockPendingTasks: MaintenanceTask[] = [
-  {
-    id: '2',
-    equipmentCode: 'ROBOT-001',
-    equipmentName: 'Welding Robot',
-    type: 'Emergency',
-    priority: 'URGENT',
-    description: 'Lỗi servo motor arm #2',
-    dueTime: '10:00',
-    estimatedMinutes: 45,
-  },
-  {
-    id: '3',
-    equipmentCode: 'PACK-001',
-    equipmentName: 'Packaging Line',
-    type: 'Inspection',
-    priority: 'NORMAL',
-    description: 'Kiểm tra an toàn định kỳ',
-    dueTime: '14:00',
-    estimatedMinutes: 30,
-  },
-];
 
 export default function TechnicianDashboard() {
-  const [stats, setStats] = useState<TechnicianStats>(mockStats);
-  const [currentTask, setCurrentTask] = useState<CurrentTask | null>(mockCurrentTask);
-  const [pendingTasks, setPendingTasks] = useState<MaintenanceTask[]>(mockPendingTasks);
-  const [clockedIn, setClockedIn] = useState(true);
-  const [clockInTime, setClockInTime] = useState('06:00');
+  const [stats, setStats] = useState<TechnicianStats>(defaultStats);
+  const [currentTask, setCurrentTask] = useState<CurrentTask | null>(null);
+  const [pendingTasks, setPendingTasks] = useState<MaintenanceTask[]>([]);
+  const [clockedIn, setClockedIn] = useState(false);
+  const [clockInTime, setClockInTime] = useState('');
   const [currentTime, setCurrentTime] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch dashboard data from API
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch work orders for technician
+      const [workOrdersRes, tasksRes] = await Promise.all([
+        fetch('/api/mobile/workorder?status=Released,In Progress'),
+        fetch('/api/mobile/tasks'),
+      ]);
+
+      if (workOrdersRes.ok) {
+        const workOrdersData = await workOrdersRes.json();
+        if (workOrdersData.success && workOrdersData.data) {
+          const workOrders = workOrdersData.data;
+
+          // Calculate stats from work orders
+          const inProgress = workOrders.find((wo: any) => wo.status === 'In Progress' && wo.currentOperation);
+          const pending = workOrders.filter((wo: any) => wo.status === 'Released' || (wo.status === 'In Progress' && !wo.currentOperation));
+
+          setStats({
+            pendingTasks: pending.length,
+            completedToday: workOrdersData.summary?.completed || 0,
+            downtimeReports: workOrdersData.summary?.behindSchedule || 0,
+            equipmentAssigned: workOrders.length,
+          });
+
+          // Set current task from in-progress work order
+          if (inProgress && inProgress.currentOperation) {
+            const now = new Date();
+            setCurrentTask({
+              id: inProgress.id,
+              equipmentCode: inProgress.woNumber,
+              equipmentName: inProgress.partDescription,
+              type: inProgress.currentOperation.name,
+              startTime: now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+              progress: Math.round((inProgress.qtyCompleted / inProgress.qty) * 100),
+            });
+          } else {
+            setCurrentTask(null);
+          }
+
+          // Set pending tasks
+          const tasks: MaintenanceTask[] = pending.slice(0, 5).map((wo: any) => ({
+            id: wo.id,
+            equipmentCode: wo.woNumber,
+            equipmentName: wo.partDescription,
+            type: wo.priority === 'Rush' ? 'Emergency' : 'PM',
+            priority: wo.priority === 'Rush' ? 'URGENT' : wo.priority === 'High' ? 'HIGH' : 'NORMAL',
+            description: `${wo.partNumber} - SL: ${wo.qty}`,
+            dueTime: new Date(wo.dueDate).toLocaleDateString('vi-VN'),
+            estimatedMinutes: Math.round((wo.operations?.reduce((sum: number, op: any) => sum + op.plannedHours, 0) || 0) * 60),
+          }));
+
+          setPendingTasks(tasks);
+        }
+      }
+
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        // Additional task data if available
+      }
+
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      setError('Không thể tải dữ liệu. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -108,6 +155,12 @@ export default function TechnicianDashboard() {
     const interval = setInterval(updateTime, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  // Refresh data every 30 seconds
+  useEffect(() => {
+    const refreshInterval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(refreshInterval);
+  }, [fetchDashboardData]);
 
   const handleClockToggle = () => {
     if (clockedIn) {

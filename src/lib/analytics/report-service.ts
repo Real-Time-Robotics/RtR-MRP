@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { emailService } from '@/lib/email/email-service';
 import type {
   ReportSchedule,
   ReportScheduleCreateInput,
@@ -333,17 +334,79 @@ class ReportService {
       throw new Error('Report instance not ready for delivery');
     }
 
-    // TODO: Implement actual email sending
-    // This would use nodemailer or a similar service
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const downloadUrl = `${baseUrl}${instance.fileUrl}`;
 
-    // For now, just update the delivery status
+    // Send email to each recipient
+    const results: { email: string; success: boolean; error?: string }[] = [];
+
+    for (const recipient of recipients) {
+      try {
+        // Get user details if it's an internal user
+        let recipientEmail = recipient.email;
+        let recipientName = recipient.name || 'User';
+
+        if (recipient.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: recipient.userId },
+            select: { email: true, name: true },
+          });
+          if (user) {
+            recipientEmail = user.email;
+            recipientName = user.name || 'User';
+          }
+        }
+
+        if (!recipientEmail) {
+          results.push({ email: 'unknown', success: false, error: 'No email address' });
+          continue;
+        }
+
+        const result = await emailService.sendReportDelivery(
+          recipientEmail,
+          recipientName,
+          {
+            reportName: instance.report.name,
+            reportType: instance.format || 'PDF',
+            generatedAt: instance.generatedAt.toISOString(),
+            downloadUrl,
+            attachReport: recipient.attachReport,
+            // Note: In production, you would fetch the actual file content here
+            // reportContent: await fetchReportContent(instance.fileUrl),
+            // reportFilename: instance.fileName || `${instance.report.name}.${instance.format}`,
+          }
+        );
+
+        results.push({
+          email: recipientEmail,
+          success: result.success,
+          error: result.error,
+        });
+      } catch (error) {
+        results.push({
+          email: recipient.email || 'unknown',
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Check if all emails were sent successfully
+    const allSuccess = results.every(r => r.success);
+    const anySuccess = results.some(r => r.success);
+
+    // Update the delivery status
     await prisma.reportInstance.update({
       where: { id: instanceId },
       data: {
         recipients: recipients as any,
-        deliveryStatus: 'sent',
+        deliveryStatus: allSuccess ? 'sent' : anySuccess ? 'partial' : 'failed',
       },
     });
+
+    // Log results
+    console.log(`[ReportService] Delivered report ${instanceId} to ${recipients.length} recipients:`,
+      results.map(r => `${r.email}: ${r.success ? 'OK' : r.error}`).join(', '));
   }
 
   // ---------------------------------------------------------------------------

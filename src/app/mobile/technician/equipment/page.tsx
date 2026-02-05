@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -16,12 +16,13 @@ import {
   Clock,
   Calendar,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // =============================================================================
 // EQUIPMENT STATUS PAGE
-// Trạng thái thiết bị cho technician
+// Trạng thái thiết bị cho technician - Connected to real database
 // =============================================================================
 
 interface Equipment {
@@ -33,123 +34,74 @@ interface Equipment {
   status: 'RUNNING' | 'IDLE' | 'DOWN' | 'MAINTENANCE';
   oee: number;
   runningHours: number;
-  nextPM: string;
+  nextPM: string | null;
   lastIssue?: string;
+  workCenter?: string;
+  criticality?: string;
 }
 
-const mockEquipment: Equipment[] = [
-  {
-    id: '1',
-    code: 'CNC-001',
-    name: 'CNC Mill #1',
-    type: 'CNC Machining',
-    location: 'Bay A1',
-    status: 'RUNNING',
-    oee: 85,
-    runningHours: 4520,
-    nextPM: '2026-02-04',
-  },
-  {
-    id: '2',
-    code: 'CNC-002',
-    name: 'CNC Mill #2',
-    type: 'CNC Machining',
-    location: 'Bay A2',
-    status: 'RUNNING',
-    oee: 78,
-    runningHours: 3890,
-    nextPM: '2026-01-20',
-  },
-  {
-    id: '3',
-    code: 'ROBOT-001',
-    name: 'Welding Robot',
-    type: 'Robotics',
-    location: 'Bay B2',
-    status: 'DOWN',
-    oee: 0,
-    runningHours: 2100,
-    nextPM: '2026-01-15',
-    lastIssue: 'Servo motor arm #2 failure',
-  },
-  {
-    id: '4',
-    code: 'PACK-001',
-    name: 'Packaging Line',
-    type: 'Packaging',
-    location: 'Bay C1',
-    status: 'IDLE',
-    oee: 72,
-    runningHours: 5200,
-    nextPM: '2026-01-10',
-  },
-  {
-    id: '5',
-    code: 'CONV-001',
-    name: 'Conveyor Belt #1',
-    type: 'Material Handling',
-    location: 'Bay A3',
-    status: 'RUNNING',
-    oee: 92,
-    runningHours: 8500,
-    nextPM: '2026-02-15',
-  },
-  {
-    id: '6',
-    code: 'CONV-002',
-    name: 'Conveyor Belt #2',
-    type: 'Material Handling',
-    location: 'Bay A3',
-    status: 'MAINTENANCE',
-    oee: 0,
-    runningHours: 7200,
-    nextPM: '2026-01-04',
-  },
-  {
-    id: '7',
-    code: 'LASER-001',
-    name: 'Laser Cutter',
-    type: 'Cutting',
-    location: 'Bay D1',
-    status: 'RUNNING',
-    oee: 88,
-    runningHours: 3200,
-    nextPM: '2026-01-25',
-  },
-  {
-    id: '8',
-    code: 'PRESS-001',
-    name: 'Hydraulic Press',
-    type: 'Forming',
-    location: 'Bay E1',
-    status: 'IDLE',
-    oee: 65,
-    runningHours: 6800,
-    nextPM: '2026-01-12',
-  },
-];
+interface EquipmentSummary {
+  total: number;
+  running: number;
+  idle: number;
+  down: number;
+  maintenance: number;
+}
 
 type FilterStatus = 'all' | 'RUNNING' | 'IDLE' | 'DOWN' | 'MAINTENANCE';
 
 export default function EquipmentStatusPage() {
-  const [equipment] = useState<Equipment[]>(mockEquipment);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [summary, setSummary] = useState<EquipmentSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
-  const filteredEquipment = equipment.filter((eq) => {
-    const matchesSearch =
-      eq.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      eq.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || eq.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Fetch equipment from API
+  useEffect(() => {
+    async function fetchEquipment() {
+      try {
+        setLoading(true);
+        setError(null);
 
+        const params = new URLSearchParams();
+        if (filterStatus !== 'all') {
+          params.set('status', filterStatus);
+        }
+        if (searchQuery) {
+          params.set('search', searchQuery);
+        }
+
+        const response = await fetch(`/api/mobile/equipment?${params.toString()}`);
+        const result = await response.json();
+
+        if (result.success) {
+          setEquipment(result.data);
+          setSummary(result.summary);
+        } else {
+          setError(result.error || 'Failed to fetch equipment');
+        }
+      } catch (err) {
+        setError('Network error - please try again');
+        console.error('Equipment fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Debounce search
+    const timeoutId = setTimeout(fetchEquipment, 300);
+    return () => clearTimeout(timeoutId);
+  }, [filterStatus, searchQuery]);
+
+  // Status counts from API summary
   const statusCounts = {
-    all: equipment.length,
-    RUNNING: equipment.filter((e) => e.status === 'RUNNING').length,
-    IDLE: equipment.filter((e) => e.status === 'IDLE').length,
-    DOWN: equipment.filter((e) => e.status === 'DOWN').length,
-    MAINTENANCE: equipment.filter((e) => e.status === 'MAINTENANCE').length,
+    all: summary?.total || equipment.length,
+    RUNNING: summary?.running || equipment.filter((e) => e.status === 'RUNNING').length,
+    IDLE: summary?.idle || equipment.filter((e) => e.status === 'IDLE').length,
+    DOWN: summary?.down || equipment.filter((e) => e.status === 'DOWN').length,
+    MAINTENANCE: summary?.maintenance || equipment.filter((e) => e.status === 'MAINTENANCE').length,
   };
 
   const getStatusConfig = (status: string) => {
@@ -234,13 +186,29 @@ export default function EquipmentStatusPage() {
 
       {/* Equipment List */}
       <div className="p-4 space-y-3">
-        {filteredEquipment.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 mx-auto text-blue-500 animate-spin mb-3" />
+            <p className="text-gray-500">Đang tải dữ liệu...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertTriangle className="w-12 h-12 mx-auto text-red-400 mb-3" />
+            <p className="text-red-500">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
+            >
+              Thử lại
+            </button>
+          </div>
+        ) : equipment.length === 0 ? (
           <div className="text-center py-12">
             <Settings className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
             <p className="text-gray-500">Không tìm thấy thiết bị</p>
           </div>
         ) : (
-          filteredEquipment.map((eq) => {
+          equipment.map((eq) => {
             const statusConfig = getStatusConfig(eq.status);
             return (
               <div
@@ -291,7 +259,9 @@ export default function EquipmentStatusPage() {
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{eq.nextPM.slice(5)}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {eq.nextPM ? eq.nextPM.slice(5) : 'N/A'}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-400">Next PM</p>
                   </div>

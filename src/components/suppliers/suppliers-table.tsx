@@ -96,13 +96,13 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     country: 'all',
   });
 
-  // Fetch suppliers
-  const fetchSuppliers = useCallback(async () => {
+  // Fetch suppliers function
+  const fetchSuppliers = useCallback(async (searchTerm?: string, statusFilter?: string) => {
     setFetchState({ loading: true, error: null });
     try {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
+      if (searchTerm) params.set('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
 
       const response = await fetch(`/api/suppliers?${params.toString()}`);
       const result = await response.json();
@@ -121,12 +121,15 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     } finally {
       setFetchState((prev) => ({ ...prev, loading: false }));
     }
-  }, [search, filters]);
+  }, []);
 
-  // Load data on mount and when search/filters change
+  // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
-    fetchSuppliers();
-  }, [fetchSuppliers]);
+    const timeoutId = setTimeout(() => {
+      fetchSuppliers(search, filters.status);
+    }, search ? 300 : 0); // No delay on initial load
+    return () => clearTimeout(timeoutId);
+  }, [search, filters.status, fetchSuppliers]);
 
   // Filtered data
   const filteredSuppliers = suppliers.filter((supplier) => {
@@ -153,11 +156,11 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   };
 
   const handleFormSuccess = () => {
-    fetchSuppliers();
+    fetchSuppliers(search, filters.status);
   };
 
   const handleDeleteSuccess = () => {
-    fetchSuppliers();
+    fetchSuppliers(search, filters.status);
     setSelectedIds(new Set());
   };
 
@@ -182,7 +185,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
         toast.success(`Đã xóa ${selectedIds.size} nhà cung cấp`);
       }
 
-      fetchSuppliers();
+      fetchSuppliers(search, filters.status);
       setSelectedIds(new Set());
     } catch (error) {
       toast.error('Có lỗi xảy ra khi xóa');
@@ -407,7 +410,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchSuppliers}
+            onRefresh={() => fetchSuppliers(search, filters.status)}
             addPermission="orders:create"
             deletePermission="orders:delete"
             addLabel="Thêm nhà cung cấp"

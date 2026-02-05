@@ -72,13 +72,13 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
 
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (searchTerm?: string, statusFilter?: string, typeFilter?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
-      if (filters.type !== 'all') params.set('type', filters.type);
+      if (searchTerm) params.set('search', searchTerm);
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+      if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
 
       const response = await fetch(`/api/customers?${params.toString()}`);
       const result = await response.json();
@@ -88,11 +88,15 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, []);
 
+  // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    const timeoutId = setTimeout(() => {
+      fetchCustomers(search, filters.status, filters.type);
+    }, search ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [search, filters.status, filters.type, fetchCustomers]);
 
   const handleAdd = () => { setEditingCustomer(null); setFormOpen(true); };
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setFormOpen(true); };
@@ -104,7 +108,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     try {
       await Promise.all(Array.from(selectedIds).map((id) => fetch(`/api/customers/${id}`, { method: 'DELETE' })));
       toast.success(`Đã xóa ${selectedIds.size} khách hàng`);
-      fetchCustomers();
+      fetchCustomers(search, filters.status, filters.type);
       setSelectedIds(new Set());
     } catch { toast.error('Có lỗi xảy ra khi xóa'); }
   };
@@ -286,7 +290,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             searchPlaceholder="Tìm kiếm khách hàng..."
             onAdd={handleAdd}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchCustomers}
+            onRefresh={() => fetchCustomers(search, filters.status, filters.type)}
             onExport={handleExport}
             onImport={handleImport}
             addPermission="orders:create"
@@ -347,8 +351,8 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
         </CardContent>
       </Card>
 
-      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={fetchCustomers} />
-      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={fetchCustomers} />
+      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={() => fetchCustomers(search, filters.status, filters.type)} />
+      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={() => fetchCustomers(search, filters.status, filters.type)} />
     </div>
   );
 }
