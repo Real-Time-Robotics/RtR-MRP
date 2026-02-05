@@ -44,9 +44,9 @@ export interface UpdateSavedViewInput {
 export async function getSavedViews(entityType: string, userId: string) {
   return prisma.savedView.findMany({
     where: {
-      entityType,
+      entity: entityType,
       OR: [
-        { userId },
+        { createdBy: userId },
         { isShared: true },
       ],
     },
@@ -66,7 +66,7 @@ export async function getSavedView(id: string, userId: string) {
   });
 
   // Check access
-  if (view && view.userId !== userId && !view.isShared) {
+  if (view && view.createdBy !== userId && !view.isShared) {
     return null;
   }
 
@@ -80,8 +80,8 @@ export async function getDefaultView(entityType: string, userId: string) {
   // First try user's default
   const userDefault = await prisma.savedView.findFirst({
     where: {
-      entityType,
-      userId,
+      entity: entityType,
+      createdBy: userId,
       isDefault: true,
     },
   });
@@ -91,7 +91,7 @@ export async function getDefaultView(entityType: string, userId: string) {
   // Then try shared default
   return prisma.savedView.findFirst({
     where: {
-      entityType,
+      entity: entityType,
       isShared: true,
       isDefault: true,
     },
@@ -108,8 +108,8 @@ export async function createSavedView(input: CreateSavedViewInput) {
   if (isDefault) {
     await prisma.savedView.updateMany({
       where: {
-        userId,
-        entityType,
+        createdBy: userId,
+        entity: entityType,
         isDefault: true,
       },
       data: { isDefault: false },
@@ -118,13 +118,14 @@ export async function createSavedView(input: CreateSavedViewInput) {
 
   return prisma.savedView.create({
     data: {
-      ...data,
-      entityType,
+      name: data.name,
+      entity: entityType,
       isDefault: isDefault || false,
       isShared: data.isShared || false,
-      filters: data.filters as object,
-      sort: data.sort as object,
+      filters: (data.filters ?? {}) as object,
       columns: data.columns as object,
+      sortBy: data.sort?.column,
+      sortOrder: data.sort?.direction?.toUpperCase(),
       user: { connect: { id: userId } },
     },
   });
@@ -143,7 +144,7 @@ export async function updateSavedView(
     where: { id },
   });
 
-  if (!existing || existing.userId !== userId) {
+  if (!existing || existing.createdBy !== userId) {
     throw new Error('View not found or access denied');
   }
 
@@ -151,8 +152,8 @@ export async function updateSavedView(
   if (input.isDefault) {
     await prisma.savedView.updateMany({
       where: {
-        userId,
-        entityType: existing.entityType,
+        createdBy: userId,
+        entity: existing.entity,
         isDefault: true,
         id: { not: id },
       },
@@ -163,10 +164,13 @@ export async function updateSavedView(
   return prisma.savedView.update({
     where: { id },
     data: {
-      ...input,
+      name: input.name,
+      isDefault: input.isDefault,
+      isShared: input.isShared,
       filters: input.filters as object,
-      sort: input.sort as object,
       columns: input.columns as object,
+      sortBy: input.sort?.column,
+      sortOrder: input.sort?.direction?.toUpperCase(),
     },
   });
 }
@@ -180,7 +184,7 @@ export async function deleteSavedView(id: string, userId: string) {
     where: { id },
   });
 
-  if (!existing || existing.userId !== userId) {
+  if (!existing || existing.createdBy !== userId) {
     throw new Error('View not found or access denied');
   }
 
@@ -200,17 +204,18 @@ export async function duplicateSavedView(id: string, userId: string, newName: st
   }
 
   // Check access for shared views
-  if (original.userId !== userId && !original.isShared) {
+  if (original.createdBy !== userId && !original.isShared) {
     throw new Error('Access denied');
   }
 
   return prisma.savedView.create({
     data: {
       name: newName,
-      entityType: original.entityType,
+      entity: original.entity,
       filters: original.filters as object,
-      sort: original.sort as object,
       columns: original.columns as object,
+      sortBy: original.sortBy,
+      sortOrder: original.sortOrder,
       isDefault: false,
       isShared: false,
       user: { connect: { id: userId } },
