@@ -107,6 +107,9 @@ export async function GET(request: NextRequest) {
         ),
         warehouseId: inv.warehouseId,
         warehouseName: inv.warehouse.name,
+        lotNumber: inv.lotNumber,
+        expiryDate: inv.expiryDate,
+        locationCode: inv.locationCode,
       };
     });
 

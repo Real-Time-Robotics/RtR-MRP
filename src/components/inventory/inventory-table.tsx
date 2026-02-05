@@ -58,6 +58,9 @@ export interface InventoryItem {
   status: StockStatus;
   warehouseId?: string;
   warehouseName?: string;
+  lotNumber?: string;
+  expiryDate?: string;
+  locationCode?: string;
 }
 
 interface InventoryTableProps {
@@ -341,6 +344,22 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       width: '180px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
+    },
+    {
+      key: 'lotNumber',
+      header: 'Lot Number',
+      width: '120px',
+      sortable: true,
+      render: (value) => value ? (
+        <span className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{value}</span>
+      ) : <span className="text-slate-400">-</span>,
+    },
+    {
+      key: 'warehouseName',
+      header: 'Kho',
+      width: '120px',
+      sortable: true,
+      render: (value) => <span className="text-sm">{value || '-'}</span>,
     },
     {
       key: 'category',
