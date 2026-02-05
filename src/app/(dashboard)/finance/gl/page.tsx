@@ -28,9 +28,20 @@ import { ChartOfAccounts, JournalEntryForm, TrialBalance } from "@/components/fi
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 
 interface GLAccount {
@@ -100,6 +111,19 @@ function GeneralLedgerContent() {
   const [loading, setLoading] = useState(true);
   const [newJournalOpen, setNewJournalOpen] = useState(showNew);
   const [submitting, setSubmitting] = useState(false);
+  const [editAccountOpen, setEditAccountOpen] = useState(false);
+  const [newAccountOpen, setNewAccountOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<GLAccount | null>(null);
+  const [accountFormData, setAccountFormData] = useState({
+    accountNumber: "",
+    name: "",
+    description: "",
+    accountType: "ASSET",
+    accountCategory: "CURRENT",
+    normalBalance: "DEBIT",
+    isActive: true,
+    parentId: "",
+  });
 
   useEffect(() => {
     fetchData();
@@ -208,8 +232,66 @@ function GeneralLedgerContent() {
     }
   };
 
-  const handleEditAccount = (_account: GLAccount) => {
-    // TODO: Implement account edit dialog
+  const handleEditAccount = (account: GLAccount) => {
+    setEditingAccount(account);
+    setAccountFormData({
+      accountNumber: account.accountNumber,
+      name: account.name,
+      description: account.description || "",
+      accountType: account.accountType,
+      accountCategory: account.accountCategory,
+      normalBalance: account.normalBalance,
+      isActive: account.isActive,
+      parentId: account.parentId || "",
+    });
+    setEditAccountOpen(true);
+  };
+
+  const handleNewAccount = () => {
+    setEditingAccount(null);
+    setAccountFormData({
+      accountNumber: "",
+      name: "",
+      description: "",
+      accountType: "ASSET",
+      accountCategory: "CURRENT",
+      normalBalance: "DEBIT",
+      isActive: true,
+      parentId: "",
+    });
+    setNewAccountOpen(true);
+  };
+
+  const submitAccountForm = async () => {
+    setSubmitting(true);
+    try {
+      const isEdit = editingAccount !== null;
+      const url = "/api/finance/gl/accounts";
+      const method = isEdit ? "PUT" : "POST";
+
+      const body = isEdit
+        ? { id: editingAccount.id, ...accountFormData }
+        : accountFormData;
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        setEditAccountOpen(false);
+        setNewAccountOpen(false);
+        await fetchData();
+      } else {
+        const error = await res.json();
+        alert(error.error || `Failed to ${isEdit ? "update" : "create"} account`);
+      }
+    } catch (error) {
+      console.error("Failed to submit account:", error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDeleteAccount = async (id: string) => {
@@ -296,7 +378,7 @@ function GeneralLedgerContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Chart of Accounts</CardTitle>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleNewAccount}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Account
               </Button>
@@ -431,6 +513,217 @@ function GeneralLedgerContent() {
             onCancel={() => setNewJournalOpen(false)}
             isSubmitting={submitting}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Account Edit/New Dialog */}
+      <Dialog
+        open={editAccountOpen || newAccountOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditAccountOpen(false);
+            setNewAccountOpen(false);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingAccount ? "Edit Account" : "New Account"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingAccount
+                ? "Update the account details below"
+                : "Fill in the details to create a new GL account"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Account Number *</Label>
+                <Input
+                  value={accountFormData.accountNumber}
+                  onChange={(e) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      accountNumber: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., 1100"
+                  disabled={editingAccount?.isSystemAccount}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Account Name *</Label>
+                <Input
+                  value={accountFormData.name}
+                  onChange={(e) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., Cash on Hand"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={accountFormData.description}
+                onChange={(e) =>
+                  setAccountFormData({
+                    ...accountFormData,
+                    description: e.target.value,
+                  })
+                }
+                placeholder="Optional description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Account Type *</Label>
+                <Select
+                  value={accountFormData.accountType}
+                  onValueChange={(value) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      accountType: value,
+                      normalBalance:
+                        value === "ASSET" || value === "EXPENSE"
+                          ? "DEBIT"
+                          : "CREDIT",
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ASSET">Asset</SelectItem>
+                    <SelectItem value="LIABILITY">Liability</SelectItem>
+                    <SelectItem value="EQUITY">Equity</SelectItem>
+                    <SelectItem value="REVENUE">Revenue</SelectItem>
+                    <SelectItem value="EXPENSE">Expense</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={accountFormData.accountCategory}
+                  onValueChange={(value) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      accountCategory: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CURRENT">Current</SelectItem>
+                    <SelectItem value="NON_CURRENT">Non-Current</SelectItem>
+                    <SelectItem value="OPERATING">Operating</SelectItem>
+                    <SelectItem value="NON_OPERATING">Non-Operating</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Normal Balance</Label>
+                <Select
+                  value={accountFormData.normalBalance}
+                  onValueChange={(value) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      normalBalance: value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DEBIT">Debit</SelectItem>
+                    <SelectItem value="CREDIT">Credit</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Parent Account</Label>
+                <Select
+                  value={accountFormData.parentId || "none"}
+                  onValueChange={(value) =>
+                    setAccountFormData({
+                      ...accountFormData,
+                      parentId: value === "none" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="No parent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Parent</SelectItem>
+                    {accounts
+                      .filter((a) => a.id !== editingAccount?.id)
+                      .map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.accountNumber} - {account.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isActive"
+                checked={accountFormData.isActive}
+                onCheckedChange={(checked) =>
+                  setAccountFormData({
+                    ...accountFormData,
+                    isActive: checked,
+                  })
+                }
+              />
+              <Label htmlFor="isActive">Active</Label>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditAccountOpen(false);
+                  setNewAccountOpen(false);
+                }}
+                disabled={submitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitAccountForm}
+                disabled={
+                  submitting ||
+                  !accountFormData.accountNumber ||
+                  !accountFormData.name
+                }
+              >
+                {submitting
+                  ? "Saving..."
+                  : editingAccount
+                  ? "Update Account"
+                  : "Create Account"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
