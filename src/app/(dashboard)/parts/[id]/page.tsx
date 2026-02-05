@@ -124,6 +124,12 @@ interface Part {
   priceBreakCost3: number | null;
 
   supplier: { id: string; name: string } | null;
+  partSuppliers: Array<{
+    id: string;
+    supplierId: string;
+    isPreferred: boolean;
+    supplier: { id: string; code: string; name: string };
+  }>;
   alternates: Array<{
     id: string;
     alternateType: string;
@@ -620,6 +626,16 @@ export default function PartDetailPage() {
                   label="Primary Supplier"
                   value={part.supplier?.name}
                 />
+                {part.partSuppliers && part.partSuppliers.filter(ps => !ps.isPreferred).length > 0 && (
+                  <InfoRow
+                    label="Secondary Suppliers"
+                    value={part.partSuppliers
+                      .filter(ps => !ps.isPreferred)
+                      .map(ps => ps.supplier?.name)
+                      .filter(Boolean)
+                      .join(", ")}
+                  />
+                )}
                 <InfoRow label="Lead Time" value={`${part.leadTimeDays} days`} />
               </CardContent>
             </Card>

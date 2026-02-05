@@ -192,27 +192,24 @@ export function PartsTable() {
   });
 
   // Fetch parts
-  const fetchParts = useCallback(async () => {
+  const fetchParts = useCallback(async (searchTerm?: string, categoryFilter?: string, lifecycleFilter?: string, makeOrBuyFilter?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.category !== 'all') params.set('category', filters.category);
-      if (filters.lifecycle !== 'all') params.set('lifecycleStatus', filters.lifecycle);
-      if (filters.makeOrBuy !== 'all') params.set('makeOrBuy', filters.makeOrBuy);
+      if (searchTerm) params.set('search', searchTerm);
+      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
+      if (lifecycleFilter && lifecycleFilter !== 'all') params.set('lifecycleStatus', lifecycleFilter);
+      if (makeOrBuyFilter && makeOrBuyFilter !== 'all') params.set('makeOrBuy', makeOrBuyFilter);
       // Include relations for full column data (planning, costs, specs)
       params.set('includeRelations', 'true');
 
       const response = await fetch(`/api/parts?${params.toString()}`);
       const result = await response.json();
-      console.log('[PartsTable] API Response:', { params: params.toString(), result });
 
       if (response.ok) {
         // Ensure we have an array and each part has required fields with defaults
         // Flatten nested relations (planning, costs, specs, compliance) for display
         const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
-        console.log('[PartsTable] Parts array:', partsArray);
-        console.log('[PartsTable] First part:', partsArray[0]);
         const normalizedParts = partsArray.map((p: any) => ({
           ...p,
           // Basic
@@ -258,11 +255,15 @@ export function PartsTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, filters]);
+  }, []);
 
+  // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
-    fetchParts();
-  }, [fetchParts]);
+    const timeoutId = setTimeout(() => {
+      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+    }, search ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [search, filters.category, filters.lifecycle, filters.makeOrBuy, fetchParts]);
 
   // Filtered parts (client-side additional filtering)
   const filteredParts = parts;
@@ -284,11 +285,11 @@ export function PartsTable() {
   };
 
   const handleFormSuccess = () => {
-    fetchParts();
+    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
   };
 
   const handleDeleteSuccess = () => {
-    fetchParts();
+    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     setSelectedIds(new Set());
   };
 
@@ -301,7 +302,7 @@ export function PartsTable() {
 
     try {
       // Optimistic delete for bulk (harder to revert, but we can try)
-      // For safety on delete, we usually wait. 
+      // For safety on delete, we usually wait.
       // But let's speed up the UI feedback.
       const idsToDelete = new Set(selectedIds);
       setParts(prev => prev.filter(p => !idsToDelete.has(p.id)));
@@ -317,13 +318,13 @@ export function PartsTable() {
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
         toast.error(`Không thể xóa ${failedCount} parts (Đã hoàn tác)`);
-        fetchParts(); // Revert/Refresh
+        fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy); // Revert/Refresh
       } else {
         toast.success(`Đã xóa ${idsToDelete.size} parts`);
       }
     } catch (error) {
       toast.error('Có lỗi xảy ra khi xóa');
-      fetchParts();
+      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     }
   };
 
@@ -359,7 +360,7 @@ export function PartsTable() {
       setEditingCostId(null);
     } catch (error) {
       toast.error('Không thể cập nhật đơn giá');
-      fetchParts();
+      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     }
   };
 
@@ -377,40 +378,52 @@ export function PartsTable() {
       return;
     }
 
-    // Flatten nested relations (planning, costs, specs, compliance) for export
-    const flattenedParts = parts.map((p: any) => ({
-      partNumber: p.partNumber,
-      name: p.name,
-      description: p.description,
-      category: p.category,
-      unit: p.unit,
-      unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
-      makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
-      leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
-      moq: p.planning?.moq ?? p.moq ?? 1,
-      orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
-      minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
-      maxStock: p.planning?.maxStock ?? null,
-      safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
-      reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
-      weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
-      lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
-      widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
-      heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
-      material: p.specs?.material ?? p.material ?? '',
-      color: p.specs?.color ?? p.color ?? '',
-      manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
-      manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
-      drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
-      countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
-      ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? true,
-      itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
-      rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? true,
-      reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? true,
-      lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
-      revision: p.revision ?? 'A',
-      isCritical: p.isCritical ?? false,
-    }));
+    // Flatten nested relations (planning, costs, specs, compliance, suppliers) for export
+    const flattenedParts = parts.map((p: any) => {
+      // Get primary and secondary suppliers
+      const primarySupplier = p.partSuppliers?.find((ps: any) => ps.isPreferred)?.supplier;
+      const secondarySuppliers = p.partSuppliers
+        ?.filter((ps: any) => !ps.isPreferred)
+        ?.map((ps: any) => ps.supplier?.name)
+        ?.filter(Boolean)
+        ?.join(', ') || '';
+
+      return {
+        partNumber: p.partNumber,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        unit: p.unit,
+        unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
+        makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+        primarySupplier: primarySupplier?.name ?? '',
+        secondarySuppliers: secondarySuppliers,
+        leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+        moq: p.planning?.moq ?? p.moq ?? 1,
+        orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+        minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+        maxStock: p.planning?.maxStock ?? null,
+        safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+        reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+        weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+        lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+        widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+        heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+        material: p.specs?.material ?? p.material ?? '',
+        color: p.specs?.color ?? p.color ?? '',
+        manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+        manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+        drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+        countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+        ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? true,
+        itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+        rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? true,
+        reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? true,
+        lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+        revision: p.revision ?? 'A',
+        isCritical: p.isCritical ?? false,
+      };
+    });
 
     exportToExcel(flattenedParts, {
       fileName: 'Parts_List',
@@ -426,7 +439,7 @@ export function PartsTable() {
 
   const handleImportSuccess = () => {
     setImportDialogOpen(false);
-    fetchParts();
+    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     toast.success('Import thành công!');
   };
 
@@ -803,7 +816,7 @@ export function PartsTable() {
               onImport={handleImport}
               onExport={handleExport}
               onBulkDelete={handleBulkDelete}
-              onRefresh={fetchParts}
+              onRefresh={() => fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy)}
               addPermission="parts:create"
               deletePermission="parts:delete"
               addLabel="Thêm Part"
