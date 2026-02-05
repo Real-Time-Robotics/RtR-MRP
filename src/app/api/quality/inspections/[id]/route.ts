@@ -51,7 +51,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const data = await request.json();
 
-    const existing = await prisma.inspection.findUnique({ where: { id } });
+    const existing = await prisma.inspection.findUnique({
+      where: { id },
+      include: { part: true },
+    });
     if (!existing) {
       return NextResponse.json({ error: "Inspection not found" }, { status: 404 });
     }
@@ -76,6 +79,111 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         results: { include: { characteristic: true } },
       },
     });
+
+    // When RECEIVING inspection is completed, handle inventory based on result
+    if (
+      data.status === "completed" &&
+      existing.type === "RECEIVING" &&
+      existing.partId &&
+      data.result
+    ) {
+      const lotNumber = existing.lotNumber || `INS-${existing.inspectionNumber}`;
+
+      // Determine target warehouse based on result
+      let targetWarehouse = null;
+      let quantity = 0;
+      let locationCode = '';
+
+      if (data.result === "PASS") {
+        // PASS → Main Warehouse (default)
+        targetWarehouse = await prisma.warehouse.findFirst({
+          where: { type: "MAIN", isDefault: true },
+        });
+        if (!targetWarehouse) {
+          targetWarehouse = await prisma.warehouse.findFirst({
+            where: { isDefault: true },
+          });
+        }
+        quantity = data.quantityAccepted || existing.quantityAccepted || 0;
+        locationCode = 'STOCK';
+      } else if (data.result === "FAIL") {
+        // FAIL → Quarantine warehouse
+        targetWarehouse = await prisma.warehouse.findFirst({
+          where: { type: "QUARANTINE" },
+        });
+        quantity = data.quantityRejected || existing.quantityRejected || existing.quantityReceived || 0;
+        locationCode = 'QUARANTINE';
+      } else if (data.result === "CONDITIONAL") {
+        // CONDITIONAL → Hold Area warehouse
+        targetWarehouse = await prisma.warehouse.findFirst({
+          where: { type: "HOLD" },
+        });
+        quantity = data.quantityAccepted || existing.quantityAccepted || existing.quantityReceived || 0;
+        locationCode = 'HOLD';
+      }
+
+      // Create/Update inventory if warehouse found and quantity > 0
+      if (targetWarehouse && quantity > 0) {
+        // Check if inventory already exists for this part + warehouse + lot
+        const existingInventory = await prisma.inventory.findFirst({
+          where: {
+            partId: existing.partId,
+            warehouseId: targetWarehouse.id,
+            lotNumber: lotNumber,
+          },
+        });
+
+        if (existingInventory) {
+          // Update existing inventory
+          await prisma.inventory.update({
+            where: { id: existingInventory.id },
+            data: {
+              quantity: existingInventory.quantity + quantity,
+            },
+          });
+        } else {
+          // Create new inventory record
+          await prisma.inventory.create({
+            data: {
+              partId: existing.partId,
+              warehouseId: targetWarehouse.id,
+              quantity: quantity,
+              reservedQty: 0,
+              lotNumber: lotNumber,
+              locationCode: locationCode,
+            },
+          });
+        }
+      }
+
+      // For FAIL result, also create NCR if not exists
+      if (data.result === "FAIL" && quantity > 0) {
+        const existingNCR = await prisma.nCR.findFirst({
+          where: { inspectionId: existing.id },
+        });
+
+        if (!existingNCR) {
+          const ncrCount = await prisma.nCR.count();
+          const ncrNumber = `NCR-${new Date().getFullYear()}-${String(ncrCount + 1).padStart(4, '0')}`;
+
+          await prisma.nCR.create({
+            data: {
+              ncrNumber,
+              status: 'open',
+              priority: 'medium',
+              source: 'receiving', // lowercase to match API schema
+              inspectionId: existing.id,
+              partId: existing.partId,
+              lotNumber: lotNumber,
+              quantityAffected: quantity,
+              title: `Receiving inspection failed - ${existing.inspectionNumber}`,
+              description: `Receiving inspection ${existing.inspectionNumber} failed with ${quantity} rejected items. Lot: ${lotNumber}`,
+              createdBy: session.user?.id || 'system',
+            },
+          });
+        }
+      }
+    }
 
     return NextResponse.json(inspection);
   } catch (error) {

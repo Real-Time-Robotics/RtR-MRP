@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; // Use navigation, not router 
-import { ArrowLeft, Package, MapPin, Box, Calendar, History, Save } from 'lucide-react';
+import { useRouter } from 'next/navigation'; // Use navigation, not router
+import { ArrowLeft, Package, MapPin, Box, Calendar, History, Save, ClipboardCheck, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,33 @@ import { useDataEntry } from '@/hooks/use-data-entry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSmartGridStore } from '@/components/ui-v2/smart-grid';
+import Link from 'next/link';
+
+interface ReceivingInspection {
+    id: string;
+    inspectionNumber: string;
+    status: string;
+    result: string | null;
+    lotNumber: string | null;
+    quantityReceived: number | null;
+    quantityAccepted: number | null;
+    quantityRejected: number | null;
+    inspectedAt: string | null;
+    createdAt: string;
+}
+
+interface OtherLocation {
+    id: string;
+    quantity: number;
+    reservedQty: number;
+    lotNumber: string | null;
+    locationCode: string | null;
+    warehouse: {
+        id: string;
+        name: string;
+        type: string | null;
+    };
+}
 
 interface InventoryDetail {
     id: string;
@@ -23,6 +50,7 @@ interface InventoryDetail {
     available: number; // Computed in API usually, but here likely need to compute logic if using raw DB record
     locationCode: string | null;
     lotNumber: string | null;
+    expiryDate: string | null;
     updatedAt: string;
     part: {
         id: string;
@@ -37,7 +65,10 @@ interface InventoryDetail {
         id: string;
         name: string;
         location: string;
+        type?: string | null;
     };
+    receivingInspections?: ReceivingInspection[];
+    otherLocations?: OtherLocation[];
 }
 
 export default function InventoryDetailPage({ params }: { params: { id: string } }) {
@@ -181,25 +212,48 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                         Stock Information
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <Label className="text-muted-foreground text-xs uppercase">Quantity On Hand</Label>
-                                        <div className="text-3xl font-bold mt-1">{inventory.quantity} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
-                                    </div>
-                                    <div>
-                                        <Label className="text-muted-foreground text-xs uppercase">Available</Label>
-                                        <div className="text-3xl font-bold mt-1 text-green-600">{available} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
-                                    </div>
-                                    <div className="col-span-2 grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg">
-                                        <div>
-                                            <Label className="text-muted-foreground text-xs uppercase">Reserved</Label>
-                                            <div className="font-semibold">{inventory.reservedQty}</div>
-                                        </div>
-                                        <div>
-                                            <Label className="text-muted-foreground text-xs uppercase">Allocated</Label>
-                                            <div className="font-semibold">0</div>
-                                        </div>
-                                    </div>
+                                <CardContent className="space-y-4">
+                                    {/* Calculate totals from all locations */}
+                                    {(() => {
+                                        const holdQty = inventory.otherLocations?.filter(l => l.warehouse.type === 'HOLD').reduce((sum, l) => sum + l.quantity, 0) || 0;
+                                        const quarantineQty = inventory.otherLocations?.filter(l => l.warehouse.type === 'QUARANTINE').reduce((sum, l) => sum + l.quantity, 0) || 0;
+                                        const mainQty = inventory.warehouse.type === 'MAIN' ? inventory.quantity : 0;
+                                        const totalStock = mainQty + holdQty + quarantineQty;
+                                        const availableStock = mainQty - inventory.reservedQty;
+
+                                        return (
+                                            <>
+                                                <div className="grid grid-cols-2 gap-6">
+                                                    <div>
+                                                        <Label className="text-muted-foreground text-xs uppercase">Tổng tồn kho (Part)</Label>
+                                                        <div className="text-3xl font-bold mt-1">{totalStock} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
+                                                    </div>
+                                                    <div>
+                                                        <Label className="text-muted-foreground text-xs uppercase">Khả dụng (Main)</Label>
+                                                        <div className="text-3xl font-bold mt-1 text-green-600">{availableStock} <span className="text-sm font-normal text-muted-foreground">{inventory.part.unit}</span></div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-3 bg-muted/30 p-4 rounded-lg">
+                                                    <div className="text-center">
+                                                        <Label className="text-muted-foreground text-[10px] uppercase">Main</Label>
+                                                        <div className="font-bold text-lg text-green-600">{mainQty}</div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <Label className="text-muted-foreground text-[10px] uppercase">On Hold</Label>
+                                                        <div className="font-bold text-lg text-amber-600">{holdQty}</div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <Label className="text-muted-foreground text-[10px] uppercase">Quarantine</Label>
+                                                        <div className="font-bold text-lg text-red-600">{quarantineQty}</div>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <Label className="text-muted-foreground text-[10px] uppercase">Reserved</Label>
+                                                        <div className="font-bold text-lg">{inventory.reservedQty}</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </CardContent>
                             </Card>
 
@@ -255,6 +309,53 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Other Inventory Locations */}
+                            {inventory.otherLocations && inventory.otherLocations.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2 text-base">
+                                            <Box className="h-4 w-4" />
+                                            Vị trí khác của Part này
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            {inventory.otherLocations.map((loc) => (
+                                                <Link
+                                                    key={loc.id}
+                                                    href={`/inventory/${loc.id}`}
+                                                    className="flex items-center justify-between p-3 rounded-lg border hover:border-primary transition-colors"
+                                                >
+                                                    <div>
+                                                        <div className="font-medium flex items-center gap-2">
+                                                            <Badge
+                                                                variant={
+                                                                    loc.warehouse.type === 'QUARANTINE' ? 'destructive' :
+                                                                    loc.warehouse.type === 'HOLD' ? 'secondary' :
+                                                                    'default'
+                                                                }
+                                                                className="text-xs"
+                                                            >
+                                                                {loc.warehouse.name}
+                                                            </Badge>
+                                                        </div>
+                                                        {loc.lotNumber && (
+                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                Lot: {loc.lotNumber}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="font-bold">{loc.quantity}</div>
+                                                        <div className="text-xs text-muted-foreground">{loc.locationCode || '-'}</div>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
 
                         {/* Right Column: Meta & History */}
@@ -278,14 +379,48 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                             <Card className="bg-slate-50 dark:bg-slate-900/50">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-sm">
-                                        <History className="h-4 w-4" />
-                                        Recent Movements
+                                        <ClipboardCheck className="h-4 w-4" />
+                                        Receiving Inspections
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-center py-6 text-muted-foreground text-xs">
-                                        No recent movements recorded.
-                                    </div>
+                                    {inventory.receivingInspections && inventory.receivingInspections.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {inventory.receivingInspections.map((insp) => (
+                                                <Link
+                                                    key={insp.id}
+                                                    href={`/quality/receiving/${insp.id}`}
+                                                    className="block p-3 rounded-lg border bg-white dark:bg-slate-800 hover:border-primary transition-colors"
+                                                >
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="font-mono text-xs font-medium">{insp.inspectionNumber}</span>
+                                                        <Badge
+                                                            variant={insp.result === 'PASS' ? 'default' : insp.result === 'FAIL' ? 'destructive' : 'secondary'}
+                                                            className="text-xs"
+                                                        >
+                                                            {insp.result === 'PASS' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                                            {insp.result === 'FAIL' && <XCircle className="h-3 w-3 mr-1" />}
+                                                            {!insp.result && <Clock className="h-3 w-3 mr-1" />}
+                                                            {insp.result || insp.status}
+                                                        </Badge>
+                                                    </div>
+                                                    {insp.lotNumber && (
+                                                        <div className="text-xs text-muted-foreground">
+                                                            <span className="font-medium">Lot:</span> {insp.lotNumber}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                                        <span>SL: {insp.quantityAccepted || insp.quantityReceived || '-'}</span>
+                                                        <span>{new Date(insp.inspectedAt || insp.createdAt).toLocaleDateString('vi-VN')}</span>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-6 text-muted-foreground text-xs">
+                                            Chưa có receiving inspection nào.
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>

@@ -32,7 +32,15 @@ export async function GET(
                         partSuppliers: { include: { supplier: true } }
                     }
                 },
-                warehouse: true,
+                warehouse: {
+                    select: {
+                        id: true,
+                        code: true,
+                        name: true,
+                        location: true,
+                        type: true,
+                    }
+                },
             },
         });
 
@@ -40,7 +48,45 @@ export async function GET(
             return NextResponse.json({ error: "Inventory record not found" }, { status: 404 });
         }
 
-        return NextResponse.json(inventory);
+        // Fetch related receiving inspections for this part
+        const receivingInspections = await prisma.inspection.findMany({
+            where: {
+                partId: inventory.partId,
+                type: 'RECEIVING',
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: {
+                id: true,
+                inspectionNumber: true,
+                status: true,
+                result: true,
+                lotNumber: true,
+                quantityReceived: true,
+                quantityAccepted: true,
+                quantityRejected: true,
+                inspectedAt: true,
+                createdAt: true,
+            },
+        });
+
+        // Fetch other inventory locations for the same part (different warehouses/lots)
+        const otherLocations = await prisma.inventory.findMany({
+            where: {
+                partId: inventory.partId,
+                id: { not: inventory.id }, // Exclude current record
+            },
+            include: {
+                warehouse: true,
+            },
+            orderBy: { warehouse: { name: 'asc' } },
+        });
+
+        return NextResponse.json({
+            ...inventory,
+            receivingInspections,
+            otherLocations,
+        });
     } catch (error) {
         console.error("Failed to fetch inventory details:", error);
         return NextResponse.json(

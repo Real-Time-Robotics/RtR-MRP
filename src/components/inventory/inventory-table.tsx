@@ -198,6 +198,9 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
           status: item.status || 'OK', // This status might be stale if we edit locally, could recalc
           warehouseId: item.warehouseId,
           warehouseName: item.warehouseName || item.warehouse?.name,
+          lotNumber: item.lotNumber || null,
+          expiryDate: item.expiryDate || null,
+          locationCode: item.locationCode || null,
         }));
         setInventory(items);
       }

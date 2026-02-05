@@ -659,8 +659,9 @@ model Warehouse {
   code      String   @unique
   name      String
   location  String?
-  type      String?
+  type      String?  // MAIN, QUARANTINE, HOLD, REJECT
   status    String   @default("active")
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 
   // Site relation
@@ -671,6 +672,7 @@ model Warehouse {
   pickListLines PickListLine[]
 
   @@index([siteId])
+  @@index([type])
   @@map("warehouses")
 }
 

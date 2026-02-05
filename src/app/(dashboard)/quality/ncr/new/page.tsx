@@ -25,12 +25,11 @@ interface Part {
 }
 
 const SOURCE_OPTIONS = [
-  { value: "RECEIVING", label: "Kiểm tra nhận hàng" },
-  { value: "IN_PROCESS", label: "Kiểm tra trong SX" },
-  { value: "FINAL", label: "Kiểm tra cuối cùng" },
-  { value: "CUSTOMER", label: "Khiếu nại khách hàng" },
-  { value: "INTERNAL", label: "Kiểm toán nội bộ" },
-  { value: "SUPPLIER", label: "Lỗi nhà cung cấp" },
+  { value: "receiving", label: "Kiểm tra nhận hàng" },
+  { value: "in_process", label: "Kiểm tra trong SX" },
+  { value: "final", label: "Kiểm tra cuối cùng" },
+  { value: "customer_complaint", label: "Khiếu nại khách hàng" },
+  { value: "supplier", label: "Lỗi nhà cung cấp" },
 ];
 
 const PRIORITY_OPTIONS = [
