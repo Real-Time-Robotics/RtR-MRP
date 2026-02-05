@@ -17,7 +17,7 @@ import {
   validationErrorResponse,
 } from "@/lib/api/with-permission";
 
-const SEARCH_FIELDS = ["name", "code", "email", "contactName"];
+const SEARCH_FIELDS = ["name", "code", "contactEmail", "contactName"];
 
 // =============================================================================
 // VALIDATION SCHEMA
@@ -26,6 +26,7 @@ const SEARCH_FIELDS = ["name", "code", "email", "contactName"];
 const createSupplierSchema = z.object({
   code: z.string().min(1, 'Mã nhà cung cấp là bắt buộc'),
   name: z.string().min(1, 'Tên nhà cung cấp là bắt buộc'),
+  taxId: z.string().max(20).nullish(),
   country: z.string().min(1, 'Quốc gia là bắt buộc'),
   ndaaCompliant: z.boolean().default(true),
   contactName: z.string().nullish(),
@@ -119,6 +120,18 @@ async function postHandler(
   });
   if (codeExists) {
     return errorResponse('Mã nhà cung cấp đã tồn tại', 409);
+  }
+
+  // Check duplicate taxId if provided
+  if (validation.data.taxId) {
+    const taxIdExists = await prisma.supplier.findFirst({
+      where: { taxId: validation.data.taxId },
+    });
+    if (taxIdExists) {
+      return validationErrorResponse({
+        taxId: [`Mã số thuế đã tồn tại cho nhà cung cấp: ${taxIdExists.name} (${taxIdExists.code})`],
+      });
+    }
   }
 
   // Create supplier

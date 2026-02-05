@@ -74,6 +74,7 @@ model Supplier {
   id            String   @id @default(cuid())
   code          String   @unique
   name          String
+  taxId         String?  // Mã số thuế
   country       String
   ndaaCompliant Boolean  @default(true)
   contactName   String?

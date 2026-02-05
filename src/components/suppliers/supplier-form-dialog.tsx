@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -23,7 +23,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Building2, MapPin, User, Mail, Phone, Clock, Star } from 'lucide-react';
+import { Building2, MapPin, User, Mail, Phone, Clock, Star, FileText, AlertTriangle, Loader2 } from 'lucide-react';
 import { useDataEntry } from '@/hooks/use-data-entry';
 import { FormModal } from '@/components/ui-v2/form-modal';
 import {
@@ -35,6 +35,7 @@ import {
     PAYMENT_TERMS,
 } from './supplier-form-schema';
 import { Supplier } from '@/components/forms/supplier-form'; // Import type primarily
+import { useDebouncedCallback } from 'use-debounce';
 
 interface SupplierFormDialogProps {
     open: boolean;
@@ -51,18 +52,53 @@ export function SupplierFormDialog({
 }: SupplierFormDialogProps) {
     const isEditing = !!supplier;
 
+    // Tax ID duplicate check state
+    const [taxIdWarning, setTaxIdWarning] = useState<{ name: string; code: string } | null>(null);
+    const [isCheckingTaxId, setIsCheckingTaxId] = useState(false);
+
     const form = useForm<SupplierFormData>({
         resolver: zodResolver(supplierSchema) as any,
         defaultValues: defaultSupplierValues,
     });
 
+    // Debounced tax ID check
+    const checkTaxIdDuplicate = useDebouncedCallback(async (taxId: string) => {
+        if (!taxId || taxId.trim() === '') {
+            setTaxIdWarning(null);
+            return;
+        }
+
+        setIsCheckingTaxId(true);
+        try {
+            const params = new URLSearchParams({ taxId: taxId.trim() });
+            if (supplier?.id) {
+                params.append('excludeId', supplier.id);
+            }
+
+            const response = await fetch(`/api/suppliers/check-tax-id?${params}`);
+            const result = await response.json();
+
+            if (result.exists && result.supplier) {
+                setTaxIdWarning({ name: result.supplier.name, code: result.supplier.code });
+            } else {
+                setTaxIdWarning(null);
+            }
+        } catch (error) {
+            console.error('Error checking tax ID:', error);
+        } finally {
+            setIsCheckingTaxId(false);
+        }
+    }, 500);
+
     // Reset form when dialog opens/closes or supplier changes
     useEffect(() => {
         if (open) {
+            setTaxIdWarning(null);
             if (supplier) {
                 form.reset({
                     code: supplier.code,
                     name: supplier.name,
+                    taxId: (supplier as any).taxId || '',
                     country: supplier.country,
                     ndaaCompliant: supplier.ndaaCompliant,
                     contactName: supplier.contactName || '',
@@ -86,6 +122,7 @@ export function SupplierFormDialog({
             // Clean up empty strings to null
             const cleanData = {
                 ...data,
+                taxId: data.taxId || null,
                 contactName: data.contactName || null,
                 contactEmail: data.contactEmail || null,
                 contactPhone: data.contactPhone || null,
@@ -195,6 +232,43 @@ export function SupplierFormDialog({
                                     <FormControl>
                                         <Input placeholder="Công ty TNHH ABC" {...field} />
                                     </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="taxId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Mã số thuế</FormLabel>
+                                    <FormControl>
+                                        <div className="relative">
+                                            <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <Input
+                                                className="pl-9"
+                                                placeholder="0123456789"
+                                                {...field}
+                                                value={field.value || ''}
+                                                onChange={(e) => {
+                                                    field.onChange(e);
+                                                    checkTaxIdDuplicate(e.target.value);
+                                                }}
+                                            />
+                                            {isCheckingTaxId && (
+                                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
+                                            )}
+                                        </div>
+                                    </FormControl>
+                                    {taxIdWarning && (
+                                        <div className="flex items-start gap-2 p-2 mt-1 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                                            <p className="text-sm text-amber-700 dark:text-amber-300">
+                                                Mã số thuế này đã tồn tại cho NCC: <strong>{taxIdWarning.name}</strong> ({taxIdWarning.code})
+                                            </p>
+                                        </div>
+                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}
