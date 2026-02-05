@@ -795,4 +795,5 @@ test.describe('Part Data Integrity Tests @data-integrity @parts', () => {
 });
 
 // Export test data creator for reuse
-export { createFullPartTestData, PartTestData };
+export { createFullPartTestData };
+export type { PartTestData };

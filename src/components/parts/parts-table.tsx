@@ -18,7 +18,23 @@ import {
   ShoppingCart,
   Warehouse,
   Calendar,
+  type LucideIcon,
 } from 'lucide-react';
+
+// =============================================================================
+// CLIENT-ONLY ICON WRAPPER (prevents hydration mismatch)
+// =============================================================================
+function SafeIcon({ icon: Icon, className, size = 16, style }: {
+  icon: LucideIcon;
+  className?: string;
+  size?: number;
+  style?: React.CSSProperties;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return <span className={className} style={{ ...style, display: 'inline-block', width: size, height: size }} />;
+  return <Icon className={className} size={size} style={style} />;
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -108,7 +124,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[10px] text-muted-foreground">Tổng số</span>
           </div>
           <p className="text-lg font-semibold font-mono">{stats.total}</p>
@@ -117,7 +133,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <SafeIcon icon={CheckCircle} className="h-3.5 w-3.5 text-green-500" />
             <span className="text-[10px] text-muted-foreground">Hoạt động</span>
           </div>
           <p className="text-lg font-semibold font-mono text-green-600">{stats.active}</p>
@@ -126,7 +142,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <Shield className="h-3.5 w-3.5 text-blue-500" />
+            <SafeIcon icon={Shield} className="h-3.5 w-3.5 text-blue-500" />
             <span className="text-[10px] text-muted-foreground">NDAA</span>
           </div>
           <p className="text-lg font-semibold font-mono text-blue-600">{stats.ndaaCompliant}</p>
@@ -135,7 +151,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+            <SafeIcon icon={AlertTriangle} className="h-3.5 w-3.5 text-orange-500" />
             <span className="text-[10px] text-muted-foreground">Quan trọng</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.critical}</p>
@@ -144,7 +160,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5 text-indigo-500" />
+            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-indigo-500" />
             <span className="text-[10px] text-muted-foreground">Tự sản xuất</span>
           </div>
           <p className="text-lg font-semibold font-mono text-indigo-600">{stats.make}</p>
@@ -153,7 +169,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5 text-orange-500" />
+            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-orange-500" />
             <span className="text-[10px] text-muted-foreground">Mua</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.buy}</p>
@@ -463,7 +479,7 @@ export function PartsTable() {
           <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline">
             {value}
           </Link>
-          {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
+          {row.isCritical && <SafeIcon icon={AlertTriangle} className="h-3 w-3 text-orange-500" />}
         </div>
       ),
     },
@@ -530,7 +546,7 @@ export function PartsTable() {
       align: 'center',
       render: (value) => value ? (
         <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1 py-0">
-          <AlertTriangle className="h-3 w-3 mr-1" />
+          <SafeIcon icon={AlertTriangle} className="h-3 w-3 mr-1" />
           Critical
         </Badge>
       ) : <span className="text-muted-foreground">-</span>,
@@ -692,7 +708,7 @@ export function PartsTable() {
       hidden: true,
       render: (value) => (
         <div className="flex items-center gap-1">
-          <Globe className="h-3 w-3 text-muted-foreground" />
+          <SafeIcon icon={Globe} className="h-3 w-3 text-muted-foreground" />
           <span className="truncate">{value || '-'}</span>
         </div>
       ),
@@ -703,9 +719,9 @@ export function PartsTable() {
       width: '65px',
       align: 'center',
       render: (value) => value ? (
-        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+        <SafeIcon icon={CheckCircle} className="h-4 w-4 text-green-500 mx-auto" />
       ) : (
-        <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+        <SafeIcon icon={XCircle} className="h-4 w-4 text-red-500 mx-auto" />
       ),
     },
     {
@@ -714,7 +730,7 @@ export function PartsTable() {
       width: '65px',
       align: 'center',
       render: (value) => value ? (
-        <Shield className="h-4 w-4 text-red-500 mx-auto" />
+        <SafeIcon icon={Shield} className="h-4 w-4 text-red-500 mx-auto" />
       ) : (
         <span className="text-muted-foreground">-</span>
       ),
@@ -725,9 +741,9 @@ export function PartsTable() {
       width: '65px',
       align: 'center',
       render: (value) => value ? (
-        <Leaf className="h-4 w-4 text-green-500 mx-auto" />
+        <SafeIcon icon={Leaf} className="h-4 w-4 text-green-500 mx-auto" />
       ) : (
-        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+        <SafeIcon icon={XCircle} className="h-4 w-4 text-yellow-500 mx-auto" />
       ),
     },
     {
@@ -737,9 +753,9 @@ export function PartsTable() {
       align: 'center',
       hidden: true,
       render: (value) => value ? (
-        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+        <SafeIcon icon={CheckCircle} className="h-4 w-4 text-green-500 mx-auto" />
       ) : (
-        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+        <SafeIcon icon={XCircle} className="h-4 w-4 text-yellow-500 mx-auto" />
       ),
     },
 
@@ -778,7 +794,7 @@ export function PartsTable() {
         {/* Header - COMPACT */}
         <div>
           <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
-            <Package className="h-4 w-4" />
+            <SafeIcon icon={Package} className="h-4 w-4" />
             Parts Master
           </h1>
           <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">

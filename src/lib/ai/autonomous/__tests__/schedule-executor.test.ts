@@ -16,8 +16,8 @@ vi.mock('@/lib/prisma', () => {
         id: 'wo-1',
         workOrderNumber: 'WO-001',
         status: 'pending',
-        plannedStartDate: new Date(),
-        plannedEndDate: new Date(),
+        plannedStart: new Date(),
+        plannedEnd: new Date(),
       }),
       update: vi.fn().mockResolvedValue({}),
     },
@@ -34,21 +34,34 @@ describe('ScheduleExecutor', () => {
   const createTestSuggestion = (
     overrides: Partial<ScheduleSuggestion> = {}
   ): ScheduleSuggestion => ({
+    id: 'sugg-1',
     workOrderId: 'wo-1',
-    workOrderNumber: 'WO-001',
-    currentStartDate: new Date(),
-    currentEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    suggestedStartDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-    suggestedEndDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-    workCenterId: 'wc-1',
-    workCenterName: 'Work Center 1',
+    woNumber: 'WO-001',
+    productName: 'Test Product',
+    currentSchedule: {
+      workCenterId: null,
+      workCenterName: null,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+    suggestedSchedule: {
+      workCenterId: 'wc-1',
+      workCenterName: 'Work Center 1',
+      startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+    },
+    operations: [],
+    changeType: 'reschedule',
     priority: 50,
     reason: 'Optimization',
-    confidence: 85,
+    confidenceScore: 85,
+    createdAt: new Date(),
     impact: {
       onTimeDeliveryChange: 5,
-      utilizationChange: 3,
-      costChange: -100,
+      capacityUtilizationChange: 3,
+      setupTimeChange: -1,
+      conflictsResolved: 0,
+      affectedWorkOrders: [],
     },
     ...overrides,
   });
@@ -57,20 +70,28 @@ describe('ScheduleExecutor', () => {
     overrides: Partial<ScheduleResult> = {}
   ): ScheduleResult => ({
     id: 'schedule-1',
-    status: 'success',
+    createdAt: new Date(),
     algorithm: 'balanced_load',
-    generatedAt: new Date(),
-    horizonDays: 30,
+    horizon: {
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      days: 30,
+    },
+    workOrdersAnalyzed: 10,
     suggestions: [createTestSuggestion()],
     metrics: {
-      totalWorkOrders: 10,
-      scheduledWorkOrders: 10,
-      utilizationRate: 75,
-      onTimeDeliveryRate: 90,
-      averageLeadTime: 5,
-      conflicts: 0,
+      currentOnTimeDelivery: 85,
+      projectedOnTimeDelivery: 90,
+      currentCapacityUtilization: 70,
+      projectedCapacityUtilization: 75,
+      currentSetupTime: 10,
+      projectedSetupTime: 8,
+      makespan: 14,
+      conflictCount: 0,
+      unscheduledCount: 0,
     },
     conflicts: [],
+    warnings: [],
     ...overrides,
   });
 
@@ -146,8 +167,8 @@ describe('ScheduleExecutor', () => {
       const result = await executor.updateWorkOrderDates(
         'wo-1',
         {
-          plannedStartDate: new Date(),
-          plannedEndDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          plannedStart: new Date(),
+          plannedEnd: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
         'user-1',
         'Manual update'
@@ -164,7 +185,7 @@ describe('ScheduleExecutor', () => {
 
       const result = await executor.updateWorkOrderDates(
         'non-existent',
-        { plannedStartDate: new Date() },
+        { plannedStart: new Date() },
         'user-1'
       );
 
@@ -180,8 +201,8 @@ describe('ScheduleExecutor', () => {
           workOrderId: 'wo-1',
           workOrderNumber: 'WO-001',
           changeType: 'reschedule',
-          previousValues: { plannedStartDate: new Date() },
-          newValues: { plannedStartDate: new Date(), workCenterId: 'wc-1' },
+          previousValues: { plannedStart: new Date() },
+          newValues: { plannedStart: new Date(), workCenterId: 'wc-1' },
           reason: 'Optimization',
           source: 'auto_schedule',
         },
@@ -286,9 +307,9 @@ describe('ScheduleExecutor', () => {
             workOrderNumber: 'WO-001',
             changeType: 'reschedule',
             previousValues: {
-              plannedStartDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
+              plannedStart: new Date(Date.now() - 24 * 60 * 60 * 1000),
             },
-            newValues: { plannedStartDate: new Date() },
+            newValues: { plannedStart: new Date() },
             reason: 'Test',
             source: 'auto_schedule',
           },
@@ -334,7 +355,7 @@ describe('ScheduleExecutor', () => {
         suggestions: Array(5)
           .fill(null)
           .map((_, i) =>
-            createTestSuggestion({ workOrderId: `wo-${i}`, workOrderNumber: `WO-00${i}` })
+            createTestSuggestion({ workOrderId: `wo-${i}`, woNumber: `WO-00${i}` })
           ),
       });
 

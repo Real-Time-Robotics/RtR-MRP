@@ -2,6 +2,7 @@
 // VITEST GLOBAL SETUP
 // =============================================================================
 
+import { vi, beforeEach, afterAll } from 'vitest';
 import '@testing-library/jest-dom';
 
 // Mock next/navigation

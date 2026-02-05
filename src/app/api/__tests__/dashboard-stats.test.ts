@@ -22,12 +22,45 @@ describe('Dashboard Stats API', () => {
   describe('GET /api/dashboard/stats', () => {
     it('should return dashboard stats successfully', async () => {
       const mockStats = {
-        totalOrders: 150,
-        totalRevenue: 1500000,
-        openWorkOrders: 25,
-        pendingPurchaseOrders: 12,
-        inventoryValue: 2500000,
-        openNCRs: 5,
+        revenue: {
+          current: 1500000,
+          previous: 1200000,
+          growth: 25,
+          currency: 'VND',
+        },
+        orders: {
+          total: 150,
+          pending: 25,
+          processing: 30,
+          completed: 90,
+          cancelled: 5,
+          growth: 10,
+        },
+        inventory: {
+          totalItems: 500,
+          totalValue: 2500000,
+          lowStock: 15,
+          outOfStock: 3,
+          healthy: 482,
+        },
+        production: {
+          efficiency: 85,
+          running: 25,
+          waiting: 10,
+          completed: 100,
+          onHold: 5,
+        },
+        quality: {
+          passRate: 98,
+          openNCRs: 5,
+          inspectionsToday: 20,
+          criticalNCRs: 1,
+        },
+        purchasing: {
+          pendingPOs: 12,
+          pendingValue: 500000,
+          overdueDeliveries: 2,
+        },
       };
 
       vi.mocked(dataService.getDashboardStats).mockResolvedValue(mockStats);

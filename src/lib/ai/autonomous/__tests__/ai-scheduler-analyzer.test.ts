@@ -354,7 +354,7 @@ describe('AISchedulerAnalyzer', () => {
         description: 'Machine is down',
       };
 
-      const response = await analyzer.handleDisruption(schedule, disruption);
+      const response = await analyzer.handleDisruption(schedule, disruption as unknown as Record<string, unknown>);
 
       expect(response).toBeDefined();
       expect(response.disruption).toBeDefined();
@@ -373,7 +373,7 @@ describe('AISchedulerAnalyzer', () => {
         description: 'Urgent customer order',
       };
 
-      const response = await analyzer.handleDisruption(schedule, disruption);
+      const response = await analyzer.handleDisruption(schedule, disruption as unknown as Record<string, unknown>);
 
       expect(response).toBeDefined();
       expect(response.recommendedOption).toBeDefined();
@@ -390,7 +390,7 @@ describe('AISchedulerAnalyzer', () => {
         description: 'Critical material delayed',
       };
 
-      const response = await analyzer.handleDisruption(schedule, disruption);
+      const response = await analyzer.handleDisruption(schedule, disruption as unknown as Record<string, unknown>);
 
       expect(response.rescheduleOptions).toBeDefined();
       expect(Array.isArray(response.rescheduleOptions)).toBe(true);
@@ -408,7 +408,7 @@ describe('AISchedulerAnalyzer', () => {
         description: 'Machine is down',
       };
 
-      const response = await analyzer.handleDisruption(schedule, disruption);
+      const response = await analyzer.handleDisruption(schedule, disruption as unknown as Record<string, unknown>);
 
       expect(response.explanation).toBeDefined();
       expect(typeof response.explanation).toBe('string');
