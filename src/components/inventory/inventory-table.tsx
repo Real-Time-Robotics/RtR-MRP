@@ -616,6 +616,38 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
               </div>
             </div>
 
+            {/* Preview of quantity after adjustment */}
+            {adjustData.partId && adjustData.quantity && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border">
+                {(() => {
+                  const selectedItem = inventory.find(item => item.partId === adjustData.partId);
+                  if (!selectedItem) return null;
+                  const currentQty = selectedItem.quantity;
+                  const adjustQty = parseInt(adjustData.quantity) || 0;
+                  const newQty = adjustData.adjustmentType === 'ADD'
+                    ? currentQty + adjustQty
+                    : currentQty - adjustQty;
+                  const isNegative = newQty < 0;
+
+                  return (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600 dark:text-slate-400">Kết quả sau điều chỉnh:</span>
+                      <div className="flex items-center gap-2 font-medium">
+                        <span>{currentQty}</span>
+                        <span className="text-slate-400">→</span>
+                        <span className={isNegative ? 'text-red-600' : adjustData.adjustmentType === 'ADD' ? 'text-green-600' : 'text-orange-600'}>
+                          {newQty}
+                        </span>
+                        {isNegative && (
+                          <span className="text-xs text-red-500">(không đủ tồn kho!)</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="reason">Lý do điều chỉnh</Label>
               <Textarea
