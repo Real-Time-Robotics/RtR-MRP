@@ -177,7 +177,6 @@ export async function getUserSchedules(userId: string) {
         select: {
           id: true,
           name: true,
-          nameVi: true,
           type: true,
         },
       },
