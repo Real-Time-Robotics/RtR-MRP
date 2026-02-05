@@ -427,6 +427,7 @@ export const PartCreateSchema = z.object({
   isCritical: z.preprocess((v) => v ?? false, z.boolean()),
   // Supplier
   primarySupplierId: z.string().max(50).nullish(),
+  secondarySupplierIds: z.array(z.string()).nullish(),
 });
 
 // =============================================================================

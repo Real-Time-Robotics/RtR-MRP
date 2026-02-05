@@ -76,6 +76,7 @@ export const partSchema = z.object({
 
     // Procurement
     primarySupplierId: z.string().optional().nullable(),
+    secondarySupplierIds: z.array(z.string()).optional().nullable(),
     makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']),
     procurementType: z.string().optional().nullable(),
     buyerCode: z.string().max(50).optional().nullable(),
@@ -156,6 +157,7 @@ export const defaultPartValues: PartFormData = {
 
     // Procurement
     primarySupplierId: null,
+    secondarySupplierIds: [],
     makeOrBuy: 'BUY',
     procurementType: null,
     buyerCode: null,

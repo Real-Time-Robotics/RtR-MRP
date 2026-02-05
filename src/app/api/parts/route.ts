@@ -316,8 +316,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Create PartSupplier relations for secondary suppliers
+    if (data.secondarySupplierIds && data.secondarySupplierIds.length > 0) {
+      await prisma.partSupplier.createMany({
+        data: data.secondarySupplierIds.map((supplierId: string) => ({
+          partId: part.id,
+          supplierId,
+          isPreferred: false,
+          unitPrice: data.unitCost ?? 0,
+          leadTimeDays: data.leadTimeDays ?? 0,
+          minOrderQty: data.moq ?? 1,
+        })),
+      });
+    }
+
     // Re-fetch with supplier included
-    const result = data.primarySupplierId
+    const result = data.primarySupplierId || (data.secondarySupplierIds && data.secondarySupplierIds.length > 0)
       ? await prisma.part.findUnique({
           where: { id: part.id },
           include: {

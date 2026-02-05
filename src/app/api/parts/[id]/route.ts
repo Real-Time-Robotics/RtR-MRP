@@ -365,6 +365,28 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Update secondary suppliers if secondarySupplierIds is provided
+    if (data.secondarySupplierIds !== undefined) {
+      // Remove existing non-preferred suppliers
+      await prisma.partSupplier.deleteMany({
+        where: { partId: id, isPreferred: false },
+      });
+
+      // Create new secondary suppliers
+      if (data.secondarySupplierIds && data.secondarySupplierIds.length > 0) {
+        await prisma.partSupplier.createMany({
+          data: data.secondarySupplierIds.map((supplierId: string) => ({
+            partId: id,
+            supplierId,
+            isPreferred: false,
+            unitPrice: data.unitCost ?? 0,
+            leadTimeDays: data.leadTimeDays ?? 0,
+            minOrderQty: data.moq ?? 1,
+          })),
+        });
+      }
+    }
+
     // Re-fetch with updated suppliers
     const updatedPart = await prisma.part.findUnique({
       where: { id },

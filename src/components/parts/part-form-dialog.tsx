@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RotateCcw, Save, CheckCircle2, FilePenLine, ChevronRight } from 'lucide-react';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
+import { Select as MultiSelect } from '@/components/ui-v2/select';
 import {
     partSchema,
     PartFormData,
@@ -445,6 +446,7 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                     color: specs?.color ?? part.color ?? '',
                     // Procurement: prefer nested planning, fallback to root
                     primarySupplierId: (part as any).partSuppliers?.[0]?.supplierId ?? (part as any).primarySupplierId ?? null,
+                    secondarySupplierIds: (part as any).partSuppliers?.slice(1)?.map((ps: any) => ps.supplierId) ?? [],
                     makeOrBuy: (planning?.makeOrBuy ?? part.makeOrBuy ?? 'BUY') as 'MAKE' | 'BUY' | 'BOTH',
                     procurementType: planning?.procurementType ?? part.procurementType ?? '',
                     buyerCode: planning?.buyerCode ?? (part as any).buyerCode ?? null,
@@ -1399,6 +1401,38 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                 allowCreate={false}
                                             />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="secondarySupplierIds"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nhà cung cấp phụ</FormLabel>
+                                        <FormControl>
+                                            <MultiSelect
+                                                options={suppliers
+                                                    .filter((s) => s.id !== form.watch('primarySupplierId'))
+                                                    .map((s) => ({
+                                                        value: s.id,
+                                                        label: `${s.code} - ${s.name}`,
+                                                    }))}
+                                                value={field.value || []}
+                                                onChange={(val) => field.onChange(val)}
+                                                placeholder="Chọn nhà cung cấp phụ..."
+                                                multiple
+                                                searchable
+                                                searchPlaceholder="Tìm nhà cung cấp..."
+                                                noOptionsMessage="Không tìm thấy nhà cung cấp"
+                                                clearable
+                                            />
+                                        </FormControl>
+                                        <FormDescription>
+                                            Có thể chọn nhiều nhà cung cấp phụ để dự phòng
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
