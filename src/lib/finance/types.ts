@@ -186,3 +186,61 @@ export type JournalStatus =
   | "PENDING_APPROVAL"
   | "POSTED"
   | "VOID";
+
+// ============================================================
+// Financial Calculation Types (Integrated from SHEETS module)
+// ============================================================
+
+export interface LoanResult {
+  payment: number;
+  totalPayment: number;
+  totalInterest: number;
+}
+
+export interface AmortizationScheduleItem {
+  period: number;
+  payment: number;
+  principal: number;
+  interest: number;
+  balance: number;
+}
+
+export interface DepreciationScheduleItem {
+  period: number;
+  depreciation: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+}
+
+export interface InvestmentAnalysisResult {
+  npv: number;
+  irr: number | null;
+  mirr: number | null;
+  paybackPeriod: number | null;
+  profitabilityIndex: number;
+}
+
+export interface BondAnalysis {
+  price: number;
+  yieldToMaturity: number;
+  accruedInterest: number;
+}
+
+export type PaymentType = 0 | 1; // 0 = end of period, 1 = beginning
+
+export type DayCountBasis = 0 | 1 | 2 | 3 | 4;
+// 0 = US (NASD) 30/360
+// 1 = Actual/actual
+// 2 = Actual/360
+// 3 = Actual/365
+// 4 = European 30/360
+
+export class FinancialCalcError extends Error {
+  constructor(
+    public code: string,
+    message?: string
+  ) {
+    super(message || `Financial calculation error: ${code}`);
+    this.name = 'FinancialCalcError';
+  }
+}
