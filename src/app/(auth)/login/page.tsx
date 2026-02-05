@@ -139,7 +139,7 @@ function LoginContent() {
             {/* Features */}
             <div className="space-y-6 lg:space-y-8 my-8 lg:my-0">
               <div>
-                <h2 className="text-3xl lg:text-5xl font-bold mb-4 leading-tight">
+                <h2 className="text-3xl lg:text-5xl font-bold mb-4 leading-tight text-white">
                   Manufacturing<br />Intelligence
                 </h2>
                 <p className="text-gray-400 text-base lg:text-lg max-w-md">
