@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, AlertTriangle, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -36,20 +37,17 @@ export default function NCRListPage() {
   const [ncrs, setNCRs] = useState<NCR[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetchNCRs();
-  }, [statusFilter]);
-
-  const fetchNCRs = async () => {
+  const fetchNCRs = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (search) params.set("search", search);
 
       const res = await fetch(`/api/quality/ncr?${params}`);
       if (res.ok) {
         const result = await res.json();
-        // API returns { data: [...], pagination: {...} }
         setNCRs(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
@@ -57,7 +55,14 @@ export default function NCRListPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, search]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchNCRs();
+    }, search ? 300 : 0);
+    return () => clearTimeout(timeoutId);
+  }, [search, statusFilter, fetchNCRs]);
 
   return (
     <div className="space-y-6">
@@ -77,6 +82,22 @@ export default function NCRListPage() {
       {/* Filters */}
       <Card className="p-4">
         <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Tìm kiếm..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Trạng thái" />

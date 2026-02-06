@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateNCRNumber } from "@/lib/quality/ncr-workflow";
+import { buildSearchQuery } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for NCR creation
@@ -26,10 +27,14 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["ncrNumber", "title", "description", "lotNumber"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (status && status !== "all") where.status = status;
 
     const [ncrs, total] = await Promise.all([

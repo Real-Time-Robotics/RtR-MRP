@@ -132,7 +132,8 @@ export default function BOMPage() {
             emptyMessage="No products found. Create a product first."
             pagination
             pageSize={20}
-            searchable={false}
+            searchable={true}
+            searchColumns={['sku', 'name', 'bomVersion']}
             stickyHeader
             excelMode={{
               enabled: true,

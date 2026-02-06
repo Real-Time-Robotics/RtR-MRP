@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateInspectionNumber } from "@/lib/quality/inspection-engine";
+import { buildSearchQuery } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for Inspection creation
@@ -29,10 +30,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
+    const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["inspectionNumber", "lotNumber", "notes"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (type) where.type = type;
     if (status) where.status = status;
 
@@ -84,6 +89,62 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validationResult.data;
+
+    // For RECEIVING type, poLineId is required
+    if (data.type === "RECEIVING") {
+      if (!data.poLineId) {
+        return NextResponse.json(
+          { error: "Phải chọn dòng PO (poLineId) cho kiểm tra nhận hàng" },
+          { status: 400 }
+        );
+      }
+
+      const poLine = await prisma.purchaseOrderLine.findUnique({
+        where: { id: data.poLineId },
+        include: { po: { select: { id: true, status: true } } },
+      });
+
+      if (!poLine) {
+        return NextResponse.json(
+          { error: "Dòng PO không tồn tại" },
+          { status: 400 }
+        );
+      }
+
+      if (poLine.po.status !== "received") {
+        return NextResponse.json(
+          { error: "PO phải ở trạng thái Đã nhận hàng" },
+          { status: 400 }
+        );
+      }
+
+      // Safeguard: prevent duplicate completed inspection on same PO line
+      const existingCompleted = await prisma.inspection.findFirst({
+        where: {
+          poLineId: data.poLineId,
+          type: "RECEIVING",
+          status: "completed",
+        },
+      });
+      if (existingCompleted) {
+        return NextResponse.json(
+          {
+            error: `Dòng PO này đã có inspection hoàn thành (${existingCompleted.inspectionNumber}). Không thể tạo thêm.`,
+          },
+          { status: 409 }
+        );
+      }
+
+      const remaining = poLine.quantity - poLine.receivedQty;
+      if (data.quantityReceived !== undefined && data.quantityReceived > remaining) {
+        return NextResponse.json(
+          {
+            error: `Số lượng nhận (${data.quantityReceived}) vượt quá số lượng còn lại (${remaining})`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Validate entity references exist
     if (data.planId) {

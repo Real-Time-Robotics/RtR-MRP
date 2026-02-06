@@ -8,6 +8,7 @@ import {
   notFoundResponse,
   validationErrorResponse,
 } from '@/lib/api/with-permission';
+import { generateInspectionNumber } from '@/lib/quality/inspection-engine';
 
 // =============================================================================
 // VALIDATION
@@ -168,18 +169,23 @@ async function putHandler(
     const poLines = order.lines || existing.lines;
 
     if (poLines.length > 0) {
-      // Find default warehouse (first active warehouse)
-      let defaultWarehouse = await prisma.warehouse.findFirst({
-        where: { status: 'active' },
-        orderBy: { createdAt: 'asc' },
+      // Find RECEIVING warehouse (dedicated for incoming goods)
+      let receivingWarehouse = await prisma.warehouse.findFirst({
+        where: { type: 'RECEIVING' },
       });
-
-      // Create a default warehouse if none exists
-      if (!defaultWarehouse) {
-        defaultWarehouse = await prisma.warehouse.create({
+      // Fallback to default warehouse if no RECEIVING warehouse
+      if (!receivingWarehouse) {
+        receivingWarehouse = await prisma.warehouse.findFirst({
+          where: { status: 'active' },
+          orderBy: { createdAt: 'asc' },
+        });
+      }
+      if (!receivingWarehouse) {
+        receivingWarehouse = await prisma.warehouse.create({
           data: {
-            code: 'WH-MAIN',
-            name: 'Kho chính',
+            code: 'WH-RECEIVING',
+            name: 'Receiving Area',
+            type: 'RECEIVING',
             status: 'active',
           },
         });
@@ -188,7 +194,7 @@ async function putHandler(
       // Update inventory for each PO line
       for (const line of poLines) {
         const existingInventory = await prisma.inventory.findFirst({
-          where: { partId: line.partId, warehouseId: defaultWarehouse.id },
+          where: { partId: line.partId, warehouseId: receivingWarehouse.id, locationCode: 'RECEIVING' },
         });
 
         if (existingInventory) {
@@ -203,7 +209,7 @@ async function putHandler(
           await prisma.inventory.create({
             data: {
               partId: line.partId,
-              warehouseId: defaultWarehouse.id,
+              warehouseId: receivingWarehouse.id,
               quantity: line.quantity,
               reservedQty: 0,
               locationCode: 'RECEIVING',
@@ -228,6 +234,31 @@ async function putHandler(
         } catch {
           // Skip audit log if it fails (non-critical)
         }
+      }
+    }
+
+    // === AUTO-CREATE RECEIVING INSPECTIONS for each PO line ===
+    for (const line of poLines) {
+      // Check if inspection already exists for this PO line
+      const existingInspection = await prisma.inspection.findFirst({
+        where: { poLineId: line.id, type: 'RECEIVING' },
+      });
+
+      if (!existingInspection) {
+        const inspectionNumber = await generateInspectionNumber('RECEIVING');
+        await prisma.inspection.create({
+          data: {
+            inspectionNumber,
+            type: 'RECEIVING',
+            status: 'pending',
+            partId: line.partId,
+            poLineId: line.id,
+            quantityReceived: line.quantity,
+            quantityInspected: 0,
+            inspectedBy: user.id || 'system',
+            lotNumber: `LOT-${existing.poNumber}-${line.lineNumber || 1}`,
+          },
+        });
       }
     }
   }

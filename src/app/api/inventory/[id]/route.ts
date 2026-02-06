@@ -8,6 +8,7 @@ const updateSchema = z.object({
     reservedQty: z.number().optional(),
     locationCode: z.string().optional(),
     lotNumber: z.string().optional(),
+    transferQty: z.number().optional(),  // Partial transfer quantity
 });
 
 // GET - Fetch single inventory record with details
@@ -96,6 +97,14 @@ export async function GET(
     }
 }
 
+// Map locationCode → warehouse type
+const locationToWarehouseType: Record<string, string> = {
+    STOCK: "MAIN",
+    RECEIVING: "RECEIVING",
+    HOLD: "HOLD",
+    QUARANTINE: "QUARANTINE",
+};
+
 export async function PATCH(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -110,9 +119,128 @@ export async function PATCH(
         const body = await request.json();
         const validatedData = updateSchema.parse(body);
 
+        // Fetch existing record
+        const existing = await prisma.inventory.findUnique({
+            where: { id },
+            include: { warehouse: true },
+        });
+        if (!existing) {
+            return NextResponse.json({ error: "Inventory not found" }, { status: 404 });
+        }
+
+        const isLocationChange = validatedData.locationCode && validatedData.locationCode !== existing.locationCode;
+        const transferQty = validatedData.transferQty ?? existing.quantity;
+
+        // Validate transfer quantity
+        if (isLocationChange && (transferQty <= 0 || transferQty > existing.quantity)) {
+            return NextResponse.json(
+                { error: `Số lượng chuyển phải từ 1 đến ${existing.quantity}` },
+                { status: 400 }
+            );
+        }
+
+        // If location is changing → handle warehouse transfer
+        if (isLocationChange) {
+            const targetWhType = locationToWarehouseType[validatedData.locationCode!];
+            const needsWarehouseMove = targetWhType && existing.warehouse.type !== targetWhType;
+
+            const targetWarehouse = needsWarehouseMove
+                ? await prisma.warehouse.findFirst({ where: { type: targetWhType } })
+                : existing.warehouse;
+
+            if (!targetWarehouse) {
+                return NextResponse.json({ error: "Kho đích không tồn tại" }, { status: 400 });
+            }
+
+            const isPartialTransfer = transferQty < existing.quantity;
+
+            // Check if target already has same part+warehouse+lot
+            const existingInTarget = needsWarehouseMove
+                ? await prisma.inventory.findFirst({
+                    where: {
+                        partId: existing.partId,
+                        warehouseId: targetWarehouse.id,
+                        lotNumber: existing.lotNumber,
+                        id: { not: id },
+                    },
+                })
+                : null;
+
+            if (isPartialTransfer) {
+                // PARTIAL TRANSFER: subtract from source, add to target
+                await prisma.inventory.update({
+                    where: { id },
+                    data: { quantity: existing.quantity - transferQty },
+                });
+
+                if (existingInTarget) {
+                    await prisma.inventory.update({
+                        where: { id: existingInTarget.id },
+                        data: { quantity: existingInTarget.quantity + transferQty },
+                    });
+                } else {
+                    await prisma.inventory.create({
+                        data: {
+                            partId: existing.partId,
+                            warehouseId: targetWarehouse.id,
+                            quantity: transferQty,
+                            reservedQty: 0,
+                            lotNumber: existing.lotNumber,
+                            locationCode: validatedData.locationCode!,
+                        },
+                    });
+                }
+            } else {
+                // FULL TRANSFER: move entire record
+                if (existingInTarget) {
+                    // Merge into existing target record
+                    await prisma.inventory.update({
+                        where: { id: existingInTarget.id },
+                        data: { quantity: existingInTarget.quantity + existing.quantity },
+                    });
+                    await prisma.inventory.delete({ where: { id } });
+                } else if (needsWarehouseMove) {
+                    await prisma.inventory.update({
+                        where: { id },
+                        data: { warehouseId: targetWarehouse.id, locationCode: validatedData.locationCode },
+                    });
+                } else {
+                    await prisma.inventory.update({
+                        where: { id },
+                        data: { locationCode: validatedData.locationCode },
+                    });
+                }
+            }
+
+            // Audit trail
+            await prisma.lotTransaction.create({
+                data: {
+                    lotNumber: existing.lotNumber || `INV-${existing.id}`,
+                    transactionType: "ADJUSTED",
+                    partId: existing.partId,
+                    quantity: transferQty,
+                    previousQty: existing.quantity,
+                    newQty: existing.quantity - transferQty,
+                    fromWarehouseId: existing.warehouseId,
+                    toWarehouseId: targetWarehouse.id,
+                    fromLocation: existing.locationCode,
+                    toLocation: validatedData.locationCode,
+                    userId: session.user?.id || "system",
+                    notes: `Manual transfer: ${transferQty} units ${existing.warehouse.code}/${existing.locationCode} → ${targetWarehouse.code}/${validatedData.locationCode}${isPartialTransfer ? ' (partial)' : ''}`,
+                },
+            });
+
+            return NextResponse.json({ success: true, transferred: transferQty });
+        }
+
+        // Non-transfer update (lotNumber, etc.)
+        const updateData: Record<string, unknown> = {};
+        if (validatedData.lotNumber !== undefined) updateData.lotNumber = validatedData.lotNumber;
+        if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
+
         const inventory = await prisma.inventory.update({
             where: { id },
-            data: validatedData,
+            data: updateData,
             include: {
                 part: true,
                 warehouse: true,

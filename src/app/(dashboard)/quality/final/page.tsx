@@ -209,7 +209,8 @@ export default function FinalInspectionPage() {
             emptyMessage="Chưa có phiếu kiểm tra"
             pagination
             pageSize={20}
-            searchable={false}
+            searchable={true}
+            searchColumns={['workOrderNumber', 'productSku', 'productName', 'serialNumber', 'inspectedBy']}
             stickyHeader
             excelMode={{
               enabled: true,

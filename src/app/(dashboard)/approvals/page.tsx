@@ -21,7 +21,10 @@ import {
   History,
   RefreshCw,
   Timer,
+  Search,
+  X,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +88,7 @@ export default function ApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedInstance, setSelectedInstance] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<'all' | 'urgent' | 'overdue'>('all');
+  const [search, setSearch] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -159,6 +163,18 @@ export default function ApprovalsPage() {
     });
   }, [pendingApprovals, quickFilter]);
 
+  // Filter workflows by search term
+  const filteredWorkflows = useMemo(() => {
+    if (!search.trim()) return myWorkflows;
+    const q = search.toLowerCase();
+    return myWorkflows.filter((w) =>
+      w.workflow.name.toLowerCase().includes(q) ||
+      w.entityType.toLowerCase().includes(q) ||
+      w.entityId.toLowerCase().includes(q) ||
+      w.status.toLowerCase().includes(q)
+    );
+  }, [myWorkflows, search]);
+
   const pendingCount = pendingApprovals.length;
   const completedCount = myWorkflows.filter((w) => w.status === 'APPROVED').length;
   const rejectedCount = myWorkflows.filter((w) => w.status === 'REJECTED').length;
@@ -194,6 +210,21 @@ export default function ApprovalsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Tìm kiếm..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+            {search && (
+              <button onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <Button variant="outline" onClick={loadData} disabled={loading}>
             <RefreshCw className={cn('w-4 h-4 mr-2', loading && 'animate-spin')} />
             Làm mới
@@ -276,14 +307,14 @@ export default function ApprovalsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {myWorkflows.length === 0 ? (
+              {filteredWorkflows.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Chưa có quy trình nào được khởi tạo</p>
+                  <p>{search ? 'Không tìm thấy quy trình phù hợp' : 'Chưa có quy trình nào được khởi tạo'}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {myWorkflows.map((workflow) => {
+                  {filteredWorkflows.map((workflow) => {
                     const config = statusConfig[workflow.status] || statusConfig.PENDING;
                     const StatusIcon = config.icon;
 

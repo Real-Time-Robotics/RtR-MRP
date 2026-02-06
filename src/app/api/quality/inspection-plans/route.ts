@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateInspectionPlanNumber } from "@/lib/quality/inspection-engine";
+import { buildSearchQuery } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for Inspection Characteristic
@@ -38,10 +39,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
+    const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["planNumber", "name", "description"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (type) where.type = type;
     if (status) where.status = status;
 

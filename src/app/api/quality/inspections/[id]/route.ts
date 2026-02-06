@@ -59,6 +59,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Inspection not found" }, { status: 404 });
     }
 
+    // Prevent re-completing an already completed inspection
+    if (data.status === "completed" && existing.status === "completed") {
+      return NextResponse.json(
+        { error: "Inspection này đã hoàn thành trước đó. Không thể complete lại." },
+        { status: 409 }
+      );
+    }
+
     const updateData: Record<string, unknown> = {};
     if (data.status) updateData.status = data.status;
     if (data.result) updateData.result = data.result;
@@ -66,6 +74,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (data.quantityAccepted !== undefined) updateData.quantityAccepted = data.quantityAccepted;
     if (data.quantityRejected !== undefined) updateData.quantityRejected = data.quantityRejected;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.lotNumber !== undefined) updateData.lotNumber = data.lotNumber;
 
     if (data.status === "completed") {
       updateData.inspectedAt = new Date();
@@ -87,43 +96,50 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       existing.partId &&
       data.result
     ) {
-      const lotNumber = existing.lotNumber || `INS-${existing.inspectionNumber}`;
+      const lotNumber = data.lotNumber || existing.lotNumber || `INS-${existing.inspectionNumber}`;
+      const acceptedQty = data.quantityAccepted ?? existing.quantityAccepted ?? 0;
+      const rejectedQty = data.quantityRejected ?? existing.quantityRejected ?? 0;
 
-      // Determine target warehouse based on result
-      let targetWarehouse = null;
-      let quantity = 0;
-      let locationCode = '';
+      // Build inventory moves based on result
+      // Each result can produce multiple moves (e.g. CONDITIONAL → HOLD + QUARANTINE)
+      const moves: { warehouseType: string; quantity: number; locationCode: string; fallbackDefault?: boolean }[] = [];
 
       if (data.result === "PASS") {
-        // PASS → Main Warehouse (default)
-        targetWarehouse = await prisma.warehouse.findFirst({
-          where: { type: "MAIN", isDefault: true },
+        // All accepted → Main Warehouse
+        moves.push({ warehouseType: "MAIN", quantity: acceptedQty, locationCode: "STOCK", fallbackDefault: true });
+      } else if (data.result === "FAIL") {
+        // All rejected → Quarantine
+        moves.push({ warehouseType: "QUARANTINE", quantity: rejectedQty, locationCode: "QUARANTINE" });
+      } else if (data.result === "CONDITIONAL") {
+        // Accepted → Hold, Rejected → Quarantine
+        moves.push({ warehouseType: "HOLD", quantity: acceptedQty, locationCode: "HOLD" });
+        moves.push({ warehouseType: "QUARANTINE", quantity: rejectedQty, locationCode: "QUARANTINE" });
+      }
+
+      // Find source RECEIVING inventory before moves
+      const receivingInventory = await prisma.inventory.findFirst({
+        where: {
+          partId: existing.partId,
+          locationCode: "RECEIVING",
+        },
+        include: { warehouse: true },
+      });
+
+      // Execute each inventory move + audit trail
+      for (const move of moves) {
+        if (move.quantity <= 0) continue;
+
+        let targetWarehouse = await prisma.warehouse.findFirst({
+          where: { type: move.warehouseType },
         });
-        if (!targetWarehouse) {
+        // Fallback to default warehouse for PASS
+        if (!targetWarehouse && move.fallbackDefault) {
           targetWarehouse = await prisma.warehouse.findFirst({
             where: { isDefault: true },
           });
         }
-        quantity = data.quantityAccepted || existing.quantityAccepted || 0;
-        locationCode = 'STOCK';
-      } else if (data.result === "FAIL") {
-        // FAIL → Quarantine warehouse
-        targetWarehouse = await prisma.warehouse.findFirst({
-          where: { type: "QUARANTINE" },
-        });
-        quantity = data.quantityRejected || existing.quantityRejected || existing.quantityReceived || 0;
-        locationCode = 'QUARANTINE';
-      } else if (data.result === "CONDITIONAL") {
-        // CONDITIONAL → Hold Area warehouse
-        targetWarehouse = await prisma.warehouse.findFirst({
-          where: { type: "HOLD" },
-        });
-        quantity = data.quantityAccepted || existing.quantityAccepted || existing.quantityReceived || 0;
-        locationCode = 'HOLD';
-      }
+        if (!targetWarehouse) continue;
 
-      // Create/Update inventory if warehouse found and quantity > 0
-      if (targetWarehouse && quantity > 0) {
         // Check if inventory already exists for this part + warehouse + lot
         const existingInventory = await prisma.inventory.findFirst({
           where: {
@@ -133,31 +149,82 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           },
         });
 
+        const previousQty = existingInventory?.quantity ?? 0;
+
         if (existingInventory) {
-          // Update existing inventory
           await prisma.inventory.update({
             where: { id: existingInventory.id },
-            data: {
-              quantity: existingInventory.quantity + quantity,
-            },
+            data: { quantity: existingInventory.quantity + move.quantity },
           });
         } else {
-          // Create new inventory record
           await prisma.inventory.create({
             data: {
               partId: existing.partId,
               warehouseId: targetWarehouse.id,
-              quantity: quantity,
+              quantity: move.quantity,
               reservedQty: 0,
               lotNumber: lotNumber,
-              locationCode: locationCode,
+              locationCode: move.locationCode,
             },
           });
         }
+
+        // Audit trail: inventory move
+        await prisma.lotTransaction.create({
+          data: {
+            lotNumber: lotNumber,
+            transactionType: "INSPECTED",
+            partId: existing.partId,
+            quantity: move.quantity,
+            previousQty: previousQty,
+            newQty: previousQty + move.quantity,
+            inspectionId: existing.id,
+            fromWarehouseId: receivingInventory?.warehouseId ?? null,
+            toWarehouseId: targetWarehouse.id,
+            fromLocation: "RECEIVING",
+            toLocation: move.locationCode,
+            userId: session.user?.id || "system",
+            notes: `Inspection ${existing.inspectionNumber} [${data.result}]: ${move.quantity} → ${targetWarehouse.code}/${move.locationCode}`,
+          },
+        });
       }
 
-      // For FAIL result, also create NCR if not exists
-      if (data.result === "FAIL" && quantity > 0) {
+      // Subtract from RECEIVING inventory in source warehouse
+      const totalMoved = moves.reduce((sum, m) => sum + (m.quantity > 0 ? m.quantity : 0), 0);
+      if (totalMoved > 0 && receivingInventory) {
+        const prevRecvQty = receivingInventory.quantity;
+        const newQty = prevRecvQty - totalMoved;
+        if (newQty <= 0) {
+          await prisma.inventory.delete({
+            where: { id: receivingInventory.id },
+          });
+        } else {
+          await prisma.inventory.update({
+            where: { id: receivingInventory.id },
+            data: { quantity: newQty },
+          });
+        }
+
+        // Audit trail: RECEIVING subtraction
+        await prisma.lotTransaction.create({
+          data: {
+            lotNumber: lotNumber,
+            transactionType: "INSPECTED",
+            partId: existing.partId,
+            quantity: -totalMoved,
+            previousQty: prevRecvQty,
+            newQty: Math.max(0, newQty),
+            inspectionId: existing.id,
+            fromWarehouseId: receivingInventory.warehouseId,
+            fromLocation: "RECEIVING",
+            userId: session.user?.id || "system",
+            notes: `Inspection ${existing.inspectionNumber}: -${totalMoved} from RECEIVING (${receivingInventory.warehouse.code})`,
+          },
+        });
+      }
+
+      // For FAIL or CONDITIONAL with rejections, create NCR
+      if ((data.result === "FAIL" || data.result === "CONDITIONAL") && rejectedQty > 0) {
         const existingNCR = await prisma.nCR.findFirst({
           where: { inspectionId: existing.id },
         });
@@ -171,13 +238,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               ncrNumber,
               status: 'open',
               priority: 'medium',
-              source: 'receiving', // lowercase to match API schema
+              source: 'receiving',
               inspectionId: existing.id,
               partId: existing.partId,
               lotNumber: lotNumber,
-              quantityAffected: quantity,
-              title: `Receiving inspection failed - ${existing.inspectionNumber}`,
-              description: `Receiving inspection ${existing.inspectionNumber} failed with ${quantity} rejected items. Lot: ${lotNumber}`,
+              quantityAffected: rejectedQty,
+              title: `Receiving inspection ${data.result === "FAIL" ? "failed" : "conditional"} - ${existing.inspectionNumber}`,
+              description: `Receiving inspection ${existing.inspectionNumber} - ${rejectedQty} rejected items. Lot: ${lotNumber}`,
               createdBy: session.user?.id || 'system',
             },
           });

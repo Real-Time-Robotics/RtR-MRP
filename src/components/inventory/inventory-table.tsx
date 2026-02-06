@@ -136,7 +136,9 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   const [loading, setLoading] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [adjustData, setAdjustData] = useState({
+    inventoryId: '',   // inventory record id (unique per part+warehouse+lot)
     partId: '',
+    warehouseId: '',
     adjustmentType: 'ADD',
     quantity: '',
     reason: '',
@@ -217,7 +219,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   }, [fetchInventory]);
 
   const submitAdjustment = async () => {
-    if (!adjustData.partId || !adjustData.quantity) {
+    if (!adjustData.partId || !adjustData.warehouseId || !adjustData.quantity) {
       toast.error('Vui lòng chọn part và nhập số lượng');
       return;
     }
@@ -225,14 +227,15 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     setAdjusting(true);
     try {
       const quantity = parseInt(adjustData.quantity);
-      const adjustedQty = adjustData.adjustmentType === 'SUBTRACT' ? -quantity : quantity;
 
       const res = await fetch('/api/inventory/adjust', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           partId: adjustData.partId,
-          quantity: adjustedQty,
+          warehouseId: adjustData.warehouseId,
+          adjustmentType: adjustData.adjustmentType === 'ADD' ? 'add' : 'subtract',
+          quantity,
           reason: adjustData.reason || 'Manual adjustment',
         }),
       });
@@ -240,7 +243,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       if (res.ok) {
         toast.success('Điều chỉnh tồn kho thành công');
         setAdjustDialogOpen(false);
-        setAdjustData({ partId: '', adjustmentType: 'ADD', quantity: '', reason: '' });
+        setAdjustData({ inventoryId: '', partId: '', warehouseId: '', adjustmentType: 'ADD', quantity: '', reason: '' });
         fetchInventory();
       } else {
         const error = await res.json();
@@ -576,18 +579,26 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
             <div className="space-y-2">
               <Label>Chọn Part *</Label>
               <Select
-                value={adjustData.partId}
-                onValueChange={(value) =>
-                  setAdjustData({ ...adjustData, partId: value })
-                }
+                value={adjustData.inventoryId}
+                onValueChange={(value) => {
+                  const item = inventory.find(i => i.id === value);
+                  if (item) {
+                    setAdjustData({
+                      ...adjustData,
+                      inventoryId: value,
+                      partId: item.partId,
+                      warehouseId: item.warehouseId || '',
+                    });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn part cần điều chỉnh" />
                 </SelectTrigger>
                 <SelectContent>
                   {inventory.map((item) => (
-                    <SelectItem key={item.partId} value={item.partId}>
-                      {item.partNumber} - {item.name} (Hiện có: {item.quantity})
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.partNumber} - {item.name} [{item.warehouseName || 'N/A'}] (SL: {item.quantity})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -639,10 +650,10 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
             </div>
 
             {/* Preview of quantity after adjustment */}
-            {adjustData.partId && adjustData.quantity && (
+            {adjustData.inventoryId && adjustData.quantity && (
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border">
                 {(() => {
-                  const selectedItem = inventory.find(item => item.partId === adjustData.partId);
+                  const selectedItem = inventory.find(item => item.id === adjustData.inventoryId);
                   if (!selectedItem) return null;
                   const currentQty = selectedItem.quantity;
                   const adjustQty = parseInt(adjustData.quantity) || 0;

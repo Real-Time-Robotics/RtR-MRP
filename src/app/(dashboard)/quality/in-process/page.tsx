@@ -202,7 +202,8 @@ export default function InProcessInspectionPage() {
             emptyMessage="Chưa có phiếu kiểm tra"
             pagination
             pageSize={20}
-            searchable={false}
+            searchable={true}
+            searchColumns={['workOrderNumber', 'partNumber', 'partName', 'operation', 'inspectedBy']}
             stickyHeader
             excelMode={{
               enabled: true,

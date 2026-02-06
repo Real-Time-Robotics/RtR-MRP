@@ -14,6 +14,13 @@ import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 import { useDataEntry } from '@/hooks/use-data-entry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useSmartGridStore } from '@/components/ui-v2/smart-grid';
 import Link from 'next/link';
 
@@ -81,7 +88,8 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
     const [formData, setFormData] = useState({
         locationCode: '',
         lotNumber: '',
-        quantity: 0
+        quantity: 0,
+        transferQty: 0,  // Quantity to transfer (0 = all)
     });
 
     const fetchData = async () => {
@@ -97,7 +105,8 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
             setFormData({
                 locationCode: data.locationCode || '',
                 lotNumber: data.lotNumber || '',
-                quantity: data.quantity
+                quantity: data.quantity,
+                transferQty: data.quantity,
             });
         } catch (error: any) {
             toast.error(error.message);
@@ -134,14 +143,21 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
             const res = await fetch(`/api/inventory/${params.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    locationCode: data.locationCode,
+                    lotNumber: data.lotNumber,
+                    transferQty: data.transferQty,
+                })
             });
-            if (!res.ok) throw new Error("Failed to update");
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Failed to update");
+            }
             return await res.json();
         },
-        onSuccess: (updated) => {
-            setInventory(prev => prev ? ({ ...prev, ...updated }) : null);
+        onSuccess: () => {
             setEditMode(false);
+            fetchData(); // Reload to get fresh data after transfer
         },
         successMessage: "Cập nhật thành công!"
     });
@@ -213,13 +229,19 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {/* Calculate totals from all locations */}
+                                    {/* Calculate totals from ALL locations (current + others) */}
                                     {(() => {
-                                        const holdQty = inventory.otherLocations?.filter(l => l.warehouse.type === 'HOLD').reduce((sum, l) => sum + l.quantity, 0) || 0;
-                                        const quarantineQty = inventory.otherLocations?.filter(l => l.warehouse.type === 'QUARANTINE').reduce((sum, l) => sum + l.quantity, 0) || 0;
-                                        const mainQty = inventory.warehouse.type === 'MAIN' ? inventory.quantity : 0;
+                                        // Include current record in calculation
+                                        const allLocations = [
+                                            { quantity: inventory.quantity, reservedQty: inventory.reservedQty, warehouse: { type: inventory.warehouse.type || 'MAIN' } },
+                                            ...(inventory.otherLocations || []),
+                                        ];
+                                        const mainQty = allLocations.filter(l => l.warehouse.type === 'MAIN').reduce((sum, l) => sum + l.quantity, 0);
+                                        const holdQty = allLocations.filter(l => l.warehouse.type === 'HOLD').reduce((sum, l) => sum + l.quantity, 0);
+                                        const quarantineQty = allLocations.filter(l => l.warehouse.type === 'QUARANTINE').reduce((sum, l) => sum + l.quantity, 0);
+                                        const totalReserved = allLocations.reduce((sum, l) => sum + (l.reservedQty || 0), 0);
                                         const totalStock = mainQty + holdQty + quarantineQty;
-                                        const availableStock = mainQty - inventory.reservedQty;
+                                        const availableStock = mainQty - totalReserved;
 
                                         return (
                                             <>
@@ -248,7 +270,7 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                                     </div>
                                                     <div className="text-center">
                                                         <Label className="text-muted-foreground text-[10px] uppercase">Reserved</Label>
-                                                        <div className="font-bold text-lg">{inventory.reservedQty}</div>
+                                                        <div className="font-bold text-lg">{totalReserved}</div>
                                                     </div>
                                                 </div>
                                             </>
@@ -276,11 +298,20 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                         <div className="space-y-2">
                                             <Label>Location Code</Label>
                                             {editMode ? (
-                                                <Input
+                                                <Select
                                                     value={formData.locationCode}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, locationCode: e.target.value }))}
-                                                    placeholder="e.g. A-01-02"
-                                                />
+                                                    onValueChange={(value) => setFormData(prev => ({ ...prev, locationCode: value }))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Chọn vị trí" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="STOCK">STOCK - Kho chính</SelectItem>
+                                                        <SelectItem value="RECEIVING">RECEIVING - Khu nhận hàng</SelectItem>
+                                                        <SelectItem value="HOLD">HOLD - Khu giữ hàng</SelectItem>
+                                                        <SelectItem value="QUARANTINE">QUARANTINE - Khu cách ly</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             ) : (
                                                 <div className="font-medium font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded inline-block">
                                                     {inventory.locationCode || 'N/A'}
@@ -288,6 +319,39 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                             )}
                                         </div>
                                     </div>
+                                    {editMode && formData.locationCode !== (inventory.locationCode || '') && (
+                                        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-2">
+                                            <Label className="text-blue-700 dark:text-blue-300 text-sm font-medium">
+                                                Số lượng chuyển (tối đa: {inventory.quantity})
+                                            </Label>
+                                            <div className="flex items-center gap-3">
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={inventory.quantity}
+                                                    value={formData.transferQty}
+                                                    onChange={(e) => {
+                                                        const val = Math.min(Math.max(1, parseInt(e.target.value) || 0), inventory.quantity);
+                                                        setFormData(prev => ({ ...prev, transferQty: val }));
+                                                    }}
+                                                    className="w-32"
+                                                />
+                                                <span className="text-sm text-muted-foreground">/ {inventory.quantity} {inventory.part.unit}</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setFormData(prev => ({ ...prev, transferQty: inventory.quantity }))}
+                                                    className="text-xs"
+                                                >
+                                                    Tất cả
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Chuyển {formData.transferQty} {inventory.part.unit} từ {inventory.locationCode} → {formData.locationCode}
+                                                {formData.transferQty < inventory.quantity && ` (giữ lại ${inventory.quantity - formData.transferQty})`}
+                                            </p>
+                                        </div>
+                                    )}
                                     <Separator />
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">

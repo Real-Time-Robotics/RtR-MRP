@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateCAPANumber } from "@/lib/quality/capa-workflow";
+import { buildSearchQuery } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for CAPA creation
@@ -22,10 +23,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
+    const search = searchParams.get("search");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "50");
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["capaNumber", "title", "description", "sourceReference"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (status && status !== "all") where.status = status;
     if (type && type !== "all") where.type = type;
 
