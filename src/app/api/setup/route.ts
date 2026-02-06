@@ -46,7 +46,7 @@ export async function GET() {
           code: "WH-MAIN",
           name: "Main Warehouse",
           location: "Default Location",
-          type: "mixed",
+          type: "MAIN",
           status: "active",
         },
       });

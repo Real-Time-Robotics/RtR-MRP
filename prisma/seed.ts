@@ -650,7 +650,7 @@ async function main() {
       code: "WH-MAIN",
       name: "Main Warehouse",
       location: "Austin, TX",
-      type: "mixed",
+      type: "MAIN",
       status: "active",
     },
   });
