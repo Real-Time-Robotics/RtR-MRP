@@ -66,6 +66,10 @@ const typeConfig: Record<string, { badge: string; label: string }> = {
     badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
     label: "Kho giữ hàng",
   },
+  SCRAP: {
+    badge: "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300",
+    label: "Kho phế liệu",
+  },
 };
 
 function getTypeConfig(type?: string) {

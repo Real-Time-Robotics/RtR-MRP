@@ -1,11 +1,12 @@
 /**
  * Ensure the warehouse system is consistent.
  *
- * Standard warehouses (4 total):
+ * Standard warehouses (5 total):
  *   WH-MAIN       (MAIN)       — Kho chính, hàng đã QC pass
  *   WH-RECEIVING  (RECEIVING)  — Khu nhận hàng, chờ kiểm tra QC
  *   WH-HOLD       (HOLD)       — Khu chờ xử lý, hàng conditional
  *   WH-QUARANTINE (QUARANTINE) — Khu cách ly, hàng lỗi
+ *   WH-SCRAP      (SCRAP)      — Khu phế liệu, hàng hủy
  *
  * This script:
  *   1. Creates missing standard warehouses
@@ -46,6 +47,13 @@ const STANDARD_WAREHOUSES = [
     name: "Quarantine",
     type: "QUARANTINE",
     location: "Khu cách ly - Hàng lỗi chờ xử lý",
+    status: "active",
+  },
+  {
+    code: "WH-SCRAP",
+    name: "Scrap Area",
+    type: "SCRAP",
+    location: "Khu phế liệu - Hàng hủy chờ xử lý",
     status: "active",
   },
 ];

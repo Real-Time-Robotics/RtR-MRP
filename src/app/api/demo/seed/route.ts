@@ -161,6 +161,13 @@ const DEMO_WAREHOUSES = [
     type: 'QUARANTINE',
     status: 'active',
   },
+  {
+    code: 'WH-SCRAP',
+    name: 'Scrap Area',
+    location: 'Khu phế liệu - Hàng hủy chờ xử lý',
+    type: 'SCRAP',
+    status: 'active',
+  },
 ];
 
 const DEMO_PARTS = [

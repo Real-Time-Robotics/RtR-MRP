@@ -60,6 +60,12 @@ const typeColors: Record<string, { border: string; bg: string; text: string; bad
     text: "text-amber-700 dark:text-amber-400",
     badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
   },
+  SCRAP: {
+    border: "border-l-gray-500",
+    bg: "bg-gray-50 dark:bg-gray-950/20",
+    text: "text-gray-700 dark:text-gray-400",
+    badge: "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300",
+  },
 };
 
 function getTypeColor(type?: string) {

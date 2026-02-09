@@ -63,12 +63,21 @@ export function Combobox({
   const selectedOption = allOptions.find((option) => option.value === value);
 
   const handleSelect = (selectedValue: string) => {
+    // cmdk v1.x may pass original or lowercased value depending on version
     const option = allOptions.find(
-      (opt) => opt.label.toLowerCase() === selectedValue.toLowerCase()
+      (opt) =>
+        opt.label.toLowerCase() === selectedValue.toLowerCase() ||
+        opt.value.toLowerCase() === selectedValue.toLowerCase()
     );
     if (option) {
       onValueChange?.(option.value === value ? "" : option.value);
     }
+    setSearchValue("");
+    setOpen(false);
+  };
+
+  const handleItemClick = (option: ComboboxOption) => {
+    onValueChange?.(option.value === value ? "" : option.value);
     setSearchValue("");
     setOpen(false);
   };
@@ -127,6 +136,12 @@ export function Combobox({
                   key={option.value}
                   value={option.label}
                   onSelect={handleSelect}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleItemClick(option);
+                  }}
+                  className="cursor-pointer"
                 >
                   <Check
                     className={cn(

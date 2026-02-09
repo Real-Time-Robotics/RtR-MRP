@@ -103,6 +103,7 @@ const locationToWarehouseType: Record<string, string> = {
     RECEIVING: "RECEIVING",
     HOLD: "HOLD",
     QUARANTINE: "QUARANTINE",
+    SCRAP: "SCRAP",
 };
 
 export async function PATCH(

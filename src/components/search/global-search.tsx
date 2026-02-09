@@ -236,6 +236,11 @@ export function GlobalSearch() {
                     key={result.id}
                     value={result.id}
                     onSelect={() => handleSelect(result)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelect(result);
+                    }}
                     className="cursor-pointer"
                   >
                     <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
