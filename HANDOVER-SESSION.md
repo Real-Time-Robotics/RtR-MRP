@@ -1,16 +1,16 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-02-09 (Vietnam Time)
-> **Session:** Post Sprint 3 - Stabilization & Status Review
-> **Latest Commit:** `6aa9da8` - fix: Standardize warehouse system — 4 warehouses only
+> **Last Updated:** 2026-02-11 (Vietnam Time)
+> **Session:** Sprint 4 Kickoff — Operations-Critical Features
+> **Latest Commit:** `3c6bb09` - feat: Add WH-SCRAP warehouse & fix mouse click selection
 > **Branch:** `main` (clean, up to date with `nclamvn/main`)
 > **Deploy:** Render LIVE — code + database đồng bộ 100% với local
-> **Total Commits:** 231
+> **Total Commits:** 232
 
 ---
 
-## TONG QUAN TINH TRANG DU AN — 09/02/2026
+## TONG QUAN TINH TRANG DU AN — 11/02/2026
 
-### Tinh trang hien tai: UAT READY — Sprint 3 COMPLETE + Warehouse Pipeline DONE
+### Tinh trang hien tai: SPRINT 4 IN PROGRESS — Operations-Critical Features
 
 Du an RTR-MRP da hoan thanh cac moc chinh sau:
 
@@ -28,8 +28,12 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | Warehouse Management System (4-warehouse) | DONE | 02/06/2026 |
 | Receiving Inspection Pipeline (PO→QC→Warehouse) | DONE | 02/06/2026 |
 | Production Data Sync (Local → Render) | DONE | 02/06/2026 |
+| WH-SCRAP warehouse + Combobox fix | DONE | 02/09/2026 |
+| **Sprint 4: PDF Generation** | **IN PROGRESS** | 02/11/2026 |
+| **Sprint 4: Audit Trail** | TODO | — |
+| **Sprint 4: Approval Workflows** | TODO | — |
 
-### So lieu du an (Verified 02/09)
+### So lieu du an (Verified 02/11)
 
 | Metric | Value |
 |--------|-------|
@@ -37,7 +41,7 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | **Models** | 149 |
 | **Enums** | 27 |
 | **API Routes** | 243 route.ts files |
-| **Total Commits** | 231 |
+| **Total Commits** | 232 |
 | **Lines of Code** | 210K+ |
 | **Database** | 59 parts, 33 inventory, 4 warehouses |
 | **Production** | https://rtr-mrp.onrender.com |
@@ -323,15 +327,15 @@ model Warehouse {
 
 ### SPRINT ROADMAP - WHAT'S NEXT
 
-#### SPRINT 4: OPERATIONS-CRITICAL (Next Priority)
+#### SPRINT 4: OPERATIONS-CRITICAL (ACTIVE — Started 02/11)
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| PDF Generation (PO, Invoice, Packing List, WO) | TODO | **Critical** | Chua co, can thiet cho van hanh |
+| PDF Generation (PO, Invoice, Packing List, WO) | **IN PROGRESS** | **Critical** | jsPDF + autotable, Vietnamese locale |
+| Audit Trail (who, when, old -> new) | TODO | **Critical** | Enterprise compliance, ChangeLog model |
+| Approval Workflows (PO, WO release) | TODO | **Critical** | Multi-step, role-based |
 | Excel Export nang cao (BOM tree, filters) | TODO | High | BOM indent format |
 | Barcode/QR Generation + Print labels | TODO | High | |
-| Audit Trail (who, when, old -> new) | TODO | **Critical** | Enterprise compliance |
-| Approval Workflows (PO, WO release) | TODO | **Critical** | |
 
 #### SPRINT 5: POLISH & SCALE
 
@@ -549,14 +553,15 @@ HANDOVER-SESSION.md                     # This file
 02/04       Sprint 3 COMPLETE + build fixes
 02/05       Supplier enhancements + Inventory improvements
 02/06       Warehouse Pipeline COMPLETE + Production data sync
-02/09       Handover cap nhat tinh trang du an (hom nay)
+02/09       Handover cap nhat tinh trang du an + WH-SCRAP + Combobox fix
+02/11       Sprint 4 Kickoff — PDF Generation, Audit Trail, Approval Workflows
 ```
 
-**Tong ket:** Du an da UAT Ready, 231 commits, 149 models, 243 API routes, 210K+ LOC.
-Sprint 4 (PDF, Audit Trail, Approval Workflows) la uu tien tiep theo.
+**Tong ket:** Du an da UAT Ready, 232 commits, 149 models, 243 API routes, 210K+ LOC.
+Sprint 4 (PDF, Audit Trail, Approval Workflows) dang trien khai tu 02/11.
 
 ---
 
-*Cap nhat lan cuoi: 2026-02-09 VN*
+*Cap nhat lan cuoi: 2026-02-11 VN*
 *Du an: RTR-MRP - Material Requirements Planning System*
 *Handover prepared by: Claude Opus 4.6*

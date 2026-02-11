@@ -153,6 +153,21 @@ export function Combobox({
                 </CommandItem>
               ))}
             </CommandGroup>
+            {/* Always show create button when typing and value doesn't exactly match existing */}
+            {allowCreate && searchValue.trim() && !allOptions.find(
+              (opt) => opt.label.toLowerCase() === searchValue.trim().toLowerCase()
+            ) && (
+              <div className="border-t px-1 py-1">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded cursor-pointer text-primary"
+                  onClick={handleCreateNew}
+                >
+                  <Plus className="h-4 w-4" />
+                  {createLabel}: &quot;{searchValue.trim()}&quot;
+                </button>
+              </div>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

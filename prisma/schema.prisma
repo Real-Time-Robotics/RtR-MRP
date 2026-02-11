@@ -567,6 +567,7 @@ model Product {
   lotTransactions LotTransaction[]
   certificates    CertificateOfConformance[]
   routings        Routing[]
+  productionReceipts ProductionReceipt[]
 
   // Financial relations
   salesInvoiceLines SalesInvoiceLine[]
@@ -668,8 +669,9 @@ model Warehouse {
   siteId String?
   site   Site?   @relation(fields: [siteId], references: [id])
 
-  inventory     Inventory[]
-  pickListLines PickListLine[]
+  inventory          Inventory[]
+  pickListLines      PickListLine[]
+  productionReceipts ProductionReceipt[]
 
   @@index([siteId])
   @@index([type])
@@ -986,6 +988,9 @@ model WorkOrder {
   ncrs          NCR[]
   operations    WorkOrderOperation[]
 
+  // Production receipt (warehouse approval flow)
+  productionReceipt ProductionReceipt?
+
   // Financial relations
   workOrderCosts WorkOrderCost[]
   costVariances  CostVariance[]
@@ -996,6 +1001,36 @@ model WorkOrder {
   @@index([status, createdAt])
   @@index([plannedStart, plannedEnd])
   @@map("work_orders")
+}
+
+model ProductionReceipt {
+  id              String    @id @default(cuid())
+  receiptNumber   String    @unique
+  workOrderId     String    @unique
+  productId       String
+  partId          String?
+  quantity        Int
+  lotNumber       String
+  warehouseId     String
+  status          String    @default("PENDING") // PENDING | CONFIRMED | REJECTED
+  requestedBy     String
+  requestedAt     DateTime  @default(now())
+  confirmedBy     String?
+  confirmedAt     DateTime?
+  rejectedBy      String?
+  rejectedAt      DateTime?
+  rejectedReason  String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workOrder       WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  product         Product   @relation(fields: [productId], references: [id])
+  warehouse       Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@index([status])
+  @@index([warehouseId, status])
+  @@map("production_receipts")
 }
 
 model MaterialAllocation {
@@ -1555,6 +1590,7 @@ model Inspection {
   type             String // RECEIVING, IN_PROCESS, FINAL
   status           String  @default("pending") // pending, in_progress, completed, on_hold
   result           String? // PASS, FAIL, CONDITIONAL
+  sourceType       String? // PO, NON_PO, PRODUCTION (for RECEIVING type)
 
   planId    String?
   partId    String?
@@ -1595,6 +1631,7 @@ model Inspection {
   certificates CertificateOfConformance[]
 
   @@index([type, status])
+  @@index([sourceType])
   @@index([lotNumber])
   @@index([partId])
   @@index([workOrderId])

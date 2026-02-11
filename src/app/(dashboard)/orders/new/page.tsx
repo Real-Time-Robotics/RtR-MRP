@@ -37,7 +37,7 @@ interface Product {
   id: string;
   sku: string;
   name: string;
-  unitPrice: number;
+  basePrice: number | null;
 }
 
 interface OrderLine {
@@ -77,10 +77,14 @@ export default function NewSalesOrderPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("/api/products?limit=100");
+      const res = await fetch("/api/products?pageSize=100");
       if (res.ok) {
         const result = await res.json();
-        setProducts(result.data || result.products || []);
+        const items = result.data || result.products || [];
+        console.log("[fetchProducts] loaded:", items.length, "products");
+        setProducts(items);
+      } else {
+        console.error("[fetchProducts] API error:", res.status);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -101,7 +105,7 @@ export default function NewSalesOrderPage() {
       newItems[index].productId = value as string;
       const product = products.find((p) => p.id === value);
       if (product) {
-        newItems[index].unitPrice = product.unitPrice || 0;
+        newItems[index].unitPrice = product.basePrice || 0;
       }
     } else if (field === "quantity") {
       newItems[index].quantity = parseInt(value as string) || 0;
@@ -262,18 +266,22 @@ export default function NewSalesOrderPage() {
                       <TableRow key={index}>
                         <TableCell>
                           <Select
-                            value={item.productId}
+                            value={item.productId || undefined}
                             onValueChange={(value) => updateItem(index, "productId", value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Chọn sản phẩm" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.sku} - {product.name}
-                                </SelectItem>
-                              ))}
+                            <SelectContent position="popper" className="max-h-[300px]">
+                              {products.length === 0 ? (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">Không có sản phẩm</div>
+                              ) : (
+                                products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.sku} - {product.name}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </TableCell>

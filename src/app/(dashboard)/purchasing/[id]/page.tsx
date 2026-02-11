@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Truck, Calendar, FileText, CheckCircle, Clock, Ban } from 'lucide-react';
+import { ArrowLeft, Truck, Calendar, FileText, CheckCircle, Clock, Ban, Printer } from 'lucide-react';
 import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -103,6 +103,11 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
 
     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
 
+    const handlePrintPDF = async () => {
+        const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+        generatePurchaseOrderPDF(po);
+    };
+
     return (
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
@@ -110,7 +115,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                 <Button variant="ghost" iconOnly size="sm" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         Purchase Order
                         <Badge variant="outline" className="font-mono text-base">{po.poNumber}</Badge>
@@ -124,6 +129,10 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                         </span>
                     </div>
                 </div>
+                <Button variant="secondary" size="sm" onClick={handlePrintPDF}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print PDF
+                </Button>
             </div>
 
             <Tabs defaultValue="details" className="w-full">

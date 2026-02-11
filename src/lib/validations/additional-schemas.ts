@@ -360,7 +360,7 @@ export const PartCreateSchema = z.object({
   partNumber: z.string().min(1).max(50),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullish(),
-  category: z.enum(['FINISHED_GOOD', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL']),
+  category: z.enum(['FINISHED_GOOD', 'SEMI_FINISHED', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL']),
   unit: z.preprocess((v) => v ?? 'EA', z.string().max(10)),
   revision: z.preprocess((v) => v ?? 'A', z.string().max(10)),
   lifecycleStatus: z.preprocess((v) => v ?? 'ACTIVE', z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL'])),

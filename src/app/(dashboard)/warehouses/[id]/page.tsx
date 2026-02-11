@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,13 +8,23 @@ import {
   Package,
   Archive,
   Lock,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SmartGrid } from "@/components/ui-v2/smart-grid";
 import { Column } from "@/components/ui-v2/data-table";
 import { StockStatusBadge } from "@/components/inventory/stock-status-badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { formatDateMedium } from "@/lib/date";
 import type { StockStatus } from "@/types";
 
 // =============================================================================
@@ -43,6 +53,31 @@ interface InventoryItem {
   isCritical: boolean;
   lotNumber?: string;
   locationCode?: string;
+}
+
+interface PendingReceipt {
+  id: string;
+  receiptNumber: string;
+  quantity: number;
+  lotNumber: string;
+  status: string;
+  requestedAt: string;
+  notes: string | null;
+  workOrder: {
+    woNumber: string;
+    status: string;
+    completedQty: number;
+  };
+  product: {
+    id: string;
+    sku: string;
+    name: string;
+  };
+  warehouse: {
+    id: string;
+    code: string;
+    name: string;
+  };
 }
 
 // =============================================================================
@@ -134,39 +169,94 @@ export default function WarehouseDetailPage() {
 
   const [warehouse, setWarehouse] = useState<WarehouseData | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [pendingReceipts, setPendingReceipts] = useState<PendingReceipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<PendingReceipt | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [whRes, invRes, receiptsRes] = await Promise.all([
+        fetch("/api/warehouses"),
+        fetch(`/api/inventory?warehouseId=${warehouseId}`),
+        fetch(`/api/warehouse-receipts?warehouseId=${warehouseId}&status=PENDING`),
+      ]);
+
+      const whJson = await whRes.json();
+      const invJson = await invRes.json();
+      const receiptsJson = await receiptsRes.json();
+
+      if (!whJson.success) throw new Error("Failed to fetch warehouse");
+      if (!invJson.success) throw new Error("Failed to fetch inventory");
+
+      const wh = (whJson.data as WarehouseData[]).find(
+        (w) => w.id === warehouseId
+      );
+      if (!wh) throw new Error("Kho không tồn tại");
+
+      setWarehouse(wh);
+      setInventory(invJson.data || []);
+      setPendingReceipts(receiptsJson.data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  }, [warehouseId]);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [whRes, invRes] = await Promise.all([
-          fetch("/api/warehouses"),
-          fetch(`/api/inventory?warehouseId=${warehouseId}`),
-        ]);
-
-        const whJson = await whRes.json();
-        const invJson = await invRes.json();
-
-        if (!whJson.success) throw new Error("Failed to fetch warehouse");
-        if (!invJson.success) throw new Error("Failed to fetch inventory");
-
-        const wh = (whJson.data as WarehouseData[]).find(
-          (w) => w.id === warehouseId
-        );
-        if (!wh) throw new Error("Kho không tồn tại");
-
-        setWarehouse(wh);
-        setInventory(invJson.data || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchData();
-  }, [warehouseId]);
+  }, [fetchData]);
+
+  const handleConfirm = async (receiptId: string) => {
+    setProcessingId(receiptId);
+    try {
+      const res = await fetch(`/api/warehouse-receipts/${receiptId}/confirm`, { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || result.message || "Lỗi xác nhận phiếu");
+        return;
+      }
+      fetchData();
+    } catch {
+      alert("Lỗi xác nhận phiếu nhập kho");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const openRejectDialog = (receipt: PendingReceipt) => {
+    setRejectTarget(receipt);
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleReject = async () => {
+    if (!rejectTarget || !rejectReason.trim()) return;
+    setProcessingId(rejectTarget.id);
+    setRejectDialogOpen(false);
+    try {
+      const res = await fetch(`/api/warehouse-receipts/${rejectTarget.id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || result.message || "Lỗi từ chối phiếu");
+        return;
+      }
+      fetchData();
+    } catch {
+      alert("Lỗi từ chối phiếu nhập kho");
+    } finally {
+      setProcessingId(null);
+      setRejectTarget(null);
+    }
+  };
 
   // Column definitions - Excel-like pattern
   const columns: Column<InventoryItem>[] = useMemo(() => [
@@ -332,31 +422,143 @@ export default function WarehouseDetailPage() {
       {/* Stats Cards */}
       <StatsCards inventory={inventory} />
 
-      {/* SmartGrid Excel-like Table */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <SmartGrid
-          data={inventory}
-          columns={columns}
-          keyField="id"
-          loading={loading}
-          emptyMessage="Chưa có vật tư nào trong kho này"
-          searchable
-          searchPlaceholder="Tìm theo mã vật tư, tên, lot..."
-          pagination
-          pageSize={20}
-          stickyHeader
-          columnToggle
-          excelMode={{
-            enabled: true,
-            showRowNumbers: true,
-            columnHeaderStyle: "field-names",
-            gridBorders: true,
-            showFooter: true,
-            sheetName: warehouse.code,
-            compactMode: true,
-          }}
-        />
-      </div>
+      {/* Tabs: Inventory + Pending Receipts */}
+      <Tabs defaultValue="inventory" className="flex-1 min-h-0 flex flex-col">
+        <TabsList>
+          <TabsTrigger value="inventory">Tồn kho</TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-1.5">
+            Phiếu chờ nhập kho
+            {pendingReceipts.length > 0 && (
+              <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                {pendingReceipts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="flex-1 min-h-0 overflow-hidden flex flex-col mt-4">
+          <SmartGrid
+            data={inventory}
+            columns={columns}
+            keyField="id"
+            loading={loading}
+            emptyMessage="Chưa có vật tư nào trong kho này"
+            searchable
+            searchPlaceholder="Tìm theo mã vật tư, tên, lot..."
+            pagination
+            pageSize={20}
+            stickyHeader
+            columnToggle
+            excelMode={{
+              enabled: true,
+              showRowNumbers: true,
+              columnHeaderStyle: "field-names",
+              gridBorders: true,
+              showFooter: true,
+              sheetName: warehouse.code,
+              compactMode: true,
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="pending" className="mt-4 space-y-3">
+          {pendingReceipts.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Không có phiếu chờ nhập kho</p>
+              </CardContent>
+            </Card>
+          ) : (
+            pendingReceipts.map((receipt) => (
+              <Card key={receipt.id} className="border-yellow-200 dark:border-yellow-900/40">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-medium text-sm">{receipt.receiptNumber}</span>
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Chờ xác nhận
+                        </Badge>
+                      </div>
+                      <p className="font-medium">{receipt.product.name}</p>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>WO: <Link href={`/production/${receipt.workOrder.woNumber}`} className="text-blue-600 hover:underline">{receipt.workOrder.woNumber}</Link></span>
+                        <span>Số lượng: <strong className="text-foreground">{receipt.quantity}</strong></span>
+                        <span>Lot: <span className="font-mono">{receipt.lotNumber}</span></span>
+                        <span>Ngày yêu cầu: {formatDateMedium(receipt.requestedAt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={processingId === receipt.id}
+                        onClick={() => handleConfirm(receipt.id)}
+                      >
+                        {processingId === receipt.id ? (
+                          <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-1.5" />
+                        )}
+                        Xác nhận
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={processingId === receipt.id}
+                        onClick={() => openRejectDialog(receipt)}
+                      >
+                        <XCircle className="h-4 w-4 mr-1.5" />
+                        Từ chối
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Từ chối phiếu nhập kho</DialogTitle>
+            <DialogDescription>
+              {rejectTarget && `Từ chối phiếu ${rejectTarget.receiptNumber} - ${rejectTarget.product.name} (${rejectTarget.quantity} units)`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="rejectReason">Lý do từ chối *</Label>
+              <Textarea
+                id="rejectReason"
+                placeholder="Nhập lý do từ chối..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={!rejectReason.trim()}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Xác nhận từ chối
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

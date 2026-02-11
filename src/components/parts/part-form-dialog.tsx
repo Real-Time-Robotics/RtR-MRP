@@ -34,7 +34,16 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RotateCcw, Save, CheckCircle2, FilePenLine, ChevronRight } from 'lucide-react';
+import { RotateCcw, Save, CheckCircle2, FilePenLine, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Select as MultiSelect } from '@/components/ui-v2/select';
 import {
@@ -111,8 +120,22 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
     // Suppliers list for dropdown
     const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
+    // Create Supplier dialog
+    const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+    const [creatingSup, setCreatingSup] = useState(false);
+    const [newSupCode, setNewSupCode] = useState('');
+    const [newSupName, setNewSupName] = useState('');
+    const [newSupCountry, setNewSupCountry] = useState('Việt Nam');
+    const [newSupContact, setNewSupContact] = useState('');
+    const [newSupEmail, setNewSupEmail] = useState('');
+    const [newSupPhone, setNewSupPhone] = useState('');
+
     // Manufacturers list for dropdown
     const [manufacturers, setManufacturers] = useState<ComboboxOption[]>([]);
+
+    // Supplier picker when multiple match manufacturer name
+    const [supplierPickerOpen, setSupplierPickerOpen] = useState(false);
+    const [matchingSuppliers, setMatchingSuppliers] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
     // 1. Setup Form Hook
     const form = useForm<PartFormData>({
@@ -536,11 +559,61 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                 .then(res => res.json())
                 .then(result => {
                     const items = result.data || [];
-                    setManufacturers(items.map((m: string) => ({ value: m, label: m })));
+                    setManufacturers(items.map((m: string, i: number) => ({
+                        value: m,
+                        label: `MFR-${String(i + 1).padStart(3, '0')} | ${m}`,
+                    })));
                 })
                 .catch(err => console.error('Failed to fetch manufacturers:', err));
         }
     }, [open]);
+
+    const openSupplierDialog = () => {
+        setNewSupCode('');
+        setNewSupName('');
+        setNewSupCountry('Việt Nam');
+        setNewSupContact('');
+        setNewSupEmail('');
+        setNewSupPhone('');
+        setSupplierDialogOpen(true);
+    };
+
+    const handleCreateSupplier = async () => {
+        if (!newSupCode.trim()) { toast.error('Mã nhà cung cấp là bắt buộc'); return; }
+        if (!newSupName.trim()) { toast.error('Tên nhà cung cấp là bắt buộc'); return; }
+
+        setCreatingSup(true);
+        try {
+            const res = await fetch('/api/suppliers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: newSupCode.trim(),
+                    name: newSupName.trim(),
+                    country: newSupCountry || 'Việt Nam',
+                    contactName: newSupContact.trim() || null,
+                    contactEmail: newSupEmail.trim() || null,
+                    contactPhone: newSupPhone.trim() || null,
+                }),
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                const newSup = result.data || result;
+                toast.success(`Đã tạo nhà cung cấp "${newSup.name}"`);
+                setSuppliers(prev => [...prev, { id: newSup.id, name: newSup.name, code: newSup.code }]);
+                form.setValue('primarySupplierId', newSup.id);
+                setSupplierDialogOpen(false);
+            } else {
+                const err = await res.json();
+                toast.error(err.error || err.message || 'Lỗi tạo nhà cung cấp');
+            }
+        } catch {
+            toast.error('Lỗi kết nối');
+        } finally {
+            setCreatingSup(false);
+        }
+    };
 
     return (
         <>
@@ -1313,8 +1386,10 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                                                     value={field.value || ''}
                                                     onValueChange={field.onChange}
                                                     placeholder="Chọn nhà sản xuất..."
-                                                    searchPlaceholder="Tìm nhà sản xuất..."
+                                                    searchPlaceholder="Tìm hoặc nhập tên mới..."
                                                     emptyText="Không tìm thấy nhà sản xuất"
+                                                    allowCreate={true}
+                                                    createLabel="Tạo nhà sản xuất mới"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -1381,26 +1456,78 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
 
                         {/* Procurement Tab */}
                         <TabsContent value="procurement" className="space-y-4 mt-4">
+                            {/* Same as manufacturer toggle */}
+                            {form.watch('manufacturer') && (
+                                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
+                                    <Switch
+                                        id="sameAsManufacturer"
+                                        checked={(() => {
+                                            const mfr = form.watch('manufacturer');
+                                            const supId = form.watch('primarySupplierId');
+                                            if (!mfr || !supId) return false;
+                                            const sup = suppliers.find(s => s.id === supId);
+                                            return sup ? sup.name.toLowerCase() === mfr.toLowerCase() : false;
+                                        })()}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                const mfrName = form.watch('manufacturer');
+                                                if (mfrName) {
+                                                    const matches = suppliers.filter(s =>
+                                                        s.name.toLowerCase() === mfrName.toLowerCase()
+                                                    );
+                                                    if (matches.length === 1) {
+                                                        form.setValue('primarySupplierId', matches[0].id);
+                                                        toast.success(`Đã chọn NCC "${matches[0].code} - ${matches[0].name}"`);
+                                                    } else if (matches.length > 1) {
+                                                        setMatchingSuppliers(matches);
+                                                        setSupplierPickerOpen(true);
+                                                    } else {
+                                                        toast.error(`Không tìm thấy NCC trùng tên "${mfrName}". Hãy tạo mới.`);
+                                                    }
+                                                }
+                                            } else {
+                                                form.setValue('primarySupplierId', null as any);
+                                            }
+                                        }}
+                                    />
+                                    <label htmlFor="sameAsManufacturer" className="text-sm cursor-pointer">
+                                        Nhà cung cấp cùng nhà sản xuất <span className="font-medium">({form.watch('manufacturer')})</span>
+                                    </label>
+                                </div>
+                            )}
+
                             <FormField
                                 control={form.control}
                                 name="primarySupplierId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Nhà cung cấp chính *</FormLabel>
-                                        <FormControl>
-                                            <Combobox
-                                                options={suppliers.map((s) => ({
-                                                    value: s.id,
-                                                    label: `${s.code} - ${s.name}`,
-                                                }))}
-                                                value={field.value || ''}
-                                                onValueChange={(val) => field.onChange(val || null)}
-                                                placeholder="Chọn nhà cung cấp..."
-                                                searchPlaceholder="Tìm nhà cung cấp..."
-                                                emptyText="Không tìm thấy nhà cung cấp"
-                                                allowCreate={false}
-                                            />
-                                        </FormControl>
+                                        <div className="flex gap-2">
+                                            <FormControl>
+                                                <Combobox
+                                                    options={suppliers.map((s) => ({
+                                                        value: s.id,
+                                                        label: `${s.code} - ${s.name}`,
+                                                    }))}
+                                                    value={field.value || ''}
+                                                    onValueChange={(val) => field.onChange(val || null)}
+                                                    placeholder="Chọn nhà cung cấp..."
+                                                    searchPlaceholder="Tìm nhà cung cấp..."
+                                                    emptyText="Không tìm thấy nhà cung cấp"
+                                                    allowCreate={false}
+                                                />
+                                            </FormControl>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="shrink-0"
+                                                onClick={openSupplierDialog}
+                                                title="Tạo nhà cung cấp mới"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -1952,6 +2079,151 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
             onConfirm={changeImpact.confirm}
             onCancel={changeImpact.cancel}
         />
+
+        {/* Create Supplier Dialog */}
+        <Dialog open={supplierDialogOpen} onOpenChange={setSupplierDialogOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Tạo nhà cung cấp mới</DialogTitle>
+                    <DialogDescription>
+                        Nhập thông tin nhà cung cấp. Sau khi tạo sẽ tự động chọn cho part này.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Mã NCC *</Label>
+                            <Input
+                                value={newSupCode}
+                                onChange={(e) => setNewSupCode(e.target.value)}
+                                placeholder="e.g., SUP-001"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tên nhà cung cấp *</Label>
+                            <Input
+                                value={newSupName}
+                                onChange={(e) => setNewSupName(e.target.value)}
+                                placeholder="e.g., Công ty ABC"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Quốc gia *</Label>
+                        <Select value={newSupCountry} onValueChange={setNewSupCountry}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {COUNTRIES.map((c) => (
+                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                            <Label>Người liên hệ</Label>
+                            <Input
+                                value={newSupContact}
+                                onChange={(e) => setNewSupContact(e.target.value)}
+                                placeholder="Tên"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input
+                                type="email"
+                                value={newSupEmail}
+                                onChange={(e) => setNewSupEmail(e.target.value)}
+                                placeholder="email@..."
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>SĐT</Label>
+                            <Input
+                                value={newSupPhone}
+                                onChange={(e) => setNewSupPhone(e.target.value)}
+                                placeholder="0..."
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setSupplierDialogOpen(false)}
+                            disabled={creatingSup}
+                        >
+                            Hủy
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleCreateSupplier}
+                            disabled={creatingSup || !newSupCode.trim() || !newSupName.trim()}
+                        >
+                            {creatingSup ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Đang tạo...
+                                </>
+                            ) : (
+                                <>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Tạo NCC
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        {/* Supplier picker when multiple suppliers match manufacturer name */}
+        <Dialog open={supplierPickerOpen} onOpenChange={setSupplierPickerOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Chọn nhà cung cấp</DialogTitle>
+                    <DialogDescription>
+                        Có {matchingSuppliers.length} NCC trùng tên &quot;{form.watch('manufacturer')}&quot;. Vui lòng chọn đúng NCC.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 pt-2">
+                    {matchingSuppliers.map((s) => (
+                        <button
+                            key={s.id}
+                            type="button"
+                            className="w-full flex items-center justify-between p-3 border rounded-lg hover:bg-accent hover:border-primary transition-colors text-left"
+                            onClick={() => {
+                                form.setValue('primarySupplierId', s.id);
+                                toast.success(`Đã chọn NCC "${s.code} - ${s.name}"`);
+                                setSupplierPickerOpen(false);
+                                setMatchingSuppliers([]);
+                            }}
+                        >
+                            <div>
+                                <p className="font-medium">{s.name}</p>
+                                <p className="text-sm text-muted-foreground">{s.code}</p>
+                            </div>
+                            <Badge variant="outline">{s.code}</Badge>
+                        </button>
+                    ))}
+                </div>
+                <div className="flex justify-end pt-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setSupplierPickerOpen(false);
+                            setMatchingSuppliers([]);
+                        }}
+                    >
+                        Hủy
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
         </>
     );
 }

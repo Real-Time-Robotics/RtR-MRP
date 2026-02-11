@@ -114,7 +114,7 @@ interface Product {
   id: string;
   sku: string;
   name: string;
-  unitCost: number;
+  basePrice: number | null;
 }
 
 interface SalesOrderFormProps {
@@ -180,7 +180,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/parts?category=Finished Goods');
+      const res = await fetch('/api/products?pageSize=100');
       if (res.ok) {
         const result = await res.json();
         setProducts(result.data || []);
@@ -530,9 +530,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                                     field.onChange(value);
                                     const product = products.find((p) => p.id === value);
                                     if (product) {
-                                      form.setValue(`lines.${index}.unitPrice`, product.unitCost);
+                                      form.setValue(`lines.${index}.unitPrice`, product.basePrice || 0);
                                     }
                                   }}
+                                  defaultValue=""
                                   value={field.value}
                                 >
                                   <SelectTrigger>

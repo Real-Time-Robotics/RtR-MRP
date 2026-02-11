@@ -12,6 +12,9 @@ import {
   XCircle,
   Pencil,
   Lock,
+  Factory,
+  Package,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,8 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import Link from "next/link";
+
+type SourceType = "PO" | "NON_PO" | "PRODUCTION";
 
 interface Part {
   id: string;
@@ -62,6 +68,16 @@ interface PurchaseOrder {
   lines?: POLine[];
 }
 
+interface WorkOrder {
+  id: string;
+  woNumber: string;
+  status: string;
+  quantity: number;
+  completedQty: number;
+  productId: string;
+  product: { id: string; sku: string; name: string };
+}
+
 function BooleanBadge({ value, label }: { value: boolean; label: string }) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
@@ -77,18 +93,34 @@ function BooleanBadge({ value, label }: { value: boolean; label: string }) {
 
 export default function NewReceivingInspectionPage() {
   const router = useRouter();
+  const [sourceType, setSourceType] = useState<SourceType>("PO");
+
+  // PO state
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [selectedPOId, setSelectedPOId] = useState("");
   const [poLines, setPOLines] = useState<POLine[]>([]);
   const [selectedLineId, setSelectedLineId] = useState("");
-  const [partQC, setPartQC] = useState<PartQC | null>(null);
   const [loadingPOs, setLoadingPOs] = useState(true);
   const [loadingLines, setLoadingLines] = useState(false);
+
+  // Non-PO state
+  const [parts, setParts] = useState<Part[]>([]);
+  const [selectedPartId, setSelectedPartId] = useState("");
+  const [loadingParts, setLoadingParts] = useState(false);
+
+  // Production state
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [selectedWOId, setSelectedWOId] = useState("");
+  const [loadingWOs, setLoadingWOs] = useState(false);
+
+  // Shared state
+  const [partQC, setPartQC] = useState<PartQC | null>(null);
   const [loadingQC, setLoadingQC] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lotEditable, setLotEditable] = useState(false);
   const [formData, setFormData] = useState({
     partId: "",
+    productId: "",
     partDisplay: "",
     lotNumber: "",
     quantityReceived: "",
@@ -96,14 +128,12 @@ export default function NewReceivingInspectionPage() {
     notes: "",
   });
 
-  // Fetch only received POs
+  // Fetch received POs
   useEffect(() => {
     const fetchPOs = async () => {
       setLoadingPOs(true);
       try {
-        const res = await fetch(
-          "/api/purchase-orders?status=received&limit=100"
-        );
+        const res = await fetch("/api/purchase-orders?status=received&limit=100");
         if (res.ok) {
           const data = await res.json();
           setPurchaseOrders(data.data || data.orders || []);
@@ -117,7 +147,98 @@ export default function NewReceivingInspectionPage() {
     fetchPOs();
   }, []);
 
-  // When PO is selected, fetch its detail to get lines
+  // Fetch parts when Non-PO tab is active
+  useEffect(() => {
+    if (sourceType !== "NON_PO" || parts.length > 0) return;
+    const fetchParts = async () => {
+      setLoadingParts(true);
+      try {
+        const res = await fetch("/api/parts?pageSize=100");
+        if (res.ok) {
+          const result = await res.json();
+          const partsList = result.data || [];
+          setParts(partsList.map((p: Record<string, unknown>) => ({
+            id: p.id as string,
+            partNumber: p.partNumber as string,
+            name: p.name as string,
+          })));
+        }
+      } catch (error) {
+        console.error("Failed to fetch parts:", error);
+      } finally {
+        setLoadingParts(false);
+      }
+    };
+    fetchParts();
+  }, [sourceType, parts.length]);
+
+  // Fetch work orders when Production tab is active
+  useEffect(() => {
+    if (sourceType !== "PRODUCTION" || workOrders.length > 0) return;
+    const fetchWOs = async () => {
+      setLoadingWOs(true);
+      try {
+        const res = await fetch("/api/production?status=completed,in_progress&pageSize=100");
+        if (res.ok) {
+          const data = await res.json();
+          setWorkOrders(data.data || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch work orders:", error);
+      } finally {
+        setLoadingWOs(false);
+      }
+    };
+    fetchWOs();
+  }, [sourceType, workOrders.length]);
+
+  // Reset form when switching tabs
+  const handleTabChange = (value: string) => {
+    setSourceType(value as SourceType);
+    setPartQC(null);
+    setLotEditable(false);
+    setFormData({
+      partId: "",
+      productId: "",
+      partDisplay: "",
+      lotNumber: "",
+      quantityReceived: "",
+      quantityInspected: "",
+      notes: formData.notes,
+    });
+    setSelectedPOId("");
+    setSelectedLineId("");
+    setPOLines([]);
+    setSelectedPartId("");
+    setSelectedWOId("");
+  };
+
+  // Fetch Part QC info
+  const fetchPartQC = async (partId: string) => {
+    setLoadingQC(true);
+    try {
+      const res = await fetch(`/api/parts/${partId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const part = data.data || data;
+        setPartQC({
+          inspectionRequired: part.inspectionRequired ?? false,
+          inspectionPlan: part.inspectionPlan || null,
+          aqlLevel: part.aqlLevel || null,
+          shelfLifeDays: part.shelfLifeDays || null,
+          lotControl: part.lotControl ?? false,
+          serialControl: part.serialControl ?? false,
+          certificateRequired: part.certificateRequired ?? false,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch part QC:", error);
+    } finally {
+      setLoadingQC(false);
+    }
+  };
+
+  // PO handlers
   const handlePOSelect = async (poId: string) => {
     setSelectedPOId(poId);
     setSelectedLineId("");
@@ -151,7 +272,6 @@ export default function NewReceivingInspectionPage() {
     }
   };
 
-  // When PO Line is selected, auto-fill part/quantity and fetch Part QC info
   const handleLineSelect = async (lineId: string) => {
     setSelectedLineId(lineId);
     setPartQC(null);
@@ -169,29 +289,7 @@ export default function NewReceivingInspectionPage() {
         quantityReceived: String(remaining),
         lotNumber: autoLot,
       }));
-
-      // Fetch Part QC details
-      setLoadingQC(true);
-      try {
-        const res = await fetch(`/api/parts/${line.partId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const part = data.data || data;
-          setPartQC({
-            inspectionRequired: part.inspectionRequired ?? false,
-            inspectionPlan: part.inspectionPlan || null,
-            aqlLevel: part.aqlLevel || null,
-            shelfLifeDays: part.shelfLifeDays || null,
-            lotControl: part.lotControl ?? false,
-            serialControl: part.serialControl ?? false,
-            certificateRequired: part.certificateRequired ?? false,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch part QC:", error);
-      } finally {
-        setLoadingQC(false);
-      }
+      fetchPartQC(line.partId);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -202,32 +300,99 @@ export default function NewReceivingInspectionPage() {
     }
   };
 
+  // Non-PO: Part select handler
+  const handlePartSelect = (partId: string) => {
+    setSelectedPartId(partId);
+    setPartQC(null);
+    setLotEditable(true);
+
+    const part = parts.find((p) => p.id === partId);
+    if (part) {
+      setFormData((prev) => ({
+        ...prev,
+        partId: part.id,
+        partDisplay: `${part.partNumber} - ${part.name}`,
+        lotNumber: "",
+        quantityReceived: "",
+      }));
+      fetchPartQC(part.id);
+    }
+  };
+
+  // Production: WO select handler
+  const handleWOSelect = (woId: string) => {
+    setSelectedWOId(woId);
+    setPartQC(null);
+    setLotEditable(false);
+
+    const wo = workOrders.find((w) => w.id === woId);
+    if (wo) {
+      const autoLot = `LOT-WO-${wo.woNumber}`;
+      setFormData((prev) => ({
+        ...prev,
+        productId: wo.productId,
+        partDisplay: `${wo.product.sku} - ${wo.product.name}`,
+        quantityReceived: String(wo.completedQty),
+        lotNumber: autoLot,
+      }));
+    }
+  };
+
   const selectedPO = purchaseOrders.find((po) => po.id === selectedPOId);
   const selectedLine = poLines.find((l) => l.id === selectedLineId);
+  const selectedWO = workOrders.find((w) => w.id === selectedWOId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedPOId || !selectedLineId) {
-      alert("Vui lòng chọn Đơn mua hàng và dòng PO");
-      return;
+    // Validation per source type
+    if (sourceType === "PO") {
+      if (!selectedPOId || !selectedLineId) {
+        alert("Vui lòng chọn Đơn mua hàng và dòng PO");
+        return;
+      }
+    } else if (sourceType === "NON_PO") {
+      if (!selectedPartId) {
+        alert("Vui lòng chọn linh kiện");
+        return;
+      }
+      if (!formData.quantityReceived || parseInt(formData.quantityReceived) <= 0) {
+        alert("Số lượng nhận phải lớn hơn 0");
+        return;
+      }
+    } else if (sourceType === "PRODUCTION") {
+      if (!selectedWOId) {
+        alert("Vui lòng chọn lệnh sản xuất");
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        type: "RECEIVING",
+        sourceType,
+        lotNumber: formData.lotNumber || null,
+        quantityReceived: parseInt(formData.quantityReceived) || 0,
+        quantityInspected: parseInt(formData.quantityInspected) || 0,
+        notes: formData.notes || null,
+      };
+
+      if (sourceType === "PO") {
+        payload.partId = formData.partId || null;
+        payload.poLineId = selectedLineId;
+      } else if (sourceType === "NON_PO") {
+        payload.partId = selectedPartId;
+      } else if (sourceType === "PRODUCTION") {
+        payload.workOrderId = selectedWOId;
+        payload.productId = formData.productId || null;
+      }
+
       const res = await fetch("/api/quality/inspections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "RECEIVING",
-          partId: formData.partId || null,
-          poLineId: selectedLineId,
-          lotNumber: formData.lotNumber || null,
-          quantityReceived: parseInt(formData.quantityReceived) || 0,
-          quantityInspected: parseInt(formData.quantityInspected) || 0,
-          notes: formData.notes || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -244,6 +409,14 @@ export default function NewReceivingInspectionPage() {
     }
   };
 
+  const isSubmitDisabled = () => {
+    if (loading) return true;
+    if (sourceType === "PO") return !selectedPOId || !selectedLineId || !formData.partId;
+    if (sourceType === "NON_PO") return !selectedPartId || !formData.quantityReceived;
+    if (sourceType === "PRODUCTION") return !selectedWOId;
+    return true;
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -254,153 +427,315 @@ export default function NewReceivingInspectionPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-6">
-          {/* Purchase Order Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Đơn mua hàng</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {loadingPOs ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tải danh sách PO...
-                </div>
-              ) : purchaseOrders.length === 0 ? (
-                <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>
-                    Không có đơn mua hàng nào ở trạng thái{" "}
-                    <strong>Đã nhận hàng</strong>. Vui lòng nhận hàng PO trước
-                    khi tạo phiếu kiểm tra.
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Đơn mua hàng (PO) *</Label>
+          {/* Source Type Tabs */}
+          <Tabs value={sourceType} onValueChange={handleTabChange}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="PO" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Từ PO
+              </TabsTrigger>
+              <TabsTrigger value="NON_PO" className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Ngoài PO
+              </TabsTrigger>
+              <TabsTrigger value="PRODUCTION" className="flex items-center gap-2">
+                <Factory className="h-4 w-4" />
+                Từ Sản xuất
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Tab 1: From PO */}
+            <TabsContent value="PO">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Đơn mua hàng</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {loadingPOs ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang tải danh sách PO...
+                    </div>
+                  ) : purchaseOrders.length === 0 ? (
+                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>
+                        Không có đơn mua hàng nào ở trạng thái{" "}
+                        <strong>Đã nhận hàng</strong>. Vui lòng nhận hàng PO trước
+                        khi tạo phiếu kiểm tra.
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Đơn mua hàng (PO) *</Label>
+                          <Select
+                            value={selectedPOId}
+                            onValueChange={handlePOSelect}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn PO" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {purchaseOrders.map((po) => (
+                                <SelectItem key={po.id} value={po.id}>
+                                  {po.poNumber} — {po.supplier?.name || "N/A"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Dòng PO *</Label>
+                          {loadingLines ? (
+                            <div className="flex items-center gap-2 text-muted-foreground h-10">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Đang tải...
+                            </div>
+                          ) : (
+                            <Select
+                              value={selectedLineId}
+                              onValueChange={handleLineSelect}
+                              disabled={!selectedPOId || poLines.length === 0}
+                            >
+                              <SelectTrigger>
+                                <SelectValue
+                                  placeholder={
+                                    !selectedPOId
+                                      ? "Chọn PO trước"
+                                      : poLines.length === 0
+                                        ? "Không có dòng nào cần nhận"
+                                        : "Chọn dòng PO"
+                                  }
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {poLines.map((line) => (
+                                  <SelectItem key={line.id} value={line.id}>
+                                    #{line.lineNumber} — {line.part.partNumber}{" "}
+                                    (Đặt: {line.quantity} / Nhận:{" "}
+                                    {line.receivedQty})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PO Info Display */}
+                      {selectedPO && (
+                        <div className="bg-muted/50 rounded-md p-3 space-y-1 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                            <Info className="h-3.5 w-3.5" />
+                            Thông tin PO
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">
+                              Nhà cung cấp:{" "}
+                            </span>
+                            <span className="font-medium">
+                              {selectedPO.supplier?.name || "N/A"}
+                            </span>
+                          </div>
+                          {selectedLine && (
+                            <>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Vật tư:{" "}
+                                </span>
+                                <span className="font-medium">
+                                  {selectedLine.part.partNumber} -{" "}
+                                  {selectedLine.part.name}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Số lượng đặt:{" "}
+                                </span>
+                                <span className="font-medium">
+                                  {selectedLine.quantity}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Đã nhận:{" "}
+                                </span>
+                                <span className="font-medium">
+                                  {selectedLine.receivedQty}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Còn lại:{" "}
+                                </span>
+                                <span className="font-medium text-orange-600">
+                                  {selectedLine.quantity - selectedLine.receivedQty}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedPOId && !loadingLines && poLines.length === 0 && (
+                        <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-sm">
+                          <AlertCircle className="h-4 w-4" />
+                          <span>
+                            PO này đã nhận đủ hàng cho tất cả các dòng.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab 2: Non-PO */}
+            <TabsContent value="NON_PO">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Nhận hàng ngoài PO</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md text-sm mb-2">
+                    <Info className="h-4 w-4" />
+                    <span>
+                      Dùng cho hàng mẫu, hàng trả lại, chuyển kho, hoặc nhận hàng không qua PO.
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Linh kiện / Vật tư *</Label>
+                    {loadingParts ? (
+                      <div className="flex items-center gap-2 text-muted-foreground h-10">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tải danh sách linh kiện...
+                      </div>
+                    ) : (
                       <Select
-                        value={selectedPOId}
-                        onValueChange={handlePOSelect}
+                        value={selectedPartId}
+                        onValueChange={handlePartSelect}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn PO" />
+                          <SelectValue placeholder="Chọn linh kiện" />
                         </SelectTrigger>
                         <SelectContent>
-                          {purchaseOrders.map((po) => (
-                            <SelectItem key={po.id} value={po.id}>
-                              {po.poNumber} — {po.supplier?.name || "N/A"}
+                          {parts.map((part) => (
+                            <SelectItem key={part.id} value={part.id}>
+                              {part.partNumber} — {part.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Dòng PO *</Label>
-                      {loadingLines ? (
-                        <div className="flex items-center gap-2 text-muted-foreground h-10">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Đang tải...
-                        </div>
-                      ) : (
-                        <Select
-                          value={selectedLineId}
-                          onValueChange={handleLineSelect}
-                          disabled={!selectedPOId || poLines.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                !selectedPOId
-                                  ? "Chọn PO trước"
-                                  : poLines.length === 0
-                                    ? "Không có dòng nào cần nhận"
-                                    : "Chọn dòng PO"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {poLines.map((line) => (
-                              <SelectItem key={line.id} value={line.id}>
-                                #{line.lineNumber} — {line.part.partNumber}{" "}
-                                (Đặt: {line.quantity} / Nhận:{" "}
-                                {line.receivedQty})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
+                    )}
                   </div>
 
-                  {/* PO Info Display */}
-                  {selectedPO && (
+                  {selectedPartId && (
                     <div className="bg-muted/50 rounded-md p-3 space-y-1 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <Info className="h-3.5 w-3.5" />
-                        Thông tin PO
+                        Thông tin linh kiện
                       </div>
                       <div>
-                        <span className="text-muted-foreground">
-                          Nhà cung cấp:{" "}
-                        </span>
-                        <span className="font-medium">
-                          {selectedPO.supplier?.name || "N/A"}
+                        <span className="text-muted-foreground">Linh kiện: </span>
+                        <span className="font-medium">{formData.partDisplay}</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab 3: Production */}
+            <TabsContent value="PRODUCTION">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Nhận bán thành phẩm từ sản xuất</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md text-sm mb-2">
+                    <Info className="h-4 w-4" />
+                    <span>
+                      Nhận thành phẩm/bán thành phẩm từ Work Order đã hoàn thành hoặc đang thực hiện.
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Lệnh sản xuất (Work Order) *</Label>
+                    {loadingWOs ? (
+                      <div className="flex items-center gap-2 text-muted-foreground h-10">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tải danh sách WO...
+                      </div>
+                    ) : workOrders.length === 0 ? (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>
+                          Không có lệnh sản xuất nào ở trạng thái{" "}
+                          <strong>Hoàn thành</strong> hoặc <strong>Đang thực hiện</strong>.
                         </span>
                       </div>
-                      {selectedLine && (
-                        <>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Vật tư:{" "}
-                            </span>
-                            <span className="font-medium">
-                              {selectedLine.part.partNumber} -{" "}
-                              {selectedLine.part.name}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Số lượng đặt:{" "}
-                            </span>
-                            <span className="font-medium">
-                              {selectedLine.quantity}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Đã nhận:{" "}
-                            </span>
-                            <span className="font-medium">
-                              {selectedLine.receivedQty}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">
-                              Còn lại:{" "}
-                            </span>
-                            <span className="font-medium text-orange-600">
-                              {selectedLine.quantity - selectedLine.receivedQty}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                    ) : (
+                      <Select
+                        value={selectedWOId}
+                        onValueChange={handleWOSelect}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn Work Order" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workOrders.map((wo) => (
+                            <SelectItem key={wo.id} value={wo.id}>
+                              {wo.woNumber} — {wo.product?.name || "N/A"} (SL hoàn thành: {wo.completedQty})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
 
-                  {selectedPOId && !loadingLines && poLines.length === 0 && (
-                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-sm">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>
-                        PO này đã nhận đủ hàng cho tất cả các dòng.
-                      </span>
+                  {selectedWO && (
+                    <div className="bg-muted/50 rounded-md p-3 space-y-1 text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <Factory className="h-3.5 w-3.5" />
+                        Thông tin Work Order
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">WO: </span>
+                        <span className="font-medium">{selectedWO.woNumber}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Sản phẩm: </span>
+                        <span className="font-medium">
+                          {selectedWO.product.sku} - {selectedWO.product.name}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">SL kế hoạch: </span>
+                        <span className="font-medium">{selectedWO.quantity}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">SL hoàn thành: </span>
+                        <span className="font-medium text-green-600">
+                          {selectedWO.completedQty}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Trạng thái: </span>
+                        <span className="font-medium capitalize">
+                          {selectedWO.status.replace("_", " ")}
+                        </span>
+                      </div>
                     </div>
                   )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           {/* Quality Control Info — from Part */}
           {loadingQC && (
@@ -496,7 +831,7 @@ export default function NewReceivingInspectionPage() {
                     type="number"
                     min="1"
                     max={
-                      selectedLine
+                      sourceType === "PO" && selectedLine
                         ? selectedLine.quantity - selectedLine.receivedQty
                         : undefined
                     }
@@ -509,11 +844,17 @@ export default function NewReceivingInspectionPage() {
                     }
                     placeholder="0"
                     required
+                    readOnly={sourceType === "PRODUCTION"}
                   />
-                  {selectedLine && (
+                  {sourceType === "PO" && selectedLine && (
                     <p className="text-xs text-muted-foreground">
                       Tối đa:{" "}
                       {selectedLine.quantity - selectedLine.receivedQty}
+                    </p>
+                  )}
+                  {sourceType === "PRODUCTION" && selectedWO && (
+                    <p className="text-xs text-muted-foreground">
+                      Từ WO: {selectedWO.completedQty} đã hoàn thành
                     </p>
                   )}
                 </div>
@@ -545,19 +886,29 @@ export default function NewReceivingInspectionPage() {
                         setFormData({ ...formData, lotNumber: e.target.value })
                       }
                       placeholder="LOT-XXXX"
-                      readOnly={!lotEditable}
-                      className={!lotEditable ? "bg-muted cursor-default" : ""}
+                      readOnly={!lotEditable && sourceType !== "NON_PO"}
+                      className={
+                        !lotEditable && sourceType !== "NON_PO"
+                          ? "bg-muted cursor-default"
+                          : ""
+                      }
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0 h-9 w-9"
-                      onClick={() => setLotEditable(!lotEditable)}
-                      title={lotEditable ? "Khóa" : "Sửa số lot"}
-                    >
-                      {lotEditable ? <Lock className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                    </Button>
+                    {sourceType !== "NON_PO" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-9 w-9"
+                        onClick={() => setLotEditable(!lotEditable)}
+                        title={lotEditable ? "Khóa" : "Sửa số lot"}
+                      >
+                        {lotEditable ? (
+                          <Lock className="h-4 w-4" />
+                        ) : (
+                          <Pencil className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -587,15 +938,7 @@ export default function NewReceivingInspectionPage() {
             <Button type="button" variant="outline" asChild>
               <Link href="/quality/receiving">Hủy</Link>
             </Button>
-            <Button
-              type="submit"
-              disabled={
-                loading ||
-                !selectedPOId ||
-                !selectedLineId ||
-                !formData.partId
-              }
-            >
+            <Button type="submit" disabled={isSubmitDisabled()}>
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

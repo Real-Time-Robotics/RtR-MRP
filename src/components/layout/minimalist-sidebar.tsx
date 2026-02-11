@@ -24,7 +24,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
-  Warehouse
+  Warehouse,
+  PackageMinus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -60,6 +61,7 @@ const toolItems: SidebarItem[] = [
   { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-3.5 h-3.5" />, href: '/bom' },
   { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-3.5 h-3.5" />, href: '/suppliers' },
   { id: 'warehouses', label: 'WAREHOUSES', labelVi: 'KHO', icon: <Warehouse className="w-3.5 h-3.5" />, href: '/warehouses' },
+  { id: 'issue', label: 'ISSUE', labelVi: 'XUẤT KHO', icon: <PackageMinus className="w-3.5 h-3.5" />, href: '/inventory/issue' },
 ];
 
 const utilityItems: SidebarItem[] = [

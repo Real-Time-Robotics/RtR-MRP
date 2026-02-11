@@ -7,8 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
 import { BomTree } from "@/components/bom/bom-tree";
+import { BomLineManager } from "@/components/bom/bom-line-manager";
 import { BomDiscussions } from "@/components/bom/bom-discussions";
+import { CreateBomHeaderButton } from "@/components/bom/create-bom-header-button";
 import { BOMExportButton } from "@/components/bom/bom-export-button";
+import { BomStatusSwitcher } from "@/components/bom/bom-status-switcher";
 import prisma from "@/lib/prisma";
 import { formatCurrency } from "@/lib/currency";
 
@@ -21,7 +24,11 @@ async function getProductWithBOM(id: string) {
     where: { id },
     include: {
       bomHeaders: {
-        where: { status: "active" },
+        where: { status: { in: ["active", "draft"] } },
+        orderBy: [
+          { status: "asc" }, // "active" before "draft" alphabetically
+          { createdAt: "desc" },
+        ],
         include: {
           bomLines: {
             include: {
@@ -40,7 +47,66 @@ async function getProductWithBOM(id: string) {
 
   if (!product) return null;
 
-  const activeBom = product.bomHeaders[0];
+  // Use the first BOM (active preferred, then draft)
+  const bom = product.bomHeaders[0];
+
+  // Fetch sub-BOMs: find products whose SKU matches a part number in this BOM
+  const partNumbers = bom?.bomLines.map((l) => l.part.partNumber) || [];
+  const subProducts = partNumbers.length > 0
+    ? await prisma.product.findMany({
+        where: {
+          sku: { in: partNumbers },
+          bomHeaders: { some: { status: { in: ["active", "draft"] } } },
+        },
+        include: {
+          bomHeaders: {
+            where: { status: { in: ["active", "draft"] } },
+            orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+            take: 1,
+            include: {
+              bomLines: {
+                include: { part: { include: { costs: true } } },
+                orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
+              },
+            },
+          },
+        },
+      })
+    : [];
+
+  // Build a map: partNumber → sub-BOM children
+  const subBomMap = new Map<string, Array<{
+    id: string;
+    lineNumber: number;
+    partNumber: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    unitCost: number;
+    isCritical: boolean;
+    moduleCode: string;
+    moduleName: string;
+  }>>();
+
+  for (const sp of subProducts) {
+    const subBom = sp.bomHeaders[0];
+    if (!subBom) continue;
+    subBomMap.set(
+      sp.sku,
+      subBom.bomLines.map((sl) => ({
+        id: sl.id,
+        lineNumber: sl.lineNumber,
+        partNumber: sl.part.partNumber,
+        name: sl.part.name,
+        quantity: sl.quantity,
+        unit: sl.unit,
+        unitCost: sl.part.costs?.[0]?.unitCost || 0,
+        isCritical: sl.isCritical,
+        moduleCode: sl.moduleCode || "MISC",
+        moduleName: sl.moduleName || "Miscellaneous",
+      }))
+    );
+  }
 
   // Group lines by module
   const moduleMap = new Map<
@@ -57,12 +123,23 @@ async function getProductWithBOM(id: string) {
         unit: string;
         unitCost: number;
         isCritical: boolean;
+        children?: Array<{
+          id: string;
+          lineNumber: number;
+          partNumber: string;
+          name: string;
+          quantity: number;
+          unit: string;
+          unitCost: number;
+          isCritical: boolean;
+        }>;
+        subBomProductId?: string;
       }>;
       totalCost: number;
     }
   >();
 
-  activeBom?.bomLines.forEach((line) => {
+  bom?.bomLines.forEach((line) => {
     const code = line.moduleCode || "MISC";
     const name = line.moduleName || "Miscellaneous";
 
@@ -79,6 +156,10 @@ async function getProductWithBOM(id: string) {
     const unitCost = line.part.costs?.[0]?.unitCost || 0;
     const lineCost = line.quantity * unitCost;
 
+    // Check for sub-BOM children
+    const children = subBomMap.get(line.part.partNumber);
+    const subProduct = subProducts.find((sp) => sp.sku === line.part.partNumber);
+
     bomModule.lines.push({
       id: line.id,
       lineNumber: line.lineNumber,
@@ -88,6 +169,8 @@ async function getProductWithBOM(id: string) {
       unit: line.unit,
       unitCost: unitCost,
       isCritical: line.isCritical,
+      children: children || undefined,
+      subBomProductId: subProduct?.id,
     });
     bomModule.totalCost += lineCost;
   });
@@ -102,15 +185,14 @@ async function getProductWithBOM(id: string) {
     description: product.description,
     basePrice: product.basePrice || 0,
     status: product.status,
-    bomVersion: activeBom?.version || "N/A",
-    bomStatus: activeBom?.status || "N/A",
-    totalParts: activeBom?.bomLines.length || 0,
+    bomHeaderId: bom?.id || null,
+    bomVersion: bom?.version || "N/A",
+    bomStatus: bom?.status || "N/A",
+    totalParts: bom?.bomLines.length || 0,
     totalCost,
     modules,
   };
 }
-
-// Using centralized formatCurrency from @/lib/currency
 
 export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
   const { id } = await params;
@@ -119,6 +201,8 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
   if (!product) {
     notFound();
   }
+
+  const isEditable = product.bomStatus === "draft" || product.bomStatus === "active";
 
   return (
     <div className="space-y-6">
@@ -167,7 +251,14 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
             <p className="text-sm text-muted-foreground">BOM Version</p>
             <div className="flex items-center gap-2 mt-1">
               <Badge>{product.bomVersion}</Badge>
-              <Badge variant="outline">{product.bomStatus}</Badge>
+              {product.bomHeaderId ? (
+                <BomStatusSwitcher
+                  bomHeaderId={product.bomHeaderId}
+                  currentStatus={product.bomStatus}
+                />
+              ) : (
+                <Badge variant="outline">{product.bomStatus}</Badge>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -187,10 +278,23 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
         </Card>
       </div>
 
-      {/* BOM Structure */}
-      <Tabs defaultValue="structure" className="w-full">
+      {/* No BOM Header - show create prompt */}
+      {!product.bomHeaderId && (
+        <Card>
+          <CardContent>
+            <CreateBomHeaderButton productId={product.id} productName={product.name} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* BOM Structure - only show tabs when BOM header exists */}
+      {product.bomHeaderId && (
+      <Tabs defaultValue={product.totalParts === 0 ? "edit" : "structure"} className="w-full">
         <TabsList>
           <TabsTrigger value="structure">Structure</TabsTrigger>
+          {isEditable && (
+            <TabsTrigger value="edit">Edit BOM</TabsTrigger>
+          )}
           <TabsTrigger value="cost">Cost Analysis</TabsTrigger>
           <TabsTrigger value="discussions">Discussions</TabsTrigger>
         </TabsList>
@@ -202,15 +306,35 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
             </CardHeader>
             <CardContent>
               {product.modules.length === 0 ? (
-                <p className="text-center py-8 text-muted-foreground">
-                  No BOM lines found
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-2">
+                    No BOM lines found
+                  </p>
+                  {isEditable && (
+                    <p className="text-sm text-muted-foreground">
+                      Go to the <span className="font-medium">Edit BOM</span> tab to add component parts.
+                    </p>
+                  )}
+                </div>
               ) : (
                 <BomTree modules={product.modules} />
               )}
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isEditable && (
+          <TabsContent value="edit" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit BOM Lines</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BomLineManager bomHeaderId={product.bomHeaderId!} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="cost" className="mt-4">
           <Card>
@@ -237,17 +361,26 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
                         {formatCurrency(module.totalCost)}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {((module.totalCost / product.totalCost) * 100).toFixed(1)}%
+                        {product.totalCost > 0
+                          ? ((module.totalCost / product.totalCost) * 100).toFixed(1)
+                          : "0"}%
                       </p>
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-between p-4 border-2 border-primary rounded-lg bg-primary/5">
-                  <p className="font-bold">Total Material Cost</p>
-                  <p className="font-mono font-bold text-lg">
-                    {formatCurrency(product.totalCost)}
+                {product.modules.length > 0 && (
+                  <div className="flex items-center justify-between p-4 border-2 border-primary rounded-lg bg-primary/5">
+                    <p className="font-bold">Total Material Cost</p>
+                    <p className="font-mono font-bold text-lg">
+                      {formatCurrency(product.totalCost)}
+                    </p>
+                  </div>
+                )}
+                {product.modules.length === 0 && (
+                  <p className="text-center py-8 text-muted-foreground">
+                    No cost data available. Add parts to the BOM first.
                   </p>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -260,6 +393,7 @@ export default async function BOMDetailPage({ params }: BOMDetailPageProps) {
           />
         </TabsContent>
       </Tabs>
+      )}
     </div>
   );
 }

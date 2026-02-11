@@ -95,6 +95,7 @@ export type Permission =
   | 'inventory:view'
   | 'inventory:adjust'
   | 'inventory:transfer'
+  | 'inventory:issue'
 
   // Production
   | 'production:view'
@@ -140,7 +141,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'dashboard:view',
     'parts:view', 'parts:create', 'parts:edit', 'parts:delete',
     'orders:view', 'orders:create', 'orders:edit', 'orders:delete', 'orders:approve',
-    'inventory:view', 'inventory:adjust', 'inventory:transfer',
+    'inventory:view', 'inventory:adjust', 'inventory:transfer', 'inventory:issue',
     'production:view', 'production:create', 'production:edit', 'production:complete',
     'quality:view', 'quality:create', 'quality:edit', 'quality:close',
     'mrp:view', 'mrp:run', 'mrp:approve',
@@ -154,7 +155,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'dashboard:view',
     'parts:view', 'parts:create', 'parts:edit', 'parts:delete',
     'orders:view', 'orders:create', 'orders:edit', 'orders:approve',
-    'inventory:view', 'inventory:adjust', 'inventory:transfer',
+    'inventory:view', 'inventory:adjust', 'inventory:transfer', 'inventory:issue',
     'production:view', 'production:create', 'production:edit', 'production:complete',
     'quality:view', 'quality:create', 'quality:edit', 'quality:close',
     'mrp:view', 'mrp:run', 'mrp:approve',
@@ -168,7 +169,7 @@ export const rolePermissions: Record<UserRole, Permission[]> = {
     'dashboard:view',
     'parts:view', 'parts:create', 'parts:edit',
     'orders:view', 'orders:create', 'orders:edit',
-    'inventory:view', 'inventory:adjust',
+    'inventory:view', 'inventory:adjust', 'inventory:issue',
     'production:view', 'production:create', 'production:edit', 'production:complete',
     'quality:view', 'quality:create', 'quality:edit',
     'mrp:view', 'mrp:run',

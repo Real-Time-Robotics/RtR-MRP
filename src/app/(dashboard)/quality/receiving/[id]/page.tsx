@@ -25,6 +25,7 @@ interface Inspection {
   type: string;
   status: string;
   result: string | null;
+  sourceType: string | null;
   lotNumber: string | null;
   quantityReceived: number | null;
   quantityInspected: number | null;
@@ -41,7 +42,14 @@ interface Inspection {
   } | null;
   product?: { id: string; sku: string; name: string } | null;
   plan?: { id: string; planNumber: string; name: string } | null;
+  workOrder?: { id: string; woNumber: string; status: string; completedQty: number } | null;
 }
+
+const sourceTypeLabels: Record<string, string> = {
+  PO: "Nhận từ PO",
+  NON_PO: "Nhận ngoài PO",
+  PRODUCTION: "Nhận từ sản xuất",
+};
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-100 text-gray-800",
@@ -239,7 +247,12 @@ export default function ReceivingInspectionDetailPage() {
             <h1 className="text-2xl font-bold">
               {inspection.inspectionNumber}
             </h1>
-            <p className="text-muted-foreground">Receiving Inspection</p>
+            <p className="text-muted-foreground">
+              {inspection.sourceType && sourceTypeLabels[inspection.sourceType]
+                ? sourceTypeLabels[inspection.sourceType]
+                : "Receiving Inspection"}
+              {inspection.workOrder && ` - ${inspection.workOrder.woNumber}`}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -273,6 +286,20 @@ export default function ReceivingInspectionDetailPage() {
                 <span className="font-medium">
                   {inspection.part.partNumber} - {inspection.part.name}
                 </span>
+              </div>
+            )}
+            {!inspection.part && inspection.product && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sản phẩm</span>
+                <span className="font-medium">
+                  {inspection.product.sku} - {inspection.product.name}
+                </span>
+              </div>
+            )}
+            {inspection.workOrder && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Work Order</span>
+                <span className="font-medium">{inspection.workOrder.woNumber}</span>
               </div>
             )}
             {inspection.status === "completed" ? (

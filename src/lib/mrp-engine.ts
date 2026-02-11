@@ -224,6 +224,70 @@ export async function createWorkOrder(
   return workOrder;
 }
 
+// Regenerate material allocations from active BOM for an existing work order
+export async function regenerateAllocations(workOrderId: string) {
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    include: {
+      product: {
+        include: {
+          bomHeaders: {
+            where: { status: "active" },
+            include: { bomLines: true },
+          },
+        },
+      },
+      allocations: true,
+    },
+  });
+
+  if (!workOrder) throw new Error("Work order not found");
+
+  const bom = workOrder.product.bomHeaders[0];
+  if (!bom) {
+    return { allocations: workOrder.allocations, regenerated: false, reason: "No active BOM found" };
+  }
+
+  // Delete existing pending allocations (keep allocated/issued ones)
+  if (workOrder.allocations.length > 0) {
+    await prisma.materialAllocation.deleteMany({
+      where: { workOrderId, status: "pending" },
+    });
+  }
+
+  // Create new allocations from BOM
+  const newAllocations = [];
+  for (const line of bom.bomLines) {
+    const requiredQty = Math.ceil(line.quantity * workOrder.quantity * (1 + line.scrapRate));
+
+    // Check if this part already has a non-pending allocation
+    const existing = workOrder.allocations.find(
+      (a) => a.partId === line.partId && a.status !== "pending"
+    );
+    if (existing) continue;
+
+    newAllocations.push({
+      workOrderId,
+      partId: line.partId,
+      requiredQty,
+    });
+  }
+
+  if (newAllocations.length > 0) {
+    await prisma.materialAllocation.createMany({
+      data: newAllocations,
+      skipDuplicates: true,
+    });
+  }
+
+  const updated = await prisma.materialAllocation.findMany({
+    where: { workOrderId },
+    include: { part: true },
+  });
+
+  return { allocations: updated, regenerated: true };
+}
+
 // Allocate materials to work order
 export async function allocateMaterials(workOrderId: string) {
   const allocations = await prisma.materialAllocation.findMany({
@@ -272,27 +336,459 @@ export async function allocateMaterials(workOrderId: string) {
   return { allocations: updated, fullyAllocated };
 }
 
+// Issue materials from work order (actual warehouse withdrawal)
+export async function issueMaterials(workOrderId: string, allocationIds?: string[]) {
+  // 1. Get allocated (not yet fully issued) allocations
+  const whereClause: Record<string, unknown> = {
+    workOrderId,
+    status: "allocated",
+    allocatedQty: { gt: 0 },
+  };
+  if (allocationIds && allocationIds.length > 0) {
+    whereClause.id = { in: allocationIds };
+  }
+
+  const allocations = await prisma.materialAllocation.findMany({
+    where: whereClause,
+    include: { part: true },
+  });
+
+  for (const alloc of allocations) {
+    const issueQty = alloc.allocatedQty - alloc.issuedQty;
+    if (issueQty <= 0) continue;
+
+    // Find inventory record matching the allocation
+    const inventory = await prisma.inventory.findFirst({
+      where: {
+        partId: alloc.partId,
+        warehouseId: alloc.warehouseId!,
+        ...(alloc.lotNumber ? { lotNumber: alloc.lotNumber } : {}),
+      },
+    });
+
+    if (!inventory || inventory.quantity < issueQty) {
+      continue; // Skip if insufficient inventory
+    }
+
+    // Decrement inventory quantity and reserved qty
+    await prisma.inventory.update({
+      where: { id: inventory.id },
+      data: {
+        quantity: { decrement: issueQty },
+        reservedQty: { decrement: Math.min(issueQty, inventory.reservedQty) },
+      },
+    });
+
+    // Update allocation: mark as issued
+    await prisma.materialAllocation.update({
+      where: { id: alloc.id },
+      data: {
+        issuedQty: alloc.issuedQty + issueQty,
+        status: "issued",
+      },
+    });
+
+    // Create LotTransaction for traceability
+    if (alloc.lotNumber) {
+      await prisma.lotTransaction.create({
+        data: {
+          lotNumber: alloc.lotNumber,
+          transactionType: "ISSUED",
+          partId: alloc.partId,
+          quantity: issueQty,
+          previousQty: inventory.quantity,
+          newQty: inventory.quantity - issueQty,
+          workOrderId,
+          fromWarehouseId: alloc.warehouseId,
+          notes: `Issued to WO ${workOrderId}`,
+          userId: "system",
+        },
+      });
+    }
+  }
+
+  const updated = await prisma.materialAllocation.findMany({
+    where: { workOrderId },
+    include: { part: true },
+  });
+
+  const fullyIssued = updated.every((a) => a.issuedQty >= a.requiredQty);
+
+  return { allocations: updated, fullyIssued };
+}
+
+// Issue ad-hoc materials (non-WO: maintenance, samples, scrap, internal use)
+export async function issueAdHocMaterials(params: {
+  partId: string;
+  warehouseId: string;
+  quantity: number;
+  lotNumber?: string;
+  reason: string;
+  issueType: string;
+  userId: string;
+  notes?: string;
+  workOrderId?: string;
+}) {
+  const { partId, warehouseId, quantity, lotNumber, reason, issueType, userId, notes, workOrderId } = params;
+
+  // Find matching inventory record
+  const whereClause: Record<string, unknown> = {
+    partId,
+    warehouseId,
+  };
+  if (lotNumber) {
+    whereClause.lotNumber = lotNumber;
+  }
+
+  const inventory = await prisma.inventory.findFirst({
+    where: whereClause,
+    include: { part: true, warehouse: true },
+  });
+
+  if (!inventory) {
+    throw new Error("Không tìm thấy tồn kho cho part/kho này");
+  }
+
+  const available = inventory.quantity - inventory.reservedQty;
+  if (available < quantity) {
+    throw new Error(`Không đủ tồn kho. Khả dụng: ${available}, yêu cầu: ${quantity}`);
+  }
+
+  // Decrement inventory
+  await prisma.inventory.update({
+    where: { id: inventory.id },
+    data: {
+      quantity: { decrement: quantity },
+    },
+  });
+
+  // If issuing for a Work Order, update MaterialAllocation
+  if (workOrderId) {
+    const existingAlloc = await prisma.materialAllocation.findUnique({
+      where: { workOrderId_partId: { workOrderId, partId } },
+    });
+
+    if (existingAlloc) {
+      // Part already in WO checklist — increase allocated/issued only (required stays as BOM standard)
+      await prisma.materialAllocation.update({
+        where: { id: existingAlloc.id },
+        data: {
+          allocatedQty: { increment: quantity },
+          issuedQty: { increment: quantity },
+        },
+      });
+    } else {
+      // New part for this WO — create allocation as fully issued
+      await prisma.materialAllocation.create({
+        data: {
+          workOrderId,
+          partId,
+          requiredQty: quantity,
+          allocatedQty: quantity,
+          issuedQty: quantity,
+          warehouseId,
+          lotNumber: lotNumber || undefined,
+          status: "issued",
+        },
+      });
+    }
+  }
+
+  // Create LotTransaction for traceability
+  const txLotNumber = lotNumber || `ADHOC-${Date.now()}`;
+  const transaction = await prisma.lotTransaction.create({
+    data: {
+      lotNumber: txLotNumber,
+      transactionType: "ISSUED",
+      partId,
+      quantity,
+      previousQty: inventory.quantity,
+      newQty: inventory.quantity - quantity,
+      fromWarehouseId: warehouseId,
+      workOrderId: workOrderId || undefined,
+      userId,
+      notes: `[${issueType.toUpperCase()}] ${reason}${notes ? ` - ${notes}` : ""}`,
+    },
+  });
+
+  return {
+    transaction,
+    inventory: {
+      id: inventory.id,
+      partNumber: inventory.part.partNumber,
+      partName: inventory.part.name,
+      warehouse: inventory.warehouse.name,
+      previousQty: inventory.quantity,
+      newQty: inventory.quantity - quantity,
+      issuedQty: quantity,
+    },
+  };
+}
+
+// Receive production output — creates a PENDING ProductionReceipt for warehouse approval
+export async function receiveProductionOutput(workOrderId: string, userId: string) {
+  // 1. Load WO + Product, validate status
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: workOrderId },
+    include: { product: true },
+  });
+
+  if (!workOrder) {
+    throw new Error("Work order not found");
+  }
+
+  const status = workOrder.status.toUpperCase();
+  if (!["COMPLETED", "CLOSED"].includes(status)) {
+    throw new Error(`Work order phải ở trạng thái COMPLETED hoặc CLOSED (hiện tại: ${workOrder.status})`);
+  }
+
+  if (workOrder.completedQty <= 0) {
+    throw new Error("Số lượng hoàn thành phải lớn hơn 0");
+  }
+
+  // 2. Check for existing ProductionReceipt
+  const existingReceipt = await prisma.productionReceipt.findUnique({
+    where: { workOrderId },
+  });
+
+  if (existingReceipt) {
+    if (existingReceipt.status === "PENDING") {
+      return {
+        status: "PENDING",
+        receipt: existingReceipt,
+        message: `Phiếu nhập kho đang chờ xác nhận (${existingReceipt.quantity} units)`,
+      };
+    }
+    if (existingReceipt.status === "CONFIRMED") {
+      return {
+        status: "CONFIRMED",
+        receipt: existingReceipt,
+        message: `Đã nhập kho trước đó (${existingReceipt.quantity} units, lot: ${existingReceipt.lotNumber})`,
+      };
+    }
+    // REJECTED → delete old receipt so user can resend
+    await prisma.productionReceipt.delete({ where: { id: existingReceipt.id } });
+  }
+
+  // 2b. Backward-compat: check if WO was already received via old flow (LotTransaction PRODUCED)
+  const legacyTransaction = await prisma.lotTransaction.findFirst({
+    where: { transactionType: "PRODUCED", workOrderId },
+  });
+  if (legacyTransaction) {
+    return {
+      status: "CONFIRMED",
+      receipt: null,
+      message: `Đã nhập kho trước đó (${legacyTransaction.quantity} units, lot: ${legacyTransaction.lotNumber})`,
+    };
+  }
+
+  // 3. Find or auto-create Part (FINISHED_GOOD) for the product
+  const product = workOrder.product;
+  let part = await prisma.part.findFirst({
+    where: { partNumber: product.sku },
+  });
+
+  if (!part) {
+    part = await prisma.part.create({
+      data: {
+        partNumber: product.sku,
+        name: product.name,
+        category: "FINISHED_GOOD",
+        description: `Thành phẩm: ${product.name}`,
+        makeOrBuy: "MAKE",
+        status: "active",
+      },
+    });
+  }
+
+  // 4. Find Main Warehouse (type=MAIN → isDefault → oldest active)
+  let warehouse = await prisma.warehouse.findFirst({
+    where: { type: "MAIN", status: "active" },
+  });
+
+  if (!warehouse) {
+    warehouse = await prisma.warehouse.findFirst({
+      where: { isDefault: true, status: "active" },
+    });
+  }
+
+  if (!warehouse) {
+    warehouse = await prisma.warehouse.findFirst({
+      where: { status: "active" },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  if (!warehouse) {
+    throw new Error("Không tìm thấy kho nào trong hệ thống");
+  }
+
+  // 5. Create ProductionReceipt with PENDING status
+  const lotNumber = `LOT-WO-${workOrder.woNumber}`;
+  const quantity = workOrder.completedQty;
+  const receiptNumber = `PR-${workOrder.woNumber}`;
+
+  const receipt = await prisma.productionReceipt.create({
+    data: {
+      receiptNumber,
+      workOrderId,
+      productId: product.id,
+      partId: part.id,
+      quantity,
+      lotNumber,
+      warehouseId: warehouse.id,
+      status: "PENDING",
+      requestedBy: userId,
+    },
+  });
+
+  return {
+    status: "PENDING",
+    receipt,
+    message: `Đã tạo phiếu nhập kho, chờ kho xác nhận (${quantity} ${product.name})`,
+  };
+}
+
+// Confirm production receipt — warehouse approves and inventory is updated
+export async function confirmProductionReceipt(receiptId: string, userId: string) {
+  const receipt = await prisma.productionReceipt.findUnique({
+    where: { id: receiptId },
+    include: { workOrder: true, product: true, warehouse: true },
+  });
+
+  if (!receipt) {
+    throw new Error("Phiếu nhập kho không tồn tại");
+  }
+
+  if (receipt.status !== "PENDING") {
+    throw new Error(`Phiếu đã được xử lý (trạng thái: ${receipt.status})`);
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Update receipt → CONFIRMED
+    const updatedReceipt = await tx.productionReceipt.update({
+      where: { id: receiptId },
+      data: {
+        status: "CONFIRMED",
+        confirmedBy: userId,
+        confirmedAt: new Date(),
+      },
+    });
+
+    // 2. Upsert Inventory
+    const existingInventory = receipt.partId ? await tx.inventory.findUnique({
+      where: {
+        partId_warehouseId_lotNumber: {
+          partId: receipt.partId,
+          warehouseId: receipt.warehouseId,
+          lotNumber: receipt.lotNumber,
+        },
+      },
+    }) : null;
+
+    let inventory;
+    if (existingInventory) {
+      inventory = await tx.inventory.update({
+        where: { id: existingInventory.id },
+        data: { quantity: { increment: receipt.quantity } },
+      });
+    } else if (receipt.partId) {
+      inventory = await tx.inventory.create({
+        data: {
+          partId: receipt.partId,
+          warehouseId: receipt.warehouseId,
+          lotNumber: receipt.lotNumber,
+          quantity: receipt.quantity,
+        },
+      });
+    }
+
+    // 3. Create LotTransaction PRODUCED
+    if (receipt.partId) {
+      await tx.lotTransaction.create({
+        data: {
+          lotNumber: receipt.lotNumber,
+          transactionType: "PRODUCED",
+          partId: receipt.partId,
+          productId: receipt.productId,
+          quantity: receipt.quantity,
+          previousQty: existingInventory?.quantity ?? 0,
+          newQty: (existingInventory?.quantity ?? 0) + receipt.quantity,
+          toWarehouseId: receipt.warehouseId,
+          workOrderId: receipt.workOrderId,
+          userId,
+          notes: `Nhập kho thành phẩm từ WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (phiếu ${receipt.receiptNumber})`,
+        },
+      });
+    }
+
+    return { receipt: updatedReceipt, inventory };
+  });
+
+  return {
+    ...result,
+    message: `Đã xác nhận nhập kho ${receipt.quantity} ${receipt.product.name} vào ${receipt.warehouse.name}`,
+  };
+}
+
+// Reject production receipt — warehouse rejects with reason
+export async function rejectProductionReceipt(receiptId: string, userId: string, reason: string) {
+  const receipt = await prisma.productionReceipt.findUnique({
+    where: { id: receiptId },
+    include: { product: true },
+  });
+
+  if (!receipt) {
+    throw new Error("Phiếu nhập kho không tồn tại");
+  }
+
+  if (receipt.status !== "PENDING") {
+    throw new Error(`Phiếu đã được xử lý (trạng thái: ${receipt.status})`);
+  }
+
+  const updatedReceipt = await prisma.productionReceipt.update({
+    where: { id: receiptId },
+    data: {
+      status: "REJECTED",
+      rejectedBy: userId,
+      rejectedAt: new Date(),
+      rejectedReason: reason,
+    },
+  });
+
+  return {
+    receipt: updatedReceipt,
+    message: `Đã từ chối phiếu nhập kho ${receipt.receiptNumber} (${receipt.product.name})`,
+  };
+}
+
 // Update work order status
 export async function updateWorkOrderStatus(
   workOrderId: string,
   status: string,
-  completedQty?: number
+  completedQty?: number,
+  scrapQty?: number
 ) {
+  const normalizedStatus = status.toUpperCase();
   const updateData: {
     status: string;
     completedQty?: number;
+    scrapQty?: number;
     actualStart?: Date;
     actualEnd?: Date;
-  } = { status };
+  } = { status: normalizedStatus };
 
-  if (status === "in_progress") {
+  if (normalizedStatus === "IN_PROGRESS") {
     updateData.actualStart = new Date();
   }
 
-  if (status === "completed") {
+  if (normalizedStatus === "COMPLETED") {
     updateData.actualEnd = new Date();
     if (completedQty !== undefined) {
       updateData.completedQty = completedQty;
+    }
+    if (scrapQty !== undefined) {
+      updateData.scrapQty = scrapQty;
     }
   }
 

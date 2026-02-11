@@ -22,6 +22,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         part: { select: { id: true, partNumber: true, name: true, unit: true } },
         product: { select: { id: true, sku: true, name: true } },
         plan: { select: { id: true, planNumber: true, name: true } },
+        workOrder: { select: { id: true, woNumber: true, status: true, completedQty: true } },
         results: {
           include: { characteristic: true },
           orderBy: { inspectedAt: "asc" },

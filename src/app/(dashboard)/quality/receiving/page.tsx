@@ -28,13 +28,21 @@ interface Inspection {
   type: string;
   status: string;
   result: string | null;
+  sourceType: string | null;
   lotNumber: string | null;
   quantityReceived: number | null;
   quantityAccepted: number | null;
   quantityRejected: number | null;
   part?: { partNumber: string; name: string } | null;
+  product?: { sku: string; name: string } | null;
+  workOrder?: { woNumber: string } | null;
   createdAt: string;
 }
+
+const sourceBadge: Record<string, { label: string; className: string }> = {
+  NON_PO: { label: "Ngoài PO", className: "bg-purple-100 text-purple-700" },
+  PRODUCTION: { label: "Sản xuất", className: "bg-indigo-100 text-indigo-700" },
+};
 
 type TabKey = "all" | "pending" | "in_progress" | "pass" | "conditional" | "fail";
 
@@ -342,11 +350,26 @@ export default function ReceivingInspectionsPage() {
                           <span className="font-bold text-base">
                             {inspection.inspectionNumber}
                           </span>
+                          {inspection.sourceType && sourceBadge[inspection.sourceType] && (
+                            <Badge variant="outline" className={sourceBadge[inspection.sourceType].className}>
+                              {sourceBadge[inspection.sourceType].label}
+                            </Badge>
+                          )}
                         </div>
                         {inspection.part && (
                           <p className="font-medium text-sm">
                             {inspection.part.partNumber} -{" "}
                             {inspection.part.name}
+                          </p>
+                        )}
+                        {!inspection.part && inspection.product && (
+                          <p className="font-medium text-sm">
+                            {inspection.product.sku} - {inspection.product.name}
+                          </p>
+                        )}
+                        {inspection.workOrder && (
+                          <p className="text-xs text-muted-foreground">
+                            WO: {inspection.workOrder.woNumber}
                           </p>
                         )}
                         <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">

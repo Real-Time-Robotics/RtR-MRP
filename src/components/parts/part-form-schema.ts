@@ -2,11 +2,12 @@
 import { z } from 'zod';
 
 // Category enum values matching API validation schema
-export const CATEGORY_ENUM = ['FINISHED_GOOD', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL'] as const;
+export const CATEGORY_ENUM = ['FINISHED_GOOD', 'SEMI_FINISHED', 'COMPONENT', 'RAW_MATERIAL', 'PACKAGING', 'CONSUMABLE', 'TOOL'] as const;
 
 // Display labels for categories (Vietnamese)
 export const CATEGORY_LABELS: Record<string, string> = {
     'FINISHED_GOOD': 'Thành phẩm',
+    'SEMI_FINISHED': 'Bán thành phẩm',
     'COMPONENT': 'Linh kiện',
     'RAW_MATERIAL': 'Nguyên liệu',
     'PACKAGING': 'Bao bì',
@@ -30,6 +31,7 @@ export const STATUS_LABELS: Record<string, string> = {
 // Legacy - kept for backward compatibility
 export const CATEGORIES = [
     'FINISHED_GOOD',
+    'SEMI_FINISHED',
     'COMPONENT',
     'RAW_MATERIAL',
     'PACKAGING',

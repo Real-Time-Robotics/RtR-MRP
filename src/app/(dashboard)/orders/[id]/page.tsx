@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAIContextSync } from '@/hooks/use-ai-context-sync';
-import { ArrowLeft, ShoppingCart, User, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, User, Calendar, FileText, Printer, Package } from 'lucide-react';
 import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -93,6 +93,28 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
     const totalAmount = order.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
 
+    const handlePrintPackingList = async () => {
+        const { generatePackingListPDF } = await import('@/lib/documents');
+        generatePackingListPDF({
+            orderNumber: order.orderNumber,
+            orderDate: order.orderDate,
+            customer: {
+                code: '-',
+                name: order.customer.name,
+                contactName: null,
+                contactPhone: null,
+                billingAddress: null,
+            },
+            notes: order.notes,
+            lines: order.lines.map((line) => ({
+                lineNumber: line.lineNumber,
+                product: line.product,
+                quantity: line.quantity,
+                unit: 'pcs',
+            })),
+        });
+    };
+
     return (
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
@@ -100,7 +122,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                 <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         Order Detail
                         <Badge variant="outline" className="font-mono text-base">{order.orderNumber}</Badge>
@@ -117,6 +139,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                         </span>
                     </div>
                 </div>
+                <Button variant="secondary" size="sm" onClick={handlePrintPackingList}>
+                    <Package className="h-4 w-4 mr-2" />
+                    Packing List
+                </Button>
             </div>
 
             <Tabs defaultValue="details" className="w-full">

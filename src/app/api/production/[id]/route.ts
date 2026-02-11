@@ -27,6 +27,7 @@ export const GET = withAuth(
           allocations: {
             include: { part: true },
           },
+          productionReceipt: true,
         },
       });
 
@@ -34,9 +35,30 @@ export const GET = withAuth(
         throw new NotFoundError("Work order", id);
       }
 
+      // Backward-compat: if no ProductionReceipt but has legacy LotTransaction PRODUCED
+      let responseData: Record<string, unknown> = { ...workOrder };
+      if (!workOrder.productionReceipt) {
+        const legacyTx = await prisma.lotTransaction.findFirst({
+          where: { transactionType: "PRODUCED", workOrderId: id },
+        });
+        if (legacyTx) {
+          responseData.productionReceipt = {
+            id: legacyTx.id,
+            receiptNumber: `LEGACY-${legacyTx.lotNumber}`,
+            quantity: legacyTx.quantity,
+            lotNumber: legacyTx.lotNumber,
+            status: "CONFIRMED",
+            requestedAt: legacyTx.createdAt,
+            confirmedAt: legacyTx.createdAt,
+            rejectedAt: null,
+            rejectedReason: null,
+          };
+        }
+      }
+
       logger.audit("read", "workOrder", id, { userId: user.id });
 
-      return successResponse(workOrder);
+      return successResponse(responseData);
     } catch (error) {
       return handleError(error);
     }
@@ -60,14 +82,14 @@ export const PATCH = withAuth(
         return validation.error;
       }
 
-      const { status, completedQty, ...updateData } = validation.data;
+      const { status, completedQty, scrapQty, ...updateData } = validation.data;
 
       logger.info("Updating work order", { workOrderId: id, userId: user.id, status });
 
       let workOrder;
 
       if (status) {
-        workOrder = await updateWorkOrderStatus(id, status, completedQty);
+        workOrder = await updateWorkOrderStatus(id, status, completedQty, scrapQty);
       } else {
         workOrder = await prisma.workOrder.update({
           where: { id },

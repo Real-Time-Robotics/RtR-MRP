@@ -16,11 +16,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
   sku: string;
   name: string;
+}
+
+interface SalesOrderLine {
+  id: string;
+  productId: string;
+  quantity: number;
+  product?: { name: string };
 }
 
 interface SalesOrder {
@@ -30,14 +38,8 @@ interface SalesOrder {
     name: string;
   };
   requiredDate: string;
-  items: Array<{
-    id: string;
-    productId: string;
-    quantity: number;
-    product: {
-      name: string;
-    };
-  }>;
+  items?: SalesOrderLine[];
+  lines?: SalesOrderLine[];
 }
 
 export default function NewWorkOrderPage() {
@@ -88,16 +90,29 @@ export default function NewWorkOrderPage() {
   const handleSalesOrderChange = (orderId: string) => {
     setSalesOrderId(orderId);
     const order = salesOrders.find((o) => o.id === orderId);
-    if (order && order.items.length > 0) {
-      setProductId(order.items[0].productId);
-      setQuantity(order.items[0].quantity.toString());
+    const items = order?.items || order?.lines || [];
+    if (order && items.length > 0) {
+      setProductId(items[0].productId);
+      setQuantity(items[0].quantity.toString());
       // Set planned end to required date
-      setPlannedEnd(order.requiredDate.split("T")[0]);
+      if (order.requiredDate) {
+        setPlannedEnd(order.requiredDate.split("T")[0]);
+      }
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!productId) {
+      toast.error("Vui lòng chọn sản phẩm");
+      return;
+    }
+    if (!quantity || parseInt(quantity) < 1) {
+      toast.error("Số lượng phải >= 1");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -106,23 +121,29 @@ export default function NewWorkOrderPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productId,
-          salesOrderId: salesOrderId || null,
+          salesOrderId: salesOrderId && salesOrderId !== "none" ? salesOrderId : undefined,
           quantity: parseInt(quantity),
           priority,
-          plannedStart: plannedStart || null,
-          plannedEnd: plannedEnd || null,
-          notes: notes || null,
+          plannedStart: plannedStart || undefined,
+          plannedEnd: plannedEnd || undefined,
+          notes: notes || undefined,
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
-        router.push(`/production/${data.id}`);
+        toast.success("Tạo Work Order thành công!");
+        const woId = data.data?.id || data.id;
+        router.push(`/production/${woId}`);
       } else {
-        console.error("Failed to create work order");
+        const errMsg = data.error || data.message || "Không thể tạo Work Order";
+        toast.error(errMsg);
+        console.error("Failed to create work order:", data);
       }
     } catch (error) {
       console.error("Failed to create work order:", error);
+      toast.error("Lỗi kết nối server");
     } finally {
       setLoading(false);
     }
