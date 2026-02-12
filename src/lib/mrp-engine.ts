@@ -801,3 +801,305 @@ export async function updateWorkOrderStatus(
     },
   });
 }
+
+// ============ SHIPPING / DELIVERY (Xuất kho & Giao hàng) ============
+
+// Create shipment from Sales Order
+export async function createShipment(salesOrderId: string, userId: string) {
+  const salesOrder = await prisma.salesOrder.findUnique({
+    where: { id: salesOrderId },
+    include: {
+      lines: { include: { product: true }, orderBy: { lineNumber: "asc" } },
+      customer: true,
+      shipment: true,
+    },
+  });
+
+  if (!salesOrder) {
+    throw new Error("Đơn hàng không tồn tại");
+  }
+
+  if (!["completed", "in_progress"].includes(salesOrder.status)) {
+    throw new Error(
+      `Đơn hàng phải ở trạng thái completed hoặc in_progress (hiện tại: ${salesOrder.status})`
+    );
+  }
+
+  if (salesOrder.shipment) {
+    return {
+      shipment: salesOrder.shipment,
+      message: `Phiếu xuất kho đã tồn tại (${salesOrder.shipment.shipmentNumber})`,
+      existing: true,
+    };
+  }
+
+  const shipmentNumber = `SHP-${salesOrder.orderNumber}`;
+
+  const shipment = await prisma.shipment.create({
+    data: {
+      shipmentNumber,
+      salesOrderId,
+      customerId: salesOrder.customerId,
+      status: "PREPARING",
+      shippedBy: userId,
+      lines: {
+        create: salesOrder.lines.map((line) => ({
+          lineNumber: line.lineNumber,
+          productId: line.productId,
+          quantity: line.quantity,
+        })),
+      },
+    },
+    include: { lines: { include: { product: true } } },
+  });
+
+  return {
+    shipment,
+    message: `Đã tạo phiếu xuất kho ${shipmentNumber}`,
+    existing: false,
+  };
+}
+
+// Confirm shipment — deduct inventory, mark as SHIPPED
+export async function confirmShipment(
+  shipmentId: string,
+  userId: string,
+  options?: {
+    carrier?: string;
+    trackingNumber?: string;
+    lotAllocations?: Array<{
+      lineNumber: number;
+      allocations: Array<{ lotNumber: string; quantity: number }>;
+    }>;
+  }
+) {
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: {
+      salesOrder: true,
+      lines: { include: { product: true } },
+      customer: true,
+    },
+  });
+
+  if (!shipment) {
+    throw new Error("Phiếu xuất kho không tồn tại");
+  }
+
+  if (shipment.status !== "PREPARING") {
+    throw new Error(
+      `Phiếu xuất kho đã được xử lý (trạng thái: ${shipment.status})`
+    );
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Deduct inventory for each line
+    for (const line of shipment.lines) {
+      // Find Part by product SKU
+      const part = await tx.part.findFirst({
+        where: { partNumber: line.product.sku },
+      });
+
+      if (!part) {
+        throw new Error(
+          `Không tìm thấy Part cho sản phẩm ${line.product.name} (SKU: ${line.product.sku})`
+        );
+      }
+
+      // Find MAIN warehouse
+      let warehouse = await tx.warehouse.findFirst({
+        where: { type: "MAIN", status: "active" },
+      });
+      if (!warehouse) {
+        warehouse = await tx.warehouse.findFirst({
+          where: { isDefault: true, status: "active" },
+        });
+      }
+      if (!warehouse) {
+        warehouse = await tx.warehouse.findFirst({
+          where: { status: "active" },
+          orderBy: { createdAt: "asc" },
+        });
+      }
+
+      if (!warehouse) {
+        throw new Error("Không tìm thấy kho nào trong hệ thống");
+      }
+
+      // Check if user provided lot allocations for this line
+      const userAllocation = options?.lotAllocations?.find(
+        (la) => la.lineNumber === line.lineNumber
+      );
+
+      if (userAllocation && userAllocation.allocations.length > 0) {
+        // --- User-specified lot allocations ---
+        const totalAllocated = userAllocation.allocations.reduce(
+          (sum, a) => sum + a.quantity, 0
+        );
+        if (totalAllocated !== line.quantity) {
+          throw new Error(
+            `Tổng số lượng phân bổ cho ${line.product.name} (${totalAllocated}) không khớp số lượng yêu cầu (${line.quantity})`
+          );
+        }
+
+        for (const alloc of userAllocation.allocations) {
+          if (alloc.quantity <= 0) continue;
+
+          const inv = await tx.inventory.findFirst({
+            where: {
+              partId: part.id,
+              warehouseId: warehouse.id,
+              lotNumber: alloc.lotNumber,
+            },
+          });
+
+          if (!inv) {
+            throw new Error(
+              `Không tìm thấy lot ${alloc.lotNumber} cho ${line.product.name} trong kho`
+            );
+          }
+
+          if (inv.quantity < alloc.quantity) {
+            throw new Error(
+              `Lot ${alloc.lotNumber} không đủ tồn kho cho ${line.product.name}. Tồn: ${inv.quantity}, yêu cầu: ${alloc.quantity}`
+            );
+          }
+
+          await tx.inventory.update({
+            where: { id: inv.id },
+            data: { quantity: { decrement: alloc.quantity } },
+          });
+
+          await tx.lotTransaction.create({
+            data: {
+              lotNumber: inv.lotNumber || `SHP-${shipment.shipmentNumber}`,
+              transactionType: "SHIPPED",
+              partId: part.id,
+              productId: line.productId,
+              quantity: alloc.quantity,
+              previousQty: inv.quantity,
+              newQty: inv.quantity - alloc.quantity,
+              fromWarehouseId: warehouse.id,
+              salesOrderId: shipment.salesOrderId,
+              soLineNumber: line.lineNumber,
+              userId,
+              notes: `Xuất kho ${line.product.name} x${alloc.quantity} (lot ${alloc.lotNumber}) - Đơn hàng ${shipment.salesOrder.orderNumber}`,
+            },
+          });
+        }
+      } else {
+        // --- Auto-allocate (backward compatible) ---
+        const inventoryRecords = await tx.inventory.findMany({
+          where: { partId: part.id, warehouseId: warehouse.id },
+          orderBy: { quantity: "desc" },
+        });
+
+        const totalStock = inventoryRecords.reduce((sum, inv) => sum + inv.quantity, 0);
+
+        if (totalStock < line.quantity) {
+          throw new Error(
+            `Không đủ tồn kho cho ${line.product.name} (SKU: ${line.product.sku}). Cần: ${line.quantity}, tồn kho: ${totalStock}`
+          );
+        }
+
+        let remaining = line.quantity;
+        for (const inv of inventoryRecords) {
+          if (remaining <= 0) break;
+          const deductQty = Math.min(remaining, inv.quantity);
+
+          await tx.inventory.update({
+            where: { id: inv.id },
+            data: { quantity: { decrement: deductQty } },
+          });
+
+          await tx.lotTransaction.create({
+            data: {
+              lotNumber: inv.lotNumber || `SHP-${shipment.shipmentNumber}`,
+              transactionType: "SHIPPED",
+              partId: part.id,
+              productId: line.productId,
+              quantity: deductQty,
+              previousQty: inv.quantity,
+              newQty: inv.quantity - deductQty,
+              fromWarehouseId: warehouse.id,
+              salesOrderId: shipment.salesOrderId,
+              soLineNumber: line.lineNumber,
+              userId,
+              notes: `Xuất kho ${line.product.name} x${deductQty} - Đơn hàng ${shipment.salesOrder.orderNumber}`,
+            },
+          });
+
+          remaining -= deductQty;
+        }
+      }
+    }
+
+    // 2. Update Shipment → SHIPPED
+    const updatedShipment = await tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        status: "SHIPPED",
+        carrier: options?.carrier || null,
+        trackingNumber: options?.trackingNumber || null,
+        shippedAt: new Date(),
+        shippedBy: userId,
+      },
+    });
+
+    // 3. Update SalesOrder → shipped
+    await tx.salesOrder.update({
+      where: { id: shipment.salesOrderId },
+      data: { status: "shipped" },
+    });
+
+    return updatedShipment;
+  });
+
+  return {
+    shipment: result,
+    message: `Đã xuất kho đơn hàng ${shipment.salesOrder.orderNumber}`,
+  };
+}
+
+// Confirm delivery — mark as DELIVERED
+export async function confirmDelivery(shipmentId: string, userId: string) {
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: { salesOrder: true },
+  });
+
+  if (!shipment) {
+    throw new Error("Phiếu xuất kho không tồn tại");
+  }
+
+  if (shipment.status !== "SHIPPED") {
+    throw new Error(
+      `Phiếu xuất kho phải ở trạng thái SHIPPED để xác nhận giao (hiện tại: ${shipment.status})`
+    );
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Update Shipment → DELIVERED
+    const updatedShipment = await tx.shipment.update({
+      where: { id: shipmentId },
+      data: {
+        status: "DELIVERED",
+        deliveredAt: new Date(),
+        deliveredBy: userId,
+      },
+    });
+
+    // 2. Update SalesOrder → delivered
+    await tx.salesOrder.update({
+      where: { id: shipment.salesOrderId },
+      data: { status: "delivered" },
+    });
+
+    return updatedShipment;
+  });
+
+  return {
+    shipment: result,
+    message: `Đã xác nhận giao hàng đơn ${shipment.salesOrder.orderNumber}`,
+  };
+}

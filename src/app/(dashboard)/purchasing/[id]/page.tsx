@@ -112,8 +112,8 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" iconOnly size="sm" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
+                <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="flex-1">
                     <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -129,8 +129,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                         </span>
                     </div>
                 </div>
-                <Button variant="secondary" size="sm" onClick={handlePrintPDF}>
-                    <Printer className="h-4 w-4 mr-2" />
+                <Button variant="secondary" size="sm" leftIcon={<Printer className="h-4 w-4" />} onClick={handlePrintPDF}>
                     Print PDF
                 </Button>
             </div>

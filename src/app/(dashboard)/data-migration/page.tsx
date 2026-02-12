@@ -570,7 +570,7 @@ export default function DataMigrationCopilotPage() {
                     placeholder="Hỏi AI Copilot..."
                     className="flex-1 h-10"
                   />
-                  <Button onClick={handleAISend} size="icon" className="h-10 w-10 shrink-0">
+                  <Button onClick={handleAISend} size="icon" className="shrink-0">
                     <MessageSquare className="w-5 h-5" />
                   </Button>
                 </div>

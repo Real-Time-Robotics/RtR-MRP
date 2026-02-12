@@ -185,8 +185,8 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" iconOnly size="sm" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
+                <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -197,14 +197,14 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                 </div>
                 <div className="ml-auto flex gap-2">
                     {!editMode ? (
-                        <Button onClick={() => setEditMode(true)} variant="secondary">
+                        <Button size="sm" onClick={() => setEditMode(true)} variant="secondary">
                             Edit Location / Lot
                         </Button>
                     ) : (
                         <>
-                            <Button variant="ghost" onClick={() => setEditMode(false)} disabled={isSubmitting}>Cancel</Button>
-                            <Button onClick={() => submit(formData)} disabled={isSubmitting}>
-                                {isSubmitting ? 'Saving...' : 'Save Changes'}
+                            <Button variant="ghost" size="sm" onClick={() => setEditMode(false)} disabled={isSubmitting}>Cancel</Button>
+                            <Button size="sm" onClick={() => submit(formData)} loading={isSubmitting} loadingText="Saving...">
+                                Save Changes
                             </Button>
                         </>
                     )}
@@ -339,9 +339,8 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                                                 <span className="text-sm text-muted-foreground">/ {inventory.quantity} {inventory.part.unit}</span>
                                                 <Button
                                                     variant="ghost"
-                                                    size="sm"
+                                                    size="xs"
                                                     onClick={() => setFormData(prev => ({ ...prev, transferQty: inventory.quantity }))}
-                                                    className="text-xs"
                                                 >
                                                     Tất cả
                                                 </Button>

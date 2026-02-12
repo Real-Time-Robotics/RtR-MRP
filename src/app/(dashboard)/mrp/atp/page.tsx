@@ -157,7 +157,6 @@ export default function ATPPage() {
             <Button
               onClick={calculateATP}
               disabled={isLoading || !selectedPartId}
-              className="h-10"
             >
               {isLoading ? (
                 <>

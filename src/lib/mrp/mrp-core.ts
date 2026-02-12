@@ -66,18 +66,38 @@ export class MrpEngine {
         // We need to know which Part ID corresponds to the BomHeader.productId.
         // Let's resolve that by fetching Products and finding matching Parts by SKU/PartNumber.
 
-        const products = await prisma.product.findMany({ select: { id: true, sku: true } });
+        const products = await prisma.product.findMany({ select: { id: true, sku: true, name: true } });
         const productSkuMap = new Map(products.map(p => [p.id, p.sku]));
+        const productNameMap = new Map(products.map(p => [p.sku, p.name]));
 
         // Map SKU to Part ID for bridging
         const skuToPartId = new Map(parts.map(p => [p.partNumber, p.id]));
+
+        // Auto-create missing Part records for Products that have no matching Part
+        for (const product of products) {
+            if (!skuToPartId.has(product.sku)) {
+                const newPart = await prisma.part.create({
+                    data: {
+                        partNumber: product.sku,
+                        name: product.name,
+                        category: "FINISHED_GOOD",
+                        description: `Thành phẩm: ${product.name}`,
+                        makeOrBuy: "MAKE",
+                        status: "active",
+                    },
+                });
+                skuToPartId.set(product.sku, newPart.id);
+                // @ts-ignore
+                partMap.set(newPart.id, { id: newPart.id, partNumber: newPart.partNumber, planning: null, inventory: [] });
+            }
+        }
 
         for (const bom of boms) {
             const productSku = productSkuMap.get(bom.productId);
             if (!productSku) continue;
 
             const parentPartId = skuToPartId.get(productSku);
-            if (!parentPartId) continue; // BOM exists for product without matching Part record (maybe non-stock)
+            if (!parentPartId) continue;
 
             if (!bomGraph.has(parentPartId)) bomGraph.set(parentPartId, []);
 
@@ -95,7 +115,10 @@ export class MrpEngine {
         // If A -> B -> C, LLC(A)=0, LLC(B)=1, LLC(C)=2.
         // Algorithm: Initialize all to 0. BFS/DFS to propagate depths.
         const llcMap = new Map<string, number>();
-        parts.forEach(p => llcMap.set(p.id, 0));
+        // Initialize all parts (original + auto-created) to level 0
+        for (const [partId] of partMap) {
+            llcMap.set(partId, 0);
+        }
 
         let changed = true;
         let loops = 0;
@@ -222,6 +245,18 @@ export class MrpEngine {
                 data: suggestionsToCreate
             });
         }
+
+        // 8. Update MRP Run with counts
+        const purchaseCount = suggestionsToCreate.filter(s => s.actionType === 'PURCHASE').length;
+        const expediteCount = suggestionsToCreate.filter(s => s.actionType === 'EXPEDITE').length;
+        await prisma.mrpRun.update({
+            where: { id: this.runId },
+            data: {
+                totalParts: grossRequirements.size,
+                purchaseSuggestions: purchaseCount,
+                expediteAlerts: expediteCount,
+            },
+        });
 
         return { success: true, suggestionsCount: suggestionsToCreate.length };
     }

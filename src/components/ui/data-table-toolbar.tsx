@@ -160,7 +160,6 @@ export function DataTableToolbar({
               size="sm"
               onClick={onFilter}
               className={cn(
-                'h-9',
                 hasActiveFilters && 'border-blue-500 text-blue-600'
               )}
             >
@@ -178,10 +177,10 @@ export function DataTableToolbar({
           {onRefresh && (
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={onRefresh}
               disabled={isLoading}
-              className="h-9"
+              className="h-9 w-9"
             >
               <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
             </Button>
@@ -196,7 +195,6 @@ export function DataTableToolbar({
               variant="destructive"
               size="sm"
               onClick={onBulkDelete}
-              className="h-9"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Xóa ({selectedCount})
@@ -212,7 +210,6 @@ export function DataTableToolbar({
               variant="outline"
               size="sm"
               onClick={onImport}
-              className="h-9"
             >
               <Upload className="h-4 w-4 mr-2" />
               {importLabel}
@@ -225,7 +222,6 @@ export function DataTableToolbar({
               variant="outline"
               size="sm"
               onClick={onExport}
-              className="h-9"
             >
               <Download className="h-4 w-4 mr-2" />
               {exportLabel}
@@ -234,7 +230,7 @@ export function DataTableToolbar({
 
           {/* Add New */}
           {onAdd && can(addPermission) && (
-            <Button size="sm" onClick={onAdd} className="h-9">
+            <Button size="sm" onClick={onAdd}>
               <Plus className="h-4 w-4 mr-2" />
               {addLabel}
             </Button>
@@ -306,7 +302,7 @@ export function DataTableToolbar({
               variant="ghost"
               size="sm"
               onClick={onClearFilters}
-              className="h-8 text-gray-500"
+              className="text-gray-500"
             >
               <X className="h-4 w-4 mr-1" />
               Xóa bộ lọc

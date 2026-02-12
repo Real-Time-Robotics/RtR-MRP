@@ -503,10 +503,7 @@ function DataTable<T extends Record<string, any>>({
                       if (el) el.indeterminate = someSelected && !allSelected;
                     }}
                     onChange={handleSelectAll}
-                    className={cn(
-                      'h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-primary-500 dark:bg-slate-800',
-                      isExcelMode ? 'text-[#217346]' : 'text-primary-600'
-                    )}
+                    className="h-4 w-4"
                   />
                 </th>
               )}
@@ -628,10 +625,7 @@ function DataTable<T extends Record<string, any>>({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectRow(row)}
-                          className={cn(
-                            'h-4 w-4 rounded border-slate-300 dark:border-slate-600 focus:ring-primary-500 dark:bg-slate-800',
-                            isExcelMode ? 'text-[#217346]' : 'text-primary-600'
-                          )}
+                          className="h-4 w-4"
                         />
                       </td>
                     )}

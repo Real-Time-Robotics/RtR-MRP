@@ -82,7 +82,7 @@ export const PATCH = withAuth(
         return validation.error;
       }
 
-      const { status, completedQty, scrapQty, ...updateData } = validation.data;
+      const { status, completedQty, scrapQty, plannedStart, plannedEnd, ...updateData } = validation.data;
 
       logger.info("Updating work order", { workOrderId: id, userId: user.id, status });
 
@@ -91,9 +91,15 @@ export const PATCH = withAuth(
       if (status) {
         workOrder = await updateWorkOrderStatus(id, status, completedQty, scrapQty);
       } else {
+        const data: Record<string, unknown> = { ...updateData };
+        if (completedQty !== undefined) data.completedQty = completedQty;
+        if (scrapQty !== undefined) data.scrapQty = scrapQty;
+        if (plannedStart !== undefined) data.plannedStart = plannedStart ? new Date(plannedStart) : null;
+        if (plannedEnd !== undefined) data.plannedEnd = plannedEnd ? new Date(plannedEnd) : null;
+
         workOrder = await prisma.workOrder.update({
           where: { id },
-          data: updateData,
+          data,
           include: {
             product: true,
             allocations: { include: { part: true } },

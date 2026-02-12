@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAIContextSync } from "@/hooks/use-ai-context-sync";
-import { Loader2, Play, Pause, CheckCircle, Package, Printer, Lock, Archive, AlertTriangle, PackageCheck, Clock, XCircle, RotateCcw } from "lucide-react";
+import { Loader2, Play, Pause, CheckCircle, Package, Printer, Lock, Archive, AlertTriangle, PackageCheck, Clock, XCircle, RotateCcw, Trash2, Ban, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -77,6 +80,21 @@ export default function WorkOrderDetailPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [completionData, setCompletionData] = useState({ completedQty: 0, scrapQty: 0 });
   const [receiving, setReceiving] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editData, setEditData] = useState({
+    quantity: 1,
+    priority: "normal",
+    plannedStart: "",
+    plannedEnd: "",
+    notes: "",
+  });
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [resendData, setResendData] = useState({ completedQty: 0, scrapQty: 0 });
 
   const fetchData = useCallback(async () => {
     try {
@@ -230,6 +248,142 @@ export default function WorkOrderDetailPage() {
     }
   };
 
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/production/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || err.message || "Không thể hủy Work Order");
+        return;
+      }
+      setCancelDialogOpen(false);
+      toast.success("Work Order đã được hủy");
+      fetchData();
+    } catch {
+      toast.error("Lỗi hủy Work Order");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/production/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || err.message || "Không thể xóa Work Order");
+        return;
+      }
+      toast.success("Work Order đã được xóa");
+      router.push("/production");
+    } catch {
+      toast.error("Lỗi xóa Work Order");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openEditDialog = () => {
+    if (!data) return;
+    setEditData({
+      quantity: data.quantity,
+      priority: data.priority || "normal",
+      plannedStart: data.plannedStart ? new Date(data.plannedStart).toISOString().slice(0, 10) : "",
+      plannedEnd: data.plannedEnd ? new Date(data.plannedEnd).toISOString().slice(0, 10) : "",
+      notes: data.notes || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        priority: editData.priority,
+        notes: editData.notes || null,
+      };
+      if (editData.quantity !== data?.quantity) body.quantity = editData.quantity;
+      if (editData.plannedStart) body.plannedStart = new Date(editData.plannedStart).toISOString();
+      else body.plannedStart = null;
+      if (editData.plannedEnd) body.plannedEnd = new Date(editData.plannedEnd).toISOString();
+      else body.plannedEnd = null;
+
+      const res = await fetch(`/api/production/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || err.message || "Không thể cập nhật Work Order");
+        return;
+      }
+      setEditDialogOpen(false);
+      toast.success("Work Order đã được cập nhật");
+      fetchData();
+    } catch {
+      toast.error("Lỗi cập nhật Work Order");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openResendDialog = () => {
+    if (!data) return;
+    setResendData({
+      completedQty: data.completedQty,
+      scrapQty: data.scrapQty,
+    });
+    setResendDialogOpen(true);
+  };
+
+  const handleResend = async () => {
+    setReceiving(true);
+    try {
+      // First update completedQty/scrapQty if changed
+      if (data && (resendData.completedQty !== data.completedQty || resendData.scrapQty !== data.scrapQty)) {
+        const patchRes = await fetch(`/api/production/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            completedQty: resendData.completedQty,
+            scrapQty: resendData.scrapQty,
+          }),
+        });
+        if (!patchRes.ok) {
+          const err = await patchRes.json();
+          toast.error(err.error || err.message || "Không thể cập nhật số lượng");
+          return;
+        }
+      }
+      // Then resend receipt
+      const res = await fetch(`/api/production/${id}/receive`, { method: "POST" });
+      const result = await res.json();
+      if (res.status === 409) {
+        fetchData();
+        setResendDialogOpen(false);
+        return;
+      }
+      if (!res.ok) {
+        toast.error(result.error || result.message || "Lỗi gửi lại phiếu nhập kho");
+        return;
+      }
+      setResendDialogOpen(false);
+      toast.success("Đã gửi lại phiếu nhập kho, chờ kho xác nhận");
+      fetchData();
+    } catch {
+      toast.error("Lỗi gửi lại phiếu nhập kho");
+    } finally {
+      setReceiving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -271,6 +425,27 @@ export default function WorkOrderDetailPage() {
         backHref="/production"
         actions={
           <div className="flex gap-2">
+            {/* Edit - only when not completed/closed/cancelled */}
+            {!["completed", "closed", "cancelled"].includes(data.status?.toLowerCase()) && (
+              <Button variant="outline" size="sm" onClick={openEditDialog}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {/* Cancel - for draft/released/in_progress/on_hold */}
+            {["draft", "released", "in_progress", "on_hold"].includes(data.status?.toLowerCase()) && (
+              <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50" onClick={() => setCancelDialogOpen(true)}>
+                <Ban className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            )}
+            {/* Delete - only draft or cancelled */}
+            {["draft", "cancelled"].includes(data.status?.toLowerCase()) && (
+              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={handlePrintPDF}>
               <Printer className="h-4 w-4 mr-2" />
               Print PDF
@@ -339,24 +514,20 @@ export default function WorkOrderDetailPage() {
                     Bị từ chối: {data.productionReceipt.rejectedReason}
                   </Badge>
                   <Button
-                    onClick={handleReceiveOutput}
+                    onClick={openResendDialog}
                     disabled={receiving}
                     size="sm"
                     variant="outline"
                   >
-                    {receiving ? (
-                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4 mr-1.5" />
-                    )}
-                    Gửi lại
+                    <Pencil className="h-4 w-4 mr-1.5" />
+                    Sửa &amp; Gửi lại
                   </Button>
                 </div>
               ) : (
                 <Button
                   onClick={handleReceiveOutput}
                   disabled={receiving}
-                  variant="default"
+                  size="sm"
                   className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   {receiving ? (
@@ -619,6 +790,240 @@ export default function WorkOrderDetailPage() {
             <Button onClick={handleComplete}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Xác nhận
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <Ban className="h-5 w-5" />
+              Hủy Work Order
+            </DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn hủy <strong>{data.woNumber}</strong>? Work Order sẽ chuyển sang trạng thái &quot;Đã hủy&quot; và không thể tiếp tục sản xuất.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+            <p className="flex items-center gap-1 font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              Lưu ý
+            </p>
+            <ul className="mt-1 ml-5 list-disc space-y-1">
+              <li>Vật tư đã cấp phát sẽ không tự động hoàn trả</li>
+              <li>Sau khi hủy, có thể xóa Work Order nếu cần</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
+              Đóng
+            </Button>
+            <Button variant="destructive" onClick={handleCancel} disabled={cancelling} className="bg-orange-600 hover:bg-orange-700">
+              {cancelling && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Xác nhận hủy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Xóa Work Order
+            </DialogTitle>
+            <DialogDescription>
+              Bạn có chắc muốn xóa vĩnh viễn <strong>{data.woNumber}</strong>? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <p className="flex items-center gap-1 font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              Cảnh báo
+            </p>
+            <p className="mt-1">Toàn bộ dữ liệu liên quan (phân bổ vật tư, operations, chi phí) sẽ bị xóa theo.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+              Đóng
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Xóa vĩnh viễn
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Chỉnh sửa Work Order
+            </DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cho {data.woNumber}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editQuantity">Số lượng</Label>
+                <Input
+                  id="editQuantity"
+                  type="number"
+                  min={1}
+                  value={editData.quantity}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      quantity: Math.max(1, parseInt(e.target.value) || 1),
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editPriority">Độ ưu tiên</Label>
+                <Select
+                  value={editData.priority}
+                  onValueChange={(value) =>
+                    setEditData((prev) => ({ ...prev, priority: value }))
+                  }
+                >
+                  <SelectTrigger id="editPriority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editPlannedStart">Ngày bắt đầu dự kiến</Label>
+                <Input
+                  id="editPlannedStart"
+                  type="date"
+                  value={editData.plannedStart}
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, plannedStart: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editPlannedEnd">Ngày kết thúc dự kiến</Label>
+                <Input
+                  id="editPlannedEnd"
+                  type="date"
+                  value={editData.plannedEnd}
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, plannedEnd: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editNotes">Ghi chú</Label>
+              <Textarea
+                id="editNotes"
+                rows={3}
+                value={editData.notes}
+                onChange={(e) =>
+                  setEditData((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Thêm ghi chú..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={saving}>
+              Hủy
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Lưu thay đổi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resend Receipt Dialog - when rejected */}
+      <Dialog open={resendDialogOpen} onOpenChange={setResendDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Sửa &amp; Gửi lại phiếu nhập kho
+            </DialogTitle>
+            <DialogDescription>
+              Phiếu trước bị từ chối{data.productionReceipt?.rejectedReason ? `: "${data.productionReceipt.rejectedReason}"` : ""}. Chỉnh sửa số lượng rồi gửi lại.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="resendCompletedQty">Số lượng hoàn thành</Label>
+              <Input
+                id="resendCompletedQty"
+                type="number"
+                min={0}
+                max={data.quantity}
+                value={resendData.completedQty}
+                onChange={(e) =>
+                  setResendData((prev) => ({
+                    ...prev,
+                    completedQty: Math.max(0, parseInt(e.target.value) || 0),
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="resendScrapQty">Số lượng phế phẩm (scrap)</Label>
+              <Input
+                id="resendScrapQty"
+                type="number"
+                min={0}
+                value={resendData.scrapQty}
+                onChange={(e) =>
+                  setResendData((prev) => ({
+                    ...prev,
+                    scrapQty: Math.max(0, parseInt(e.target.value) || 0),
+                  }))
+                }
+              />
+            </div>
+            <div className="rounded-md border p-3 space-y-1">
+              <p className="text-sm">
+                Tổng: {resendData.completedQty + resendData.scrapQty} / {data.quantity}
+              </p>
+              <Progress
+                value={data.quantity > 0 ? (resendData.completedQty / data.quantity) * 100 : 0}
+              />
+              {resendData.completedQty + resendData.scrapQty > data.quantity && (
+                <p className="text-sm text-yellow-600 flex items-center gap-1">
+                  <AlertTriangle className="h-4 w-4" />
+                  Tổng vượt quá số lượng kế hoạch ({data.quantity})
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResendDialogOpen(false)} disabled={receiving}>
+              Hủy
+            </Button>
+            <Button onClick={handleResend} disabled={receiving || resendData.completedQty <= 0}>
+              {receiving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Gửi lại phiếu nhập kho
             </Button>
           </DialogFooter>
         </DialogContent>

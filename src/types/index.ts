@@ -132,6 +132,11 @@ export interface BomExplosionResult {
   status: "OK" | "SHORTAGE";
   moduleCode?: string;
   moduleName?: string;
+  level: number;
+  isSubAssembly: boolean;
+  parentPartNumber?: string;
+  children?: BomExplosionResult[];
+  quantityPer: number;
 }
 
 // ============ INVENTORY ============

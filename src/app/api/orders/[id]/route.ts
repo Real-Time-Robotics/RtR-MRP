@@ -42,6 +42,14 @@ export async function GET(
                     },
                     orderBy: { lineNumber: 'asc' }
                 },
+                shipment: {
+                    include: {
+                        lines: {
+                            include: { product: true },
+                            orderBy: { lineNumber: 'asc' },
+                        },
+                    },
+                },
             },
         });
 

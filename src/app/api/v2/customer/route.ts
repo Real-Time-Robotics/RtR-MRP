@@ -178,7 +178,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Dashboard view
     if (view === 'dashboard') {
       // Fetch all data for dashboard
-      const [salesOrders, invoices] = await Promise.all([
+      const [salesOrders, invoices, pendingShipments] = await Promise.all([
         prisma.salesOrder.findMany({
           where: { customerId },
           include: {
@@ -197,6 +197,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             lines: true,
           },
           orderBy: { invoiceDate: 'desc' },
+        }),
+        prisma.shipment.count({
+          where: { customerId, status: { in: ['PREPARING', 'SHIPPED'] } },
         }),
       ]);
 
@@ -217,7 +220,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         customer,
         summary: {
           activeOrders: activeOrders.length,
-          pendingDeliveries: 0, // Would need delivery tracking table
+          pendingDeliveries: pendingShipments,
           unpaidInvoices: unpaidInvoices.length,
           openTickets: 0, // Would need support ticket table
           totalSpent: invoiceList.filter(i => i.status === 'PAID').reduce((s, i) => s + i.total, 0),
@@ -358,14 +361,57 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Deliveries view - would need a delivery tracking table
+    // Deliveries view — powered by Shipment model
     if (view === 'deliveries') {
-      // For now, return empty until delivery tracking is implemented
+      const page = parseInt(searchParams.get('page') || '1');
+      const limit = parseInt(searchParams.get('limit') || '10');
+
+      const [shipments, total] = await Promise.all([
+        prisma.shipment.findMany({
+          where: { customerId },
+          include: {
+            salesOrder: true,
+            lines: { include: { product: true }, orderBy: { lineNumber: 'asc' } },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        prisma.shipment.count({ where: { customerId } }),
+      ]);
+
+      const deliveries: CustomerDelivery[] = shipments.map((s) => ({
+        id: s.id,
+        deliveryNumber: s.shipmentNumber,
+        soId: s.salesOrderId,
+        soNumber: s.salesOrder.orderNumber,
+        customerId: s.customerId,
+        status: s.status as CustomerDelivery['status'],
+        shipDate: s.shippedAt?.toISOString(),
+        actualArrival: s.deliveredAt?.toISOString(),
+        trackingNumber: s.trackingNumber || undefined,
+        carrier: s.carrier || undefined,
+        items: s.lines.map((l) => ({
+          id: l.id,
+          soItemId: l.id,
+          productCode: l.product.sku,
+          productName: l.product.name,
+          orderedQty: l.quantity,
+          shippedQty: l.quantity,
+          status: s.status === 'DELIVERED' ? 'DELIVERED' as const : s.status === 'SHIPPED' ? 'SHIPPED' as const : 'PENDING' as const,
+        })),
+        shippingAddress: '',
+        createdAt: s.createdAt.toISOString(),
+      }));
+
       return NextResponse.json({
         success: true,
         data: {
-          deliveries: [],
-          total: 0,
+          deliveries,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
         },
       });
     }

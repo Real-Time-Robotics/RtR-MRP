@@ -568,6 +568,7 @@ model Product {
   certificates    CertificateOfConformance[]
   routings        Routing[]
   productionReceipts ProductionReceipt[]
+  shipmentLines      ShipmentLine[]
 
   // Financial relations
   salesInvoiceLines SalesInvoiceLine[]
@@ -720,6 +721,7 @@ model Customer {
   createdAt      DateTime @default(now())
 
   salesOrders SalesOrder[]
+  shipments   Shipment[]
 
   // Financial relations
   salesInvoices SalesInvoice[]
@@ -750,6 +752,9 @@ model SalesOrder {
   // Financial relations
   salesInvoices SalesInvoice[]
 
+  // Shipping
+  shipment Shipment?
+
   // Performance indexes
   @@index([customerId, orderDate])
   @@index([status])
@@ -776,6 +781,47 @@ model SalesOrderLine {
 
   @@unique([orderId, lineNumber])
   @@map("sales_order_lines")
+}
+
+// ============ SHIPMENTS (Xuất kho & Giao hàng) ============
+model Shipment {
+  id              String    @id @default(cuid())
+  shipmentNumber  String    @unique
+  salesOrderId    String    @unique
+  customerId      String
+  status          String    @default("PREPARING") // PREPARING | SHIPPED | DELIVERED
+  carrier         String?
+  trackingNumber  String?
+  shippedAt       DateTime?
+  deliveredAt     DateTime?
+  shippedBy       String?
+  deliveredBy     String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  salesOrder SalesOrder   @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  customer   Customer     @relation(fields: [customerId], references: [id])
+  lines      ShipmentLine[]
+
+  @@index([status])
+  @@index([customerId])
+  @@map("shipments")
+}
+
+model ShipmentLine {
+  id          String @id @default(cuid())
+  shipmentId  String
+  lineNumber  Int
+  productId   String
+  quantity    Int
+  createdAt   DateTime @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@unique([shipmentId, lineNumber])
+  @@map("shipment_lines")
 }
 
 // ============ PURCHASING ============

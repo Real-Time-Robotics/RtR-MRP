@@ -101,8 +101,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
+                <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">

@@ -9,6 +9,8 @@ type OrderStatus =
   | "confirmed"
   | "in_progress"
   | "completed"
+  | "shipped"
+  | "delivered"
   | "cancelled";
 
 interface OrderStatusBadgeProps {
@@ -36,6 +38,14 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   completed: {
     label: "Hoàn thành",
     className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
+  },
+  shipped: {
+    label: "Đã xuất kho",
+    className: "bg-indigo-100 text-indigo-800 hover:bg-indigo-100",
+  },
+  delivered: {
+    label: "Đã giao hàng",
+    className: "bg-teal-100 text-teal-800 hover:bg-teal-100",
   },
   cancelled: {
     label: "Đã hủy",

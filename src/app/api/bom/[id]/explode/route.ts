@@ -27,11 +27,12 @@ export async function GET(
     }
 
     // Explode BOM
-    const { results, summary } = await explodeBOM(id, quantity);
+    const { results, tree, summary } = await explodeBOM(id, quantity);
 
     return NextResponse.json({
       product,
       results,
+      tree,
       summary,
     });
   } catch (error) {

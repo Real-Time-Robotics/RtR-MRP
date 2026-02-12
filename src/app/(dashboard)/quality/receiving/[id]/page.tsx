@@ -241,7 +241,7 @@ export default function ReceivingInspectionDetailPage() {
             size="icon"
             onClick={() => router.push("/quality/receiving")}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">
@@ -315,8 +315,8 @@ export default function ReceivingInspectionDetailPage() {
                   <span className="text-muted-foreground">Lot/Batch *</span>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
+                    size="sm"
+                    className="h-7 w-7 p-0"
                     onClick={() => setLotEditable(!lotEditable)}
                   >
                     {lotEditable ? (
@@ -521,7 +521,7 @@ export default function ReceivingInspectionDetailPage() {
           </CardHeader>
           <CardContent>
             {inspection.status === "pending" && (
-              <Button onClick={handleStartInspection} disabled={updating}>
+              <Button size="sm" onClick={handleStartInspection} disabled={updating}>
                 {updating && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
@@ -531,6 +531,7 @@ export default function ReceivingInspectionDetailPage() {
             {inspection.status === "in_progress" && (
               <div className="flex flex-wrap gap-3">
                 <Button
+                  size="sm"
                   onClick={() => handleComplete("PASS")}
                   disabled={updating}
                   className="bg-green-600 hover:bg-green-700"
@@ -543,6 +544,7 @@ export default function ReceivingInspectionDetailPage() {
                   Đạt (PASS)
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => handleComplete("CONDITIONAL")}
                   disabled={updating}
                   variant="outline"
@@ -556,6 +558,7 @@ export default function ReceivingInspectionDetailPage() {
                   Chấp nhận có điều kiện
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => handleComplete("FAIL")}
                   disabled={updating}
                   variant="destructive"
