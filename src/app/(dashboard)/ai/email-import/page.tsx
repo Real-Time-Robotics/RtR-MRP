@@ -203,7 +203,7 @@ export default function EmailImportPage() {
             {(extractedData || error) && (
               <button
                 onClick={handleReset}
-                className="h-7 px-3 text-[11px] bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 flex items-center gap-1.5"
+                className="h-9 px-3 text-xs bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Làm mới

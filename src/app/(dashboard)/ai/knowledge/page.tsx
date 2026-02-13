@@ -195,7 +195,7 @@ export default function KnowledgePage() {
               <button
                 onClick={fetchStats}
                 disabled={loading}
-                className="h-7 px-3 text-[11px] bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5"
+                className="h-9 px-3 text-xs bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5"
               >
                 <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
                 Refresh
@@ -203,7 +203,7 @@ export default function KnowledgePage() {
               <button
                 onClick={handleIndexAll}
                 disabled={indexing}
-                className="h-7 px-3 text-[11px] bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
+                className="h-9 px-3 text-xs bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1.5 disabled:opacity-50"
               >
                 {indexing ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

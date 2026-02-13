@@ -112,37 +112,37 @@ export default function QualityDashboardPage() {
         <CardContent className="px-3 py-2">
           {/* COMPACT: gap-3 → gap-1.5, smaller buttons */}
           <div className="flex flex-wrap gap-1.5">
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/receiving/new">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newReceivingInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/in-process">
                 <Cog className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newInProcessInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/final">
                 <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newFinalInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/ncr/new">
                 <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.createNCR")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/traceability">
                 <Search className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.lotLookup")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/certificates">
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.generateCoC")}

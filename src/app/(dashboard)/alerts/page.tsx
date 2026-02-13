@@ -235,7 +235,7 @@ export default function AlertsPage() {
               <button
                 onClick={() => fetchAlerts()}
                 disabled={loading}
-                className="h-7 px-3 text-[11px] bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5"
+                className="h-9 px-3 text-xs bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center gap-1.5"
               >
                 <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
                 Làm mới
@@ -306,7 +306,7 @@ export default function AlertsPage() {
                 placeholder="Tìm kiếm cảnh báo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-7 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-[11px] focus:ring-2 focus:ring-blue-500"
+                className="w-full h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -317,7 +317,7 @@ export default function AlertsPage() {
                   key={filter.value}
                   onClick={() => setFilterStatus(filter.value)}
                   className={cn(
-                    'h-7 px-2.5 text-[11px] font-medium whitespace-nowrap transition-colors',
+                    'h-9 px-2.5 text-xs font-medium whitespace-nowrap transition-colors',
                     filterStatus === filter.value
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -332,7 +332,7 @@ export default function AlertsPage() {
             <select
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value as AlertSeverity | 'all')}
-              className="h-7 px-2.5 bg-gray-100 dark:bg-gray-700 border-0 text-[11px] focus:ring-2 focus:ring-blue-500"
+              className="h-9 px-2.5 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-blue-500"
             >
               {severityFilters.map((filter) => (
                 <option key={filter.value} value={filter.value}>

@@ -103,7 +103,7 @@ export function ThreadList({
           </button>
           <button
             onClick={() => setShowNewModal(true)}
-            className="h-7 px-2.5 flex items-center gap-1.5 bg-info-cyan text-steel-dark text-[11px] font-medium hover:bg-info-cyan/80 transition-colors"
+            className="h-9 px-2.5 flex items-center gap-1.5 bg-info-cyan text-steel-dark text-xs font-medium hover:bg-info-cyan/80 transition-colors"
           >
             <MessageSquarePlus className="w-3.5 h-3.5" />
             Tạo mới

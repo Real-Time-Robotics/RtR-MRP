@@ -254,11 +254,11 @@ export default function MrpPage() {
         </div>
         {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
         <div className="flex gap-1.5">
-          <Button size="sm" className="h-7 text-[11px]" onClick={() => router.push("/mrp/wizard")}>
+          <Button size="sm" className="text-xs" onClick={() => router.push("/mrp/wizard")}>
             <Wand2 className="h-3.5 w-3.5 mr-1.5" />
             MRP Wizard
           </Button>
-          <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/mrp/shortages")}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => router.push("/mrp/shortages")}>
             <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
             {t("mrp.shortages")}
           </Button>
@@ -286,7 +286,7 @@ export default function MrpPage() {
             <div className="space-y-1">
               <Label className="text-[11px]">Planning Horizon</Label>
               <Select value={horizon} onValueChange={setHorizon}>
-                <SelectTrigger className="h-7 text-[11px]">
+                <SelectTrigger className="h-9 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -414,7 +414,7 @@ export default function MrpPage() {
           </div>
 
           {/* COMPACT: size="lg" → size="sm" */}
-          <Button onClick={runMrp} disabled={running} size="sm" className="h-7 text-[11px]">
+          <Button onClick={runMrp} disabled={running} size="sm" className="text-xs">
             {running ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

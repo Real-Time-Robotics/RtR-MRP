@@ -204,11 +204,11 @@ export default function ProductionPage() {
         {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
         <div className="flex gap-1.5">
           <WOExportButton workOrders={workOrders} variant="outline" size="sm" />
-          <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/schedule")}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => router.push("/production/schedule")}>
             <Calendar className="h-3.5 w-3.5 mr-1.5" />
             {t("nav.production.schedule")}
           </Button>
-          <Button size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/new")}>
+          <Button size="sm" className="text-xs" onClick={() => router.push("/production/new")}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {t("production.workOrders")}
           </Button>
@@ -261,12 +261,12 @@ export default function ProductionPage() {
                   placeholder="Search WO number..."
                   value={searchInput}
                   onChange={handleSearchChange}
-                  className="pl-7 h-7 text-[11px] w-full sm:w-[160px]"
+                  className="pl-7 h-9 text-xs w-full sm:w-[160px]"
                 />
               </div>
               {/* Status Filter - COMPACT */}
               <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full sm:w-[140px] h-7 text-[11px]">
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>

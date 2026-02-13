@@ -95,7 +95,7 @@ export default function DocumentsPage() {
               <button
                 onClick={() => setActiveTab('upload')}
                 className={cn(
-                  'h-7 px-3 text-[11px] font-medium flex items-center gap-1.5 transition-colors',
+                  'h-9 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors',
                   activeTab === 'upload'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -107,7 +107,7 @@ export default function DocumentsPage() {
               <button
                 onClick={() => setActiveTab('history')}
                 className={cn(
-                  'h-7 px-3 text-[11px] font-medium flex items-center gap-1.5 transition-colors',
+                  'h-9 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors',
                   activeTab === 'history'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -239,7 +239,7 @@ export default function DocumentsPage() {
                   <input
                     type="text"
                     placeholder="Tìm kiếm..."
-                    className="h-7 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-[11px] focus:ring-2 focus:ring-blue-500 rounded"
+                    className="h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-blue-500 rounded"
                   />
                 </div>
               </div>

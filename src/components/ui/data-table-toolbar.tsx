@@ -283,7 +283,7 @@ export function DataTableToolbar({
                 value={activeFilters[filter.key] || 'all'}
                 onValueChange={(value) => onFilterChange?.(filter.key, value)}
               >
-                <SelectTrigger className="h-8 w-auto min-w-[120px] text-sm">
+                <SelectTrigger className="h-9 w-auto min-w-[120px] text-sm">
                   <SelectValue placeholder={filter.label} />
                 </SelectTrigger>
                 <SelectContent>
