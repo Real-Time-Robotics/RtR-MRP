@@ -805,13 +805,17 @@ export async function updateWorkOrderStatus(
 // ============ SHIPPING / DELIVERY (Xuất kho & Giao hàng) ============
 
 // Create shipment from Sales Order
-export async function createShipment(salesOrderId: string, userId: string) {
+export async function createShipment(
+  salesOrderId: string,
+  userId: string,
+  linesToShip?: Array<{ lineNumber: number; quantity: number }>
+) {
   const salesOrder = await prisma.salesOrder.findUnique({
     where: { id: salesOrderId },
     include: {
       lines: { include: { product: true }, orderBy: { lineNumber: "asc" } },
       customer: true,
-      shipment: true,
+      shipments: true,
     },
   });
 
@@ -819,21 +823,56 @@ export async function createShipment(salesOrderId: string, userId: string) {
     throw new Error("Đơn hàng không tồn tại");
   }
 
-  if (!["completed", "in_progress"].includes(salesOrder.status)) {
+  if (!["completed", "in_progress", "partially_shipped"].includes(salesOrder.status)) {
     throw new Error(
-      `Đơn hàng phải ở trạng thái completed hoặc in_progress (hiện tại: ${salesOrder.status})`
+      `Đơn hàng phải ở trạng thái completed, in_progress hoặc partially_shipped (hiện tại: ${salesOrder.status})`
     );
   }
 
-  if (salesOrder.shipment) {
-    return {
-      shipment: salesOrder.shipment,
-      message: `Phiếu xuất kho đã tồn tại (${salesOrder.shipment.shipmentNumber})`,
-      existing: true,
-    };
+  // Determine which lines to ship
+  let shipLines: Array<{ lineNumber: number; productId: string; quantity: number }>;
+
+  if (linesToShip && linesToShip.length > 0) {
+    // Partial shipment: validate each line
+    shipLines = linesToShip.map((lts) => {
+      const orderLine = salesOrder.lines.find((l) => l.lineNumber === lts.lineNumber);
+      if (!orderLine) {
+        throw new Error(`Dòng ${lts.lineNumber} không tồn tại trong đơn hàng`);
+      }
+      const remaining = orderLine.quantity - orderLine.shippedQty;
+      if (lts.quantity <= 0) {
+        throw new Error(`Số lượng xuất cho dòng ${lts.lineNumber} phải > 0`);
+      }
+      if (lts.quantity > remaining) {
+        throw new Error(
+          `Dòng ${lts.lineNumber} (${orderLine.product.name}): yêu cầu xuất ${lts.quantity} nhưng chỉ còn ${remaining} chưa xuất`
+        );
+      }
+      return {
+        lineNumber: orderLine.lineNumber,
+        productId: orderLine.productId,
+        quantity: lts.quantity,
+      };
+    });
+  } else {
+    // Ship all remaining lines (backward compatible)
+    shipLines = salesOrder.lines
+      .filter((l) => l.shippedQty < l.quantity)
+      .map((l) => ({
+        lineNumber: l.lineNumber,
+        productId: l.productId,
+        quantity: l.quantity - l.shippedQty,
+      }));
+
+    if (shipLines.length === 0) {
+      throw new Error("Tất cả các dòng đã được xuất kho đầy đủ");
+    }
   }
 
-  const shipmentNumber = `SHP-${salesOrder.orderNumber}`;
+  // Generate unique shipment number with sequence
+  const existingCount = salesOrder.shipments.length;
+  const sequence = String(existingCount + 1).padStart(3, "0");
+  const shipmentNumber = `SHP-${salesOrder.orderNumber}-${sequence}`;
 
   const shipment = await prisma.shipment.create({
     data: {
@@ -843,7 +882,7 @@ export async function createShipment(salesOrderId: string, userId: string) {
       status: "PREPARING",
       shippedBy: userId,
       lines: {
-        create: salesOrder.lines.map((line) => ({
+        create: shipLines.map((line) => ({
           lineNumber: line.lineNumber,
           productId: line.productId,
           quantity: line.quantity,
@@ -1034,7 +1073,20 @@ export async function confirmShipment(
       }
     }
 
-    // 2. Update Shipment → SHIPPED
+    // 2. Update SalesOrderLine.shippedQty for each shipped line
+    for (const line of shipment.lines) {
+      await tx.salesOrderLine.updateMany({
+        where: {
+          orderId: shipment.salesOrderId,
+          lineNumber: line.lineNumber,
+        },
+        data: {
+          shippedQty: { increment: line.quantity },
+        },
+      });
+    }
+
+    // 3. Update Shipment → SHIPPED
     const updatedShipment = await tx.shipment.update({
       where: { id: shipmentId },
       data: {
@@ -1046,10 +1098,26 @@ export async function confirmShipment(
       },
     });
 
-    // 3. Update SalesOrder → shipped
+    // 4. Determine SalesOrder status based on shipped quantities
+    const orderLines = await tx.salesOrderLine.findMany({
+      where: { orderId: shipment.salesOrderId },
+    });
+
+    const allFullyShipped = orderLines.every((l) => l.shippedQty >= l.quantity);
+    const someShipped = orderLines.some((l) => l.shippedQty > 0);
+
+    let newOrderStatus: string;
+    if (allFullyShipped) {
+      newOrderStatus = "shipped";
+    } else if (someShipped) {
+      newOrderStatus = "partially_shipped";
+    } else {
+      newOrderStatus = shipment.salesOrder.status; // keep current
+    }
+
     await tx.salesOrder.update({
       where: { id: shipment.salesOrderId },
-      data: { status: "shipped" },
+      data: { status: newOrderStatus },
     });
 
     return updatedShipment;
@@ -1089,11 +1157,31 @@ export async function confirmDelivery(shipmentId: string, userId: string) {
       },
     });
 
-    // 2. Update SalesOrder → delivered
-    await tx.salesOrder.update({
-      where: { id: shipment.salesOrderId },
-      data: { status: "delivered" },
+    // 2. Check if ALL shipments delivered AND all lines fully shipped
+    const allShipments = await tx.shipment.findMany({
+      where: { salesOrderId: shipment.salesOrderId },
     });
+    const allDelivered = allShipments.every((s) => s.status === "DELIVERED");
+
+    const orderLines = await tx.salesOrderLine.findMany({
+      where: { orderId: shipment.salesOrderId },
+    });
+    const allFullyShipped = orderLines.every((l) => l.shippedQty >= l.quantity);
+
+    if (allDelivered && allFullyShipped) {
+      // All shipments delivered AND all lines fully shipped → delivered
+      await tx.salesOrder.update({
+        where: { id: shipment.salesOrderId },
+        data: { status: "delivered" },
+      });
+    } else if (allFullyShipped) {
+      // All lines shipped but some shipments not yet delivered → shipped
+      await tx.salesOrder.update({
+        where: { id: shipment.salesOrderId },
+        data: { status: "shipped" },
+      });
+    }
+    // Otherwise keep current status (partially_shipped, etc.)
 
     return updatedShipment;
   });

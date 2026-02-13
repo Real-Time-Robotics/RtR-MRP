@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { createShipment, confirmShipment } from "@/lib/mrp-engine";
 import prisma from "@/lib/prisma";
 
-// GET /api/orders/[id]/ship — Preview inventory by lot for shipping
+// GET /api/orders/[id]/ship — Preview inventory by lot for shipping (partial-aware)
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
@@ -45,6 +45,26 @@ export async function GET(
 
     const lines = await Promise.all(
       salesOrder.lines.map(async (line) => {
+        const remainingQty = line.quantity - line.shippedQty;
+
+        // Skip fully shipped lines
+        if (remainingQty <= 0) {
+          return {
+            lineNumber: line.lineNumber,
+            productId: line.productId,
+            productSku: line.product.sku,
+            productName: line.product.name,
+            orderQty: line.quantity,
+            shippedQty: line.shippedQty,
+            requiredQty: 0,
+            totalAvailable: 0,
+            sufficient: true,
+            fullyShipped: true,
+            lots: [] as Array<{ lotNumber: string; quantity: number; warehouseCode: string }>,
+            allocationPlan: [] as Array<{ lotNumber: string; deductQty: number }>,
+          };
+        }
+
         const part = await prisma.part.findFirst({
           where: { partNumber: line.product.sku },
         });
@@ -68,12 +88,13 @@ export async function GET(
           totalAvailable = inventoryRecords.reduce((sum, inv) => sum + inv.quantity, 0);
         }
 
-        const sufficient = totalAvailable >= line.quantity;
+        // Check against remaining qty, not total qty
+        const sufficient = totalAvailable >= remainingQty;
 
-        // Build allocation plan (which lot gets deducted how much)
+        // Build allocation plan for remaining qty
         const allocationPlan: Array<{ lotNumber: string; deductQty: number }> = [];
         if (sufficient) {
-          let remaining = line.quantity;
+          let remaining = remainingQty;
           for (const lot of lots) {
             if (remaining <= 0) break;
             const deductQty = Math.min(remaining, lot.quantity);
@@ -87,16 +108,21 @@ export async function GET(
           productId: line.productId,
           productSku: line.product.sku,
           productName: line.product.name,
-          requiredQty: line.quantity,
+          orderQty: line.quantity,
+          shippedQty: line.shippedQty,
+          requiredQty: remainingQty,
           totalAvailable,
           sufficient,
+          fullyShipped: false,
           lots,
           allocationPlan,
         };
       })
     );
 
-    const allSufficient = lines.every((l) => l.sufficient);
+    // Only consider non-fully-shipped lines for allSufficient check
+    const activeLines = lines.filter((l) => !l.fullyShipped);
+    const allSufficient = activeLines.every((l) => l.sufficient);
 
     return NextResponse.json({ lines, allSufficient });
   } catch (error: any) {
@@ -108,7 +134,7 @@ export async function GET(
   }
 }
 
-// POST /api/orders/[id]/ship — Create shipment + confirm (single step)
+// POST /api/orders/[id]/ship — Create partial shipment + confirm
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -121,11 +147,11 @@ export async function POST(
 
     const { id } = params;
     const body = await request.json().catch(() => ({}));
-    const { carrier, trackingNumber, lotAllocations } = body;
+    const { carrier, trackingNumber, lotAllocations, linesToShip } = body;
     const userId = session.user.id || session.user.email || "system";
 
-    // Step 1: Create shipment
-    const createResult = await createShipment(id, userId);
+    // Step 1: Create shipment (with optional linesToShip for partial shipping)
+    const createResult = await createShipment(id, userId, linesToShip);
 
     // Step 2: Confirm shipment (deduct inventory, mark SHIPPED)
     const confirmResult = await confirmShipment(

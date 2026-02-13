@@ -100,6 +100,7 @@ export interface SalesOrder {
     quantity: number;
     unitPrice: number;
     lineTotal: number;
+    shippedQty?: number;
     product?: { id: string; sku: string; name: string };
   }>;
 }

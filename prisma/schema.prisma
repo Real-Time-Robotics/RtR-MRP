@@ -752,8 +752,8 @@ model SalesOrder {
   // Financial relations
   salesInvoices SalesInvoice[]
 
-  // Shipping
-  shipment Shipment?
+  // Shipping (one-to-many: partial shipments)
+  shipments Shipment[]
 
   // Performance indexes
   @@index([customerId, orderDate])
@@ -774,6 +774,7 @@ model SalesOrderLine {
   lineTotal  Float?
   options    String?
   status     String   @default("pending")
+  shippedQty Int      @default(0)
   createdAt  DateTime @default(now())
 
   order   SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -787,7 +788,7 @@ model SalesOrderLine {
 model Shipment {
   id              String    @id @default(cuid())
   shipmentNumber  String    @unique
-  salesOrderId    String    @unique
+  salesOrderId    String
   customerId      String
   status          String    @default("PREPARING") // PREPARING | SHIPPED | DELIVERED
   carrier         String?
@@ -804,6 +805,7 @@ model Shipment {
   customer   Customer     @relation(fields: [customerId], references: [id])
   lines      ShipmentLine[]
 
+  @@index([salesOrderId])
   @@index([status])
   @@index([customerId])
   @@map("shipments")

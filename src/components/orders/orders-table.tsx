@@ -23,6 +23,7 @@ interface OrdersTableProps {
   initialData?: SalesOrder[];
 }
 
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -238,9 +239,8 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     },
   ];
 
-  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
+  // Column definitions for DataTable
   const columns: Column<SalesOrder>[] = useMemo(() => [
-    // ===== HEADER INFO SECTION =====
     {
       key: 'orderNumber',
       header: 'Số đơn hàng',
@@ -273,8 +273,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       sortable: true,
       render: (value) => <OrderStatusBadge status={value} />,
     },
-
-    // ===== DATE INFO SECTION =====
     {
       key: 'orderDate',
       header: 'Ngày đặt',
@@ -297,8 +295,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       hidden: true,
       render: (value) => value ? formatDateShort(value) : '-',
     },
-
-    // ===== PRIORITY SECTION =====
     {
       key: 'priority',
       header: 'Ưu tiên',
@@ -317,16 +313,51 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         </span>
       ),
     },
-
-    // ===== LINE ITEMS SECTION =====
     {
       key: 'lines',
-      header: 'Số dòng',
-      width: '80px',
-      align: 'center',
-      render: (value) => (
-        <span className="font-mono text-xs">{value?.length || 0} items</span>
-      ),
+      header: 'Sản phẩm',
+      width: '250px',
+      render: (value, row) => {
+        const lines = value as SalesOrder['lines'];
+        const order = row as SalesOrder;
+        const hasShipments = ['partially_shipped', 'shipped', 'delivered'].includes(order.status);
+        if (!lines || lines.length === 0) {
+          return <span className="text-xs text-muted-foreground">Chưa có sản phẩm</span>;
+        }
+        return (
+          <div className="space-y-0.5">
+            {lines.slice(0, 3).map((line, idx) => {
+              const shipped = line.shippedQty || 0;
+              const fullyShipped = shipped >= line.quantity;
+              const partiallyShipped = shipped > 0 && shipped < line.quantity;
+              return (
+                <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                  <span className={cn("truncate max-w-[140px]", fullyShipped && hasShipments && "text-green-700")} title={line.product?.name || line.productId}>
+                    {line.product?.name || line.productId}
+                  </span>
+                  <span className="shrink-0 flex items-center gap-1">
+                    {hasShipments ? (
+                      <span className={cn(
+                        "font-mono px-1 py-0.5 rounded text-[10px]",
+                        fullyShipped ? "bg-green-100 text-green-700" :
+                        partiallyShipped ? "bg-amber-100 text-amber-700" :
+                        "bg-gray-100 text-gray-500"
+                      )}>
+                        {shipped}/{line.quantity}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-muted-foreground">x{line.quantity}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+            {lines.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{lines.length - 3} sản phẩm khác</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'totalAmount',
@@ -339,8 +370,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         <span className="font-mono font-medium">${(value || 0).toLocaleString()}</span>
       ),
     },
-
-    // ===== NOTES SECTION =====
     {
       key: 'notes',
       header: 'Ghi chú',
@@ -350,8 +379,6 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         <span className="text-xs truncate" title={value}>{value}</span>
       ) : '-',
     },
-
-    // ===== ACTIONS =====
     {
       key: 'actions',
       header: '',
@@ -405,6 +432,9 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
                   { value: 'confirmed', label: 'Đã xác nhận' },
                   { value: 'in_progress', label: 'Đang thực hiện' },
                   { value: 'completed', label: 'Hoàn thành' },
+                  { value: 'partially_shipped', label: 'Xuất kho 1 phần' },
+                  { value: 'shipped', label: 'Đã xuất kho' },
+                  { value: 'delivered', label: 'Đã giao hàng' },
                   { value: 'cancelled', label: 'Đã hủy' },
                 ],
               },

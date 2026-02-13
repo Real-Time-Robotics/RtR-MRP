@@ -48,9 +48,12 @@ interface InventoryPreviewLine {
     productId: string;
     productSku: string;
     productName: string;
+    orderQty: number;
+    shippedQty: number;
     requiredQty: number;
     totalAvailable: number;
     sufficient: boolean;
+    fullyShipped: boolean;
     lots: InventoryLot[];
     allocationPlan: AllocationPlanItem[];
 }
@@ -93,12 +96,13 @@ interface OrderDetail {
         lineNumber: number;
         quantity: number;
         unitPrice: number;
+        shippedQty: number;
         product: {
             name: string;
             sku: string;
         };
     }>;
-    shipment: ShipmentDetail | null;
+    shipments: ShipmentDetail[];
 }
 
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
@@ -109,10 +113,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     const [shipCarrier, setShipCarrier] = useState('');
     const [shipTracking, setShipTracking] = useState('');
     const [shipping, setShipping] = useState(false);
-    const [delivering, setDelivering] = useState(false);
+    const [deliveringShipmentId, setDeliveringShipmentId] = useState<string | null>(null);
     const [inventoryPreview, setInventoryPreview] = useState<InventoryPreview | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [lotAllocations, setLotAllocations] = useState<Record<number, Record<string, number>>>({});
+    const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
 
     const fetchData = async () => {
         try {
@@ -148,15 +153,20 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             const data: InventoryPreview = await res.json();
             setInventoryPreview(data);
 
-            // Pre-fill lotAllocations from allocationPlan
+            // Pre-select lines that have remaining qty > 0
+            const preSelected = new Set<number>();
             const prefilled: Record<number, Record<string, number>> = {};
             for (const line of data.lines) {
+                if (!line.fullyShipped && line.requiredQty > 0) {
+                    preSelected.add(line.lineNumber);
+                }
                 prefilled[line.lineNumber] = {};
                 for (const lot of line.lots) {
                     const planned = line.allocationPlan.find(a => a.lotNumber === lot.lotNumber);
                     prefilled[line.lineNumber][lot.lotNumber] = planned ? planned.deductQty : 0;
                 }
             }
+            setSelectedLines(preSelected);
             setLotAllocations(prefilled);
         } catch (error: any) {
             toast.error(error.message);
@@ -169,15 +179,45 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         setShowShipDialog(true);
         setInventoryPreview(null);
         setLotAllocations({});
+        setSelectedLines(new Set());
+        setShipCarrier('');
+        setShipTracking('');
         fetchInventoryPreview();
     };
 
+    const handleToggleLine = (lineNumber: number) => {
+        setSelectedLines(prev => {
+            const next = new Set(prev);
+            if (next.has(lineNumber)) {
+                next.delete(lineNumber);
+            } else {
+                next.add(lineNumber);
+            }
+            return next;
+        });
+    };
+
     const handleShipOrder = async () => {
+        if (!inventoryPreview) return;
         try {
             setShipping(true);
 
-            // Build lotAllocations payload from state
-            const lotAllocationsPayload = inventoryPreview?.lines.map((line) => ({
+            // Build linesToShip from selected lines
+            const activeLines = inventoryPreview.lines.filter(
+                (l) => selectedLines.has(l.lineNumber) && !l.fullyShipped
+            );
+
+            const linesToShip = activeLines.map((line) => {
+                const lineAllocs = lotAllocations[line.lineNumber] || {};
+                const totalAllocated = Object.values(lineAllocs).reduce((sum, qty) => sum + qty, 0);
+                return {
+                    lineNumber: line.lineNumber,
+                    quantity: totalAllocated,
+                };
+            });
+
+            // Build lotAllocations payload for selected lines only
+            const lotAllocationsPayload = activeLines.map((line) => ({
                 lineNumber: line.lineNumber,
                 allocations: Object.entries(lotAllocations[line.lineNumber] || {})
                     .filter(([, qty]) => qty > 0)
@@ -191,6 +231,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     carrier: shipCarrier || undefined,
                     trackingNumber: shipTracking || undefined,
                     lotAllocations: lotAllocationsPayload,
+                    linesToShip,
                 }),
             });
             const data = await res.json();
@@ -207,11 +248,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         }
     };
 
-    const handleConfirmDelivery = async () => {
-        if (!order?.shipment) return;
+    const handleConfirmDelivery = async (shipmentId: string) => {
         try {
-            setDelivering(true);
-            const res = await fetch(`/api/shipments/${order.shipment.id}`, {
+            setDeliveringShipmentId(shipmentId);
+            const res = await fetch(`/api/shipments/${shipmentId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'deliver' }),
@@ -223,7 +263,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         } catch (error: any) {
             toast.error(error.message);
         } finally {
-            setDelivering(false);
+            setDeliveringShipmentId(null);
         }
     };
 
@@ -243,10 +283,17 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         return { totalAllocated, required: line.requiredQty, matched: totalAllocated === line.requiredQty };
     };
 
-    const allLinesMatched = inventoryPreview?.lines.every((line) => {
-        const { matched } = getAllocationStatus(line);
-        return matched;
-    }) ?? false;
+    // Only check selected, non-fully-shipped lines
+    const allSelectedLinesMatched = inventoryPreview?.lines
+        .filter((line) => selectedLines.has(line.lineNumber) && !line.fullyShipped)
+        .every((line) => {
+            const { matched } = getAllocationStatus(line);
+            return matched;
+        }) ?? false;
+
+    const hasSelectedLines = inventoryPreview?.lines.some(
+        (line) => selectedLines.has(line.lineNumber) && !line.fullyShipped
+    ) ?? false;
 
     if (loading) {
         return (
@@ -266,8 +313,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     }
 
     const totalAmount = order.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
-    const canShip = ['completed', 'in_progress'].includes(order.status) && !order.shipment;
-    const canConfirmDelivery = order.shipment?.status === 'SHIPPED';
+
+    // canShip: order has unshipped lines and status allows shipping
+    const hasUnshippedLines = order.lines.some((l) => (l.shippedQty || 0) < l.quantity);
+    const canShip = ['completed', 'in_progress', 'partially_shipped'].includes(order.status) && hasUnshippedLines;
 
     const handlePrintPackingList = async () => {
         const { generatePackingListPDF } = await import('@/lib/documents');
@@ -289,6 +338,16 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                 unit: 'pcs',
             })),
         });
+    };
+
+    const getShippedBadge = (shippedQty: number, quantity: number) => {
+        if (shippedQty >= quantity) {
+            return <Badge className="bg-green-100 text-green-800 text-xs">{shippedQty}/{quantity}</Badge>;
+        }
+        if (shippedQty > 0) {
+            return <Badge className="bg-amber-100 text-amber-800 text-xs">{shippedQty}/{quantity}</Badge>;
+        }
+        return <Badge className="bg-gray-100 text-gray-500 text-xs">0/{quantity}</Badge>;
     };
 
     return (
@@ -314,18 +373,6 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     {canShip && (
                         <Button variant="primary" size="sm" leftIcon={<Truck className="h-4 w-4" />} onClick={handleOpenShipDialog}>
                             Xuất kho
-                        </Button>
-                    )}
-                    {canConfirmDelivery && (
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<CheckCircle2 className="h-4 w-4" />}
-                            onClick={handleConfirmDelivery}
-                            loading={delivering}
-                            loadingText="Đang xử lý..."
-                        >
-                            Xác nhận đã giao
                         </Button>
                     )}
                     <Button variant="secondary" size="sm" leftIcon={<Package className="h-4 w-4" />} onClick={handlePrintPackingList}>
@@ -359,6 +406,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                 <TableHead className="w-[50px]">#</TableHead>
                                                 <TableHead>Product</TableHead>
                                                 <TableHead className="text-right">Qty</TableHead>
+                                                <TableHead className="text-center">Đã xuất</TableHead>
                                                 <TableHead className="text-right">Price</TableHead>
                                                 <TableHead className="text-right">Total</TableHead>
                                             </TableRow>
@@ -372,6 +420,9 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                         <div className="text-xs text-muted-foreground">{line.product.sku}</div>
                                                     </TableCell>
                                                     <TableCell className="text-right">{line.quantity}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        {getShippedBadge(line.shippedQty || 0, line.quantity)}
+                                                    </TableCell>
                                                     <TableCell className="text-right">${line.unitPrice.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-medium">
                                                         ${(line.quantity * line.unitPrice).toFixed(2)}
@@ -379,7 +430,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                 </TableRow>
                                             ))}
                                             <TableRow>
-                                                <TableCell colSpan={4} className="text-right font-bold">Total Amount</TableCell>
+                                                <TableCell colSpan={5} className="text-right font-bold">Total Amount</TableCell>
                                                 <TableCell className="text-right font-bold text-lg">
                                                     ${totalAmount.toFixed(2)}
                                                 </TableCell>
@@ -392,60 +443,86 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
                         {/* Right Column: Meta Info */}
                         <div className="space-y-6">
-                            {/* Shipment Status Card */}
-                            {order.shipment && (
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2 text-base">
-                                            <Truck className="h-4 w-4" />
-                                            Thông tin xuất kho
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 text-sm">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Mã phiếu</span>
-                                            <span className="font-mono font-medium">{order.shipment.shipmentNumber}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-muted-foreground">Trạng thái</span>
-                                            <Badge className={
-                                                order.shipment.status === 'DELIVERED'
-                                                    ? 'bg-teal-100 text-teal-800'
-                                                    : order.shipment.status === 'SHIPPED'
-                                                        ? 'bg-indigo-100 text-indigo-800'
-                                                        : 'bg-orange-100 text-orange-800'
-                                            }>
-                                                {order.shipment.status === 'DELIVERED' ? 'Đã giao hàng'
-                                                    : order.shipment.status === 'SHIPPED' ? 'Đã xuất kho'
-                                                        : 'Đang chuẩn bị'}
-                                            </Badge>
-                                        </div>
-                                        {order.shipment.carrier && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Đơn vị vận chuyển</span>
-                                                <span>{order.shipment.carrier}</span>
-                                            </div>
-                                        )}
-                                        {order.shipment.trackingNumber && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Mã vận đơn</span>
-                                                <span className="font-mono">{order.shipment.trackingNumber}</span>
-                                            </div>
-                                        )}
-                                        {order.shipment.shippedAt && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Ngày xuất kho</span>
-                                                <span>{new Date(order.shipment.shippedAt).toLocaleDateString()}</span>
-                                            </div>
-                                        )}
-                                        {order.shipment.deliveredAt && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Ngày giao hàng</span>
-                                                <span>{new Date(order.shipment.deliveredAt).toLocaleDateString()}</span>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                            {/* Shipment Status Cards - show ALL shipments */}
+                            {order.shipments && order.shipments.length > 0 && (
+                                <div className="space-y-4">
+                                    {order.shipments.map((shipment) => (
+                                        <Card key={shipment.id}>
+                                            <CardHeader className="pb-2">
+                                                <CardTitle className="flex items-center gap-2 text-base">
+                                                    <Truck className="h-4 w-4" />
+                                                    <span className="truncate">{shipment.shipmentNumber}</span>
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-3 text-sm">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-muted-foreground">Trạng thái</span>
+                                                    <Badge className={
+                                                        shipment.status === 'DELIVERED'
+                                                            ? 'bg-teal-100 text-teal-800'
+                                                            : shipment.status === 'SHIPPED'
+                                                                ? 'bg-indigo-100 text-indigo-800'
+                                                                : 'bg-orange-100 text-orange-800'
+                                                    }>
+                                                        {shipment.status === 'DELIVERED' ? 'Đã giao hàng'
+                                                            : shipment.status === 'SHIPPED' ? 'Đã xuất kho'
+                                                                : 'Đang chuẩn bị'}
+                                                    </Badge>
+                                                </div>
+                                                {shipment.carrier && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Vận chuyển</span>
+                                                        <span>{shipment.carrier}</span>
+                                                    </div>
+                                                )}
+                                                {shipment.trackingNumber && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Mã vận đơn</span>
+                                                        <span className="font-mono text-xs">{shipment.trackingNumber}</span>
+                                                    </div>
+                                                )}
+                                                {shipment.shippedAt && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Ngày xuất</span>
+                                                        <span>{new Date(shipment.shippedAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                )}
+                                                {shipment.deliveredAt && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Ngày giao</span>
+                                                        <span>{new Date(shipment.deliveredAt).toLocaleDateString()}</span>
+                                                    </div>
+                                                )}
+                                                {/* Lines in this shipment */}
+                                                <div className="pt-2 border-t">
+                                                    <p className="text-xs text-muted-foreground mb-1">Sản phẩm:</p>
+                                                    <ul className="space-y-0.5">
+                                                        {shipment.lines.map((sl) => (
+                                                            <li key={sl.id} className="flex justify-between text-xs">
+                                                                <span>{sl.product.name}</span>
+                                                                <span className="font-mono">x{sl.quantity}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                                {/* Confirm delivery button per shipment */}
+                                                {shipment.status === 'SHIPPED' && (
+                                                    <Button
+                                                        variant="primary"
+                                                        size="sm"
+                                                        className="w-full mt-2"
+                                                        leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                                                        onClick={() => handleConfirmDelivery(shipment.id)}
+                                                        loading={deliveringShipmentId === shipment.id}
+                                                        loadingText="Đang xử lý..."
+                                                    >
+                                                        Xác nhận đã giao
+                                                    </Button>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
                             )}
 
                             <Card>
@@ -516,7 +593,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     <DialogHeader>
                         <DialogTitle>Xuất kho - {order.orderNumber}</DialogTitle>
                         <DialogDescription>
-                            Chọn lot và số lượng xuất cho từng sản phẩm, sau đó xác nhận xuất kho.
+                            Chọn dòng sản phẩm muốn xuất, điều chỉnh số lượng và lot, sau đó xác nhận.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -549,110 +626,122 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                             </div>
                         ) : inventoryPreview ? (
                             <div className="space-y-3">
-                                {/* Global warning if insufficient */}
-                                {!inventoryPreview.allSufficient && (
-                                    <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                                        <div>
-                                            <p className="font-medium">Không đủ tồn kho!</p>
-                                            <p>Một hoặc nhiều sản phẩm không đủ hàng trong kho. Vui lòng kiểm tra lại trước khi xuất kho.</p>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Per-product inventory table */}
-                                {inventoryPreview.lines.map((line) => (
-                                    <div key={line.lineNumber} className="rounded-md border p-3 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <span className="font-medium">{line.productName}</span>
-                                                <span className="text-muted-foreground text-xs ml-2">({line.productSku})</span>
-                                            </div>
-                                            <Badge className={
-                                                line.sufficient
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-red-100 text-red-800'
-                                            }>
-                                                {line.sufficient ? 'Đủ hàng' : 'Thiếu hàng'}
-                                            </Badge>
-                                        </div>
+                                {inventoryPreview.lines.map((line) => {
+                                    const isSelected = selectedLines.has(line.lineNumber);
+                                    const isFullyShipped = line.fullyShipped;
 
-                                        <div className="flex gap-4 text-xs text-muted-foreground">
-                                            <span>Cần xuất: <strong className="text-foreground">{line.requiredQty}</strong></span>
-                                            <span>Tồn kho: <strong className={line.sufficient ? 'text-green-700' : 'text-red-700'}>{line.totalAvailable}</strong></span>
-                                            {!line.sufficient && (
-                                                <span className="text-red-600">Thiếu: <strong>{line.requiredQty - line.totalAvailable}</strong></span>
+                                    return (
+                                        <div key={line.lineNumber} className={`rounded-md border p-3 space-y-2 ${isFullyShipped ? 'opacity-50' : ''}`}>
+                                            <div className="flex items-center gap-2">
+                                                {/* Checkbox to select line */}
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    disabled={isFullyShipped}
+                                                    onChange={() => handleToggleLine(line.lineNumber)}
+                                                    className="h-4 w-4 rounded border-gray-300"
+                                                />
+                                                <div className="flex-1 flex items-center justify-between">
+                                                    <div>
+                                                        <span className="font-medium">{line.productName}</span>
+                                                        <span className="text-muted-foreground text-xs ml-2">({line.productSku})</span>
+                                                    </div>
+                                                    {isFullyShipped ? (
+                                                        <Badge className="bg-green-100 text-green-800">Đã xuất đủ</Badge>
+                                                    ) : (
+                                                        <Badge className={
+                                                            line.sufficient
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-red-100 text-red-800'
+                                                        }>
+                                                            {line.sufficient ? 'Đủ hàng' : 'Thiếu hàng'}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {!isFullyShipped && (
+                                                <>
+                                                    <div className="flex gap-4 text-xs text-muted-foreground ml-6">
+                                                        <span>Đặt hàng: <strong className="text-foreground">{line.orderQty}</strong></span>
+                                                        <span>Đã xuất: <strong className="text-foreground">{line.shippedQty}</strong></span>
+                                                        <span>Cần xuất: <strong className="text-foreground">{line.requiredQty}</strong></span>
+                                                        <span>Tồn kho: <strong className={line.sufficient ? 'text-green-700' : 'text-red-700'}>{line.totalAvailable}</strong></span>
+                                                    </div>
+
+                                                    {/* Lot details table — only if line is selected */}
+                                                    {isSelected && line.lots.length > 0 && (
+                                                        <>
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow>
+                                                                        <TableHead className="text-xs h-8">Lot Number</TableHead>
+                                                                        <TableHead className="text-xs h-8">Kho</TableHead>
+                                                                        <TableHead className="text-xs h-8 text-right">Tồn kho</TableHead>
+                                                                        <TableHead className="text-xs h-8 text-right">Số lượng xuất</TableHead>
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {line.lots.map((lot) => {
+                                                                        const currentQty = lotAllocations[line.lineNumber]?.[lot.lotNumber] ?? 0;
+                                                                        return (
+                                                                            <TableRow key={lot.lotNumber}>
+                                                                                <TableCell className="text-xs font-mono py-1.5">{lot.lotNumber}</TableCell>
+                                                                                <TableCell className="text-xs py-1.5">{lot.warehouseCode}</TableCell>
+                                                                                <TableCell className="text-xs text-right py-1.5">{lot.quantity}</TableCell>
+                                                                                <TableCell className="text-right py-1">
+                                                                                    <Input
+                                                                                        type="number"
+                                                                                        min={0}
+                                                                                        max={lot.quantity}
+                                                                                        value={currentQty}
+                                                                                        onChange={(e) => {
+                                                                                            const val = Math.max(0, Math.min(lot.quantity, parseInt(e.target.value) || 0));
+                                                                                            handleLotQtyChange(line.lineNumber, lot.lotNumber, val);
+                                                                                        }}
+                                                                                        className="h-7 w-20 text-xs text-right ml-auto"
+                                                                                    />
+                                                                                </TableCell>
+                                                                            </TableRow>
+                                                                        );
+                                                                    })}
+                                                                </TableBody>
+                                                            </Table>
+                                                            {/* Validation row */}
+                                                            {(() => {
+                                                                const { totalAllocated, required, matched } = getAllocationStatus(line);
+                                                                return (
+                                                                    <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded ${
+                                                                        matched
+                                                                            ? 'bg-green-50 text-green-700'
+                                                                            : totalAllocated > required
+                                                                                ? 'bg-red-50 text-red-700'
+                                                                                : 'bg-amber-50 text-amber-700'
+                                                                    }`}>
+                                                                        {matched ? (
+                                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                                        ) : (
+                                                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                                                        )}
+                                                                        <span>
+                                                                            Đã chọn: <strong>{totalAllocated}</strong> / {required}
+                                                                            {!matched && totalAllocated < required && ' — Chưa đủ số lượng'}
+                                                                            {!matched && totalAllocated > required && ' — Vượt quá số lượng'}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </>
+                                                    )}
+                                                    {isSelected && line.lots.length === 0 && (
+                                                        <p className="text-xs text-muted-foreground italic ml-6">Không tìm thấy tồn kho nào.</p>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
-
-                                        {/* Lot details table */}
-                                        {line.lots.length > 0 ? (
-                                            <>
-                                                <Table>
-                                                    <TableHeader>
-                                                        <TableRow>
-                                                            <TableHead className="text-xs h-8">Lot Number</TableHead>
-                                                            <TableHead className="text-xs h-8">Kho</TableHead>
-                                                            <TableHead className="text-xs h-8 text-right">Tồn kho</TableHead>
-                                                            <TableHead className="text-xs h-8 text-right">Số lượng xuất</TableHead>
-                                                        </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                        {line.lots.map((lot) => {
-                                                            const currentQty = lotAllocations[line.lineNumber]?.[lot.lotNumber] ?? 0;
-                                                            return (
-                                                                <TableRow key={lot.lotNumber}>
-                                                                    <TableCell className="text-xs font-mono py-1.5">{lot.lotNumber}</TableCell>
-                                                                    <TableCell className="text-xs py-1.5">{lot.warehouseCode}</TableCell>
-                                                                    <TableCell className="text-xs text-right py-1.5">{lot.quantity}</TableCell>
-                                                                    <TableCell className="text-right py-1">
-                                                                        <Input
-                                                                            type="number"
-                                                                            min={0}
-                                                                            max={lot.quantity}
-                                                                            value={currentQty}
-                                                                            onChange={(e) => {
-                                                                                const val = Math.max(0, Math.min(lot.quantity, parseInt(e.target.value) || 0));
-                                                                                handleLotQtyChange(line.lineNumber, lot.lotNumber, val);
-                                                                            }}
-                                                                            className="h-7 w-20 text-xs text-right ml-auto"
-                                                                        />
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            );
-                                                        })}
-                                                    </TableBody>
-                                                </Table>
-                                                {/* Validation row */}
-                                                {(() => {
-                                                    const { totalAllocated, required, matched } = getAllocationStatus(line);
-                                                    return (
-                                                        <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded ${
-                                                            matched
-                                                                ? 'bg-green-50 text-green-700'
-                                                                : totalAllocated > required
-                                                                    ? 'bg-red-50 text-red-700'
-                                                                    : 'bg-amber-50 text-amber-700'
-                                                        }`}>
-                                                            {matched ? (
-                                                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            ) : (
-                                                                <AlertTriangle className="h-3.5 w-3.5" />
-                                                            )}
-                                                            <span>
-                                                                Đã chọn: <strong>{totalAllocated}</strong> / {required}
-                                                                {!matched && totalAllocated < required && ' — Chưa đủ số lượng'}
-                                                                {!matched && totalAllocated > required && ' — Vượt quá số lượng'}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })()}
-                                            </>
-                                        ) : (
-                                            <p className="text-xs text-muted-foreground italic">Không tìm thấy tồn kho nào.</p>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="rounded-md bg-muted p-3 text-sm">
@@ -676,7 +765,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                             size="sm"
                             leftIcon={<Truck className="h-4 w-4" />}
                             onClick={handleShipOrder}
-                            disabled={shipping || loadingPreview || !inventoryPreview || !allLinesMatched}
+                            disabled={shipping || loadingPreview || !inventoryPreview || !allSelectedLinesMatched || !hasSelectedLines}
                             loading={shipping}
                             loadingText="Đang xử lý..."
                         >

@@ -9,6 +9,7 @@ type OrderStatus =
   | "confirmed"
   | "in_progress"
   | "completed"
+  | "partially_shipped"
   | "shipped"
   | "delivered"
   | "cancelled";
@@ -38,6 +39,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   completed: {
     label: "Hoàn thành",
     className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-100",
+  },
+  partially_shipped: {
+    label: "Xuất kho 1 phần",
+    className: "bg-violet-100 text-violet-800 hover:bg-violet-100",
   },
   shipped: {
     label: "Đã xuất kho",

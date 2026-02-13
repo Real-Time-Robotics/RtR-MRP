@@ -18,7 +18,7 @@ const OrderUpdateSchema = z.object({
   items: z.array(OrderItemSchema).optional(),
   notes: z.string().max(2000).optional().nullable(),
   priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
-  status: z.enum(["draft", "pending", "confirmed", "in_production", "shipped", "delivered", "cancelled"]).optional(),
+  status: z.enum(["draft", "pending", "confirmed", "in_production", "partially_shipped", "shipped", "delivered", "cancelled"]).optional(),
 });
 
 export async function GET(
@@ -43,13 +43,14 @@ export async function GET(
                     },
                     orderBy: { lineNumber: 'asc' }
                 },
-                shipment: {
+                shipments: {
                     include: {
                         lines: {
                             include: { product: true },
                             orderBy: { lineNumber: 'asc' },
                         },
                     },
+                    orderBy: { createdAt: 'asc' },
                 },
             },
         });
@@ -240,7 +241,7 @@ export async function DELETE(
         }
 
         // Cannot cancel already shipped/delivered/cancelled orders
-        if (["shipped", "delivered", "cancelled"].includes(existing.status)) {
+        if (["partially_shipped", "shipped", "delivered", "cancelled"].includes(existing.status)) {
             return NextResponse.json(
                 { error: "Không thể hủy đơn hàng đã giao hoặc đã hủy" },
                 { status: 400 }
