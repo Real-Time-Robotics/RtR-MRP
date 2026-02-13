@@ -8,6 +8,7 @@ import {
   notFoundResponse,
   validationErrorResponse,
 } from '@/lib/api/with-permission';
+import { auditUpdate, auditDelete } from '@/lib/audit/route-audit';
 
 // =============================================================================
 // SUPPLIER VALIDATION SCHEMA
@@ -146,6 +147,9 @@ async function putHandler(
     },
   });
 
+  // Audit trail: log changes
+  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, existing as unknown as Record<string, unknown>, validation.data as Record<string, unknown>);
+
   return successResponse(supplier);
 }
 
@@ -199,6 +203,9 @@ async function deleteHandler(
       updatedAt: new Date(),
     },
   });
+
+  // Audit trail: log delete
+  auditDelete(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, { code: existing.code, name: existing.name });
 
   return successResponse({ deleted: true, id });
 }

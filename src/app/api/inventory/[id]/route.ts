@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { auditUpdate } from "@/lib/audit/route-audit";
 
 const updateSchema = z.object({
     quantity: z.number().optional(),
@@ -231,6 +232,17 @@ export async function PATCH(
                 },
             });
 
+            // Audit trail: log transfer
+            auditUpdate(request, session.user, "Inventory", id, {
+                locationCode: existing.locationCode,
+                warehouseId: existing.warehouseId,
+                quantity: existing.quantity,
+            }, {
+                locationCode: validatedData.locationCode,
+                warehouseId: targetWarehouse.id,
+                quantity: existing.quantity - transferQty,
+            });
+
             return NextResponse.json({ success: true, transferred: transferQty });
         }
 
@@ -247,6 +259,9 @@ export async function PATCH(
                 warehouse: true,
             },
         });
+
+        // Audit trail: log non-transfer update
+        auditUpdate(request, session.user, "Inventory", id, existing as unknown as Record<string, unknown>, updateData);
 
         return NextResponse.json(inventory);
     } catch (error) {

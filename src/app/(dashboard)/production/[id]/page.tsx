@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { formatDateMedium } from "@/lib/date";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { EntityAuditHistory } from "@/components/audit/entity-audit-history";
 
 interface WorkOrderData {
   id: string;
@@ -574,6 +575,7 @@ export default function WorkOrderDetailPage() {
       <Tabs defaultValue="details" className="w-full">
         <TabsList>
           <TabsTrigger value="details">Chi tiết</TabsTrigger>
+          <TabsTrigger value="history">Lịch sử</TabsTrigger>
           <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
@@ -716,6 +718,10 @@ export default function WorkOrderDetailPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <EntityAuditHistory entityType="WorkOrder" entityId={data.id} title="Lịch sử thay đổi" />
         </TabsContent>
 
         <TabsContent value="discussions" className="mt-4">

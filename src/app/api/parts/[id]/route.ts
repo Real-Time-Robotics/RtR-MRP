@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { rolePermissions, UserRole } from "@/lib/auth/auth-types";
+import { auditUpdate, auditDelete } from "@/lib/audit/route-audit";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -399,6 +400,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    // Audit trail: log field-level changes
+    auditUpdate(request, session.user, "Part", id, existing as Record<string, unknown>, data);
+
     return NextResponse.json(updatedPart);
   } catch (error) {
     console.error("Failed to update part:", error);
@@ -438,6 +442,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         },
       });
 
+      auditDelete(request, session.user, "Part", id, { softDeleted: true, partNumber: (await prisma.part.findUnique({ where: { id }, select: { partNumber: true } }))?.partNumber });
+
       return NextResponse.json({
         message: "Part marked as obsolete (used in BOM)",
         softDeleted: true,
@@ -445,7 +451,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Hard delete if not used
+    const deletedPart = await prisma.part.findUnique({ where: { id }, select: { partNumber: true, name: true } });
     await prisma.part.delete({ where: { id } });
+
+    auditDelete(request, session.user, "Part", id, deletedPart);
 
     return NextResponse.json({ message: "Part deleted successfully" });
   } catch (error) {

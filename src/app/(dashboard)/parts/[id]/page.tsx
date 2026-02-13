@@ -32,6 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { EntityAuditHistory } from "@/components/audit/entity-audit-history";
 import {
   Table,
   TableBody,
@@ -433,7 +434,7 @@ export default function PartDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="procurement">Procurement</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -445,6 +446,7 @@ export default function PartDetailPage() {
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             AI
           </TabsTrigger>
+          <TabsTrigger value="audit">Lịch sử</TabsTrigger>
           <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
@@ -1418,6 +1420,11 @@ export default function PartDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Audit Trail Tab */}
+        <TabsContent value="audit" className="mt-4">
+          <EntityAuditHistory entityType="Part" entityId={part.id} title="Lịch sử thay đổi" />
         </TabsContent>
 
         {/* Discussions Tab */}

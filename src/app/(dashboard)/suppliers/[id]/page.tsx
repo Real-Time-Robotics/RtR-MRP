@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from 'sonner';
 import { ConversationPanel } from '@/components/conversations';
+import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
 
 interface SupplierDetail {
     id: string;
@@ -177,13 +178,14 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                 {/* Right Column: Tabs (Products, Orders) */}
                 <div className="space-y-6 col-span-2">
                     <Tabs defaultValue="products">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="products">
                                 Products ({supplier._count.partSuppliers})
                             </TabsTrigger>
                             <TabsTrigger value="orders">
                                 Orders ({supplier._count.purchaseOrders})
                             </TabsTrigger>
+                            <TabsTrigger value="history">Lịch sử</TabsTrigger>
                             <TabsTrigger value="discussions">
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Discussions
@@ -246,6 +248,10 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                     </Table>
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        <TabsContent value="history" className="mt-4">
+                            <EntityAuditHistory entityType="Supplier" entityId={supplier.id} title="Lịch sử thay đổi" />
                         </TabsContent>
 
                         <TabsContent value="discussions" className="mt-4">

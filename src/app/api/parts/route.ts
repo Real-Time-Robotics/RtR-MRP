@@ -11,6 +11,7 @@ import {
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
 import { logApi } from "@/lib/audit/audit-logger";
+import { auditCreate } from "@/lib/audit/route-audit";
 
 // Allowed filters for parts
 const ALLOWED_FILTERS = ["category", "lifecycleStatus", "makeOrBuy"];
@@ -343,6 +344,9 @@ export async function POST(request: NextRequest) {
           },
         })
       : part;
+
+    // Audit trail: log creation
+    auditCreate(request, session.user, "Part", part.id, { partNumber: part.partNumber, name: part.name, category: part.category });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {

@@ -8,6 +8,7 @@ import {
   notFoundResponse,
   validationErrorResponse,
 } from '@/lib/api/with-permission';
+import { auditUpdate, auditDelete } from '@/lib/audit/route-audit';
 
 // =============================================================================
 // VALIDATION SCHEMA
@@ -110,6 +111,9 @@ async function putHandler(
     },
   });
 
+  // Audit trail: log changes
+  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Customer", id!, existing as unknown as Record<string, unknown>, validation.data as Record<string, unknown>);
+
   return successResponse(customer);
 }
 
@@ -150,6 +154,9 @@ async function deleteHandler(
     where: { id },
     data: { status: 'inactive' },
   });
+
+  // Audit trail: log delete
+  auditDelete(request, { id: user.id, name: user.name, email: user.email }, "Customer", id!, { code: existing.code, name: existing.name });
 
   return successResponse({ deleted: true, id });
 }

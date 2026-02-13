@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
 
 // Validation schema for order item
 const OrderItemSchema = z.object({
@@ -194,6 +195,13 @@ export async function PUT(
             });
         });
 
+        // Audit trail: log changes
+        if (validationResult.data.status && validationResult.data.status !== existing.status) {
+            auditStatusChange(request, session.user, "SalesOrder", id, existing.status, validationResult.data.status);
+        } else {
+            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
+        }
+
         return NextResponse.json(order);
     } catch (error) {
         console.error("Failed to update order:", error);
@@ -227,6 +235,7 @@ export async function DELETE(
         // If draft, delete completely
         if (existing.status === "draft") {
             await prisma.salesOrder.delete({ where: { id } });
+            auditDelete(request, session.user, "SalesOrder", id, { orderNumber: existing.orderNumber });
             return NextResponse.json({ deleted: true, id });
         }
 
@@ -243,6 +252,8 @@ export async function DELETE(
             where: { id },
             data: { status: "cancelled" },
         });
+
+        auditStatusChange(request, session.user, "SalesOrder", id, existing.status, "cancelled");
 
         return NextResponse.json({ cancelled: true, id });
     } catch (error) {

@@ -9,6 +9,7 @@ import {
   validationErrorResponse,
 } from '@/lib/api/with-permission';
 import { generateInspectionNumber } from '@/lib/quality/inspection-engine';
+import { auditUpdate, auditStatusChange, auditDelete } from '@/lib/audit/route-audit';
 
 // =============================================================================
 // VALIDATION
@@ -160,6 +161,13 @@ async function putHandler(
     });
   });
 
+  // Audit trail: log changes
+  if (validation.data.status && validation.data.status !== existing.status) {
+    auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, validation.data.status);
+  } else {
+    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
+  }
+
   // === INVENTORY UPDATE: When PO status changes to "received" ===
   const isBeingReceived =
     validation.data.status === 'received' && existing.status !== 'received';
@@ -282,6 +290,7 @@ async function deleteHandler(
 
   if (existing.status === 'draft') {
     await prisma.purchaseOrder.delete({ where: { id } });
+    auditDelete(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, { poNumber: existing.poNumber });
     return successResponse({ deleted: true, id });
   }
 
@@ -293,6 +302,8 @@ async function deleteHandler(
     where: { id },
     data: { status: 'cancelled' },
   });
+
+  auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, "cancelled");
 
   return successResponse({ cancelled: true, id });
 }

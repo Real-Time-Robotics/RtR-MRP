@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { ConversationPanel } from '@/components/conversations';
+import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
 
 interface CustomerDetail {
   id: string;
@@ -194,11 +195,12 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
         {/* Right Column: Tabs */}
         <div className="space-y-6 col-span-2">
           <Tabs defaultValue="orders">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="orders">
                 <ShoppingBag className="h-4 w-4 mr-1" />
                 Đơn hàng ({customer._count.salesOrders})
               </TabsTrigger>
+              <TabsTrigger value="history">Lịch sử</TabsTrigger>
               <TabsTrigger value="discussions">
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Thảo luận
@@ -243,6 +245,10 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                   </Table>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <EntityAuditHistory entityType="Customer" entityId={customer.id} title="Lịch sử thay đổi" />
             </TabsContent>
 
             <TabsContent value="discussions" className="mt-4">

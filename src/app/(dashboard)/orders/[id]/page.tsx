@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
+import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
 
 interface InventoryLot {
     lotNumber: string;
@@ -336,6 +337,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             <Tabs defaultValue="details" className="w-full">
                 <TabsList>
                     <TabsTrigger value="details">Chi tiết</TabsTrigger>
+                    <TabsTrigger value="history">Lịch sử</TabsTrigger>
                     <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
                 </TabsList>
 
@@ -493,6 +495,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                             </Card>
                         </div>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="mt-4">
+                    <EntityAuditHistory entityType="SalesOrder" entityId={order.id} title="Lịch sử thay đổi" />
                 </TabsContent>
 
                 <TabsContent value="discussions" className="mt-4">

@@ -5,6 +5,7 @@ import { withAuth, type AuthUser } from "@/lib/auth/middleware";
 import { handleError, NotFoundError, paginatedResponse, successResponse } from "@/lib/error-handler";
 import { logger } from "@/lib/logger";
 import { WorkOrderUpdateSchema, validateRequest } from "@/lib/validation/schemas";
+import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
 
 // GET - Get work order details (requires authentication + permission)
 export const GET = withAuth(
@@ -109,6 +110,13 @@ export const PATCH = withAuth(
 
       logger.audit("update", "workOrder", id, { userId: user.id, status });
 
+      // Audit trail
+      if (status) {
+        auditStatusChange(request, user, "WorkOrder", id, "previous", status);
+      } else {
+        auditUpdate(request, user, "WorkOrder", id, {} as Record<string, unknown>, updateData as Record<string, unknown>);
+      }
+
       return successResponse(workOrder);
     } catch (error) {
       return handleError(error);
@@ -145,6 +153,7 @@ export const DELETE = withAuth(
       await prisma.workOrder.delete({ where: { id } });
 
       logger.audit("delete", "workOrder", id, { userId: user.id });
+      auditDelete(request, user, "WorkOrder", id, { woNumber: existing.woNumber });
 
       return NextResponse.json({ success: true, message: "Work order deleted" });
     } catch (error) {

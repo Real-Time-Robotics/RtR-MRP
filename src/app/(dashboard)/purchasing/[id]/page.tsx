@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EntityDiscussions } from '@/components/discussions/entity-discussions';
+import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
 
 interface PurchaseOrderDetail {
     id: string;
@@ -137,6 +138,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
             <Tabs defaultValue="details" className="w-full">
                 <TabsList>
                     <TabsTrigger value="details">Chi tiết</TabsTrigger>
+                    <TabsTrigger value="history">Lịch sử</TabsTrigger>
                     <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
                 </TabsList>
 
@@ -250,6 +252,10 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                             </Card>
                         </div>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="mt-4">
+                    <EntityAuditHistory entityType="PurchaseOrder" entityId={po.id} title="Lịch sử thay đổi" />
                 </TabsContent>
 
                 <TabsContent value="discussions" className="mt-4">
