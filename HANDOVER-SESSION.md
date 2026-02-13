@@ -1,14 +1,14 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-02-11 (Vietnam Time)
-> **Session:** Sprint 4 Kickoff — Operations-Critical Features
-> **Latest Commit:** `3c6bb09` - feat: Add WH-SCRAP warehouse & fix mouse click selection
+> **Last Updated:** 2026-02-13 (Vietnam Time)
+> **Session:** Sprint 4 In Progress — Shipments, Warehouse Approval, PDF, BOM Explosion
+> **Latest Commit:** `70663d3` - feat: Shipment system, lot selection, button standardization & checkbox fix
 > **Branch:** `main` (clean, up to date with `nclamvn/main`)
-> **Deploy:** Render LIVE — code + database đồng bộ 100% với local
-> **Total Commits:** 232
+> **Deploy:** Render LIVE
+> **Total Commits:** 234
 
 ---
 
-## TONG QUAN TINH TRANG DU AN — 11/02/2026
+## TONG QUAN TINH TRANG DU AN — 13/02/2026
 
 ### Tinh trang hien tai: SPRINT 4 IN PROGRESS — Operations-Critical Features
 
@@ -25,29 +25,32 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | Advanced Analytics (Power BI-level dashboards) | DONE | 01/30/2026 |
 | AI Smart Import Engine (Vietnamese headers) | DONE | 02/02–02/03/2026 |
 | Supplier enhancements (Tax ID, Secondary suppliers) | DONE | 02/05/2026 |
-| Warehouse Management System (4-warehouse) | DONE | 02/06/2026 |
+| Warehouse Management System (4-warehouse + SCRAP) | DONE | 02/06–02/09/2026 |
 | Receiving Inspection Pipeline (PO→QC→Warehouse) | DONE | 02/06/2026 |
 | Production Data Sync (Local → Render) | DONE | 02/06/2026 |
-| WH-SCRAP warehouse + Combobox fix | DONE | 02/09/2026 |
-| **Sprint 4: PDF Generation** | **IN PROGRESS** | 02/11/2026 |
+| Warehouse Approval Flow (Production→Kho confirm) | DONE | 02/11/2026 |
+| PDF Generation (PO, Invoice, Packing List, WO) | DONE | 02/11/2026 |
+| Shipment System (SO→Xuất kho→Lot selection) | DONE | 02/12/2026 |
+| BOM Explosion → Create PO flow | DONE | 02/12/2026 |
+| Button/Checkbox UI standardization | DONE | 02/12/2026 |
 | **Sprint 4: Audit Trail** | TODO | — |
-| **Sprint 4: Approval Workflows** | TODO | — |
+| **Sprint 4: Approval Workflows (PO, WO)** | TODO | — |
 
-### So lieu du an (Verified 02/11)
+### So lieu du an (Verified 02/13)
 
 | Metric | Value |
 |--------|-------|
-| **Prisma Schema** | 5,583 dong |
-| **Models** | 149 |
+| **Prisma Schema** | 5,666 dong |
+| **Models** | 152 |
 | **Enums** | 27 |
-| **API Routes** | 243 route.ts files |
-| **Total Commits** | 232 |
-| **Lines of Code** | 210K+ |
-| **Database** | 59 parts, 33 inventory, 4 warehouses |
+| **API Routes** | 253 route.ts files |
+| **Total Commits** | 234 |
+| **Lines of Code** | 300K+ |
+| **Database** | 59 parts, 33 inventory, 5 warehouses |
 | **Production** | https://rtr-mrp.onrender.com |
 | **Git Status** | Clean — up to date with `nclamvn/main` |
 
-### Cong viec da lam tu 21/01 den 09/02 (48 commits)
+### Cong viec da lam tu 21/01 den 12/02 (50 commits)
 
 #### 01/21 — Bug Fixes & UI
 - Fix 6 bugs tu customer feedback (leading zeros, part form tabs, default lead time, PO line qty, AI error explainer)
@@ -91,6 +94,82 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 - **Data Integrity Fixes** + Ghost record cleanup
 - **Production Data Sync** (pg_dump/pg_restore Local → Render)
 - **ensure-warehouses.ts** build-time script
+
+#### 02/11 — Warehouse Approval + PDF + BOM + Material Issue (MAJOR)
+- **Warehouse Approval Flow**: ProductionReceipt model (PENDING/CONFIRMED/REJECTED)
+  - Production tao phieu PENDING, Kho confirm/reject
+  - Inventory chi update khi warehouse confirmed
+  - WO detail hien thi 3-state receipt status
+  - Warehouse detail them tab "Phieu cho nhap kho" voi confirm/reject actions
+- **PDF Generation**: 4 document types (PO, Invoice, Packing List, Work Order)
+  - `src/lib/documents/pdf-base.ts` — base class voi Vietnamese locale
+  - `src/lib/documents/po-document.ts` — Purchase Order PDF
+  - `src/lib/documents/invoice-document.ts` — Invoice PDF
+  - `src/lib/documents/packing-list-document.ts` — Packing List PDF
+  - `src/lib/documents/wo-document.ts` — Work Order PDF
+- **BOM Management**: Line manager, status switcher, create BOM header button
+- **Material Issue**: Ad-hoc issue page + WO issue endpoint
+- **Customer Detail Page** + Product detail API
+- **Quality Inspection** enhancements
+- **Combobox improvements**, Part form enhancements
+
+#### 02/12 — Shipment System + BOM Explosion PO + UI Polish
+- **Shipment System (NEW)**:
+  - Shipment + ShipmentLine models (PREPARING/SHIPPED/DELIVERED)
+  - Manual lot selection + quantity input khi shipping
+  - `confirmShipment()` supports user-specified lot allocations with validation
+  - API: POST `/api/orders/[id]/ship`, GET/PATCH `/api/shipments/[id]`
+- **BOM Explosion → Create PO**: API `/api/bom/[id]/create-pos` tu BOM explosion ket qua
+- **Button Standardization**: Tat ca detail pages ui-v2 sm h-8→h-9
+- **Checkbox Fix**: Native checkbox dark/black color → custom CSS appearance:none
+- **Production Receiving** improvements
+
+---
+
+## HANDOVER CHECKPOINT - 12/02/2026
+
+### Completed 02/11–02/12 (2 commits, +8,791 lines)
+
+**New Models Added (3):**
+- `ProductionReceipt` — Warehouse approval for production output
+- `Shipment` — Shipping management for sales orders
+- `ShipmentLine` — Line items in shipments
+
+**New API Routes (10):**
+```
+POST   /api/production/[id]/receive     — Create production receipt
+POST   /api/production/[id]/issue       — Issue materials to WO
+POST   /api/inventory/issue             — Ad-hoc material issue
+GET    /api/warehouse-receipts          — List pending receipts
+POST   /api/warehouse-receipts/[id]/confirm — Confirm receipt
+POST   /api/warehouse-receipts/[id]/reject  — Reject receipt
+GET    /api/products/[id]               — Product detail
+POST   /api/orders/[id]/ship            — Create shipment
+GET    /api/shipments/[id]              — Shipment detail
+POST   /api/bom/[id]/create-pos         — Create POs from BOM explosion
+```
+
+**New UI Pages/Components:**
+- Material Issue page (`/inventory/issue`)
+- BOM Line Manager component
+- BOM Status Switcher
+- Create BOM Header Button
+- Customer Detail page
+- Shipment flow in Sales Order detail
+- Enhanced BOM Explosion with create-PO flow
+
+**PDF Document System:**
+- `src/lib/documents/pdf-base.ts` — Base class, Vietnamese locale, header/footer
+- `src/lib/documents/po-document.ts` — Purchase Order PDF
+- `src/lib/documents/invoice-document.ts` — Invoice PDF
+- `src/lib/documents/packing-list-document.ts` — Packing List PDF
+- `src/lib/documents/wo-document.ts` — Work Order PDF
+
+### Commits (02/11–02/12)
+```
+70663d3 feat: Shipment system, lot selection, button standardization & checkbox fix
+979c807 feat: Add warehouse approval flow for production receipts + multiple enhancements
+```
 
 ---
 
@@ -183,15 +262,15 @@ f7b4f71 feat: Warehouse management, receiving inspection pipeline & inventory tr
 | Local | `postgresql://mac@localhost:5432/rtr_mrp` | PostgreSQL 14 | 59 parts, 33 inventory, 4 warehouses |
 | Production | Render PostgreSQL (Singapore) | PostgreSQL 18 | **Identical to local** |
 
-### Project Stats (Verified 02/06)
+### Project Stats (Verified 02/13)
 
 | Metric | Value |
 |--------|-------|
-| **Prisma Schema** | 5,583 lines |
-| **Models** | 149 |
+| **Prisma Schema** | 5,666 lines |
+| **Models** | 152 |
 | **Enums** | 27 |
-| **API Routes** | 243 route.ts files |
-| **Lines of Code** | 210K+ |
+| **API Routes** | 253 route.ts files |
+| **Lines of Code** | 300K+ |
 
 ### Tech Stack Detail
 ```
@@ -211,9 +290,9 @@ Sync:       pg_dump v18 + pg_restore (local ↔ production)
 
 ---
 
-## WAREHOUSE PIPELINE ARCHITECTURE (NEW)
+## WAREHOUSE & LOGISTICS ARCHITECTURE
 
-### 4-Warehouse System
+### 5-Warehouse System
 ```
 PO Received → WH-RECEIVING (RECEIVING)
                     │
@@ -223,18 +302,53 @@ PO Received → WH-RECEIVING (RECEIVING)
          │          │          │
        PASS    CONDITIONAL   FAIL
          │       │      │      │
-    WH-MAIN  WH-HOLD  WH-QUARANTINE
+    WH-MAIN  WH-HOLD  WH-QUARANTINE → WH-SCRAP (disposable)
     (STOCK)  (accepted) (rejected)
+```
+
+### Production → Warehouse Approval Flow (NEW 02/11)
+```
+Work Order COMPLETED → ProductionReceipt (PENDING)
+                              │
+                    Warehouse Manager reviews
+                              │
+                    ┌─────────┼─────────┐
+                    │                   │
+                CONFIRMED           REJECTED
+                    │                   │
+            Inventory updated     No inventory change
+            (WH-MAIN + lot)       (reason recorded)
+```
+
+### Shipment Flow (NEW 02/12)
+```
+Sales Order CONFIRMED → Ship button
+                           │
+                    Lot Selection UI
+                    (manual qty per lot)
+                           │
+                    Shipment created (PREPARING)
+                           │
+                    Inventory deducted per lot
+                           │
+                    SO status → SHIPPED
 ```
 
 ### Key Files
 ```
 src/app/(dashboard)/warehouses/page.tsx        — Warehouse overview
-src/app/(dashboard)/warehouses/[id]/page.tsx   — Warehouse detail + SmartGrid
+src/app/(dashboard)/warehouses/[id]/page.tsx   — Warehouse detail + pending receipts tab
 src/app/(dashboard)/quality/receiving/         — Inspection pages (list, new, detail)
+src/app/(dashboard)/inventory/issue/page.tsx   — Material issue page (NEW)
 src/app/api/quality/inspections/[id]/route.ts  — Inspection completion + inventory moves
 src/app/api/inventory/[id]/route.ts            — Transfer logic (partial/full)
+src/app/api/inventory/issue/route.ts           — Ad-hoc material issue (NEW)
 src/app/api/purchase-orders/[id]/route.ts      — PO receiving → WH-RECEIVING
+src/app/api/warehouse-receipts/                — Warehouse approval flow (NEW)
+src/app/api/production/[id]/receive/route.ts   — Production receipt (NEW)
+src/app/api/orders/[id]/ship/route.ts          — Shipment creation (NEW)
+src/app/api/shipments/[id]/route.ts            — Shipment detail (NEW)
+src/lib/documents/                             — PDF generators (NEW)
 scripts/ensure-warehouses.ts                   — Build-time warehouse creation
 ```
 
@@ -295,9 +409,39 @@ model Inventory {
 model Warehouse {
   code    String  @unique
   name    String
-  type    String?  // MAIN, RECEIVING, HOLD, QUARANTINE
+  type    String?  // MAIN, RECEIVING, HOLD, QUARANTINE, SCRAP
   status  String   @default("active")
-  // Standard: WH-MAIN, WH-RECEIVING, WH-HOLD, WH-QUARANTINE
+  // Standard: WH-MAIN, WH-RECEIVING, WH-HOLD, WH-QUARANTINE, WH-SCRAP
+}
+
+model ProductionReceipt {
+  receiptNumber  String  @unique
+  workOrderId    String  @unique
+  productId      String
+  quantity       Int
+  lotNumber      String
+  warehouseId    String
+  status         String  @default("PENDING")  // PENDING | CONFIRMED | REJECTED
+  requestedBy    String
+  confirmedBy    String?
+  rejectedBy     String?
+}
+
+model Shipment {
+  shipmentNumber  String  @unique
+  salesOrderId    String  @unique
+  customerId      String
+  status          String  @default("PREPARING")  // PREPARING | SHIPPED | DELIVERED
+  carrier         String?
+  trackingNumber  String?
+}
+
+model ShipmentLine {
+  shipmentId  String
+  lineNumber  Int
+  productId   String
+  quantity    Int
+  @@unique([shipmentId, lineNumber])
 }
 ```
 
@@ -308,22 +452,28 @@ model Warehouse {
 ### DONE
 - [x] AI Smart Import Engine (Vietnamese headers, auto-mapping, duplicate detect)
 - [x] AI Phase 1-3 (Forecast, Quality, Supplier Risk, Auto-PO, Auto-Schedule, Alerts)
-- [x] BOM Management (multi-level, explode, where-used)
+- [x] BOM Management (multi-level, explode, where-used, line manager, status switcher)
+- [x] **BOM Explosion → Create PO** (auto-create POs from BOM explosion) — NEW 02/12
 - [x] MRP Planning (ATP/CTP, Pegging, Simulation)
 - [x] Production (Work Orders, Routing, Capacity, OEE)
+- [x] **Warehouse Approval Flow** (Production→PENDING→Kho confirm/reject) — NEW 02/11
+- [x] **Material Issue** (ad-hoc + WO-based material issuing) — NEW 02/11
 - [x] Quality (NCR, CAPA, Inspection Plans, Traceability)
-- [x] **Receiving Inspection Pipeline** (PO→RECEIVING→QC→MAIN/HOLD/QUARANTINE) — NEW
-- [x] **Warehouse Management** (4-warehouse system, transfer, audit trail) — NEW
+- [x] Receiving Inspection Pipeline (PO→RECEIVING→QC→MAIN/HOLD/QUARANTINE)
+- [x] Warehouse Management (5-warehouse: MAIN, RECEIVING, HOLD, QUARANTINE, SCRAP)
 - [x] Inventory (Multi-warehouse, lot/serial, composite keys, partial transfer)
 - [x] Purchasing (PO, Suppliers, Tax ID, Secondary suppliers)
 - [x] Sales (SO, Customer tiers: Platinum/Gold/Silver/Bronze)
+- [x] **Shipment System** (SO→Xuat kho→Lot selection→Delivery) — NEW 02/12
 - [x] Finance (Costing, GL, Invoicing, multi-currency VND)
+- [x] **PDF Generation** (PO, Invoice, Packing List, Work Order) — NEW 02/11
 - [x] Excel Import/Export (Vietnamese support)
 - [x] Mobile PWA (offline + barcode scanning)
 - [x] Discussions (threaded on entities)
 - [x] Sprint 3: Intelligence & Polish features
 - [x] Report Scheduler
 - [x] Part form UX (searchable dropdowns, smart navigation)
+- [x] Customer Detail Page — NEW 02/11
 
 ### SPRINT ROADMAP - WHAT'S NEXT
 
@@ -331,7 +481,12 @@ model Warehouse {
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| PDF Generation (PO, Invoice, Packing List, WO) | **IN PROGRESS** | **Critical** | jsPDF + autotable, Vietnamese locale |
+| PDF Generation (PO, Invoice, Packing List, WO) | **DONE** | Critical | `src/lib/documents/` — 5 files |
+| Warehouse Approval Flow (Production receipts) | **DONE** | Critical | ProductionReceipt PENDING→CONFIRMED/REJECTED |
+| Shipment System (SO xuất kho) | **DONE** | Critical | Shipment + lot selection |
+| BOM Explosion → Create PO | **DONE** | High | `/api/bom/[id]/create-pos` |
+| Material Issue (ad-hoc + WO) | **DONE** | High | `/inventory/issue` page |
+| Button/Checkbox UI standardization | **DONE** | Medium | ui-v2 h-9, custom checkbox CSS |
 | Audit Trail (who, when, old -> new) | TODO | **Critical** | Enterprise compliance, ChangeLog model |
 | Approval Workflows (PO, WO release) | TODO | **Critical** | Multi-step, role-based |
 | Excel Export nang cao (BOM tree, filters) | TODO | High | BOM indent format |
@@ -420,20 +575,30 @@ API Key:  ~/.render/cli.yaml
 
 ### V1 (Primary - `/api/*`)
 ```
-GET/POST   /api/parts              - Parts CRUD
-GET/POST   /api/inventory          - Inventory management
-PATCH      /api/inventory/[id]     - Transfer + location change
-POST       /api/inventory/movements - Stock movements
-GET/POST   /api/warehouses         - Warehouse management
-GET/POST   /api/quality/inspections - Receiving inspections
-PUT        /api/quality/inspections/[id] - Update + complete inspection
-GET/POST   /api/production         - Work orders
-GET/POST   /api/customers          - Customer management
-GET/POST   /api/suppliers          - Supplier management
-GET        /api/dashboard          - Dashboard aggregations
-POST       /api/mrp/run            - Trigger MRP calculation
-GET        /api/export             - Bulk data export
-GET        /api/health             - Basic health check
+GET/POST   /api/parts                          - Parts CRUD
+GET/POST   /api/inventory                      - Inventory management
+PATCH      /api/inventory/[id]                 - Transfer + location change
+POST       /api/inventory/movements            - Stock movements
+POST       /api/inventory/issue                - Ad-hoc material issue (NEW)
+GET/POST   /api/warehouses                     - Warehouse management
+GET        /api/warehouse-receipts             - List pending receipts (NEW)
+POST       /api/warehouse-receipts/[id]/confirm - Confirm receipt (NEW)
+POST       /api/warehouse-receipts/[id]/reject  - Reject receipt (NEW)
+GET/POST   /api/quality/inspections            - Receiving inspections
+PUT        /api/quality/inspections/[id]       - Update + complete inspection
+GET/POST   /api/production                     - Work orders
+POST       /api/production/[id]/receive        - Create production receipt (NEW)
+POST       /api/production/[id]/issue          - Issue materials to WO (NEW)
+POST       /api/orders/[id]/ship               - Create shipment (NEW)
+GET/PATCH  /api/shipments/[id]                 - Shipment detail (NEW)
+GET        /api/products/[id]                  - Product detail (NEW)
+POST       /api/bom/[id]/create-pos            - Create POs from BOM explosion (NEW)
+GET/POST   /api/customers                      - Customer management
+GET/POST   /api/suppliers                      - Supplier management
+GET        /api/dashboard                      - Dashboard aggregations
+POST       /api/mrp/run                        - Trigger MRP calculation
+GET        /api/export                         - Bulk data export
+GET        /api/health                         - Basic health check
 ```
 
 ### NON-EXISTENT ROUTES (do NOT use)
@@ -493,17 +658,26 @@ render deploys create srv-d5a8l81r0fns73872uhg --confirm -o json
 ## IMPORTANT FILES
 
 ```
-prisma/schema.prisma                    # 149 models, 27 enums, 5583 lines
-scripts/ensure-warehouses.ts            # Build-time warehouse creation (4 standard)
-src/app/(dashboard)/warehouses/         # Warehouse management UI
+prisma/schema.prisma                    # 152 models, 27 enums, 5666 lines
+scripts/ensure-warehouses.ts            # Build-time warehouse creation (5 standard)
+src/app/(dashboard)/warehouses/         # Warehouse management UI + pending receipts
 src/app/(dashboard)/quality/receiving/  # Receiving inspection UI
+src/app/(dashboard)/inventory/issue/    # Material issue page (NEW)
 src/app/api/quality/inspections/        # Inspection API + inventory moves
 src/app/api/inventory/[id]/route.ts     # Transfer logic
+src/app/api/inventory/issue/route.ts    # Ad-hoc material issue (NEW)
+src/app/api/warehouse-receipts/         # Warehouse approval flow (NEW)
+src/app/api/production/[id]/            # WO + receive + issue (NEW)
+src/app/api/orders/[id]/ship/route.ts   # Shipment creation (NEW)
+src/app/api/shipments/                  # Shipment management (NEW)
+src/app/api/bom/[id]/create-pos/        # BOM→PO creation (NEW)
 src/app/api/purchase-orders/[id]/       # PO receiving → WH-RECEIVING
-src/app/api/                            # 243 API route files
+src/app/api/                            # 253 API route files
+src/lib/documents/                      # PDF generators: PO, Invoice, WO, Packing List (NEW)
 src/lib/ai/                             # All AI modules
 src/lib/excel/                          # Excel import/export + AI
-src/components/                         # 46 feature component sets
+src/components/bom/                     # BOM components: line manager, status, tree (ENHANCED)
+src/components/                         # 50+ feature component sets
 CLAUDE.md                               # AI coding conventions
 HANDOVER-SESSION.md                     # This file
 ```
@@ -514,29 +688,16 @@ HANDOVER-SESSION.md                     # This file
 
 | # | Van de | Muc do | Ghi chu |
 |---|--------|--------|---------|
-| 1 | Test coverage thap | HIGH | 243 API routes nhung chi ~10 test files |
-| 2 | V2 API chua hoan thanh | MEDIUM | Hau het routes con o V1 |
-| 3 | Warehouse type la String | LOW | Khong phai enum, can validate trong code |
-| 4 | pg_dump version mismatch | LOW | Prod v18, local v14 — phai dung pg_dump v18 |
-| 5 | Zod z.record() | FIXED | Da fix 02/04 — can explicit key schema |
-| 6 | Prisma JSON fields | FIXED | Da fix — cast to object truoc khi save |
-| 7 | Buffer/Uint8Array | FIXED | Da fix — NextResponse can Uint8Array |
-| 8 | Nodemailer | FIXED | Da fix — dynamic import only |
-
----
-
-## KHI TRO LAI
-
-**Noi voi Claude:** "Doc HANDOVER-SESSION.md de tiep tuc"
-
-**Viec tiep theo nen lam (theo thu tu uu tien):**
-1. PDF Generation (PO, Invoice, WO) - **Critical** cho van hanh
-2. Audit Trail (who, when, old → new) - **Critical** cho enterprise compliance
-3. Approval Workflows (PO, WO release) - **Critical**
-4. Excel Export nang cao (BOM tree, filters) - High
-5. Barcode/QR Generation + Print labels - High
-6. Role-based Dashboards (CEO, Kho, SX, Mua hang) - High
-7. Tang test coverage (target: 50%+ API routes) - Medium
+| 1 | Test coverage thap | HIGH | 253 API routes nhung chi ~10 test files |
+| 2 | Audit Trail chua co | HIGH | Can ChangeLog model cho enterprise compliance |
+| 3 | Approval Workflows chua co | HIGH | PO/WO release can multi-step approval |
+| 4 | V2 API chua hoan thanh | MEDIUM | Hau het routes con o V1 |
+| 5 | Warehouse type la String | LOW | Khong phai enum, can validate trong code |
+| 6 | pg_dump version mismatch | LOW | Prod v18, local v14 — phai dung pg_dump v18 |
+| 7 | Zod z.record() | FIXED | Da fix 02/04 — can explicit key schema |
+| 8 | Prisma JSON fields | FIXED | Da fix — cast to object truoc khi save |
+| 9 | Buffer/Uint8Array | FIXED | Da fix — NextResponse can Uint8Array |
+| 10 | Nodemailer | FIXED | Da fix — dynamic import only |
 
 ---
 
@@ -553,15 +714,32 @@ HANDOVER-SESSION.md                     # This file
 02/04       Sprint 3 COMPLETE + build fixes
 02/05       Supplier enhancements + Inventory improvements
 02/06       Warehouse Pipeline COMPLETE + Production data sync
-02/09       Handover cap nhat tinh trang du an + WH-SCRAP + Combobox fix
-02/11       Sprint 4 Kickoff — PDF Generation, Audit Trail, Approval Workflows
+02/09       WH-SCRAP + Combobox fix
+02/11       Warehouse Approval Flow + PDF Generation + BOM + Material Issue (MAJOR)
+02/12       Shipment System + BOM Explosion→PO + UI standardization
 ```
 
-**Tong ket:** Du an da UAT Ready, 232 commits, 149 models, 243 API routes, 210K+ LOC.
-Sprint 4 (PDF, Audit Trail, Approval Workflows) dang trien khai tu 02/11.
+**Tong ket:** Du an da UAT Ready, 234 commits, 152 models, 253 API routes, 300K+ LOC.
+Sprint 4 dang trien khai — da hoan thanh PDF, Shipments, Warehouse Approval, BOM→PO.
+Con lai: Audit Trail + Approval Workflows.
 
 ---
 
-*Cap nhat lan cuoi: 2026-02-11 VN*
+## KHI TRO LAI
+
+**Noi voi Claude:** "Doc HANDOVER-SESSION.md de tiep tuc"
+
+**Viec tiep theo nen lam (theo thu tu uu tien):**
+1. Audit Trail (who, when, old → new) - **Critical** cho enterprise compliance
+2. Approval Workflows (PO, WO release) - **Critical** multi-step, role-based
+3. Excel Export nang cao (BOM tree, filters) - High
+4. Barcode/QR Generation + Print labels - High
+5. Role-based Dashboards (CEO, Kho, SX, Mua hang) - High
+6. Tang test coverage (target: 50%+ API routes) - Medium
+7. Data sync Local → Production (pg_dump/pg_restore) - khi can
+
+---
+
+*Cap nhat lan cuoi: 2026-02-13 VN*
 *Du an: RTR-MRP - Material Requirements Planning System*
 *Handover prepared by: Claude Opus 4.6*
