@@ -17,6 +17,10 @@ const envSchema = z.object({
 });
 
 function validateEnv() {
+  // Skip strict validation during build phase (next build collects page data
+  // but secrets are not available at build time on platforms like Render)
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
@@ -25,7 +29,9 @@ function validateEnv() {
       .map(([key, msgs]) => `  ${key}: ${msgs?.join(", ")}`)
       .join("\n");
 
-    if (process.env.NODE_ENV === "production") {
+    if (isBuildPhase) {
+      console.warn(`⚠ Environment validation skipped during build:\n${message}`);
+    } else if (process.env.NODE_ENV === "production") {
       throw new Error(`Environment validation failed:\n${message}`);
     } else {
       console.warn(`\u26A0 Environment validation warnings:\n${message}`);
