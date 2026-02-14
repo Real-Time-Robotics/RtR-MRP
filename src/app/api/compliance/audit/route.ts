@@ -8,6 +8,7 @@ import {
   getEntityHistory,
   generateAuditReport,
 } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,8 +76,8 @@ export async function GET(request: NextRequest) {
     const toDate = searchParams.get("toDate");
     const isSecurityEvent = searchParams.get("isSecurityEvent");
     const searchText = searchParams.get("search") || undefined;
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
+    const offset = parseInt(searchParams.get("offset") || "0") || 0;
 
     const result = await searchAuditTrail({
       userId,
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Audit query error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/compliance/audit' });
     return NextResponse.json(
       { error: "Query failed" },
       { status: 500 }

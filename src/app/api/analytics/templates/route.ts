@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dashboardService } from '@/lib/analytics';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching templates:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/templates' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch templates' },
       { status: 500 }
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error seeding templates:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/templates' });
     return NextResponse.json(
       { success: false, error: 'Failed to seed templates' },
       { status: 500 }

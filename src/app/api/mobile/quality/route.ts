@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Helper function to transform inspection data
 function transformInspection(inspection: any) {
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error('Quality API GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/quality' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch inspections' },
       { status: 500 }
@@ -282,7 +283,7 @@ export async function POST(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error('Quality API POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/quality' });
     return NextResponse.json(
       { success: false, error: 'Failed to process inspection' },
       { status: 500 }
@@ -378,7 +379,7 @@ export async function PATCH(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error('Quality PATCH error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/quality' });
     return NextResponse.json(
       { success: false, error: 'Failed to update inspection' },
       { status: 500 }

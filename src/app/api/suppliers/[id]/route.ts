@@ -7,6 +7,7 @@ import {
   errorResponse,
   notFoundResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
 import { auditUpdate, auditDelete } from '@/lib/audit/route-audit';
 
@@ -36,7 +37,7 @@ const updateSupplierSchema = z.object({
 
 async function getHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
 
@@ -92,7 +93,7 @@ async function getHandler(
 
 async function putHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
 
@@ -148,7 +149,7 @@ async function putHandler(
   });
 
   // Audit trail: log changes
-  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, existing as unknown as Record<string, unknown>, validation.data as Record<string, unknown>);
+  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, existing as unknown as any, validation.data as any);
 
   return successResponse(supplier);
 }
@@ -159,7 +160,7 @@ async function putHandler(
 
 async function deleteHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
 

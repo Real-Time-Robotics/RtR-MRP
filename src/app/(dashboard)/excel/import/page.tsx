@@ -27,7 +27,7 @@ export default function ImportPage() {
       </div>
 
       {/* AI Feature Badge */}
-      <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg w-fit">
+      <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-primary-50 border border-purple-200 rounded-lg w-fit">
         <Sparkles className="w-5 h-5 text-purple-600" />
         <span className="text-sm text-purple-800">
           <strong>AI Smart Import:</strong> Tự động nhận diện tiếng Việt, đề xuất mapping thông minh, phát hiện trùng lặp
@@ -40,9 +40,9 @@ export default function ImportPage() {
       </div>
 
       {/* Help Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">Hướng dẫn Import</h3>
-        <ul className="text-sm text-blue-800 space-y-1">
+      <div className="bg-primary-50 border border-primary-200 rounded-xl p-6">
+        <h3 className="font-semibold text-primary-900 mb-2">Hướng dẫn Import</h3>
+        <ul className="text-sm text-primary-800 space-y-1">
           <li>
             - Đảm bảo file có headers ở dòng đầu tiên
           </li>
@@ -65,7 +65,7 @@ export default function ImportPage() {
         <div className="mt-4">
           <Link
             href="/excel/templates"
-            className="text-blue-600 hover:underline text-sm font-medium"
+            className="text-primary-600 hover:underline text-sm font-medium"
           >
             Tải templates import mẫu
           </Link>

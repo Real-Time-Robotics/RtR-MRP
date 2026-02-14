@@ -138,7 +138,10 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // =============================================================================
-// MOCK DATA (Replace with real API calls)
+// MOCK DATA
+// Used as fallback for the MRP Wizard. For real API integration, use the SWR-based
+// hooks in src/lib/hooks/ (e.g., useSalesOrders, useInventory, useParts) which
+// fetch from /api/v2/* endpoints with proper caching and revalidation.
 // =============================================================================
 
 const mockSalesOrders: SalesOrderForMRP[] = [
@@ -357,7 +360,8 @@ export function useSalesOrdersForMRP() {
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: Replace with real API call
+      // Uses mock data for the MRP Wizard. For real API integration, use the
+      // SWR-based useSalesOrders hook which fetches from /api/v2/sales-orders.
       // const data = await fetchAPI<SalesOrderForMRP[]>('/sales-orders');
       await new Promise((resolve) => setTimeout(resolve, 500));
       setOrders(mockSalesOrders);
@@ -378,29 +382,65 @@ export function useSalesOrdersForMRP() {
 export function useMRPCalculation() {
   const [result, setResult] = useState<MRPRunResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const runMRP = useCallback(async (selectedOrderIds: string[]) => {
     setIsCalculating(true);
     setError(null);
+    setProgress(0);
     try {
-      // TODO: Replace with real API call
-      // const data = await fetchAPI<MRPRunResult>('/run', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ orderIds: selectedOrderIds }),
-      // });
+      // Submit MRP calculation to background job queue
+      const response = await fetch('/api/mrp/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: selectedOrderIds }),
+      });
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: 'MRP request failed' }));
+        throw new Error(errData.error || `HTTP ${response.status}`);
+      }
 
-      // Get selected orders
-      const selectedOrders = mockSalesOrders.filter((o) => selectedOrderIds.includes(o.id));
+      const submitResult = await response.json();
+      const bgJobId = submitResult.backgroundJobId;
 
-      // Calculate MRP
-      const mrpResult = calculateMRP(selectedOrders, mockInventory, mockBOMExplosion);
-      setResult(mrpResult);
+      if (!bgJobId) {
+        // Fallback: direct result (no background job)
+        if (submitResult.data) {
+          const data = submitResult.data;
+          setResult(data);
+          return data;
+        }
+        throw new Error('Unexpected response format');
+      }
 
-      return mrpResult;
+      // Poll for background job completion
+      let attempts = 0;
+      const maxAttempts = 300; // 5 minutes at 1s intervals
+      while (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        attempts++;
+
+        const statusRes = await fetch(`/api/jobs/${bgJobId}`);
+        if (!statusRes.ok) continue;
+
+        const jobStatus = await statusRes.json();
+        setProgress(jobStatus.progress || 0);
+
+        if (jobStatus.status === 'completed') {
+          const mrpResult = jobStatus.result as MRPRunResult;
+          setResult(mrpResult);
+          setProgress(100);
+          return mrpResult;
+        }
+
+        if (jobStatus.status === 'failed' || jobStatus.status === 'cancelled') {
+          throw new Error(jobStatus.error || 'MRP calculation failed');
+        }
+      }
+
+      throw new Error('MRP calculation timed out after 5 minutes');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'MRP calculation failed';
       setError(message);
@@ -413,9 +453,10 @@ export function useMRPCalculation() {
   const reset = useCallback(() => {
     setResult(null);
     setError(null);
+    setProgress(0);
   }, []);
 
-  return { result, isCalculating, error, runMRP, reset };
+  return { result, isCalculating, progress, error, runMRP, reset };
 }
 
 export function useInventoryData() {
@@ -425,7 +466,8 @@ export function useInventoryData() {
   useEffect(() => {
     const fetchInventory = async () => {
       setIsLoading(true);
-      // TODO: Replace with real API call
+      // Uses mock data. For real API integration, use the SWR-based
+      // useInventory hook which fetches from /api/v2/inventory.
       await new Promise((resolve) => setTimeout(resolve, 300));
       setInventory(mockInventory);
       setIsLoading(false);

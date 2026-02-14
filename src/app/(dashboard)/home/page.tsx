@@ -80,12 +80,12 @@ const mockWorkOrders: WorkOrder[] = [
   { id: '5', number: 'WO-2024-005', product: 'Propeller Set', quantity: 500, completed: 150, status: 'delayed', progress: 30 },
 ];
 
-const mockAlerts: Alert[] = [
-  { id: '1', type: 'critical', title: 'Low stock: Carbon Fiber Tubes (5 remaining)', time: '2m ago' },
-  { id: '2', type: 'critical', title: 'Machine CNC-01 requires maintenance', time: '15m ago' },
-  { id: '3', type: 'warning', title: 'PO-2024-089 delivery delayed by 2 days', time: '1h ago' },
-  { id: '4', type: 'warning', title: 'Quality issue reported on WO-2024-003', time: '2h ago' },
-  { id: '5', type: 'info', title: 'New supplier quote received', time: '3h ago' },
+const mockAlertKeys: { id: string; type: Alert['type']; titleKey: string; timeKey: string }[] = [
+  { id: '1', type: 'critical', titleKey: 'dashboard.alertLowStock', timeKey: 'dashboard.timeAgo2m' },
+  { id: '2', type: 'critical', titleKey: 'dashboard.alertMaintenance', timeKey: 'dashboard.timeAgo15m' },
+  { id: '3', type: 'warning', titleKey: 'dashboard.alertDeliveryDelay', timeKey: 'dashboard.timeAgo1h' },
+  { id: '4', type: 'warning', titleKey: 'dashboard.alertQualityIssue', timeKey: 'dashboard.timeAgo2h' },
+  { id: '5', type: 'info', titleKey: 'dashboard.alertSupplierQuote', timeKey: 'dashboard.timeAgo3h' },
 ];
 
 // =============================================================================
@@ -173,11 +173,12 @@ function StatCard({
 }
 
 function ProductionStatusCard({ order }: { order: WorkOrder }) {
+  const { t } = useLanguage();
   const statusConfig = {
-    running: { icon: Play, color: 'text-production-green bg-production-green-dim', label: 'RUN' },
-    paused: { icon: Pause, color: 'text-alert-amber bg-alert-amber-dim', label: 'PAUSE' },
-    completed: { icon: CheckCircle2, color: 'text-info-cyan bg-info-cyan-dim', label: 'DONE' },
-    delayed: { icon: AlertCircle, color: 'text-urgent-red bg-urgent-red-dim', label: 'DELAY' },
+    running: { icon: Play, color: 'text-production-green bg-production-green-dim', label: t('dashboard.woRunning') },
+    paused: { icon: Pause, color: 'text-alert-amber bg-alert-amber-dim', label: t('dashboard.woPaused') },
+    completed: { icon: CheckCircle2, color: 'text-info-cyan bg-info-cyan-dim', label: t('dashboard.woCompleted') },
+    delayed: { icon: AlertCircle, color: 'text-urgent-red bg-urgent-red-dim', label: t('dashboard.woDelayed') },
   };
 
   const config = statusConfig[order.status];
@@ -375,7 +376,7 @@ export default function HomePage() {
         {/* Refresh button - larger touch target on mobile */}
         <button className="flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1 min-h-[36px] sm:min-h-0 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors touch-manipulation rounded">
           <RefreshCw className="w-4 h-4 sm:w-3 sm:h-3" />
-          <span className="hidden sm:inline">REFRESH</span>
+          <span className="hidden sm:inline">{t('dashboard.refresh')}</span>
         </button>
       </div>
 
@@ -388,35 +389,35 @@ export default function HomePage() {
       {/* KPI Cards Row 1 - COMPACT: gap-4 → gap-2 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatCard
-          title="Pending Orders"
+          title={t('dashboard.pendingOrders')}
           value={stats?.pendingOrders ?? 0}
           subtitle={formatCurrency(stats?.pendingOrdersValue ?? 0)}
           icon={ShoppingCart}
           trend="up"
-          trendValue="+12% vs last week"
+          trendValue={t('dashboard.trendUpLastWeek')}
           onClick={() => router.push('/orders')}
         />
         <StatCard
-          title="Critical Stock"
+          title={t('dashboard.criticalStock')}
           value={stats?.criticalStock ?? 0}
-          subtitle="Items below minimum"
+          subtitle={t('dashboard.itemsBelowMinimum')}
           icon={AlertTriangle}
           status={(stats?.criticalStock ?? 0) > 0 ? 'danger' : 'success'}
           onClick={() => router.push('/inventory?filter=critical')}
         />
         <StatCard
-          title="Active POs"
+          title={t('dashboard.activePOs')}
           value={stats?.activePOs ?? 0}
           subtitle={formatCurrency(stats?.activePOsValue ?? 0)}
           icon={Truck}
           trend="neutral"
-          trendValue="Same as last week"
+          trendValue={t('dashboard.sameAsLastWeek')}
           onClick={() => router.push('/purchasing')}
         />
         <StatCard
-          title="Reorder Alerts"
+          title={t('dashboard.reorderAlerts')}
           value={stats?.reorderAlerts ?? 0}
-          subtitle="Items to reorder"
+          subtitle={t('dashboard.itemsToReorder')}
           icon={Boxes}
           status={(stats?.reorderAlerts ?? 0) > 0 ? 'warning' : 'success'}
           onClick={() => router.push('/inventory?filter=reorder')}
@@ -426,31 +427,31 @@ export default function HomePage() {
       {/* KPI Cards Row 2 - COMPACT: gap-4 → gap-2 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatCard
-          title="OEE"
+          title={t('dashboard.oee')}
           value={`${oee}%`}
-          subtitle="Overall Equipment Effectiveness"
+          subtitle={t('dashboard.oeeSubtitle')}
           icon={Target}
           status={oee >= 85 ? 'success' : oee >= 70 ? 'warning' : 'danger'}
         />
         <StatCard
-          title="Uptime"
+          title={t('dashboard.uptime')}
           value={`${uptime}%`}
-          subtitle="Machine availability"
+          subtitle={t('dashboard.machineAvailability')}
           icon={Activity}
           trend="up"
-          trendValue="+2.3% this month"
+          trendValue={t('dashboard.trendUpThisMonth')}
         />
         <StatCard
-          title="Quality Rate"
+          title={t('dashboard.qualityRate')}
           value={`${quality}%`}
-          subtitle="First pass yield"
+          subtitle={t('dashboard.firstPassYield')}
           icon={CheckCircle2}
           status="success"
         />
         <StatCard
-          title="Active Work Orders"
+          title={t('dashboard.activeWorkOrders')}
           value={mockWorkOrders.filter(wo => wo.status === 'running').length}
-          subtitle={`${mockWorkOrders.length} total orders`}
+          subtitle={t('dashboard.totalOrders', { count: String(mockWorkOrders.length) })}
           icon={Factory}
           onClick={() => router.push('/production')}
         />
@@ -464,13 +465,13 @@ export default function HomePage() {
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
             <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
               <Factory className="w-3.5 h-3.5 text-info-cyan" />
-              PRODUCTION STATUS
+              {t('dashboard.productionStatus')}
             </h2>
             <Link
               href="/production"
               className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan transition-colors flex items-center gap-0.5"
             >
-              VIEW ALL
+              {t('dashboard.viewAll')}
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -487,22 +488,22 @@ export default function HomePage() {
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
             <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-alert-amber" />
-              ALERTS
+              {t('dashboard.alerts')}
               <span className="px-1 py-0.5 text-[9px] font-bold bg-urgent-red-dim text-urgent-red">
-                {mockAlerts.filter(a => a.type === 'critical').length}
+                {mockAlertKeys.filter(a => a.type === 'critical').length}
               </span>
             </h2>
             <Link
               href="/alerts"
               className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan transition-colors"
             >
-              VIEW ALL
+              {t('dashboard.viewAll')}
             </Link>
           </div>
           {/* COMPACT: max-h reduced */}
           <div className="max-h-[240px] overflow-y-auto">
-            {mockAlerts.map((alert) => (
-              <AlertItem key={alert.id} alert={alert} />
+            {mockAlertKeys.map((a) => (
+              <AlertItem key={a.id} alert={{ id: a.id, type: a.type, title: t(a.titleKey), time: t(a.timeKey) }} />
             ))}
           </div>
         </div>
@@ -522,46 +523,46 @@ export default function HomePage() {
           <div className="px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
             <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-info-cyan" />
-              QUICK ACTIONS
+              {t('dashboard.quickActions')}
             </h2>
           </div>
           {/* COMPACT: p-4 → p-2, gap-3 → gap-1.5 */}
           <div className="p-2 grid grid-cols-2 gap-1.5">
             <QuickActionButton
-              label="Sales Orders"
+              label={t('dashboard.salesOrders')}
               icon={ShoppingCart}
               href="/orders"
-              color="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+              color="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400"
             />
             <QuickActionButton
-              label="Inventory"
+              label={t('dashboard.inventory')}
               icon={Package}
               href="/inventory"
-              color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+              color="bg-success-100 dark:bg-success-900/30 text-success-600 dark:text-success-400"
             />
             <QuickActionButton
-              label="Production"
+              label={t('dashboard.production')}
               icon={Factory}
               href="/production"
               color="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
             />
             <QuickActionButton
-              label="MRP Planning"
+              label={t('dashboard.mrpPlanning')}
               icon={BarChart3}
               href="/mrp"
               color="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
             />
             <QuickActionButton
-              label="Quality Control"
+              label={t('dashboard.qualityControl')}
               icon={CheckCircle2}
               href="/quality"
               color="bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400"
             />
             <QuickActionButton
-              label="Suppliers"
+              label={t('dashboard.suppliers')}
               icon={Users}
               href="/suppliers"
-              color="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+              color="bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400"
             />
           </div>
         </div>
@@ -571,7 +572,7 @@ export default function HomePage() {
           <div className="px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
             <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-info-cyan" />
-              TODAY'S SUMMARY
+              {t('dashboard.todaySummary')}
             </h2>
           </div>
           {/* COMPACT: p-4 → p-2, space-y-4 → space-y-1.5 */}
@@ -582,7 +583,7 @@ export default function HomePage() {
                 <div className="w-6 h-6 flex items-center justify-center bg-production-green-dim">
                   <CheckCircle2 className="w-3 h-3 text-production-green" />
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">Completed</span>
+                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.completed')}</span>
               </div>
               <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">12</span>
             </div>
@@ -591,7 +592,7 @@ export default function HomePage() {
                 <div className="w-6 h-6 flex items-center justify-center bg-info-cyan-dim">
                   <Play className="w-3 h-3 text-info-cyan" />
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">In Progress</span>
+                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.inProgress')}</span>
               </div>
               <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">8</span>
             </div>
@@ -600,7 +601,7 @@ export default function HomePage() {
                 <div className="w-6 h-6 flex items-center justify-center bg-alert-amber-dim">
                   <Clock className="w-3 h-3 text-alert-amber" />
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">Pending</span>
+                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.pending')}</span>
               </div>
               <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">5</span>
             </div>
@@ -609,7 +610,7 @@ export default function HomePage() {
                 <div className="w-6 h-6 flex items-center justify-center bg-urgent-red-dim">
                   <AlertTriangle className="w-3 h-3 text-urgent-red" />
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">Issues</span>
+                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.issues')}</span>
               </div>
               <span className="text-sm font-mono font-semibold text-urgent-red">2</span>
             </div>

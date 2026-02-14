@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reportService } from '@/lib/analytics';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const scheduleSchema = z.object({
   frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly']),
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching schedules:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/reports/[id]/schedule' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch schedules' },
       { status: 500 }
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error scheduling report:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/reports/[id]/schedule' });
     return NextResponse.json(
       { success: false, error: 'Failed to schedule report' },
       { status: 500 }

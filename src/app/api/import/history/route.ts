@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getImportHistory, getImportSession, getImportLogs } from '@/lib/import';
+import { logger } from '@/lib/logger';
 
 // GET /api/import/history - Get import history
 export async function GET(request: NextRequest) {
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error('Failed to get import history:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/import/history' });
     return NextResponse.json(
       { error: 'Failed to get import history' },
       { status: 500 }

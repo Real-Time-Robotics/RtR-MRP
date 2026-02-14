@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(orders, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch orders:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders' });
     return paginatedError("Failed to fetch orders", 500);
   }
 }
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
-    console.error("Failed to create order:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/orders' });
     return NextResponse.json(
       { error: "Failed to create order" },
       { status: 500 }

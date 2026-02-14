@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { unifiedAlertService } from '@/lib/ai/alerts';
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       data: digest,
     });
   } catch (error) {
-    console.error('[Digest API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts/digest' });
     return NextResponse.json(
       { error: 'Failed to generate digest', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

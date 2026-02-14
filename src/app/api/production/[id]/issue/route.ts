@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { issueMaterials } from "@/lib/mrp-engine";
+import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
 
 // POST - Issue allocated materials for work order (actual warehouse withdrawal)
@@ -57,7 +58,7 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Issue materials error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/[id]/issue' });
     return NextResponse.json(
       { error: "Failed to issue materials" },
       { status: 500 }

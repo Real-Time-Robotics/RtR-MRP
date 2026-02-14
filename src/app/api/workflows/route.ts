@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { workflowEngine } from '@/lib/workflow';
 import { WorkflowEntityType, WorkflowStatus } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 // GET /api/workflows - List workflows
 export async function GET(request: NextRequest) {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[API] Workflows GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/workflows' });
     return NextResponse.json(
       { error: 'Failed to fetch workflows' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
       status: result.status,
     });
   } catch (error) {
-    console.error('[API] Workflows POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/workflows' });
     return NextResponse.json(
       { error: 'Failed to start workflow' },
       { status: 500 }

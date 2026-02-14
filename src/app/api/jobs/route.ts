@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { jobQueue, JOB_NAMES } from "@/lib/jobs/job-queue";
+import { jobQueue, JOB_NAMES } from "@/lib/jobs/job-queue";import { logger } from '@/lib/logger';
+
 import "@/lib/jobs/handlers"; // Ensure handlers are registered
 
 // GET - List jobs and stats
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    console.error("Jobs API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to fetch jobs" },
       { status: 500 }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Create job error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to create job" },
       { status: 500 }
@@ -112,7 +113,7 @@ export async function DELETE(request: NextRequest) {
       cleared,
     });
   } catch (error) {
-    console.error("Clear jobs error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to clear jobs" },
       { status: 500 }

@@ -4,6 +4,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 interface PaginationInfo {
   page: number;
@@ -33,6 +34,8 @@ export function Pagination({
   pageSizeOptions = [10, 25, 50, 100],
   className = "",
 }: PaginationProps) {
+  const { t } = useLanguage();
+
   if (!pagination) return null;
 
   const { page, pageSize, totalItems, totalPages, hasNextPage, hasPrevPage } = pagination;
@@ -78,13 +81,13 @@ export function Pagination({
       {/* Info section */}
       <div className="text-sm text-muted-foreground">
         {totalItems > 0 ? (
-          <>
-            Hiển thị <span className="font-medium">{startItem}</span> đến{" "}
-            <span className="font-medium">{endItem}</span> của{" "}
-            <span className="font-medium">{totalItems.toLocaleString()}</span> kết quả
-          </>
+          t('dataTable.showingRange', {
+            start: String(startItem),
+            end: String(endItem),
+            total: totalItems.toLocaleString(),
+          })
         ) : (
-          "Không có kết quả"
+          t('dataTable.noResults')
         )}
       </div>
 
@@ -92,21 +95,18 @@ export function Pagination({
       <div className="flex items-center gap-4">
         {/* Page size selector */}
         {showPageSize && onPageSizeChange && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Hiển thị</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              disabled={loading}
-              className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            disabled={loading}
+            className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size} {t('dataTable.perPage')}
+              </option>
+            ))}
+          </select>
         )}
 
         {/* Page navigation */}

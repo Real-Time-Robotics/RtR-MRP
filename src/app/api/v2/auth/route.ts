@@ -8,6 +8,7 @@ import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error: unknown) {
-    console.error('[AUTH API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function GET() {
       data: user,
     });
   } catch (error: unknown) {
-    console.error('[AUTH API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

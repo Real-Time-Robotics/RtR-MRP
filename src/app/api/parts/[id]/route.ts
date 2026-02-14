@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { rolePermissions, UserRole } from "@/lib/auth/auth-types";
 import { auditUpdate, auditDelete } from "@/lib/audit/route-audit";
 
@@ -17,7 +18,7 @@ async function checkPermission(permission: string): Promise<{ authorized: boolea
   if (!userRole) return { authorized: false, session };
 
   const userPermissions = rolePermissions[userRole] || [];
-  return { authorized: userPermissions.includes(permission as any), session };
+  return { authorized: userPermissions.includes(permission as (typeof userPermissions)[number]), session };
 }
 
 // GET - Get single part with full details
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       supplier: primarySupplier,
     });
   } catch (error) {
-    console.error("Failed to fetch part:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch part" },
       { status: 500 }
@@ -401,11 +402,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     // Audit trail: log field-level changes
-    auditUpdate(request, session.user, "Part", id, existing as Record<string, unknown>, data);
+    auditUpdate(request, session.user, "Part", id, existing as any, data);
 
     return NextResponse.json(updatedPart);
   } catch (error) {
-    console.error("Failed to update part:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/parts/[id]' });
     return NextResponse.json(
       { error: "Failed to update part" },
       { status: 500 }
@@ -458,7 +459,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: "Part deleted successfully" });
   } catch (error) {
-    console.error("Failed to delete part:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/parts/[id]' });
     return NextResponse.json(
       { error: "Failed to delete part" },
       { status: 500 }

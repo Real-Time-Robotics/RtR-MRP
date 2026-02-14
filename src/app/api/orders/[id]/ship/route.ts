@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { createShipment, confirmShipment } from "@/lib/mrp-engine";
 import prisma from "@/lib/prisma";
 
@@ -125,10 +126,10 @@ export async function GET(
     const allSufficient = activeLines.every((l) => l.sufficient);
 
     return NextResponse.json({ lines, allSufficient });
-  } catch (error: any) {
-    console.error("Failed to preview ship inventory:", error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders/[id]/ship' });
     return NextResponse.json(
-      { error: error.message || "Lỗi khi kiểm tra tồn kho" },
+      { error: error instanceof Error ? error.message : "Lỗi khi kiểm tra tồn kho" },
       { status: 500 }
     );
   }
@@ -165,10 +166,10 @@ export async function POST(
       shipment: confirmResult.shipment,
       message: confirmResult.message,
     });
-  } catch (error: any) {
-    console.error("Failed to ship order:", error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/orders/[id]/ship' });
     return NextResponse.json(
-      { error: error.message || "Lỗi khi xuất kho" },
+      { error: error instanceof Error ? error.message : "Lỗi khi xuất kho" },
       { status: 400 }
     );
   }

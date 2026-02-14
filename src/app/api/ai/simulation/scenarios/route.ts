@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import {
   getScenarioBuilder,
@@ -224,7 +225,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Scenarios API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/scenarios' });
     return NextResponse.json(
       { error: 'Failed to process request', details: (error as Error).message },
       { status: 500 }
@@ -292,7 +293,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Scenarios API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/simulation/scenarios' });
     return NextResponse.json(
       { error: 'Failed to fetch scenarios' },
       { status: 500 }

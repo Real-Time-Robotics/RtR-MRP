@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       inventory: result.inventory,
     });
   } catch (error) {
-    console.error("Mobile inventory adjust API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/inventory/adjust' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to adjust inventory" },
       { status: 500 }

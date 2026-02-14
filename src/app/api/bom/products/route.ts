@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 // GET - List all products with BOM summary
 export async function GET() {
@@ -41,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error("Failed to fetch products with BOM:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/products' });
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }

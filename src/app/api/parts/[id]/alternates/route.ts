@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(alternates);
   } catch (error) {
-    console.error("Failed to fetch alternates:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]/alternates' });
     return NextResponse.json(
       { error: "Failed to fetch alternates" },
       { status: 500 }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(alternate, { status: 201 });
   } catch (error) {
-    console.error("Failed to create alternate:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts/[id]/alternates' });
     return NextResponse.json(
       { error: "Failed to create alternate" },
       { status: 500 }

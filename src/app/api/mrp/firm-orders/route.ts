@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/firm-orders - Get planned orders (firm and non-firm)
 export async function GET(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(orders);
   } catch (error) {
-    console.error("Firm orders GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to get planned orders" },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error("Firm orders POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to create planned order" },
       { status: 500 }
@@ -123,7 +124,7 @@ export async function PUT(request: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error("Firm orders PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to update planned order" },
       { status: 500 }
@@ -150,7 +151,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Firm orders DELETE error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to delete planned order" },
       { status: 500 }

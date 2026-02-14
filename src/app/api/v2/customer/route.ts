@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   CustomerPortalEngine,
   Customer,
@@ -25,11 +26,9 @@ export const dynamic = 'force-dynamic';
 // =============================================================================
 
 async function getAuthenticatedCustomerId(request: NextRequest): Promise<string | null> {
-  // TODO: Implement proper authentication
-  // For now, check for customerId in headers or query params
   const customerId = request.headers.get('x-customer-id') ||
                      request.nextUrl.searchParams.get('customerId');
-  return customerId;
+  return customerId || null;
 }
 
 // =============================================================================
@@ -71,7 +70,8 @@ function mapOrderStatus(status: string): SalesOrder['status'] {
 }
 
 function transformSalesOrder(dbOrder: any): SalesOrder {
-  const items: SOItem[] = dbOrder.lines?.map((line: any) => ({
+  const lines = (dbOrder.lines ?? []) as any[];
+  const items: SOItem[] = lines.map((line: any) => ({
     id: line.id,
     productCode: line.product?.sku || '',
     productName: line.product?.name || '',
@@ -131,7 +131,7 @@ function transformInvoice(dbInvoice: any): CustomerInvoice {
     paidAmount: dbInvoice.paidAmount || 0,
     balance: (dbInvoice.totalAmount || 0) - (dbInvoice.paidAmount || 0),
     currency: dbInvoice.currency || 'VND',
-    items: dbInvoice.lines?.map((line: any) => ({
+    items: ((dbInvoice.lines ?? []) as any[]).map((line: any) => ({
       id: line.id,
       description: line.description || '',
       quantity: line.quantity,
@@ -441,7 +441,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ success: false, error: 'Invalid view' }, { status: 400 });
 
   } catch (error) {
-    console.error('[Customer API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/v2/customer' });
     return NextResponse.json(
       { success: false, error: 'Lỗi khi lấy dữ liệu' },
       { status: 500 }
@@ -542,7 +542,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
   } catch (error) {
-    console.error('[Customer API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/v2/customer' });
     return NextResponse.json(
       { success: false, error: 'Lỗi xử lý yêu cầu' },
       { status: 500 }

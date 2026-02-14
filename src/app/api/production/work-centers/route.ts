@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { getCapacitySummary } from "@/lib/production/capacity-engine";
 
 export async function GET(request: NextRequest) {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(workCenters);
   } catch (error) {
-    console.error("Failed to fetch work centers:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/work-centers' });
     return NextResponse.json(
       { error: "Failed to fetch work centers" },
       { status: 500 }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(workCenter, { status: 201 });
   } catch (error) {
-    console.error("Failed to create work center:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/work-centers' });
     return NextResponse.json(
       { error: "Failed to create work center" },
       { status: 500 }

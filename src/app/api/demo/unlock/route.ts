@@ -4,6 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 const DEMO_EMAILS = [
   'admin@demo.rtr-mrp.com',
@@ -57,7 +58,7 @@ export async function POST() {
       results,
     });
   } catch (error) {
-    console.error('Demo unlock error:', error);
+    logger.error('Demo unlock error', { context: 'POST /api/demo/unlock', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       {
         success: false,

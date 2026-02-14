@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -54,7 +55,7 @@ export async function GET(
     return NextResponse.json(thread)
 
   } catch (error) {
-    console.error('Error fetching thread:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/[threadId]' })
     return NextResponse.json(
       { error: 'Failed to fetch thread' },
       { status: 500 }
@@ -116,7 +117,7 @@ export async function PATCH(
     return NextResponse.json(thread)
 
   } catch (error) {
-    console.error('Error updating thread:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/[threadId]' })
     return NextResponse.json(
       { error: 'Failed to update thread' },
       { status: 500 }
@@ -146,7 +147,7 @@ export async function DELETE(
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Error archiving thread:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/[threadId]' })
     return NextResponse.json(
       { error: 'Failed to archive thread' },
       { status: 500 }

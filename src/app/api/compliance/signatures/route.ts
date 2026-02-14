@@ -8,6 +8,7 @@ import {
   getSignatureHistory,
   getWorkflowStatus,
 } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
       signatureHash: result.signatureHash,
     });
   } catch (error) {
-    console.error("Signature creation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/signatures' });
     return NextResponse.json(
       { error: "Signature creation failed" },
       { status: 500 }
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     const history = await getSignatureHistory(entityType, entityId);
     return NextResponse.json({ signatures: history });
   } catch (error) {
-    console.error("Signature query error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/compliance/signatures' });
     return NextResponse.json(
       { error: "Query failed" },
       { status: 500 }

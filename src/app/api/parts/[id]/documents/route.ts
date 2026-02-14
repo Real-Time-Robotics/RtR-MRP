@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(documents);
   } catch (error) {
-    console.error("Failed to fetch documents:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]/documents' });
     return NextResponse.json(
       { error: "Failed to fetch documents" },
       { status: 500 }
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(document, { status: 201 });
   } catch (error) {
-    console.error("Failed to create document:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts/[id]/documents' });
     return NextResponse.json(
       { error: "Failed to create document" },
       { status: 500 }

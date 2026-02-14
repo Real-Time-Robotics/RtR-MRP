@@ -36,12 +36,6 @@ interface WarehouseWithStats extends WarehouseData {
 
 // Color config by warehouse type
 const typeColors: Record<string, { border: string; bg: string; text: string; badge: string }> = {
-  MAIN: {
-    border: "border-l-green-500",
-    bg: "bg-green-50 dark:bg-green-950/20",
-    text: "text-green-700 dark:text-green-400",
-    badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  },
   RECEIVING: {
     border: "border-l-blue-500",
     bg: "bg-blue-50 dark:bg-blue-950/20",
@@ -53,6 +47,30 @@ const typeColors: Record<string, { border: string; bg: string; text: string; bad
     bg: "bg-red-50 dark:bg-red-950/20",
     text: "text-red-700 dark:text-red-400",
     badge: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+  },
+  MAIN: {
+    border: "border-l-green-500",
+    bg: "bg-green-50 dark:bg-green-950/20",
+    text: "text-green-700 dark:text-green-400",
+    badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  },
+  WIP: {
+    border: "border-l-purple-500",
+    bg: "bg-purple-50 dark:bg-purple-950/20",
+    text: "text-purple-700 dark:text-purple-400",
+    badge: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+  },
+  FINISHED_GOODS: {
+    border: "border-l-emerald-500",
+    bg: "bg-emerald-50 dark:bg-emerald-950/20",
+    text: "text-emerald-700 dark:text-emerald-400",
+    badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+  },
+  SHIPPING: {
+    border: "border-l-cyan-500",
+    bg: "bg-cyan-50 dark:bg-cyan-950/20",
+    text: "text-cyan-700 dark:text-cyan-400",
+    badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
   },
   HOLD: {
     border: "border-l-amber-500",
@@ -163,8 +181,8 @@ export default function WarehousesPage() {
     return (
       <div className="p-6 space-y-6">
         <PageHeader title="Quản lý Kho" description="Tổng quan hệ thống kho hàng" />
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
-          <CardContent className="p-6 text-center text-red-600 dark:text-red-400">
+        <Card className="border-danger-200 bg-danger-50 dark:bg-danger-950/20">
+          <CardContent className="p-6 text-center text-danger-600 dark:text-danger-400">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
             <p>{error}</p>
           </CardContent>
@@ -193,7 +211,7 @@ export default function WarehousesPage() {
         </Card>
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardContent className="p-3">
-            <div className="text-lg font-semibold font-mono text-red-600">{totalAlerts}</div>
+            <div className="text-lg font-semibold font-mono text-danger-600">{totalAlerts}</div>
             <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Cảnh báo</p>
           </CardContent>
         </Card>
@@ -210,25 +228,25 @@ export default function WarehousesPage() {
         {warehouses.map((wh) => {
           const colors = getTypeColor(wh.type);
           return (
-            <Link key={wh.id} href={`/warehouses/${wh.id}`}>
+            <Link key={wh.id} href={`/warehouses/${wh.id}`} className="block h-full">
               <Card
-                className={`border-l-4 ${colors.border} hover:shadow-md transition-shadow cursor-pointer`}
+                className={`border-l-4 h-full flex flex-col ${colors.border} hover:shadow-md transition-shadow cursor-pointer`}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">
+                    <CardTitle className="text-base font-semibold truncate">
                       {wh.name}
                     </CardTitle>
                     <Badge variant="secondary" className={colors.badge}>
                       {wh.type || "MAIN"}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">
+                  <p className="text-xs text-muted-foreground font-mono truncate">
                     {wh.code}
                     {wh.location && ` — ${wh.location}`}
                   </p>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pt-0 mt-auto">
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     <div>
                       <p className="text-xs text-muted-foreground">Items</p>
@@ -245,8 +263,8 @@ export default function WarehousesPage() {
                       <p
                         className={`text-lg font-bold ${
                           wh.criticalCount > 0
-                            ? "text-red-600 dark:text-red-400"
-                            : "text-green-600 dark:text-green-400"
+                            ? "text-danger-600 dark:text-danger-400"
+                            : "text-success-600 dark:text-success-400"
                         }`}
                       >
                         {wh.criticalCount}

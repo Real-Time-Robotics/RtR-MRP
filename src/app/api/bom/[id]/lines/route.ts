@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { BomType } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(lines);
   } catch (error) {
-    console.error("Failed to fetch BOM lines:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to fetch BOM lines" },
       { status: 500 }
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(line, { status: 201 });
   } catch (error) {
-    console.error("Failed to create BOM line:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to create BOM line" },
       { status: 500 }
@@ -152,7 +153,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const results = await Promise.all(
-      data.lines.map(async (lineData: Record<string, unknown>) => {
+      data.lines.map(async (lineData: any) => {
         return prisma.bomLine.update({
           where: { id: lineData.id as string },
           data: {
@@ -187,7 +188,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(results);
   } catch (error) {
-    console.error("Failed to update BOM lines:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to update BOM lines" },
       { status: 500 }
@@ -218,7 +219,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: "Line deleted successfully" });
   } catch (error) {
-    console.error("Failed to delete BOM line:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to delete BOM line" },
       { status: 500 }

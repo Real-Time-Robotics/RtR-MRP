@@ -1,6 +1,7 @@
 // src/lib/prisma.ts
 // Optimized Prisma client with connection pooling and performance settings
 
+import "@/lib/env";
 import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {

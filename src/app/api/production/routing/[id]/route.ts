@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import {
   activateRouting,
   validateRouting,
@@ -30,7 +31,7 @@ export async function GET(
 
     return NextResponse.json(routing);
   } catch (error) {
-    console.error("Failed to fetch routing:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/routing/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch routing" },
       { status: 500 }
@@ -56,7 +57,7 @@ export async function PUT(
 
     return NextResponse.json(routing);
   } catch (error) {
-    console.error("Failed to update routing:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/production/routing/[id]' });
     return NextResponse.json(
       { error: "Failed to update routing" },
       { status: 500 }
@@ -100,7 +101,7 @@ export async function POST(
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Failed to perform routing action:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/routing/[id]' });
     return NextResponse.json(
       { error: "Failed to perform routing action" },
       { status: 500 }
@@ -121,7 +122,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete routing:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/production/routing/[id]' });
     return NextResponse.json(
       { error: "Failed to delete routing" },
       { status: 500 }

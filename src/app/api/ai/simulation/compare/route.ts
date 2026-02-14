@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import {
   getScenarioBuilder,
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('[Comparison API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/compare' });
     return NextResponse.json(
       { error: 'Failed to compare scenarios', details: (error as Error).message },
       { status: 500 }

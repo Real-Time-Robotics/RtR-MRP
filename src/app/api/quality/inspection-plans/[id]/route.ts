@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // Validation schema for Inspection Plan update
 const InspectionPlanUpdateSchema = z.object({
@@ -41,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Lỗi tải kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi tải kế hoạch kiểm tra" },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function PATCH(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Lỗi cập nhật kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi cập nhật kế hoạch kiểm tra" },
       { status: 500 }
@@ -134,7 +135,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Lỗi xóa kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi xóa kế hoạch kiểm tra" },
       { status: 500 }

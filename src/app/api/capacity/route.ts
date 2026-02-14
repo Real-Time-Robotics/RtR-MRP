@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get capacity data for work centers
 export async function GET(request: NextRequest) {
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error("Capacity API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/capacity' });
     return NextResponse.json(
       { error: "Failed to fetch capacity data" },
       { status: 500 }
@@ -278,7 +279,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("Capacity POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/capacity' });
     return NextResponse.json(
       { error: "Failed to process capacity request" },
       { status: 500 }

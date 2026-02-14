@@ -133,7 +133,7 @@ export default function ImportHubPage() {
             const Icon = type.icon;
             return (
               <Link key={type.id} href={`/excel/import?type=${type.id}`}>
-                <Card className="h-full hover:border-blue-300 transition-colors cursor-pointer">
+                <Card className="h-full hover:border-primary-300 transition-colors cursor-pointer">
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${type.color}`}>
@@ -205,7 +205,7 @@ export default function ImportHubPage() {
           </CardHeader>
           <CardContent>
             <Link href="/excel/import?showMappings=true">
-              <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-lg hover:border-blue-300 hover:bg-blue-50/50 transition-colors cursor-pointer">
+              <div className="flex items-center justify-center p-8 border-2 border-dashed rounded-lg hover:border-primary-300 hover:bg-primary-50/50 transition-colors cursor-pointer">
                 <div className="text-center">
                   <Columns className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                   <p className="font-medium">Quản lý Mappings</p>
@@ -252,10 +252,10 @@ export default function ImportHubPage() {
       </Card>
 
       {/* Help Section */}
-      <Card className="bg-blue-50 border-blue-200">
+      <Card className="bg-primary-50 border-primary-200">
         <CardContent className="py-6">
-          <h3 className="font-semibold text-blue-900 mb-2">Hướng dẫn Import</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
+          <h3 className="font-semibold text-primary-900 mb-2">Hướng dẫn Import</h3>
+          <ul className="text-sm text-primary-800 space-y-1">
             <li>• Đảm bảo file có headers ở dòng đầu tiên</li>
             <li>• Sử dụng template chuẩn để đạt kết quả tốt nhất</li>
             <li>• AI hỗ trợ headers tiếng Việt: Mã SP, Tên, Đơn giá, Số lượng...</li>

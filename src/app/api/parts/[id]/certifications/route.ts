@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(certifications);
   } catch (error) {
-    console.error("Failed to fetch certifications:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]/certifications' });
     return NextResponse.json(
       { error: "Failed to fetch certifications" },
       { status: 500 }
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(certification, { status: 201 });
   } catch (error) {
-    console.error("Failed to create certification:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts/[id]/certifications' });
     return NextResponse.json(
       { error: "Failed to create certification" },
       { status: 500 }

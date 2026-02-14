@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getForecastEngine,
@@ -33,7 +34,7 @@ interface BatchRequest {
 
 interface BatchResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   latency?: number;
 }
@@ -50,7 +51,7 @@ interface BatchJobResult {
   };
   startTime: Date;
   endTime?: Date;
-  results?: any[];
+  results?: unknown[];
   errors?: string[];
 }
 
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
     // Generate job ID
     const jobId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'generate': {
@@ -238,7 +239,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
           );
         }
 
-        const enhancedResults: any[] = [];
+        const enhancedResults: unknown[] = [];
         const errors: string[] = [];
 
         for (const productId of productIds.slice(0, options.maxProducts || 50)) {
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
     });
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,
@@ -472,7 +473,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<BatchRespo
     }
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,
@@ -549,7 +550,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<BatchRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10") || 10, 100);
 
     const notifications = await prisma.notification.findMany({
       where: { userId: session.user.id },
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
-    console.error("Failed to fetch notifications:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications' });
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications' });
     return NextResponse.json(
       { error: "Failed to create notification" },
       { status: 500 }

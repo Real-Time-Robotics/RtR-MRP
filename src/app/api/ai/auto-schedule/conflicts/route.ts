@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { ConflictSeverity, ConflictType } from '@/lib/ai/autonomous/conflict-detector';
 
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Conflicts API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-schedule/conflicts' });
     return NextResponse.json(
       {
         error: 'Không thể phát hiện xung đột',
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Conflicts API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-schedule/conflicts' });
     return NextResponse.json(
       {
         error: 'Không thể giải quyết xung đột',

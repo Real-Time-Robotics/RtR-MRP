@@ -8,6 +8,7 @@ import {
   updateBackupSchedule,
 } from '@/lib/backup/backup-service';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Validation schema
 const updateScheduleSchema = z.object({
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       data: schedule,
     });
   } catch (error) {
-    console.error('Failed to get backup schedule:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/backup/schedule' });
     return NextResponse.json(
       { error: 'Failed to get backup schedule' },
       { status: 500 }
@@ -76,7 +77,7 @@ export async function PUT(request: NextRequest) {
       message: 'Backup schedule updated',
     });
   } catch (error) {
-    console.error('Failed to update backup schedule:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/backup/schedule' });
     return NextResponse.json(
       { error: 'Failed to update backup schedule' },
       { status: 500 }

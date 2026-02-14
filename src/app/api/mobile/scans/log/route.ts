@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Mobile scan log API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scans/log' });
     return NextResponse.json(
       { error: "Failed to log scan" },
       { status: 500 }
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
     const userId = searchParams.get("userId");
 
     const scans = await prisma.scanLog.findMany({
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile scan log GET API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scans/log' });
     return NextResponse.json(
       { error: "Failed to fetch scans" },
       { status: 500 }

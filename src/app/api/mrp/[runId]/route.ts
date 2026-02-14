@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 // GET - Get MRP run details
 export async function GET(
@@ -28,7 +29,7 @@ export async function GET(
 
     return NextResponse.json(run);
   } catch (error) {
-    console.error("MRP run API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/[runId]' });
     return NextResponse.json(
       { error: "Failed to fetch MRP run" },
       { status: 500 }

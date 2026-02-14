@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -15,6 +16,7 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
 
 const SEARCH_FIELDS = ["name", "code", "contactEmail", "contactName"];
@@ -82,7 +84,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(suppliers, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Lỗi tải danh sách nhà cung cấp:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/suppliers' });
     return paginatedError("Lỗi tải danh sách nhà cung cấp", 500);
   }
 }
@@ -93,7 +95,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   // Parse and validate body
   let body;

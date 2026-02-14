@@ -861,16 +861,67 @@ export interface EmailDeliveryOptions {
   }[];
 }
 
+/**
+ * Deliver a report via email using SMTP.
+ *
+ * Required environment variables:
+ *   SMTP_HOST     - SMTP server hostname (e.g. smtp.gmail.com)
+ *   SMTP_PORT     - SMTP server port (e.g. 587)
+ *   SMTP_USER     - SMTP authentication username
+ *   SMTP_PASS     - SMTP authentication password
+ *   SMTP_FROM     - Sender address (e.g. "RTR MRP <noreply@rtr.vn>")
+ */
 export async function deliverReportByEmail(options: EmailDeliveryOptions): Promise<{ success: boolean; error?: string }> {
-  // TODO: Implement with actual email service (nodemailer, SendGrid, etc.)
-  console.log('Email delivery requested:', {
-    to: options.to,
-    subject: options.subject,
-    attachmentsCount: options.attachments.length,
-  });
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
-  // Placeholder - in production, integrate with email service
-  return { success: true };
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    console.warn('Email delivery skipped: SMTP environment variables not configured (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)');
+    return { success: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    // Dynamic require to avoid webpack static analysis bundling error
+    // nodemailer must be installed separately: pnpm add nodemailer
+    let nodemailer: any;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const moduleName = 'nodemailer';
+      nodemailer = require(moduleName);
+    } catch {
+      return { success: false, error: 'nodemailer package not installed. Run: pnpm add nodemailer' };
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: parseInt(SMTP_PORT, 10),
+      secure: parseInt(SMTP_PORT, 10) === 465,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: SMTP_FROM || SMTP_USER,
+      to: options.to.join(', '),
+      cc: options.cc?.join(', '),
+      bcc: options.bcc?.join(', '),
+      subject: options.subject,
+      html: options.body,
+      attachments: options.attachments.map((att: { filename: string; content: string; contentType: string }) => ({
+        filename: att.filename,
+        content: att.content,
+        encoding: 'base64' as const,
+        contentType: att.contentType,
+      })),
+    });
+
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Email delivery failed:', message);
+    return { success: false, error: message };
+  }
 }
 
 export default {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dashboardService, widgetService } from '@/lib/analytics';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // WIDGET API - UPDATE, DELETE, GET DATA
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching widget data:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch widget data' },
       { status: 500 }
@@ -120,7 +121,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error updating widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to update widget' },
       { status: 500 }
@@ -155,7 +156,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error deleting widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to delete widget' },
       { status: 500 }

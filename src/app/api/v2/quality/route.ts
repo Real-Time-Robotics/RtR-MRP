@@ -3,7 +3,8 @@
 // Phase 11: Quality Management - SPC
 // =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+
 import { 
   SPCEngine, 
   ProcessCharacteristic, 
@@ -498,7 +499,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Invalid view' }, { status: 400 });
     }
   } catch (error) {
-    console.error('Quality API Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/quality' });
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -612,7 +613,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
     }
   } catch (error) {
-    console.error('Quality API Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/quality' });
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

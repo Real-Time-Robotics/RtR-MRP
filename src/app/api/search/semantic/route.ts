@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmbeddingService } from '@/lib/ai/embedding-service';
 import { globalSearch } from '@/lib/search-engine';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
       latency,
     });
   } catch (error) {
-    console.error('[Semantic Search] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/search/semantic' });
     return NextResponse.json(
       {
         success: false,

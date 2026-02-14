@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Helper: Transform equipment from database
 function transformEquipment(eq: any) {
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error('Equipment API GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/equipment' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch equipment' },
       { status: 500 }
@@ -282,7 +283,7 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Equipment API POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/equipment' });
     return NextResponse.json(
       { success: false, error: 'Failed to process equipment operation' },
       { status: 500 }

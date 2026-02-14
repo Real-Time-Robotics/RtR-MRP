@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, CheckCircle, XCircle, Building2, AlertTriangle, Shield, User, Mail, Phone, MapPin, CreditCard, Clock, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { SupplierFormDialog } from '@/components/suppliers/supplier-form-dialog';
 import { DeleteSupplierDialog, Supplier } from '@/components/forms/supplier-form';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
@@ -12,6 +11,7 @@ import { ActionDropdown, createSupplierActions } from '@/components/ui/action-dr
 import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
@@ -32,6 +32,7 @@ interface FetchState {
 // =============================================================================
 
 function StatsCards({ suppliers }: { suppliers: Supplier[] }) {
+  const { t } = useLanguage();
   const active = suppliers.filter((s) => s.status === 'active').length;
   const ndaaCompliant = suppliers.filter((s) => s.ndaaCompliant).length;
   const avgLeadTime =
@@ -46,25 +47,25 @@ function StatsCards({ suppliers }: { suppliers: Supplier[] }) {
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">
           <div className="text-lg font-semibold font-mono">{suppliers.length}</div>
-          <p className="text-[10px] text-muted-foreground">Tổng nhà cung cấp</p>
+          <p className="text-[10px] text-muted-foreground">{t('suppliers.totalSuppliers')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="text-lg font-semibold font-mono text-green-600">{active}</div>
-          <p className="text-[10px] text-muted-foreground">Đang hoạt động</p>
+          <p className="text-[10px] text-muted-foreground">{t('suppliers.activeCount')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="text-lg font-semibold font-mono text-blue-600">{ndaaCompliant}</div>
-          <p className="text-[10px] text-muted-foreground">NDAA Compliant</p>
+          <p className="text-[10px] text-muted-foreground">{t('suppliers.ndaaCompliantCount')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{avgLeadTime} ngày</div>
-          <p className="text-[10px] text-muted-foreground">Lead Time TB</p>
+          <div className="text-lg font-semibold font-mono">{t('suppliers.leadTimeDays', { days: String(avgLeadTime) })}</div>
+          <p className="text-[10px] text-muted-foreground">{t('suppliers.avgLeadTimeLabel')}</p>
         </CardContent>
       </Card>
     </div>
@@ -77,6 +78,7 @@ function StatsCards({ suppliers }: { suppliers: Supplier[] }) {
 
 export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   const router = useRouter();
+  const { t } = useLanguage();
 
   // State
   const [suppliers, setSuppliers] = useState<Supplier[]>(initialData);
@@ -116,7 +118,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
       console.error('Failed to fetch suppliers:', error);
       setFetchState({
         loading: false,
-        error: error instanceof Error ? error.message : 'Có lỗi xảy ra',
+        error: error instanceof Error ? error.message : t('error.occurred'),
       });
     } finally {
       setFetchState((prev) => ({ ...prev, loading: false }));
@@ -167,7 +169,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} nhà cung cấp?`)) {
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: t('suppliers.title').toLowerCase() }))) {
       return;
     }
 
@@ -180,15 +182,15 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa ${failedCount} nhà cung cấp`);
+        toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: t('suppliers.title').toLowerCase() }));
       } else {
-        toast.success(`Đã xóa ${selectedIds.size} nhà cung cấp`);
+        toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('suppliers.title').toLowerCase() }));
       }
 
       fetchSuppliers(search, filters.status);
       setSelectedIds(new Set());
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi xóa');
+      toast.error(t('table.deleteError'));
     }
   };
 
@@ -197,7 +199,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
 
   const handleExport = () => {
     if (!suppliers || suppliers.length === 0) {
-      toast.warning('Không có dữ liệu để export');
+      toast.warning(t('table.noDataToExport'));
       return;
     }
 
@@ -206,11 +208,11 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
       sheetName: 'Suppliers'
     });
 
-    toast.success('Đã xuất file Excel');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
-    toast.info('Tính năng import đang được phát triển');
+    toast.info(t('table.importInDev'));
   };
 
   // Get unique countries for filter
@@ -221,7 +223,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     // ===== BASIC INFO SECTION =====
     {
       key: 'code',
-      header: 'Mã NCC',
+      header: t('suppliers.supplierCode'),
       width: '100px',
       sortable: true,
       sticky: 'left',
@@ -229,40 +231,44 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     },
     {
       key: 'name',
-      header: 'Tên nhà cung cấp',
+      header: t('suppliers.supplierName'),
       width: '200px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {
       key: 'status',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '100px',
-      align: 'center',
       sortable: true,
+      cellClassName: (value) =>
+        value === 'active'
+          ? 'bg-green-50 dark:bg-green-950/30'
+          : value === 'inactive'
+            ? 'bg-gray-50 dark:bg-gray-900/30'
+            : 'bg-yellow-50 dark:bg-yellow-950/30',
       render: (value) => (
-        <Badge
-          variant={value === 'active' ? 'default' : 'secondary'}
+        <span
           className={cn(
-            value === 'active' && 'bg-green-100 text-green-700',
-            value === 'inactive' && 'bg-gray-100 text-gray-600',
-            value === 'pending' && 'bg-yellow-100 text-yellow-700',
-            'text-[10px] px-1 py-0'
+            'text-xs font-medium',
+            value === 'active' && 'text-green-700 dark:text-green-400',
+            value === 'inactive' && 'text-gray-600 dark:text-gray-400',
+            value === 'pending' && 'text-yellow-700 dark:text-yellow-400',
           )}
         >
-          {value === 'active' ? 'Hoạt động' : value === 'inactive' ? 'Ngưng' : 'Chờ duyệt'}
-        </Badge>
+          {value === 'active' ? t('status.active') : value === 'inactive' ? t('status.inactive') : t('status.approval')}
+        </span>
       ),
     },
     {
       key: 'country',
-      header: 'Quốc gia',
+      header: t('column.country'),
       width: '100px',
       sortable: true,
     },
     {
       key: 'category',
-      header: 'Danh mục',
+      header: t('column.category'),
       width: '120px',
       sortable: true,
       hidden: true,
@@ -272,14 +278,14 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     // ===== CONTACT INFO SECTION =====
     {
       key: 'contactName',
-      header: 'Người liên hệ',
+      header: t('column.contactName'),
       width: '150px',
       hidden: true,
       render: (value) => value || '-',
     },
     {
       key: 'contactPhone',
-      header: 'Số điện thoại',
+      header: t('column.contactPhone'),
       width: '120px',
       hidden: true,
       render: (value) => value ? (
@@ -288,7 +294,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     },
     {
       key: 'contactEmail',
-      header: 'Email',
+      header: t('column.contactEmail'),
       width: '180px',
       hidden: true,
       render: (value) => value ? (
@@ -299,7 +305,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     },
     {
       key: 'address',
-      header: 'Địa chỉ',
+      header: t('column.address'),
       width: '200px',
       hidden: true,
       render: (value) => value ? (
@@ -310,34 +316,29 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     // ===== BUSINESS TERMS SECTION =====
     {
       key: 'paymentTerms',
-      header: 'Điều khoản TT',
+      header: t('column.paymentTerms'),
       width: '100px',
       sortable: true,
       hidden: true,
-      render: (value) => value ? (
-        <Badge variant="outline" className="text-[10px] px-1 py-0">
-          {value}
-        </Badge>
-      ) : '-',
+      cellClassName: (value) => value ? 'bg-slate-50 dark:bg-slate-900/30' : '',
+      render: (value) => value || '-',
     },
     {
       key: 'leadTimeDays',
       header: 'Lead Time',
       width: '90px',
-      align: 'right',
       sortable: true,
       render: (value) => (
-        <span className="text-xs font-mono">{value} ngày</span>
+        <span className="text-xs font-mono">{t('suppliers.leadTimeDays', { days: String(value) })}</span>
       ),
     },
     {
       key: 'rating',
-      header: 'Đánh giá',
+      header: t('suppliers.ratingCol'),
       width: '100px',
-      align: 'center',
       sortable: true,
       render: (value) => (
-        <div className="flex items-center justify-center gap-0.5">
+        <div className="flex items-center gap-0.5">
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
@@ -354,12 +355,11 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
       key: 'ndaaCompliant',
       header: 'NDAA',
       width: '70px',
-      align: 'center',
       render: (value) => (
         value ? (
-          <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+          <CheckCircle className="h-4 w-4 text-green-500" />
         ) : (
-          <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+          <XCircle className="h-4 w-4 text-red-500" />
         )
       ),
     },
@@ -380,7 +380,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
         />
       ),
     },
-  ], []);
+  ], [t]);
 
   return (
     // COMPACT: space-y-6 → space-y-3
@@ -389,10 +389,10 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
       <div>
         <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
           <Building2 className="h-4 w-4" />
-          Quản lý Nhà cung cấp
+          {t('suppliers.pageTitle')}
         </h1>
         <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
-          Quản lý danh sách nhà cung cấp và thông tin liên hệ
+          {t('suppliers.pageDesc')}
         </p>
       </div>
 
@@ -405,7 +405,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Tìm kiếm nhà cung cấp..."
+            searchPlaceholder={t('suppliers.searchPlaceholder')}
             onAdd={handleAdd}
             onImport={handleImport}
             onExport={handleExport}
@@ -413,22 +413,22 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             onRefresh={() => fetchSuppliers(search, filters.status)}
             addPermission="orders:create"
             deletePermission="orders:delete"
-            addLabel="Thêm nhà cung cấp"
+            addLabel={t('suppliers.addSupplier')}
             selectedCount={selectedIds.size}
             isLoading={fetchState.loading}
             filters={[
               {
                 key: 'status',
-                label: 'Trạng thái',
+                label: t('column.status'),
                 options: [
-                  { value: 'active', label: 'Hoạt động' },
-                  { value: 'inactive', label: 'Ngưng' },
-                  { value: 'pending', label: 'Chờ duyệt' },
+                  { value: 'active', label: t('status.active') },
+                  { value: 'inactive', label: t('status.inactive') },
+                  { value: 'pending', label: t('status.approval') },
                 ],
               },
               {
                 key: 'country',
-                label: 'Quốc gia',
+                label: t('column.country'),
                 options: countries.map((c) => ({ value: c, label: c })),
               },
             ]}
@@ -445,7 +445,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             columns={columns}
             keyField="id"
             loading={fetchState.loading}
-            emptyMessage="Chưa có nhà cung cấp nào"
+            emptyMessage={t('suppliers.emptyMessage')}
             selectable
             selectedKeys={selectedIds}
             onSelectionChange={setSelectedIds}

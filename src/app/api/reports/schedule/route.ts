@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 import {
   createReportSchedule,
   updateReportSchedule,
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
       data: schedules,
     });
   } catch (error) {
-    console.error('Failed to get schedules:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/reports/schedule' });
     return NextResponse.json(
       { error: 'Failed to get schedules' },
       { status: 500 }
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       message: 'Schedule created successfully',
     });
   } catch (error) {
-    console.error('Failed to create schedule:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/reports/schedule' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create schedule' },
       { status: 500 }
@@ -129,7 +130,7 @@ export async function PUT(request: NextRequest) {
       message: 'Schedule updated successfully',
     });
   } catch (error) {
-    console.error('Failed to update schedule:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/reports/schedule' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update schedule' },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Schedule deleted',
     });
   } catch (error) {
-    console.error('Failed to delete schedule:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/reports/schedule' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete schedule' },
       { status: 500 }

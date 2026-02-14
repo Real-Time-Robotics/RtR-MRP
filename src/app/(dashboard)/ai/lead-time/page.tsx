@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Loader2, RefreshCw, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { TrendIndicator } from "@/components/ai/trend-indicator";
 import { compareSupplierLeadTimes } from "@/lib/ai/lead-time-predictor";
@@ -60,19 +59,6 @@ export default function LeadTimePage() {
     predictions.reduce((sum, p) => sum + p.trendDays, 0) / predictions.length ||
     0;
 
-  const getTrendBadgeColor = (trend: string) => {
-    switch (trend) {
-      case "faster":
-        return "bg-green-100 text-green-800";
-      case "on_time":
-        return "bg-gray-100 text-gray-800";
-      case "slower":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const leadTimeColumns: Column<{
     supplierId: string;
     supplierName: string;
@@ -93,7 +79,6 @@ export default function LeadTimePage() {
       key: 'statedDays',
       header: 'Stated',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => `${value}d`,
     },
@@ -101,7 +86,6 @@ export default function LeadTimePage() {
       key: 'predictedDays',
       header: 'Predicted',
       width: '90px',
-      align: 'right',
       sortable: true,
       render: (value) => <span className="font-bold">{value}d</span>,
     },
@@ -109,7 +93,6 @@ export default function LeadTimePage() {
       key: 'actualAvg',
       header: 'Actual Avg',
       width: '90px',
-      align: 'right',
       sortable: true,
       render: (value) => <span className="text-muted-foreground">{value.toFixed(1)}d</span>,
     },
@@ -117,7 +100,6 @@ export default function LeadTimePage() {
       key: 'variance',
       header: 'Variance',
       width: '100px',
-      align: 'center',
       render: (_, row) => (
         <TrendIndicator
           trend={row.trend}
@@ -129,13 +111,15 @@ export default function LeadTimePage() {
       key: 'trend',
       header: 'Status',
       width: '90px',
-      align: 'center',
       sortable: true,
-      render: (value) => (
-        <Badge className={getTrendBadgeColor(value)}>
-          {value === "faster" ? "Faster" : value === "slower" ? "Slower" : "On Time"}
-        </Badge>
-      ),
+      cellClassName: (row) => {
+        switch (row.trend) {
+          case "faster": return "bg-green-50 text-green-800";
+          case "slower": return "bg-red-50 text-red-800";
+          default: return "bg-gray-50 text-gray-800";
+        }
+      },
+      render: (value) => value === "faster" ? "Faster" : value === "slower" ? "Slower" : "On Time",
     },
   ], []);
 

@@ -9,6 +9,7 @@ import {
   cleanupOldBackups,
 } from '@/lib/backup/backup-service';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Validation schema
 const createBackupSchema = z.object({
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       data: backups,
     });
   } catch (error) {
-    console.error('Failed to list backups:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/backup' });
     return NextResponse.json(
       { error: 'Failed to list backups' },
       { status: 500 }
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       message: 'Backup created successfully',
     });
   } catch (error) {
-    console.error('Failed to create backup:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/backup' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create backup' },
       { status: 500 }
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest) {
       message: `Cleaned up ${deletedCount} old backup(s)`,
     });
   } catch (error) {
-    console.error('Failed to cleanup backups:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/backup' });
     return NextResponse.json(
       { error: 'Failed to cleanup backups' },
       { status: 500 }

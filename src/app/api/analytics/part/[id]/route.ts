@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -103,7 +104,7 @@ export async function GET(
         return NextResponse.json({ data });
 
     } catch (error) {
-        console.error("Analysis API Error:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/part/[id]' });
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kpiService } from '@/lib/analytics';
+import { logger } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ code: string }>;
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching KPI:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/kpis/[code]' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch KPI' },
       { status: 500 }

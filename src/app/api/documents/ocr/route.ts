@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentOCRService, DocumentType, OCRResult } from '@/lib/ai/document-ocr-service';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Auto-create entities if requested and successful
-    let createdEntities: any = null;
+    let createdEntities: any | null = null;
     if (autoCreate && result.success && result.extractedData) {
       createdEntities = await createEntitiesFromDocument(result, userId);
     }
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Document OCR error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/documents/ocr' });
     return NextResponse.json(
       {
         error: 'Failed to process document',
@@ -190,7 +191,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Document OCR status error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/documents/ocr' });
     return NextResponse.json(
       { error: 'Failed to get OCR status' },
       { status: 500 }
@@ -205,7 +206,7 @@ export async function GET(request: NextRequest) {
 async function createEntitiesFromDocument(
   result: OCRResult,
   userId: string
-): Promise<any> {
+): Promise<Record<string, unknown>> {
   const created: any = {};
 
   try {
@@ -439,7 +440,7 @@ async function createEntitiesFromDocument(
 
     return created;
   } catch (error) {
-    console.error('Error creating entities from document:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/documents/ocr' });
     return {
       error: 'Failed to create some entities',
       details: error instanceof Error ? error.message : 'Unknown error',

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { broadcastMessageUpdate, broadcastMessageDelete } from '@/lib/socket/emit';
+import { logger } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ messageId: string }>;
@@ -112,12 +113,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         editedAt: updatedMessage.editedAt?.toISOString(),
       });
     } catch (err) {
-      console.error('Failed to broadcast message update:', err);
+      logger.error('Failed to broadcast message update', { context: '/api/discussions/messages/[messageId]', details: err instanceof Error ? err.message : String(err) });
     }
 
     return NextResponse.json({ message: updatedMessage });
   } catch (error) {
-    console.error('Error updating message:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/messages/[messageId]' });
     return NextResponse.json(
       { error: 'Failed to update message' },
       { status: 500 }
@@ -161,12 +162,12 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     try {
       broadcastMessageDelete(message.threadId, messageId);
     } catch (err) {
-      console.error('Failed to broadcast message deletion:', err);
+      logger.error('Failed to broadcast message deletion', { context: '/api/discussions/messages/[messageId]', details: err instanceof Error ? err.message : String(err) });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting message:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/messages/[messageId]' });
     return NextResponse.json(
       { error: 'Failed to delete message' },
       { status: 500 }

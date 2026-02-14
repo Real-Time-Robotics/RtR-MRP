@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import {
   getScenarioBuilder,
@@ -36,7 +37,7 @@ export async function GET(
       { status: 404 }
     );
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to fetch result' },
       { status: 500 }
@@ -133,7 +134,7 @@ export async function POST(
         );
     }
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }
@@ -160,7 +161,7 @@ export async function DELETE(
       message: deleted ? 'Result deleted' : 'Result not found',
     });
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to delete result' },
       { status: 500 }

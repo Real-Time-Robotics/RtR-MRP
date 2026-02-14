@@ -14,6 +14,7 @@ import { calculateSupplierImpact } from '@/lib/change-impact/calculators/supplie
 import { calculatePurchaseOrderImpact } from '@/lib/change-impact/calculators/purchase-order-impact';
 import { calculateSalesOrderImpact } from '@/lib/change-impact/calculators/sales-order-impact';
 import { calculateCustomerImpact } from '@/lib/change-impact/calculators/customer-impact';
+import { logger } from '@/lib/logger';
 
 // Request validation schema
 const fieldChangeSchema = z.object({
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChangeImp
       data: result,
     });
   } catch (error) {
-    console.error('Change impact calculation error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/change-impact' });
     return NextResponse.json(
       {
         success: false,

@@ -133,36 +133,33 @@ export default function WorkOrderDetailPage() {
       key: 'requiredQty',
       header: 'Required',
       width: '90px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'allocatedQty',
       header: 'Allocated',
       width: '90px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'issuedQty',
       header: 'Issued',
       width: '90px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'status',
       header: 'Status',
       width: '100px',
-      align: 'center',
       render: (_, row) => {
-        if (row.issuedQty >= row.requiredQty) {
-          return <Badge variant="default" className="bg-green-600">Issued</Badge>;
-        }
-        if (row.allocatedQty >= row.requiredQty) {
-          return <Badge variant="default">Ready</Badge>;
-        }
-        return <Badge variant="secondary">Partial</Badge>;
+        if (row.issuedQty >= row.requiredQty) return 'Issued';
+        if (row.allocatedQty >= row.requiredQty) return 'Ready';
+        return 'Partial';
+      },
+      cellClassName: (_, row) => {
+        if (row.issuedQty >= row.requiredQty) return 'bg-green-50 dark:bg-green-950/30';
+        if (row.allocatedQty >= row.requiredQty) return 'bg-blue-50 dark:bg-blue-950/30';
+        return 'bg-yellow-50 dark:bg-yellow-950/30';
       },
     },
   ], []);

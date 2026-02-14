@@ -10,6 +10,7 @@ import {
   deleteSavedMapping,
 } from '@/lib/import';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Validation schema
 const createMappingSchema = z.object({
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: mappings });
   } catch (error) {
-    console.error('Failed to get saved mappings:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/import/mappings' });
     return NextResponse.json(
       { error: 'Failed to get saved mappings' },
       { status: 500 }
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       message: 'Mapping saved successfully',
     });
   } catch (error) {
-    console.error('Failed to save mapping:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/import/mappings' });
     return NextResponse.json(
       { error: 'Failed to save mapping' },
       { status: 500 }
@@ -107,7 +108,7 @@ export async function PUT(request: NextRequest) {
       data: mapping,
     });
   } catch (error) {
-    console.error('Failed to update mapping:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/import/mappings' });
     return NextResponse.json(
       { error: 'Failed to update mapping' },
       { status: 500 }
@@ -140,7 +141,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Mapping deleted',
     });
   } catch (error) {
-    console.error('Failed to delete mapping:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/import/mappings' });
     return NextResponse.json(
       { error: 'Failed to delete mapping' },
       { status: 500 }

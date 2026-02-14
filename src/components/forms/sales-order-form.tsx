@@ -48,14 +48,15 @@ import {
   detectChanges,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // CHANGE IMPACT CONFIGURATION
 // =============================================================================
 
 const SO_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
-  status: { label: 'Trạng thái', valueType: 'string' },
-  priority: { label: 'Độ ưu tiên', valueType: 'string' },
+  status: { label: 'Status', valueType: 'string' },
+  priority: { label: 'Priority', valueType: 'string' },
 };
 
 // =============================================================================
@@ -130,6 +131,7 @@ interface SalesOrderFormProps {
 // =============================================================================
 
 export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOrderFormProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -282,15 +284,15 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(isEditing ? 'Cập nhật đơn hàng thành công!' : 'Tạo đơn hàng thành công!');
+      toast.success(isEditing ? t('soForm.updateSuccess') : t('soForm.createSuccess'));
       onSuccess?.(result.data || result);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save order:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -331,10 +333,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa Đơn hàng' : 'Tạo Đơn hàng mới'}
+            {isEditing ? t('soForm.editTitle') : t('soForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin đơn hàng' : 'Điền thông tin để tạo đơn hàng mới'}
+            {isEditing ? t('soForm.editDesc') : t('soForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -347,7 +349,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="orderNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số đơn hàng *</FormLabel>
+                    <FormLabel>{t('soForm.orderNumber')}</FormLabel>
                     <FormControl>
                       <Input placeholder="SO-001" {...field} disabled={isEditing} />
                     </FormControl>
@@ -361,11 +363,11 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="customerId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Khách hàng *</FormLabel>
+                    <FormLabel>{t('soForm.customer')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn khách hàng" />
+                          <SelectValue placeholder={t('soForm.selectCustomer')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -388,7 +390,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="orderDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày đặt hàng *</FormLabel>
+                    <FormLabel>{t('soForm.orderDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -402,7 +404,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="requiredDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày yêu cầu *</FormLabel>
+                    <FormLabel>{t('soForm.requiredDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -416,7 +418,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="promisedDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày cam kết</FormLabel>
+                    <FormLabel>{t('soForm.promisedDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ''} />
                     </FormControl>
@@ -430,7 +432,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="priority"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ưu tiên</FormLabel>
+                    <FormLabel>{t('soForm.priority')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -438,10 +440,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="low">Thấp</SelectItem>
-                        <SelectItem value="normal">Bình thường</SelectItem>
-                        <SelectItem value="high">Cao</SelectItem>
-                        <SelectItem value="urgent">Khẩn cấp</SelectItem>
+                        <SelectItem value="low">{t('priority.low')}</SelectItem>
+                        <SelectItem value="normal">{t('priority.normal')}</SelectItem>
+                        <SelectItem value="high">{t('priority.high')}</SelectItem>
+                        <SelectItem value="urgent">{t('priority.urgent')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -456,7 +458,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Trạng thái</FormLabel>
+                    <FormLabel>{t('form.status')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -464,12 +466,12 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="draft">Nháp</SelectItem>
-                        <SelectItem value="pending">Chờ xử lý</SelectItem>
-                        <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                        <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                        <SelectItem value="completed">Hoàn thành</SelectItem>
-                        <SelectItem value="cancelled">Đã hủy</SelectItem>
+                        <SelectItem value="draft">{t('status.draft')}</SelectItem>
+                        <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                        <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+                        <SelectItem value="in_progress">{t('status.inProgress')}</SelectItem>
+                        <SelectItem value="completed">{t('status.completed')}</SelectItem>
+                        <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -482,9 +484,9 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ghi chú</FormLabel>
+                    <FormLabel>{t('form.notes')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Ghi chú..." {...field} value={field.value || ''} />
+                      <Textarea placeholder={t('form.notesPlaceholder')} {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -495,10 +497,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
             {/* Order Lines */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">Chi tiết đơn hàng</h4>
+                <h4 className="font-medium">{t('soForm.orderDetails')}</h4>
                 <Button type="button" variant="outline" size="sm" onClick={addLine}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Thêm dòng
+                  {t('form.addLine')}
                 </Button>
               </div>
 
@@ -506,10 +508,10 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40%]">Sản phẩm</TableHead>
-                      <TableHead className="w-[20%]">Số lượng</TableHead>
-                      <TableHead className="w-[20%]">Đơn giá</TableHead>
-                      <TableHead className="w-[15%] text-right">Thành tiền</TableHead>
+                      <TableHead className="w-[40%]">{t('soForm.product')}</TableHead>
+                      <TableHead className="w-[20%]">{t('soForm.quantity')}</TableHead>
+                      <TableHead className="w-[20%]">{t('soForm.unitPrice')}</TableHead>
+                      <TableHead className="w-[15%] text-right">{t('soForm.lineTotal')}</TableHead>
                       <TableHead className="w-[5%]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -538,7 +540,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                                   value={field.value}
                                 >
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Chọn sản phẩm" />
+                                    <SelectValue placeholder={t('soForm.selectProduct')} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {products.map((p) => (
@@ -598,7 +600,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                     })}
                     <TableRow>
                       <TableCell colSpan={3} className="text-right font-medium">
-                        Tổng cộng:
+                        {t('form.total')}
                       </TableCell>
                       <TableCell className="text-right font-mono font-bold">
                         ${calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -609,18 +611,18 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                 </Table>
               ) : (
                 <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                  Chưa có sản phẩm nào. Nhấn "Thêm dòng" để thêm sản phẩm.
+                  {t('soForm.noProducts')}
                 </div>
               )}
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                Hủy
+                {t('form.cancel')}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo đơn hàng'}
+                {isEditing ? t('form.save') : t('soForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -655,6 +657,7 @@ interface DeleteSalesOrderDialogProps {
 }
 
 export function DeleteSalesOrderDialog({ open, onOpenChange, order, onSuccess }: DeleteSalesOrderDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -666,15 +669,15 @@ export function DeleteSalesOrderDialog({ open, onOpenChange, order, onSuccess }:
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(result.deleted ? 'Đã xóa đơn hàng!' : 'Đã hủy đơn hàng!');
+      toast.success(result.deleted ? t('soForm.deleteSuccess') : t('soForm.cancelSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to delete order:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -684,22 +687,22 @@ export function DeleteSalesOrderDialog({ open, onOpenChange, order, onSuccess }:
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa/hủy</DialogTitle>
+          <DialogTitle>{t('soForm.deleteConfirmTitle')}</DialogTitle>
           <DialogDescription>
             {order?.status === 'draft' ? (
-              <>Bạn có chắc chắn muốn <strong>xóa</strong> đơn hàng <strong>{order?.orderNumber}</strong>?</>
+              t('soForm.deleteConfirmDraft', { orderNumber: order?.orderNumber || '' })
             ) : (
-              <>Bạn có chắc chắn muốn <strong>hủy</strong> đơn hàng <strong>{order?.orderNumber}</strong>?</>
+              t('soForm.cancelConfirm', { orderNumber: order?.orderNumber || '' })
             )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Không
+            {t('form.no')}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {order?.status === 'draft' ? 'Xóa' : 'Hủy đơn'}
+            {order?.status === 'draft' ? t('form.delete') : t('soForm.cancelBtn')}
           </Button>
         </DialogFooter>
       </DialogContent>

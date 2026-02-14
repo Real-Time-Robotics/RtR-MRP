@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ChevronUp,
   ChevronDown,
@@ -12,12 +13,12 @@ import {
   Download,
   MoreHorizontal,
   Check,
-  Columns3,
   ArrowUpDown,
   Loader2,
   Database,
 } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import {
   ExcelModeConfig,
@@ -59,6 +60,8 @@ export interface Column<T> {
   accessor?: (row: T) => any;
   /** Footer content */
   footer?: string | ((rows: T[]) => React.ReactNode);
+  /** Dynamic className applied to the td element (for cell-level coloring) */
+  cellClassName?: (value: any, row: T, index: number) => string;
 }
 
 export interface DataTableProps<T> {
@@ -112,6 +115,10 @@ export interface DataTableProps<T> {
   showFooter?: boolean;
   /** Excel-like UI mode configuration */
   excelMode?: ExcelModeConfig;
+  /** Enable row virtualization for large datasets */
+  virtualize?: boolean;
+  /** Row height in pixels when virtualized (default 40) */
+  virtualRowHeight?: number;
 }
 
 // Pagination component
@@ -123,6 +130,7 @@ const TablePagination: React.FC<{
   pageSizeOptions: number[];
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  t: (key: string, params?: Record<string, string>) => string;
 }> = ({
   currentPage,
   totalPages,
@@ -131,6 +139,7 @@ const TablePagination: React.FC<{
   pageSizeOptions,
   onPageChange,
   onPageSizeChange,
+  t,
 }) => {
     const startItem = (currentPage - 1) * pageSize + 1;
     const endItem = Math.min(currentPage * pageSize, totalItems);
@@ -140,9 +149,7 @@ const TablePagination: React.FC<{
         {/* Info */}
         <div className="flex items-center gap-4">
           <span className="text-sm text-slate-600 dark:text-slate-400">
-            Hiển thị <span className="font-medium text-slate-900 dark:text-slate-200">{startItem}</span> đến{' '}
-            <span className="font-medium text-slate-900 dark:text-slate-200">{endItem}</span> của{' '}
-            <span className="font-medium text-slate-900 dark:text-slate-200">{formatNumber(totalItems)}</span> kết quả
+            {t('dataTable.showingRange', { start: String(startItem), end: String(endItem), total: formatNumber(totalItems) })}
           </span>
 
           {/* Page size select */}
@@ -153,7 +160,7 @@ const TablePagination: React.FC<{
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
-                {size} / trang
+                {size} {t('dataTable.perPage')}
               </option>
             ))}
           </select>
@@ -249,7 +256,11 @@ function DataTable<T extends Record<string, any>>({
   headerActions,
   showFooter = false,
   excelMode,
+  virtualize = false,
+  virtualRowHeight = 40,
 }: DataTableProps<T>) {
+  const { t } = useLanguage();
+
   // Parse Excel config
   const excelConfig = mergeExcelConfig(excelMode);
   const isExcelMode = !!excelConfig;
@@ -321,6 +332,16 @@ function DataTable<T extends Record<string, any>>({
   }, [sortedData, currentPage, pageSize, pagination]);
 
   const totalPages = Math.ceil(sortedData.length / pageSize);
+
+  // Virtualization
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const virtualData = virtualize ? sortedData : paginatedData;
+  const rowVirtualizer = useVirtualizer({
+    count: virtualize ? virtualData.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => virtualRowHeight,
+    overscan: 10,
+  });
 
   // Keyboard Navigation
   const handleArrowNav = useCallback((direction: 'up' | 'down') => {
@@ -434,13 +455,13 @@ function DataTable<T extends Record<string, any>>({
           <Database className="h-3.5 w-3.5 text-white" />
           <span className="text-xs font-medium text-white">{excelConfig.sheetName}</span>
           <span className="ml-auto text-[10px] text-white/70 font-mono">
-            {sortedData.length} records
+            {sortedData.length} {t('dataTable.records')}
           </span>
         </div>
       )}
 
       {/* Header */}
-      {(searchable || columnToggle || headerActions) && (
+      {(searchable || headerActions) && (
         <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 shrink-0">
           {/* Search */}
           {searchable && (
@@ -461,11 +482,6 @@ function DataTable<T extends Record<string, any>>({
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {columnToggle && (
-              <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                <Columns3 className="h-4 w-4" />
-              </button>
-            )}
             {headerActions}
           </div>
         </div>
@@ -473,7 +489,9 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Table */}
       <div
+        ref={scrollContainerRef}
         className="flex-1 min-h-[200px] overflow-auto"
+        style={virtualize ? { maxHeight: maxHeight || 'calc(100vh - 280px)' } : undefined}
       >
         <table className="w-full table-fixed">
           <thead className={cn(stickyHeader && 'sticky top-0 z-10')}>
@@ -525,8 +543,6 @@ function DataTable<T extends Record<string, any>>({
                           'border-b border-slate-200 dark:border-slate-800',
                           column.sortable && 'cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-800'
                         ),
-                    column.align === 'center' && 'text-center',
-                    column.align === 'right' && 'text-right'
                   )}
                   style={{
                     width: column.width,
@@ -534,7 +550,7 @@ function DataTable<T extends Record<string, any>>({
                   }}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
-                  <div className={cn("flex items-center gap-1", column.align === 'right' && "justify-end", column.align === 'center' && "justify-center")}>
+                  <div className="flex items-center gap-1">
                     <span>
                       {isExcelMode && excelConfig.columnHeaderStyle !== 'field-names'
                         ? formatColumnHeader(colIndex, column.header, excelConfig.columnHeaderStyle)
@@ -560,11 +576,11 @@ function DataTable<T extends Record<string, any>>({
                 >
                   <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Loading...</span>
+                    <span>{t('dataTable.loading')}</span>
                   </div>
                 </td>
               </tr>
-            ) : paginatedData.length === 0 ? (
+            ) : (virtualize ? virtualData : paginatedData).length === 0 ? (
               <tr>
                 <td
                   colSpan={activeColumns.length + (selectable ? 1 : 0) + (isExcelMode && excelConfig.showRowNumbers ? 1 : 0)}
@@ -573,6 +589,88 @@ function DataTable<T extends Record<string, any>>({
                   {emptyMessage}
                 </td>
               </tr>
+            ) : virtualize ? (
+              <>
+                {rowVirtualizer.getVirtualItems()[0]?.start > 0 && (
+                  <tr><td style={{ height: rowVirtualizer.getVirtualItems()[0].start }} /></tr>
+                )}
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = virtualData[virtualRow.index];
+                  const rowIndex = virtualRow.index;
+                  const rowKey = String(row[keyField]);
+                  const isSelected = selectedKeys.has(rowKey);
+                  const actualRowNumber = rowIndex + 1;
+
+                  return (
+                    <tr
+                      key={rowKey}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      className={cn(
+                        'transition-colors',
+                        isExcelMode
+                          ? cn(
+                              'border-b border-slate-200 dark:border-slate-800',
+                              'hover:bg-[#E2EFDA]/30 dark:hover:bg-[#217346]/10',
+                              isSelected && 'bg-[#E2EFDA]/50 dark:bg-[#217346]/15'
+                            )
+                          : cn(
+                              'border-b border-slate-100 dark:border-slate-800 last:border-0',
+                              striped && rowIndex % 2 === 1 && 'bg-slate-50/50 dark:bg-slate-900/30',
+                              isSelected && 'bg-primary-50 dark:bg-primary-900/20',
+                              'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                            ),
+                        onRowClick && 'cursor-pointer'
+                      )}
+                      onClick={() => onRowClick?.(row, rowIndex)}
+                    >
+                      {isExcelMode && excelConfig.showRowNumbers && (
+                        <td className={cn(
+                          'w-10 min-w-[40px] px-1 text-center text-[10px] font-mono',
+                          'border-r border-slate-200 dark:border-slate-800',
+                          'bg-slate-50 dark:bg-slate-900',
+                          isExcelMode && excelConfig.compactMode ? 'py-1' : 'py-1.5',
+                          isSelected
+                            ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 text-[#217346] dark:text-[#70AD47] font-semibold'
+                            : 'text-slate-400 dark:text-slate-500'
+                        )}>
+                          {actualRowNumber}
+                        </td>
+                      )}
+                      {selectable && (
+                        <td className={cn('w-12 px-4', isExcelMode ? 'py-1.5' : 'py-3')} onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row)} className="h-4 w-4" />
+                        </td>
+                      )}
+                      {activeColumns.map((column) => {
+                        const value = getCellValue(row, column);
+                        const content = column.render ? column.render(value, row, rowIndex) : value;
+                        return (
+                          <td
+                            key={column.key}
+                            className={cn(
+                              'text-slate-700 dark:text-slate-300',
+                              isExcelMode
+                                ? cn('px-2 text-[11px] font-mono', excelConfig.compactMode ? 'py-1' : 'py-1.5', 'border-r border-b border-slate-200 dark:border-slate-800 last:border-r-0')
+                                : cn('px-4 text-sm', compact ? 'py-2' : 'py-3', bordered && 'border-b border-slate-100 dark:border-slate-800'),
+                              (column.type === 'number' || column.type === 'currency') && 'font-mono tabular-nums',
+                              column.cellClassName?.(value, row, rowIndex)
+                            )}
+                          >
+                            {content}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+                {(() => {
+                  const items = rowVirtualizer.getVirtualItems();
+                  const lastItem = items[items.length - 1];
+                  const paddingBottom = lastItem ? rowVirtualizer.getTotalSize() - lastItem.end : 0;
+                  return paddingBottom > 0 ? <tr><td style={{ height: paddingBottom }} /></tr> : null;
+                })()}
+              </>
             ) : (
               paginatedData.map((row, rowIndex) => {
                 const rowKey = String(row[keyField]);
@@ -653,10 +751,9 @@ function DataTable<T extends Record<string, any>>({
                                   compact ? 'py-2' : 'py-3',
                                   bordered && 'border-b border-slate-100 dark:border-slate-800'
                                 ),
-                            column.align === 'center' && 'text-center',
-                            column.align === 'right' && 'text-right',
                             column.type === 'number' && 'font-mono tabular-nums',
-                            column.type === 'currency' && 'font-mono tabular-nums'
+                            column.type === 'currency' && 'font-mono tabular-nums',
+                            column.cellClassName?.(value, row, rowIndex)
                           )}
                         >
                           {content}
@@ -687,9 +784,7 @@ function DataTable<T extends Record<string, any>>({
                       'font-medium text-slate-700 dark:text-slate-300',
                       isExcelMode
                         ? 'px-2 py-1.5 text-[10px] text-[#217346] dark:text-[#70AD47]'
-                        : 'px-4 py-3 text-sm',
-                      column.align === 'center' && 'text-center',
-                      column.align === 'right' && 'text-right'
+                        : 'px-4 py-3 text-sm'
                     )}
                   >
                     {typeof column.footer === 'function'
@@ -707,7 +802,7 @@ function DataTable<T extends Record<string, any>>({
       {isExcelMode && excelConfig.showFooter && (
         <div className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
           <span className="text-[10px] text-slate-400 font-mono">
-            {selectedKeys.size > 0 ? `${selectedKeys.size} selected • ` : ''}{sortedData.length} rows
+            {selectedKeys.size > 0 ? `${selectedKeys.size} ${t('dataTable.selected')} • ` : ''}{virtualize ? virtualData.length : sortedData.length} {t('dataTable.rows')}
           </span>
           <span className="text-[10px] text-[#217346] dark:text-[#70AD47] font-medium">
             {excelConfig.sheetName}
@@ -716,7 +811,7 @@ function DataTable<T extends Record<string, any>>({
       )}
 
       {/* Pagination */}
-      {pagination && totalPages > 0 && !isExcelMode && (
+      {pagination && !virtualize && totalPages > 0 && !isExcelMode && (
         <TablePagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -728,11 +823,12 @@ function DataTable<T extends Record<string, any>>({
             setPageSize(size);
             setCurrentPage(1);
           }}
+          t={t}
         />
       )}
 
       {/* Excel-style Pagination */}
-      {pagination && totalPages > 1 && isExcelMode && (
+      {pagination && !virtualize && totalPages > 1 && isExcelMode && (
         <div className="flex items-center justify-center gap-2 px-2 py-1.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <button
             onClick={() => setCurrentPage(currentPage - 1)}
@@ -745,7 +841,7 @@ function DataTable<T extends Record<string, any>>({
             <ChevronLeft className="h-3 w-3 text-slate-500" />
           </button>
           <span className="text-[10px] text-slate-500 font-mono">
-            Page {currentPage} of {totalPages}
+            {t('dataTable.page', { current: String(currentPage), total: String(totalPages) })}
           </span>
           <button
             onClick={() => setCurrentPage(currentPage + 1)}

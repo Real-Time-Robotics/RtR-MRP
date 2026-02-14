@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 
 const planningSchema = z.object({
@@ -46,7 +47,7 @@ export async function PATCH(
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 });
         }
-        console.error("Failed to update planning:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/parts/[id]/planning' });
         return NextResponse.json(
             { error: "Failed to update planning" },
             { status: 500 }

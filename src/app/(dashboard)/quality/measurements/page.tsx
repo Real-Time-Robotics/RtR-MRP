@@ -205,7 +205,7 @@ export default function MeasurementsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -239,7 +239,7 @@ export default function MeasurementsPage() {
                   onClick={() => setSelectedChar(char)}
                   className={`p-4 rounded-lg border text-left transition-all ${
                     selectedChar?.id === char.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 ring-2 ring-primary-500'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -272,8 +272,8 @@ export default function MeasurementsPage() {
               {message && (
                 <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
                   message.type === 'success' 
-                    ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
-                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                    ? 'bg-success-50 text-success-700 dark:bg-success-900/20 dark:text-success-400'
+                    : 'bg-danger-50 text-danger-700 dark:bg-danger-900/20 dark:text-danger-400'
                 }`}>
                   {message.type === 'success' ? (
                     <CheckCircle className="h-5 w-5" />
@@ -288,7 +288,7 @@ export default function MeasurementsPage() {
               <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500">LSL:</span>
-                  <span className="ml-2 font-mono font-medium text-red-600">{selectedChar.lsl}</span>
+                  <span className="ml-2 font-mono font-medium text-danger-600">{selectedChar.lsl}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-gray-500">Target:</span>
@@ -298,7 +298,7 @@ export default function MeasurementsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-gray-500">USL:</span>
-                  <span className="ml-2 font-mono font-medium text-red-600">{selectedChar.usl}</span>
+                  <span className="ml-2 font-mono font-medium text-danger-600">{selectedChar.usl}</span>
                 </div>
               </div>
               
@@ -325,18 +325,18 @@ export default function MeasurementsPage() {
                         value={value}
                         onChange={(e) => handleValueChange(index, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(index, e)}
-                        className={`w-full px-3 py-3 text-center font-mono text-lg border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          isOutOfSpec 
-                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                        className={`w-full px-3 py-3 text-center font-mono text-lg border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
+                          isOutOfSpec
+                            ? 'border-danger-500 bg-danger-50 dark:bg-danger-900/20'
                             : isNearLimit
-                            ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                            ? 'border-warning-500 bg-warning-50 dark:bg-warning-900/20'
                             : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                         }`}
                         placeholder="0.000"
                       />
                       {isOutOfSpec && (
                         <div className="absolute -top-1 -right-1">
-                          <AlertTriangle className="h-4 w-4 text-red-500" />
+                          <AlertTriangle className="h-4 w-4 text-danger-500" />
                         </div>
                       )}
                     </div>
@@ -346,7 +346,7 @@ export default function MeasurementsPage() {
               
               {/* Calculated stats */}
               {currentStats && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg grid grid-cols-5 gap-4 text-sm mb-4">
+                <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg grid grid-cols-5 gap-4 text-sm mb-4">
                   <div className="text-center">
                     <p className="text-gray-500 text-xs">X̄</p>
                     <p className="font-mono font-medium">{currentStats.mean.toFixed(3)}</p>
@@ -435,7 +435,7 @@ export default function MeasurementsPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={saving || values.some(v => !v || isNaN(parseFloat(v)))}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {saving ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />

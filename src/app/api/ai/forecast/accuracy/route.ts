@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getAccuracyTrackerService,
@@ -26,7 +27,7 @@ interface AccuracyRequest {
 
 interface AccuracyResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   latency?: number;
 }
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AccuracyRe
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'summary': {
@@ -284,7 +285,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AccuracyRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast Accuracy] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/accuracy' });
     return NextResponse.json(
       {
         success: false,
@@ -316,7 +317,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AccuracyR
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'record': {
@@ -464,7 +465,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AccuracyR
     });
 
   } catch (error) {
-    console.error('[AI Forecast Accuracy] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/accuracy' });
     return NextResponse.json(
       {
         success: false,

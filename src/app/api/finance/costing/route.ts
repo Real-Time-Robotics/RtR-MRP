@@ -9,6 +9,7 @@ import {
   rollupPartCost,
   saveRollupResults,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get cost rollup status and data
 export async function GET(request: NextRequest) {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ rollups });
   } catch (error) {
-    console.error("Costing GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/costing' });
     return NextResponse.json(
       { error: "Failed to get costing data" },
       { status: 500 }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Costing POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/costing' });
     return NextResponse.json(
       { error: "Failed to run cost rollup" },
       { status: 500 }

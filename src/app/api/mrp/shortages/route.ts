@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -125,7 +126,7 @@ export async function GET() {
 
     return NextResponse.json(shortages);
   } catch (error) {
-    console.error("Failed to fetch shortages:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/shortages' });
     return NextResponse.json(
       { error: "Failed to fetch shortages" },
       { status: 500 }

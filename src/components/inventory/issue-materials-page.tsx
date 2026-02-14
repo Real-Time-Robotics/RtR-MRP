@@ -37,6 +37,7 @@ import { PermissionButton } from '@/components/ui/permission-button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES
@@ -78,15 +79,6 @@ interface InventoryOption {
   lotNumber?: string;
 }
 
-const ISSUE_TYPES = [
-  { value: 'work_order', label: 'Xuất cho WO (Work Order)' },
-  { value: 'maintenance', label: 'Bảo trì (Maintenance)' },
-  { value: 'sample', label: 'Mẫu (Sample)' },
-  { value: 'scrap', label: 'Phế liệu (Scrap)' },
-  { value: 'internal', label: 'Nội bộ (Internal Use)' },
-  { value: 'other', label: 'Khác (Other)' },
-];
-
 interface ActiveWorkOrder {
   id: string;
   woNumber: string;
@@ -99,7 +91,7 @@ interface ActiveWorkOrder {
 // STATS CARDS
 // =============================================================================
 
-function StatsCards({ stats }: { stats: Stats }) {
+function StatsCards({ stats, t }: { stats: Stats; t: (key: string, params?: Record<string, string>) => string }) {
   return (
     <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
       <Card className="border-gray-200 dark:border-mrp-border">
@@ -108,7 +100,7 @@ function StatsCards({ stats }: { stats: Stats }) {
             <Hash className="h-4 w-4 text-blue-500" />
             <div>
               <div className="text-lg font-semibold font-mono">{stats.pendingCount}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Pending Issues</p>
+              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.pendingIssues')}</p>
             </div>
           </div>
         </CardContent>
@@ -119,7 +111,7 @@ function StatsCards({ stats }: { stats: Stats }) {
             <Layers className="h-4 w-4 text-amber-500" />
             <div>
               <div className="text-lg font-semibold font-mono">{stats.partsAffected}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Parts Affected</p>
+              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.partsAffected')}</p>
             </div>
           </div>
         </CardContent>
@@ -130,7 +122,7 @@ function StatsCards({ stats }: { stats: Stats }) {
             <Package className="h-4 w-4 text-green-500" />
             <div>
               <div className="text-lg font-semibold font-mono">{stats.totalQtyToIssue}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Total Qty to Issue</p>
+              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.totalQty')}</p>
             </div>
           </div>
         </CardContent>
@@ -144,12 +136,22 @@ function StatsCards({ stats }: { stats: Stats }) {
 // =============================================================================
 
 export function IssueMaterialsPage() {
+  const { t } = useLanguage();
   const [allocations, setAllocations] = useState<PendingAllocation[]>([]);
   const [stats, setStats] = useState<Stats>({ pendingCount: 0, partsAffected: 0, totalQtyToIssue: 0 });
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkIssuing, setBulkIssuing] = useState(false);
+
+  const issueTypes = useMemo(() => [
+    { value: 'work_order', label: t('issueMat.typeWO') },
+    { value: 'maintenance', label: t('issueMat.typeMaintenance') },
+    { value: 'sample', label: t('issueMat.typeSample') },
+    { value: 'scrap', label: t('issueMat.typeScrap') },
+    { value: 'internal', label: t('issueMat.typeInternal') },
+    { value: 'other', label: t('issueMat.typeOther') },
+  ], [t]);
 
   // Ad-hoc dialog state
   const [adhocOpen, setAdhocOpen] = useState(false);
@@ -180,7 +182,7 @@ export function IssueMaterialsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch pending issues:', error);
-      toast.error('Không thể tải danh sách xuất kho');
+      toast.error(t('issueMat.loadError'));
     } finally {
       setLoading(false);
     }
@@ -241,13 +243,13 @@ export function IssueMaterialsPage() {
       });
       const result = await res.json();
       if (result.success) {
-        toast.success('Xuất kho thành công');
+        toast.success(t('issueMat.issueSuccess'));
         fetchData();
       } else {
-        toast.error(result.error || 'Xuất kho thất bại');
+        toast.error(result.error || t('issueMat.issueFailed'));
       }
     } catch {
-      toast.error('Xuất kho thất bại');
+      toast.error(t('issueMat.issueFailed'));
     } finally {
       setIssuing(null);
     }
@@ -265,14 +267,14 @@ export function IssueMaterialsPage() {
       });
       const result = await res.json();
       if (result.success) {
-        toast.success(`Đã xuất ${selectedIds.size} dòng thành công`);
+        toast.success(t('issueMat.batchSuccess', { count: String(selectedIds.size) }));
         setSelectedIds(new Set());
         fetchData();
       } else {
-        toast.error(result.error || 'Xuất kho thất bại');
+        toast.error(result.error || t('issueMat.issueFailed'));
       }
     } catch {
-      toast.error('Xuất kho thất bại');
+      toast.error(t('issueMat.issueFailed'));
     } finally {
       setBulkIssuing(false);
     }
@@ -302,11 +304,11 @@ export function IssueMaterialsPage() {
   // Ad-hoc submit
   const handleAdhocSubmit = async () => {
     if (!adhocData.partId || !adhocData.warehouseId || !adhocData.quantity || !adhocData.issueType || !adhocData.reason) {
-      toast.error('Vui lòng điền đầy đủ thông tin');
+      toast.error(t('issueMat.fillRequired'));
       return;
     }
     if (adhocData.issueType === 'work_order' && !adhocData.workOrderId) {
-      toast.error('Vui lòng chọn Work Order');
+      toast.error(t('issueMat.selectWO'));
       return;
     }
 
@@ -329,15 +331,15 @@ export function IssueMaterialsPage() {
       });
       const result = await res.json();
       if (result.success) {
-        toast.success('Xuất kho thành công');
+        toast.success(t('issueMat.issueSuccess'));
         setAdhocOpen(false);
         setAdhocData({ inventoryId: '', partId: '', warehouseId: '', quantity: '', lotNumber: '', issueType: '', reason: '', notes: '', workOrderId: '' });
         fetchData();
       } else {
-        toast.error(result.error || 'Xuất kho thất bại');
+        toast.error(result.error || t('issueMat.issueFailed'));
       }
     } catch {
-      toast.error('Xuất kho thất bại');
+      toast.error(t('issueMat.issueFailed'));
     } finally {
       setAdhocSubmitting(false);
     }
@@ -391,21 +393,18 @@ export function IssueMaterialsPage() {
       key: 'requiredQty',
       header: 'Required',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'allocatedQty',
       header: 'Allocated',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'issuedQty',
       header: 'Issued',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => (
         <span className={value > 0 ? 'text-green-600 font-medium' : ''}>{value}</span>
@@ -415,7 +414,6 @@ export function IssueMaterialsPage() {
       key: 'remainingQty',
       header: 'Remaining',
       width: '90px',
-      align: 'right',
       render: (value) => (
         <span className="font-bold text-amber-600">{value}</span>
       ),
@@ -424,7 +422,6 @@ export function IssueMaterialsPage() {
       key: 'id' as any,
       header: 'Action',
       width: '100px',
-      align: 'center',
       render: (_, row) => (
         <Button
           size="sm"
@@ -438,7 +435,7 @@ export function IssueMaterialsPage() {
           ) : (
             <>
               <CheckCircle2 className="h-3 w-3 mr-1" />
-              Issue
+              {t('issueMat.issueBtn')}
             </>
           )}
         </Button>
@@ -450,14 +447,14 @@ export function IssueMaterialsPage() {
     <div className="h-full flex flex-col space-y-4">
       {/* Header */}
       <PageHeader
-        title="Issue Materials"
-        description="Xuất kho vật tư cho Work Order hoặc ad-hoc (bảo trì, mẫu, phế liệu...)"
+        title={t('issueMat.title')}
+        description={t('issueMat.description')}
         backHref="/inventory"
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
-              Refresh
+              {t('issueMat.refresh')}
             </Button>
             {selectedIds.size > 0 && (
               <Button
@@ -470,7 +467,7 @@ export function IssueMaterialsPage() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                 )}
-                Issue Selected ({selectedIds.size})
+                {t('issueMat.issueSelected')} ({selectedIds.size})
               </Button>
             )}
             <PermissionButton
@@ -480,14 +477,14 @@ export function IssueMaterialsPage() {
               onClick={openAdhocDialog}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Ad-Hoc Issue
+              {t('issueMat.adhocIssue')}
             </PermissionButton>
           </div>
         }
       />
 
       {/* Stats */}
-      <StatsCards stats={stats} />
+      <StatsCards stats={stats} t={t} />
 
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
@@ -499,7 +496,7 @@ export function IssueMaterialsPage() {
               className="h-7 text-xs"
               onClick={toggleSelectAll}
             >
-              {selectedIds.size === allocations.length ? 'Deselect All' : 'Select All'}
+              {selectedIds.size === allocations.length ? t('issueMat.deselectAll') : t('issueMat.selectAll')}
             </Button>
           )}
         </div>
@@ -507,7 +504,7 @@ export function IssueMaterialsPage() {
           data={allocations}
           columns={columns}
           keyField="id"
-          emptyMessage="Không có vật tư nào đang chờ xuất kho"
+          emptyMessage={t('issueMat.noItems')}
           searchable
           stickyHeader
           excelMode={{
@@ -528,16 +525,16 @@ export function IssueMaterialsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PackageMinus className="h-5 w-5" />
-              Ad-Hoc Issue
+              {t('issueMat.adhocTitle')}
             </DialogTitle>
             <DialogDescription>
-              Xuất kho vật tư cho Work Order hoặc mục đích khác (bảo trì, mẫu, phế liệu...)
+              {t('issueMat.adhocDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             {/* Part / Inventory select */}
             <div className="space-y-2">
-              <Label>Chọn vật tư *</Label>
+              <Label>{t('issueMat.selectPart')}</Label>
               <Select
                 value={adhocData.inventoryId}
                 onValueChange={(value) => {
@@ -554,7 +551,7 @@ export function IssueMaterialsPage() {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn vật tư cần xuất" />
+                  <SelectValue placeholder={t('issueMat.selectPartPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {inventoryOptions.map((item) => (
@@ -569,7 +566,7 @@ export function IssueMaterialsPage() {
             {/* Quantity + Issue Type */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="adhocQty">Số lượng *</Label>
+                <Label htmlFor="adhocQty">{t('issueMat.quantity')}</Label>
                 <Input
                   id="adhocQty"
                   type="number"
@@ -580,18 +577,18 @@ export function IssueMaterialsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Loại xuất *</Label>
+                <Label>{t('issueMat.issueType')}</Label>
                 <Select
                   value={adhocData.issueType}
                   onValueChange={(value) => setAdhocData({ ...adhocData, issueType: value, workOrderId: '' })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn loại" />
+                    <SelectValue placeholder={t('issueMat.selectType')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {ISSUE_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                    {issueTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -602,18 +599,18 @@ export function IssueMaterialsPage() {
             {/* Work Order selector */}
             {adhocData.issueType === 'work_order' && (
               <div className="space-y-2">
-                <Label>Chọn Work Order *</Label>
+                <Label>{t('issueMat.selectWOLabel')}</Label>
                 <Select
                   value={adhocData.workOrderId}
                   onValueChange={(value) => setAdhocData({ ...adhocData, workOrderId: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Chọn WO đang mở..." />
+                    <SelectValue placeholder={t('issueMat.selectWOPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {activeWorkOrders.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        Không có WO nào đang mở
+                        {t('issueMat.noOpenWO')}
                       </SelectItem>
                     ) : (
                       activeWorkOrders.map((wo) => (
@@ -637,7 +634,7 @@ export function IssueMaterialsPage() {
                   const newAvail = selected.available - qty;
                   return (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Sau xuất kho:</span>
+                      <span className="text-slate-600 dark:text-slate-400">{t('issueMat.afterIssue')}</span>
                       <div className="flex items-center gap-2 font-medium">
                         <span>{selected.available}</span>
                         <span className="text-slate-400">&rarr;</span>
@@ -645,7 +642,7 @@ export function IssueMaterialsPage() {
                           {newAvail}
                         </span>
                         {newAvail < 0 && (
-                          <span className="text-xs text-red-500">(không đủ!)</span>
+                          <span className="text-xs text-red-500">({t('issueMat.insufficient')})</span>
                         )}
                       </div>
                     </div>
@@ -656,23 +653,23 @@ export function IssueMaterialsPage() {
 
             {/* Reason */}
             <div className="space-y-2">
-              <Label htmlFor="adhocReason">Lý do xuất kho *</Label>
+              <Label htmlFor="adhocReason">{t('issueMat.issueReason')}</Label>
               <Input
                 id="adhocReason"
                 value={adhocData.reason}
                 onChange={(e) => setAdhocData({ ...adhocData, reason: e.target.value })}
-                placeholder="Nhập lý do..."
+                placeholder={t('issueMat.reasonPlaceholder')}
               />
             </div>
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="adhocNotes">Ghi chú</Label>
+              <Label htmlFor="adhocNotes">{t('issueMat.notes')}</Label>
               <Textarea
                 id="adhocNotes"
                 value={adhocData.notes}
                 onChange={(e) => setAdhocData({ ...adhocData, notes: e.target.value })}
-                placeholder="Ghi chú thêm (tuỳ chọn)..."
+                placeholder={t('issueMat.notesPlaceholder')}
                 rows={2}
               />
             </div>
@@ -680,18 +677,18 @@ export function IssueMaterialsPage() {
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={() => setAdhocOpen(false)} disabled={adhocSubmitting}>
-                Hủy
+                {t('issueMat.cancelBtn')}
               </Button>
               <Button onClick={handleAdhocSubmit} disabled={adhocSubmitting}>
                 {adhocSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Đang xử lý...
+                    {t('issueMat.processing')}
                   </>
                 ) : (
                   <>
                     <PackageMinus className="h-4 w-4 mr-2" />
-                    Xuất kho
+                    {t('issueMat.issueBtn')}
                   </>
                 )}
               </Button>

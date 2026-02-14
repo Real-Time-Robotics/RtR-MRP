@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { confirmDelivery } from "@/lib/mrp-engine";
 
 // GET /api/shipments/[id] — Get shipment detail
@@ -35,7 +36,7 @@ export async function GET(
 
     return NextResponse.json(shipment);
   } catch (error) {
-    console.error("Failed to fetch shipment:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/shipments/[id]' });
     return NextResponse.json(
       { error: "Lỗi khi tải phiếu xuất kho" },
       { status: 500 }
@@ -71,10 +72,10 @@ export async function PATCH(
       { error: "Action không hợp lệ" },
       { status: 400 }
     );
-  } catch (error: any) {
-    console.error("Failed to update shipment:", error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/shipments/[id]' });
     return NextResponse.json(
-      { error: error.message || "Lỗi khi cập nhật phiếu xuất kho" },
+      { error: error instanceof Error ? error.message : "Lỗi khi cập nhật phiếu xuất kho" },
       { status: 400 }
     );
   }

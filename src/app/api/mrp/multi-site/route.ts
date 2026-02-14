@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/multi-site - Get sites and inventory by site
 export async function GET(request: NextRequest) {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Multi-site GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/multi-site' });
     return NextResponse.json(
       { error: "Failed to get multi-site data" },
       { status: 500 }
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Multi-site POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/multi-site' });
     return NextResponse.json(
       { error: "Failed to process multi-site action" },
       { status: 500 }

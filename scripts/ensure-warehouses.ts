@@ -1,17 +1,20 @@
 /**
  * Ensure the warehouse system is consistent.
  *
- * Standard warehouses (5 total):
- *   WH-MAIN       (MAIN)       — Kho chính, hàng đã QC pass
- *   WH-RECEIVING  (RECEIVING)  — Khu nhận hàng, chờ kiểm tra QC
- *   WH-HOLD       (HOLD)       — Khu chờ xử lý, hàng conditional
- *   WH-QUARANTINE (QUARANTINE) — Khu cách ly, hàng lỗi
- *   WH-SCRAP      (SCRAP)      — Khu phế liệu, hàng hủy
+ * Standard warehouses (8 total, ordered by material flow):
+ *   WH-RECEIVING  (RECEIVING)      — Khu nhận hàng, chờ kiểm tra QC
+ *   WH-QUARANTINE (QUARANTINE)     — Khu cách ly, hàng lỗi chờ xử lý
+ *   WH-MAIN       (MAIN)           — Kho chính, nguyên vật liệu đã QC pass
+ *   WH-WIP        (WIP)            — Khu sản xuất, hàng đang gia công
+ *   WH-FG         (FINISHED_GOODS) — Kho thành phẩm, hàng hoàn thành
+ *   WH-SHIP       (SHIPPING)       — Khu xuất hàng, hàng chờ vận chuyển
+ *   WH-HOLD       (HOLD)           — Khu tạm giữ, hàng conditional
+ *   WH-SCRAP      (SCRAP)          — Khu phế liệu, hàng hủy
  *
  * This script:
  *   1. Creates missing standard warehouses
  *   2. Fixes WH-MAIN type if it's 'mixed' or 'main' → 'MAIN'
- *   3. Removes legacy warehouses (WH-FG, WH-RAW) if they have no inventory
+ *   3. Removes legacy warehouses (WH-RAW) if they have no inventory
  *
  * Safe to run multiple times. Runs automatically during build.
  * Manual: npx tsx scripts/ensure-warehouses.ts
@@ -22,13 +25,6 @@ const prisma = new PrismaClient();
 
 const STANDARD_WAREHOUSES = [
   {
-    code: "WH-MAIN",
-    name: "Main Warehouse",
-    type: "MAIN",
-    location: "Austin, TX",
-    status: "active",
-  },
-  {
     code: "WH-RECEIVING",
     name: "Receiving Area",
     type: "RECEIVING",
@@ -36,17 +32,45 @@ const STANDARD_WAREHOUSES = [
     status: "active",
   },
   {
-    code: "WH-HOLD",
-    name: "Hold Area",
-    type: "HOLD",
-    location: "Khu chờ xử lý - Hàng conditional",
-    status: "active",
-  },
-  {
     code: "WH-QUARANTINE",
     name: "Quarantine",
     type: "QUARANTINE",
     location: "Khu cách ly - Hàng lỗi chờ xử lý",
+    status: "active",
+  },
+  {
+    code: "WH-MAIN",
+    name: "Main Warehouse",
+    type: "MAIN",
+    location: "Austin, TX",
+    status: "active",
+  },
+  {
+    code: "WH-WIP",
+    name: "Work-in-Progress",
+    type: "WIP",
+    location: "Khu sản xuất - Hàng đang gia công",
+    status: "active",
+  },
+  {
+    code: "WH-FG",
+    name: "Finished Goods",
+    type: "FINISHED_GOODS",
+    location: "Kho thành phẩm - Hàng hoàn thành",
+    status: "active",
+  },
+  {
+    code: "WH-SHIP",
+    name: "Shipping Area",
+    type: "SHIPPING",
+    location: "Khu xuất hàng - Chờ vận chuyển",
+    status: "active",
+  },
+  {
+    code: "WH-HOLD",
+    name: "Hold Area",
+    type: "HOLD",
+    location: "Khu chờ xử lý - Hàng conditional",
     status: "active",
   },
   {
@@ -59,7 +83,7 @@ const STANDARD_WAREHOUSES = [
 ];
 
 // Legacy warehouse codes that should be removed if empty
-const LEGACY_CODES = ["WH-FG", "WH-RAW"];
+const LEGACY_CODES = ["WH-RAW"];
 
 async function main() {
   console.log("=== Warehouse System Check ===\n");

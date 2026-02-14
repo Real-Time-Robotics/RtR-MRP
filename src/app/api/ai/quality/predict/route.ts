@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getQualityPredictionEngine } from '@/lib/ai/quality/quality-prediction-engine';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
@@ -85,14 +86,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           confidenceLevel: defectInsight.confidenceLevel,
         };
       } catch (aiError) {
-        console.warn('[Quality API] AI prediction failed:', aiError);
+        logger.warn('AI prediction failed', { context: 'POST /api/ai/quality/predict', error: String(aiError) });
         response.data.aiPrediction = null;
       }
     }
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[Quality API] Prediction Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/quality/predict' });
     return NextResponse.json(
       {
         success: false,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { autoScheduleAll, scheduleWorkOrder } from "@/lib/production/scheduling-engine";
 
 export async function POST(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Failed to auto-schedule:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/scheduler/auto-schedule' });
     return NextResponse.json(
       { error: "Failed to auto-schedule" },
       { status: 500 }

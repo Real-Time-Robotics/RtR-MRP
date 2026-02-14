@@ -8,6 +8,7 @@ import {
   recordSalesPayment,
   getARAging,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get sales invoices
 export async function GET(request: NextRequest) {
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ invoices });
   } catch (error) {
-    console.error("Sales invoices GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/invoices/sales' });
     return NextResponse.json(
       { error: "Failed to get invoices" },
       { status: 500 }
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error("Sales invoices POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/invoices/sales' });
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }
@@ -209,7 +210,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Sales invoices PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/finance/invoices/sales' });
     return NextResponse.json(
       { error: "Failed to update invoice" },
       { status: 500 }

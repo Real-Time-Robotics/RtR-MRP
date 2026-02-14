@@ -299,31 +299,31 @@ export default function AuditPage() {
         <Card className={cn(
           'border-2',
           integrityResult.valid
-            ? 'border-green-500 bg-green-50 dark:bg-green-950'
-            : 'border-red-500 bg-red-50 dark:bg-red-950'
+            ? 'border-success-500 bg-success-50 dark:bg-success-950'
+            : 'border-danger-500 bg-danger-50 dark:bg-danger-950'
         )}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               {integrityResult.valid ? (
                 <>
-                  <ShieldCheck className="w-8 h-8 text-green-600" />
+                  <ShieldCheck className="w-8 h-8 text-success-600" />
                   <div>
-                    <p className="font-semibold text-green-700 dark:text-green-300">
+                    <p className="font-semibold text-success-700 dark:text-success-300">
                       Audit Trail toàn vẹn
                     </p>
-                    <p className="text-sm text-green-600 dark:text-green-400">
+                    <p className="text-sm text-success-600 dark:text-success-400">
                       Đã kiểm tra {integrityResult.entriesChecked.toLocaleString()} bản ghi - Không phát hiện thay đổi
                     </p>
                   </div>
                 </>
               ) : (
                 <>
-                  <ShieldAlert className="w-8 h-8 text-red-600" />
+                  <ShieldAlert className="w-8 h-8 text-danger-600" />
                   <div>
-                    <p className="font-semibold text-red-700 dark:text-red-300">
+                    <p className="font-semibold text-danger-700 dark:text-danger-300">
                       Phát hiện vấn đề toàn vẹn
                     </p>
-                    <p className="text-sm text-red-600 dark:text-red-400">
+                    <p className="text-sm text-danger-600 dark:text-danger-400">
                       {integrityResult.error || `Lỗi tại bản ghi: ${integrityResult.brokenAt}`}
                     </p>
                   </div>
@@ -558,7 +558,7 @@ export default function AuditPage() {
                               </Badge>
                             )}
                             {entry.isComplianceEvent && (
-                              <Badge variant="outline" className="text-xs border-blue-500 text-blue-600">
+                              <Badge variant="outline" className="text-xs border-primary-500 text-primary-600">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Compliance
                               </Badge>

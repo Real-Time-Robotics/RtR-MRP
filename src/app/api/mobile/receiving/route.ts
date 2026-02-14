@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Mock PO data
 const mockPurchaseOrders = [
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Receiving API error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/receiving' });
     return NextResponse.json(
       { success: false, error: 'Failed to process receipt' },
       { status: 500 }

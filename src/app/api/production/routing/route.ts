@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import {
   generateRoutingNumber,
   calculateRoutingTotals,
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(routings);
   } catch (error) {
-    console.error("Failed to fetch routings:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/routing' });
     return NextResponse.json(
       { error: "Failed to fetch routings" },
       { status: 500 }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(routing, { status: 201 });
   } catch (error) {
-    console.error("Failed to create routing:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/routing' });
     return NextResponse.json(
       { error: "Failed to create routing" },
       { status: 500 }

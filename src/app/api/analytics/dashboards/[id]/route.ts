@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { dashboardService, widgetService } from '@/lib/analytics';
 import type { UserRole } from '@/lib/roles';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // DASHBOARD API - GET, UPDATE, DELETE WITH ROLE-BASED ACCESS
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching dashboard:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/dashboards/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch dashboard' },
       { status: 500 }
@@ -160,7 +161,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error updating dashboard:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/analytics/dashboards/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to update dashboard' },
       { status: 500 }
@@ -216,7 +217,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error deleting dashboard:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/analytics/dashboards/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to delete dashboard' },
       { status: 500 }

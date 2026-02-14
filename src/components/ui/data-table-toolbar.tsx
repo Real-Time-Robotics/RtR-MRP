@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Permission, rolePermissions, UserRole } from '@/lib/auth/auth-types';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   Plus,
   Upload,
@@ -86,7 +87,7 @@ interface FilterConfig {
 export function DataTableToolbar({
   searchValue = '',
   onSearchChange,
-  searchPlaceholder = 'Tìm kiếm...',
+  searchPlaceholder,
   onAdd,
   onImport,
   onExport,
@@ -97,7 +98,7 @@ export function DataTableToolbar({
   importPermission = 'reports:export',
   exportPermission = 'reports:export',
   deletePermission,
-  addLabel = 'Thêm mới',
+  addLabel,
   importLabel = 'Import',
   exportLabel = 'Export',
   selectedCount = 0,
@@ -111,7 +112,10 @@ export function DataTableToolbar({
   density,
   onDensityChange,
 }: DataTableToolbarProps) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
+  const resolvedSearchPlaceholder = searchPlaceholder || t("toolbar.search");
+  const resolvedAddLabel = addLabel || t("toolbar.addNew");
 
   // Get user permissions
   const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
@@ -137,15 +141,17 @@ export function DataTableToolbar({
             <div className="relative flex-1 sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder={searchPlaceholder}
+                placeholder={resolvedSearchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-9 h-9"
+                aria-label={resolvedSearchPlaceholder}
               />
               {searchValue && (
                 <button
                   onClick={() => onSearchChange('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -164,7 +170,7 @@ export function DataTableToolbar({
               )}
             >
               <Filter className="h-4 w-4 mr-2" />
-              Lọc
+              {t("toolbar.filter")}
               {hasActiveFilters && (
                 <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
                   {Object.values(activeFilters).filter(v => v && v !== 'all').length}
@@ -181,6 +187,7 @@ export function DataTableToolbar({
               onClick={onRefresh}
               disabled={isLoading}
               className="h-9 w-9"
+              aria-label="Refresh data"
             >
               <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
             </Button>
@@ -197,7 +204,7 @@ export function DataTableToolbar({
               onClick={onBulkDelete}
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Xóa ({selectedCount})
+              {t("toolbar.deleteCount", { count: String(selectedCount) })}
             </Button>
           )}
 
@@ -232,7 +239,7 @@ export function DataTableToolbar({
           {onAdd && can(addPermission) && (
             <Button size="sm" onClick={onAdd}>
               <Plus className="h-4 w-4 mr-2" />
-              {addLabel}
+              {resolvedAddLabel}
             </Button>
           )}
 
@@ -242,6 +249,8 @@ export function DataTableToolbar({
               <button
                 onClick={() => onDensityChange('default')}
                 title="Comfortable"
+                aria-label="Comfortable density"
+                aria-pressed={!density || density === 'default'}
                 className={cn(
                   "px-2 h-full flex items-center justify-center transition-colors border-r",
                   (!density || density === 'default')
@@ -254,6 +263,8 @@ export function DataTableToolbar({
               <button
                 onClick={() => onDensityChange('compact')}
                 title="Compact"
+                aria-label="Compact density"
+                aria-pressed={density === 'compact'}
                 className={cn(
                   "px-2 h-full flex items-center justify-center transition-colors",
                   density === 'compact'
@@ -287,7 +298,7 @@ export function DataTableToolbar({
                   <SelectValue placeholder={filter.label} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả {filter.label}</SelectItem>
+                  <SelectItem value="all">{t("toolbar.allFilter", { label: filter.label })}</SelectItem>
                   {filter.options.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -305,7 +316,7 @@ export function DataTableToolbar({
               className="text-gray-500"
             >
               <X className="h-4 w-4 mr-1" />
-              Xóa bộ lọc
+              {t("toolbar.clearFilters")}
             </Button>
           )}
         </div>
@@ -314,7 +325,7 @@ export function DataTableToolbar({
       {/* Selection Info */}
       {selectedCount > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-          <span className="font-medium">{selectedCount}</span> mục đã chọn
+          {t("toolbar.selectedCount", { count: String(selectedCount) })}
         </div>
       )}
     </div>
@@ -338,26 +349,28 @@ export function CompactToolbar({
   onAdd,
   onRefresh,
   addPermission,
-  addLabel = 'Thêm',
+  addLabel,
   isLoading = false,
   className,
 }: CompactToolbarProps) {
+  const { t } = useLanguage();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
   const userPermissions = userRole ? rolePermissions[userRole] || [] : [];
   const can = (permission?: Permission) => !permission || userPermissions.includes(permission);
+  const resolvedAddLabel = addLabel || t("toolbar.add");
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {onRefresh && (
-        <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading}>
+        <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading} aria-label="Refresh">
           <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
         </Button>
       )}
       {onAdd && can(addPermission) && (
         <Button size="sm" onClick={onAdd}>
           <Plus className="h-4 w-4 mr-1" />
-          {addLabel}
+          {resolvedAddLabel}
         </Button>
       )}
     </div>

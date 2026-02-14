@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         try {
           draftOrder = await emailParser.createDraftOrder(extractedData);
         } catch (err) {
-          console.warn('[EmailParser API] Could not create draft:', err);
+          logger.warn('Could not create draft', { context: 'POST /api/ai/email-parser', error: String(err) });
         }
       }
 
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      let createdOrder: any = null;
+      let createdOrder: any | null = null;
 
       if (draftOrder.type === 'sales_order') {
         // Find or validate customer
@@ -316,7 +317,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('[EmailParser API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/email-parser' });
     return NextResponse.json(
       {
         error: 'Failed to process request',

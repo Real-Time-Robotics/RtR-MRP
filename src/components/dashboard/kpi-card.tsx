@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/language-context";
 import {
   Package,
   AlertTriangle,
@@ -100,6 +101,7 @@ export function KPICard({
   loading = false,
   refreshing = false,
 }: KPICardProps) {
+  const { t } = useLanguage();
   const Icon = iconMap[iconName] || Activity;
 
   // Calculate target progress
@@ -176,7 +178,7 @@ export function KPICard({
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Target className="h-3 w-3" />
-                    {targetLabel || `Mục tiêu: ${target}`}
+                    {targetLabel || t("kpi.target", { target: String(target) })}
                   </span>
                   <span>{targetProgress.toFixed(0)}%</span>
                 </div>

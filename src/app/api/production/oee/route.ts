@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import {
   getOEEDashboard,
   calculateOEE,
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const dashboard = await getOEEDashboard();
     return NextResponse.json(dashboard);
   } catch (error) {
-    console.error("Failed to fetch OEE data:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/oee' });
     return NextResponse.json(
       { error: "Failed to fetch OEE data" },
       { status: 500 }

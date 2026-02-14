@@ -2,7 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";import { logger } from '@/lib/logger';
+
 import {
   parseFile,
   autoDetectMappings,
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Import upload error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 500 }
@@ -175,7 +176,7 @@ export async function PUT(request: NextRequest) {
       status: "validating",
     });
   } catch (error) {
-    console.error("Import mapping error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Mapping update failed" },
       { status: 500 }
@@ -219,7 +220,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ jobs });
   } catch (error) {
-    console.error("Import status error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Failed to get import status" },
       { status: 500 }

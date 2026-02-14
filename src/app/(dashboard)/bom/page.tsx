@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Eye, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { BOMHeader, BOMTableHeader } from "@/components/bom/bom-content";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
@@ -67,27 +66,22 @@ export default function BOMPage() {
       key: 'bomVersion',
       header: 'BOM Version',
       width: '100px',
-      align: 'center',
-      render: (value, row) => (
-        row.hasBom ? (
-          <Badge variant="secondary">{value}</Badge>
-        ) : (
-          <Badge variant="outline">No BOM</Badge>
-        )
-      ),
+      render: (value, row) => row.hasBom ? value : 'No BOM',
+      cellClassName: (_, row) =>
+        row.hasBom
+          ? 'bg-blue-50 dark:bg-blue-950/30'
+          : 'bg-gray-50 dark:bg-gray-950/30',
     },
     {
       key: 'totalParts',
       header: 'Parts',
       width: '80px',
-      align: 'center',
       sortable: true,
     },
     {
       key: 'basePrice',
       header: 'Base Price',
       width: '100px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value) => <span className="font-mono">{formatCurrency(value)}</span>,
@@ -96,7 +90,6 @@ export default function BOMPage() {
       key: 'actions',
       header: 'Actions',
       width: '150px',
-      align: 'right',
       render: (_, row) => (
         <div className="flex items-center justify-end gap-1.5">
           <Link href={`/bom/${row.id}`}>

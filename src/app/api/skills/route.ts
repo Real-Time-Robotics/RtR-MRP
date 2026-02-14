@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(skills, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Skills API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills' });
     return paginatedError("Failed to fetch skills", 500);
   }
 }
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(skill, { status: 201 });
   } catch (error) {
-    console.error("Create skill error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills' });
     return NextResponse.json(
       { error: "Failed to create skill" },
       { status: 500 }

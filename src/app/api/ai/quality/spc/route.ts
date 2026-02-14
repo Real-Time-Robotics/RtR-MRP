@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getQualityAnomalyDetector } from '@/lib/ai/quality/anomaly-detector';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Quality API] SPC Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/quality/spc' });
     return NextResponse.json(
       {
         success: false,
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error('[Quality API] Cpk Calculation Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality/spc' });
     return NextResponse.json(
       {
         success: false,

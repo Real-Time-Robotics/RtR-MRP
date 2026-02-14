@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -14,6 +16,7 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
 
 // =============================================================================
@@ -54,7 +57,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const supplierId = searchParams.get("supplierId");
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.PurchaseOrderWhereInput = {};
     if (status) where.status = status;
     if (supplierId) where.supplierId = supplierId;
     if (search) {
@@ -84,7 +87,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(orders, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch purchase orders:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/purchase-orders' });
     return paginatedError("Failed to fetch purchase orders", 500);
   }
 }
@@ -95,7 +98,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   let body;
   try {

@@ -281,13 +281,14 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     }
   }, [parseResult, mappings, entityType, updateMode, aiImport]);
 
-  // Process import
+  // Process import — submits to background job queue, then polls for result
   const handleImport = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setImportResult(null);
 
     try {
+      // Submit to background queue
       const response = await fetch("/api/excel/import/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -302,13 +303,54 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         throw new Error(data.error || "Import failed");
       }
 
-      const result = await response.json();
-      setImportResult(result);
+      const submitResult = await response.json();
+      const bgJobId = submitResult.backgroundJobId;
 
-      // Call onSuccess callback if import was successful
-      if (result.successCount > 0 && onSuccess) {
-        onSuccess();
+      if (!bgJobId) {
+        // Fallback: API returned direct result (no background job)
+        setImportResult({
+          processed: submitResult.processed || 0,
+          success: submitResult.successCount || submitResult.success || 0,
+          errors: submitResult.errors || [],
+        });
+        if ((submitResult.successCount || submitResult.success) > 0 && onSuccess) onSuccess();
+        return;
       }
+
+      // Poll for background job completion
+      let attempts = 0;
+      const maxAttempts = 300; // 5 minutes at 1s intervals
+      while (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        attempts++;
+
+        const statusRes = await fetch(`/api/jobs/${bgJobId}`);
+        if (!statusRes.ok) continue;
+
+        const jobStatus = await statusRes.json();
+
+        if (jobStatus.status === "completed") {
+          const result = jobStatus.result as {
+            processed: number;
+            success: number;
+            errorCount: number;
+            errors: { row: number; message: string }[];
+          };
+          setImportResult({
+            processed: result.processed,
+            success: result.success,
+            errors: result.errors,
+          });
+          if (result.success > 0 && onSuccess) onSuccess();
+          return;
+        }
+
+        if (jobStatus.status === "failed" || jobStatus.status === "cancelled") {
+          throw new Error(jobStatus.error || "Import job failed");
+        }
+      }
+
+      throw new Error("Import job timed out after 5 minutes");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
     } finally {

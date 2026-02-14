@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { warmAllCaches, warmCache } from "@/lib/cache/cache-warmer";
+import { logger } from '@/lib/logger';
 
 // POST - Trigger cache warming
 export async function POST(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       report,
     });
   } catch (error) {
-    console.error("Cache warming error:", error);
+    logger.error('Cache warming error', { context: 'POST /api/cache/warm', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Failed to warm cache" },
       { status: 500 }

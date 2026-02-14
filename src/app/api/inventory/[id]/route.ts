@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { auditUpdate } from "@/lib/audit/route-audit";
 
@@ -90,7 +91,7 @@ export async function GET(
             otherLocations,
         });
     } catch (error) {
-        console.error("Failed to fetch inventory details:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/inventory/[id]' });
         return NextResponse.json(
             { error: "Failed to fetch inventory details" },
             { status: 500 }
@@ -247,7 +248,7 @@ export async function PATCH(
         }
 
         // Non-transfer update (lotNumber, etc.)
-        const updateData: Record<string, unknown> = {};
+        const updateData: any = {};
         if (validatedData.lotNumber !== undefined) updateData.lotNumber = validatedData.lotNumber;
         if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
 
@@ -261,14 +262,14 @@ export async function PATCH(
         });
 
         // Audit trail: log non-transfer update
-        auditUpdate(request, session.user, "Inventory", id, existing as unknown as Record<string, unknown>, updateData);
+        auditUpdate(request, session.user, "Inventory", id, existing as unknown as any, updateData);
 
         return NextResponse.json(inventory);
     } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: error.issues }, { status: 400 });
         }
-        console.error("Failed to update inventory:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/inventory/[id]' });
         return NextResponse.json(
             { error: "Failed to update inventory" },
             { status: 500 }

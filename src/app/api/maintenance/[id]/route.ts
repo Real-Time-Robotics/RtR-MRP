@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get maintenance order by ID
 export async function GET(
@@ -40,7 +41,7 @@ export async function GET(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error("Get maintenance order error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch maintenance order" },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function PUT(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error("Update maintenance order error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/[id]' });
     return NextResponse.json(
       { error: "Failed to update maintenance order" },
       { status: 500 }
@@ -194,7 +195,7 @@ export async function PATCH(
 
     return NextResponse.json(order);
   } catch (error) {
-    console.error("Update maintenance status error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/[id]' });
     return NextResponse.json(
       { error: "Failed to update maintenance order" },
       { status: 500 }
@@ -219,7 +220,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete maintenance order error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/[id]' });
     return NextResponse.json(
       { error: "Failed to delete maintenance order" },
       { status: 500 }

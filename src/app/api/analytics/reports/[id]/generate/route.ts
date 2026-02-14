@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reportService } from '@/lib/analytics';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const generateSchema = z.object({
   format: z.enum(['pdf', 'xlsx', 'csv']).default('pdf'),
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error generating report:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/reports/[id]/generate' });
     return NextResponse.json(
       { success: false, error: 'Failed to generate report' },
       { status: 500 }

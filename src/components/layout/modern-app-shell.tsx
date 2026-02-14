@@ -11,6 +11,8 @@ import { signOut } from 'next-auth/react';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
 import { MobileNav } from './mobile-nav';
+import { PageTransition } from './page-transition';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES
@@ -41,21 +43,21 @@ export function ModernAppShell({
 }: ModernAppShellProps) {
   const pathname = usePathname();
   
+  // Use global language context (single source of truth)
+  const { language, setLanguage } = useLanguage();
+
   // State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'vi'>('vi');
   const [darkMode, setDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Load preferences from localStorage and sync dark mode
   useEffect(() => {
     const savedCollapsed = localStorage.getItem('sidebar-collapsed');
-    const savedLanguage = localStorage.getItem('language') as 'en' | 'vi';
     const savedDarkMode = localStorage.getItem('dark-mode');
 
     if (savedCollapsed) setSidebarCollapsed(savedCollapsed === 'true');
-    if (savedLanguage) setLanguage(savedLanguage);
 
     // Initialize dark mode
     const isDark = savedDarkMode === 'true';
@@ -79,10 +81,9 @@ export function ModernAppShell({
     document.documentElement.classList.toggle('dark', !darkMode);
   };
 
-  // Change language
+  // Change language (context's setLanguage already saves to localStorage)
   const handleLanguageChange = (lang: 'en' | 'vi') => {
     setLanguage(lang);
-    localStorage.setItem('language', lang);
   };
 
   // Handle logout
@@ -158,7 +159,7 @@ export function ModernAppShell({
         <main className="flex-1 overflow-y-auto">
           {/* Add bottom padding on mobile for fixed bottom nav (h-14 + safe area) */}
           <div className="p-4 pb-20 md:pb-4">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </div>
         </main>
       </div>

@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import Link from "next/link";
@@ -179,7 +180,6 @@ export default function MrpPage() {
       key: 'totalParts',
       header: 'Parts',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => value || 0,
     },
@@ -187,7 +187,6 @@ export default function MrpPage() {
       key: 'purchaseSuggestions',
       header: 'Purchase',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => value || 0,
     },
@@ -195,7 +194,6 @@ export default function MrpPage() {
       key: 'expediteAlerts',
       header: 'Expedite',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => value || 0,
     },
@@ -203,34 +201,26 @@ export default function MrpPage() {
       key: 'status',
       header: 'Status',
       width: '100px',
-      align: 'center',
       sortable: true,
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          completed: 'bg-green-100 dark:bg-green-900/30',
+          failed: 'bg-red-100 dark:bg-red-900/30',
+          running: 'bg-blue-100 dark:bg-blue-900/30',
+          queued: 'bg-yellow-100 dark:bg-yellow-900/30',
+        };
+        return map[value] || 'bg-gray-50 dark:bg-gray-800';
+      },
       render: (value) => (
-        <Badge
-          variant={
-            value === "completed"
-              ? "default"
-              : value === "failed"
-                ? "destructive"
-                : "secondary"
-          }
-          className={
-            value === "running" || value === "queued"
-              ? "animate-pulse"
-              : ""
-          }
-        >
-          {value === "running" ? "Running..." :
-            value === "queued" ? "Queued" :
-              value}
-        </Badge>
+        <span className={cn("text-xs font-medium", (value === "running" || value === "queued") && "animate-pulse")}>
+          {value === "running" ? "Running..." : value === "queued" ? "Queued" : value}
+        </span>
       ),
     },
     {
       key: 'actions',
       header: '',
       width: '80px',
-      align: 'right',
       render: (_, row) => (
         <Button
           variant="ghost"
@@ -265,168 +255,183 @@ export default function MrpPage() {
         </div>
       </div>
 
-      {/* Run MRP Form - COMPACT */}
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardHeader className="px-3 py-2">
-          <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
-            <Brain className="h-3.5 w-3.5" />
-            Run MRP Calculation (Async)
-          </CardTitle>
-        </CardHeader>
-        {/* COMPACT: space-y-6 → space-y-3 */}
-        <CardContent className="px-3 py-3 space-y-3">
+      {/* Run MRP Form */}
+      <Card className="border-gray-200 dark:border-mrp-border overflow-hidden">
+        <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/60 border-b border-gray-200 dark:border-mrp-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+              <Brain className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <span className="text-xs font-semibold font-mono uppercase tracking-wider text-gray-700 dark:text-gray-300">
+              MRP Calculation
+            </span>
+          </div>
+          <Button onClick={runMrp} disabled={running} size="sm" className="h-7 text-[11px] px-3 gap-1.5">
+            {running ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Queuing...
+              </>
+            ) : (
+              <>
+                <Play className="h-3 w-3" />
+                Run MRP
+              </>
+            )}
+          </Button>
+        </div>
+
+        <CardContent className="px-4 py-3">
           {errorMsg && (
-            <div className="bg-destructive/15 text-destructive px-4 py-3 rounded-md text-sm font-medium">
+            <div className="bg-destructive/10 text-destructive px-3 py-2 rounded-md text-[11px] font-medium mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               {errorMsg}
             </div>
           )}
 
-          {/* COMPACT: gap-6 → gap-3 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-[11px]">Planning Horizon</Label>
-              <Select value={horizon} onValueChange={setHorizon}>
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 days</SelectItem>
-                  <SelectItem value="60">60 days</SelectItem>
-                  <SelectItem value="90">90 days</SelectItem>
-                  <SelectItem value="180">180 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <div className="grid grid-cols-[1fr_1px_1fr] gap-0 items-start">
+            {/* Left Column: Parameters */}
+            <div className="pr-4 space-y-3">
+              {/* Planning Horizon */}
+              <div className="flex items-center justify-between gap-3">
+                <Label className="text-[11px] text-muted-foreground whitespace-nowrap">Planning Horizon</Label>
+                <Select value={horizon} onValueChange={setHorizon}>
+                  <SelectTrigger className="h-7 w-28 text-[11px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 days</SelectItem>
+                    <SelectItem value="60">60 days</SelectItem>
+                    <SelectItem value="90">90 days</SelectItem>
+                    <SelectItem value="180">180 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* COMPACT: space-y-4 → space-y-2 */}
-          <div className="space-y-2">
-            <Label className="text-[11px]">Include in Calculation:</Label>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="confirmed" className="text-[11px] font-normal">
-                  Confirmed Sales Orders
-                </Label>
-                <Switch
-                  id="confirmed"
-                  checked={includeConfirmed}
-                  onCheckedChange={setIncludeConfirmed}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="draft" className="text-[11px] font-normal">
-                  Draft Sales Orders
-                </Label>
-                <Switch
-                  id="draft"
-                  checked={includeDraft}
-                  onCheckedChange={setIncludeDraft}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="safety" className="text-[11px] font-normal">
-                  Include Safety Stock in calculations
-                </Label>
-                <Switch
-                  id="safety"
-                  checked={includeSafetyStock}
-                  onCheckedChange={setIncludeSafetyStock}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* AI Forecast Integration */}
-          <div className="space-y-2 pt-2 border-t">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                <Label className="text-[11px] font-semibold">AI Forecast Integration</Label>
-                <Badge variant="outline" className="text-[9px] px-1 py-0 bg-purple-50 text-purple-700 border-purple-200">
-                  NEW
-                </Badge>
-              </div>
-              <Switch
-                id="forecast"
-                checked={useForecast}
-                onCheckedChange={setUseForecast}
-              />
-            </div>
-
-            {useForecast && (
-              <div className="space-y-2 pl-5 animate-in fade-in-50 duration-200">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="forecastWeight" className="text-[11px] font-normal">
-                    Forecast Weight
+              {/* Toggles */}
+              <div className="space-y-0">
+                <div className="flex items-center justify-between py-1.5 group">
+                  <Label htmlFor="confirmed" className="text-[11px] font-normal text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer">
+                    Confirmed Orders
                   </Label>
-                  <Select value={forecastWeight} onValueChange={setForecastWeight}>
-                    <SelectTrigger className="h-6 w-24 text-[10px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0.3">30% (Low)</SelectItem>
-                      <SelectItem value="0.5">50% (Balanced)</SelectItem>
-                      <SelectItem value="0.7">70% (High)</SelectItem>
-                      <SelectItem value="1.0">100% (Full)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Switch
+                    id="confirmed"
+                    checked={includeConfirmed}
+                    onCheckedChange={setIncludeConfirmed}
+                    className="scale-[0.8] origin-right"
+                  />
                 </div>
-
-                {/* Forecast Status */}
-                {loadingForecastStatus ? (
-                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Loading forecast status...
-                  </div>
-                ) : forecastStatus && (
-                  <div className="p-2 bg-muted/50 rounded-md space-y-1">
-                    {forecastStatus.holidayBuffer > 0 && (
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <Calendar className="h-3 w-3 text-amber-500" />
-                        <span className="text-amber-700 dark:text-amber-400">
-                          Holiday buffer active: +{(forecastStatus.holidayBuffer * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
-                    {forecastStatus.tetPhase && forecastStatus.tetPhase !== 'normal' && (
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <TrendingUp className="h-3 w-3 text-red-500" />
-                        <span className="text-red-700 dark:text-red-400">
-                          Tết phase: {forecastStatus.tetPhase}
-                        </span>
-                      </div>
-                    )}
-                    {forecastStatus.upcomingHolidays?.length > 0 && (
-                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        Next: {forecastStatus.upcomingHolidays[0]?.name} ({forecastStatus.upcomingHolidays[0]?.daysUntil} days)
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <Link href="/ai/forecast" className="flex items-center gap-1 text-[10px] text-purple-600 hover:underline">
-                  View Forecast Dashboard
-                  <ChevronRight className="h-3 w-3" />
-                </Link>
+                <div className="flex items-center justify-between py-1.5 group">
+                  <Label htmlFor="draft" className="text-[11px] font-normal text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer">
+                    Draft Orders
+                  </Label>
+                  <Switch
+                    id="draft"
+                    checked={includeDraft}
+                    onCheckedChange={setIncludeDraft}
+                    className="scale-[0.8] origin-right"
+                  />
+                </div>
+                <div className="flex items-center justify-between py-1.5 group">
+                  <Label htmlFor="safety" className="text-[11px] font-normal text-muted-foreground group-hover:text-foreground transition-colors cursor-pointer">
+                    Safety Stock
+                  </Label>
+                  <Switch
+                    id="safety"
+                    checked={includeSafetyStock}
+                    onCheckedChange={setIncludeSafetyStock}
+                    className="scale-[0.8] origin-right"
+                  />
+                </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* COMPACT: size="lg" → size="sm" */}
-          <Button onClick={runMrp} disabled={running} size="sm" className="text-xs">
-            {running ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Queuing Job...
-              </>
-            ) : (
-              <>
-                <Play className="h-3.5 w-3.5 mr-1.5" />
-                Queue MRP Calculation
-              </>
-            )}
-          </Button>
+            {/* Divider */}
+            <div className="w-px h-full bg-gray-200 dark:bg-gray-800" />
+
+            {/* Right Column: AI Forecast */}
+            <div className="pl-4 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-purple-500" />
+                  <Label className="text-[11px] font-medium">AI Forecast</Label>
+                  <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 leading-none bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950 dark:text-purple-400 dark:border-purple-800">
+                    NEW
+                  </Badge>
+                </div>
+                <Switch
+                  id="forecast"
+                  checked={useForecast}
+                  onCheckedChange={setUseForecast}
+                  className="scale-[0.8] origin-right"
+                />
+              </div>
+
+              {useForecast ? (
+                <div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-1 duration-200">
+                  {/* Forecast Weight */}
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="forecastWeight" className="text-[11px] font-normal text-muted-foreground">
+                      Weight
+                    </Label>
+                    <Select value={forecastWeight} onValueChange={setForecastWeight}>
+                      <SelectTrigger className="h-7 w-32 text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0.3">30% (Low)</SelectItem>
+                        <SelectItem value="0.5">50% (Balanced)</SelectItem>
+                        <SelectItem value="0.7">70% (High)</SelectItem>
+                        <SelectItem value="1.0">100% (Full)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Forecast Status */}
+                  {loadingForecastStatus ? (
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading status...
+                    </div>
+                  ) : forecastStatus && (
+                    <div className="p-2 bg-muted/40 rounded-md space-y-1">
+                      {forecastStatus.holidayBuffer > 0 && (
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <Calendar className="h-3 w-3 text-amber-500" />
+                          <span className="text-amber-700 dark:text-amber-400">
+                            Holiday buffer +{(forecastStatus.holidayBuffer * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {forecastStatus.tetPhase && forecastStatus.tetPhase !== 'normal' && (
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <TrendingUp className="h-3 w-3 text-red-500" />
+                          <span className="text-red-700 dark:text-red-400">
+                            Tết: {forecastStatus.tetPhase}
+                          </span>
+                        </div>
+                      )}
+                      {forecastStatus.upcomingHolidays?.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          {forecastStatus.upcomingHolidays[0]?.name} ({forecastStatus.upcomingHolidays[0]?.daysUntil}d)
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Link href="/ai/forecast" className="inline-flex items-center gap-1 text-[10px] text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:underline">
+                    Forecast Dashboard
+                    <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                  Enable to blend AI demand forecasts with order-based MRP calculations for improved accuracy.
+                </p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

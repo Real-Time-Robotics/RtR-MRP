@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get employee by ID with skills
 export async function GET(
@@ -47,7 +48,7 @@ export async function GET(
 
     return NextResponse.json(employee);
   } catch (error) {
-    console.error("Get employee error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch employee" },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function PUT(
 
     return NextResponse.json(employee);
   } catch (error) {
-    console.error("Update employee error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees/[id]' });
     return NextResponse.json(
       { error: "Failed to update employee" },
       { status: 500 }
@@ -161,7 +162,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Manage employee skills error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees/[id]' });
     return NextResponse.json(
       { error: "Failed to manage employee skills" },
       { status: 500 }
@@ -193,7 +194,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete employee error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees/[id]' });
     return NextResponse.json(
       { error: "Failed to delete employee" },
       { status: 500 }

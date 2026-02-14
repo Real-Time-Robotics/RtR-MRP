@@ -352,7 +352,7 @@ export default function ApprovalsPage() {
                             }
                             className={
                               workflow.status === 'APPROVED'
-                                ? 'bg-green-600'
+                                ? 'bg-success-600'
                                 : undefined
                             }
                           >

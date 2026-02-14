@@ -225,7 +225,7 @@ const MetricCard = ({
         {subtitle && <p className="text-xs text-gray-400 dark:text-neutral-500 mt-1">{subtitle}</p>}
         {trend && trendValue && (
           <div className={`flex items-center mt-2 text-sm ${
-            trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-500'
+            trend === 'up' ? 'text-success-600' : trend === 'down' ? 'text-danger-600' : 'text-gray-500'
           }`}>
             {trend === 'up' ? <ArrowUpRight className="h-4 w-4" /> :
              trend === 'down' ? <ArrowDownRight className="h-4 w-4" /> :
@@ -300,10 +300,9 @@ export default function AnalyticsDashboard() {
       key: 'rank',
       header: '#',
       width: '50px',
-      align: 'center',
       render: (_, row, index) => (
         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-          index === 0 ? 'bg-yellow-100 text-yellow-700' :
+          index === 0 ? 'bg-warning-100 text-warning-700' :
           index === 1 ? 'bg-gray-100 text-gray-700' :
           index === 2 ? 'bg-orange-100 text-orange-700' :
           'bg-gray-50 text-gray-500'
@@ -323,16 +322,14 @@ export default function AnalyticsDashboard() {
       key: 'quantity',
       header: 'SL',
       width: '70px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'revenue',
       header: 'Doanh thu',
       width: '100px',
-      align: 'right',
       sortable: true,
-      render: (value) => <span className="font-medium text-green-600">{formatCurrency(value)}</span>,
+      render: (value) => <span className="font-medium text-success-600">{formatCurrency(value)}</span>,
     },
   ], []);
 
@@ -348,13 +345,17 @@ export default function AnalyticsDashboard() {
       key: 'onTime',
       header: 'Đúng hạn',
       width: '90px',
-      align: 'center',
       sortable: true,
+      cellClassName: (value) => {
+        if (value >= 95) return 'bg-success-50 dark:bg-success-950/30';
+        if (value >= 90) return 'bg-warning-50 dark:bg-warning-950/30';
+        return 'bg-danger-50 dark:bg-danger-950/30';
+      },
       render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          value >= 95 ? 'bg-green-100 text-green-700' :
-          value >= 90 ? 'bg-yellow-100 text-yellow-700' :
-          'bg-red-100 text-red-700'
+        <span className={`text-xs font-medium ${
+          value >= 95 ? 'text-success-700 dark:text-success-300' :
+          value >= 90 ? 'text-warning-700 dark:text-warning-300' :
+          'text-danger-700 dark:text-danger-300'
         }`}>
           {value}%
         </span>
@@ -364,13 +365,17 @@ export default function AnalyticsDashboard() {
       key: 'quality',
       header: 'Chất lượng',
       width: '90px',
-      align: 'center',
       sortable: true,
+      cellClassName: (value) => {
+        if (value >= 98) return 'bg-success-50 dark:bg-success-950/30';
+        if (value >= 95) return 'bg-warning-50 dark:bg-warning-950/30';
+        return 'bg-danger-50 dark:bg-danger-950/30';
+      },
       render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          value >= 98 ? 'bg-green-100 text-green-700' :
-          value >= 95 ? 'bg-yellow-100 text-yellow-700' :
-          'bg-red-100 text-red-700'
+        <span className={`text-xs font-medium ${
+          value >= 98 ? 'text-success-700 dark:text-success-300' :
+          value >= 95 ? 'text-warning-700 dark:text-warning-300' :
+          'text-danger-700 dark:text-danger-300'
         }`}>
           {value}%
         </span>
@@ -380,12 +385,11 @@ export default function AnalyticsDashboard() {
       key: 'score',
       header: 'Điểm',
       width: '120px',
-      align: 'right',
       sortable: true,
       render: (value) => (
         <div className="flex items-center justify-end">
           <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
-            <div className="h-full rounded-full bg-blue-600" style={{ width: `${value}%` }} />
+            <div className="h-full rounded-full bg-primary-600" style={{ width: `${value}%` }} />
           </div>
           <span className="text-sm font-medium">{value}</span>
         </div>
@@ -401,7 +405,6 @@ export default function AnalyticsDashboard() {
       key: 'rank',
       header: '#',
       width: '50px',
-      align: 'center',
       render: (_, row, index) => <span className="text-sm font-medium text-gray-500">{(index || 0) + 1}</span>,
     },
     {
@@ -415,7 +418,6 @@ export default function AnalyticsDashboard() {
       key: 'quantity',
       header: 'Số lượng',
       width: '80px',
-      align: 'right',
       sortable: true,
       render: (value) => <span className="text-gray-600 dark:text-neutral-400">{formatNumber(value)}</span>,
     },
@@ -423,21 +425,19 @@ export default function AnalyticsDashboard() {
       key: 'value',
       header: 'Giá trị',
       width: '100px',
-      align: 'right',
       sortable: true,
-      render: (value) => <span className="font-medium text-blue-600">{formatCurrency(value)}</span>,
+      render: (value) => <span className="font-medium text-primary-600">{formatCurrency(value)}</span>,
     },
     {
       key: 'percent',
       header: '% Tổng',
       width: '120px',
-      align: 'right',
       render: (_, row) => {
         const percent = (row.value / inventoryTotalValue) * 100;
         return (
           <div className="flex items-center justify-end">
             <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
+              <div className="h-full rounded-full bg-primary-600" style={{ width: `${percent}%` }} />
             </div>
             <span className="text-sm text-gray-600 dark:text-neutral-400">{percent.toFixed(1)}%</span>
           </div>
@@ -451,7 +451,7 @@ export default function AnalyticsDashboard() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <RefreshCw className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
         </div>
       </div>
@@ -467,7 +467,7 @@ export default function AnalyticsDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+              <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -481,7 +481,7 @@ export default function AnalyticsDashboard() {
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
                 <option value="1m">1 tháng</option>
                 <option value="3m">3 tháng</option>
@@ -494,7 +494,7 @@ export default function AnalyticsDashboard() {
                 <RefreshCw className="h-5 w-5" />
               </button>
 
-              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </button>
@@ -515,7 +515,7 @@ export default function AnalyticsDashboard() {
                 onClick={() => setActiveTab(tab.key as 'overview' | 'inventory' | 'sales' | 'production' | 'quality')}
                 className={`flex items-center px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
                   activeTab === tab.key
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-b-2 border-blue-600'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border-b-2 border-primary-600'
                     : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -630,21 +630,21 @@ export default function AnalyticsDashboard() {
               {/* Compliance Overview */}
               <ChartCard title="Compliance Status">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-success-50 rounded-lg">
                     <div className="flex items-center">
-                      <Globe className="h-5 w-5 text-green-600 mr-3" />
+                      <Globe className="h-5 w-5 text-success-600 mr-3" />
                       <span className="font-medium">NDAA Compliant</span>
                     </div>
-                    <span className="text-lg font-bold text-green-600">
+                    <span className="text-lg font-bold text-success-600">
                       {((metrics.compliance.ndaaCompliantParts / metrics.inventory.totalParts) * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg">
                     <div className="flex items-center">
-                      <FileText className="h-5 w-5 text-blue-600 mr-3" />
+                      <FileText className="h-5 w-5 text-primary-600 mr-3" />
                       <span className="font-medium">RoHS Compliant</span>
                     </div>
-                    <span className="text-lg font-bold text-blue-600">
+                    <span className="text-lg font-bold text-primary-600">
                       {((metrics.compliance.rohsCompliantParts / metrics.inventory.totalParts) * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -657,12 +657,12 @@ export default function AnalyticsDashboard() {
                       {metrics.compliance.itarControlledParts}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-warning-50 rounded-lg">
                     <div className="flex items-center">
-                      <Clock className="h-5 w-5 text-yellow-600 mr-3" />
+                      <Clock className="h-5 w-5 text-warning-600 mr-3" />
                       <span className="font-medium">Certs Expiring Soon</span>
                     </div>
-                    <span className="text-lg font-bold text-yellow-600">
+                    <span className="text-lg font-bold text-warning-600">
                       {metrics.compliance.expiringSoonCerts}
                     </span>
                   </div>
@@ -755,43 +755,43 @@ export default function AnalyticsDashboard() {
             {/* Alerts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Low Stock Alert */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <div className="bg-warning-50 border border-warning-200 rounded-xl p-4">
                 <div className="flex items-start">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-warning-600 mr-3 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-yellow-800">Cảnh báo tồn kho thấp</h4>
-                    <p className="text-sm text-yellow-700 mt-1">
+                    <h4 className="font-semibold text-warning-800">Cảnh báo tồn kho thấp</h4>
+                    <p className="text-sm text-warning-700 mt-1">
                       {metrics.inventory.lowStockItems} linh kiện dưới mức tồn tối thiểu
                     </p>
-                    <button className="text-sm text-yellow-700 underline mt-2">Xem chi tiết →</button>
+                    <button className="text-sm text-warning-700 underline mt-2">Xem chi tiết &rarr;</button>
                   </div>
                 </div>
               </div>
 
               {/* Out of Stock */}
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="bg-danger-50 border border-danger-200 rounded-xl p-4">
                 <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-danger-600 mr-3 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-red-800">Hết hàng</h4>
-                    <p className="text-sm text-red-700 mt-1">
+                    <h4 className="font-semibold text-danger-800">Hết hàng</h4>
+                    <p className="text-sm text-danger-700 mt-1">
                       {metrics.inventory.outOfStockItems} linh kiện đang hết hàng
                     </p>
-                    <button className="text-sm text-red-700 underline mt-2">Tạo PO ngay →</button>
+                    <button className="text-sm text-danger-700 underline mt-2">Tạo PO ngay &rarr;</button>
                   </div>
                 </div>
               </div>
 
               {/* Pending Work Orders */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
                 <div className="flex items-start">
-                  <Clock className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+                  <Clock className="h-5 w-5 text-primary-600 mr-3 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-blue-800">Chờ vật tư</h4>
-                    <p className="text-sm text-blue-700 mt-1">
+                    <h4 className="font-semibold text-primary-800">Chờ vật tư</h4>
+                    <p className="text-sm text-primary-700 mt-1">
                       {metrics.production.pendingMaterials} Work Orders đang chờ vật tư
                     </p>
-                    <button className="text-sm text-blue-700 underline mt-2">Kiểm tra →</button>
+                    <button className="text-sm text-primary-700 underline mt-2">Kiểm tra &rarr;</button>
                   </div>
                 </div>
               </div>

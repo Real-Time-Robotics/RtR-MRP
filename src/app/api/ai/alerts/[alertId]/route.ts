@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { unifiedAlertService, aiAlertAnalyzer } from '@/lib/ai/alerts';
 
@@ -49,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[Alert API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts/[alertId]' });
     return NextResponse.json(
       { error: 'Failed to fetch alert', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -100,7 +101,7 @@ export async function PATCH(
       data: unifiedAlertService.getAlert(alertId),
     });
   } catch (error) {
-    console.error('[Alert API] PATCH error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/ai/alerts/[alertId]' });
     return NextResponse.json(
       { error: 'Failed to update alert', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -133,7 +134,7 @@ export async function DELETE(
 
     return NextResponse.json({ success });
   } catch (error) {
-    console.error('[Alert API] DELETE error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/alerts/[alertId]' });
     return NextResponse.json(
       { error: 'Failed to delete alert', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

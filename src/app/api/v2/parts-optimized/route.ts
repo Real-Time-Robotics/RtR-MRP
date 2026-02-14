@@ -6,8 +6,10 @@
 // =============================================================================
 
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Performance imports
 import {
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
       cacheKey,
       async () => {
         // Build where clause
-        const where: any = {};
+        const where: Prisma.PartWhereInput = {};
         
         // Search optimization
         if (search) {
@@ -105,7 +107,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Build select clause (sparse fieldsets)
-        let select: any = DEFAULT_SELECTS.part.list;
+        let select: Record<string, boolean> = DEFAULT_SELECTS.part.list;
         
         if (fields) {
           const requestedFields = fields.split(',').map(f => f.trim());
@@ -155,11 +157,11 @@ export async function GET(request: NextRequest) {
       etag: true,
     });
     
-  } catch (error: any) {
-    console.error('[PARTS API] Error:', error);
-    
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/parts-optimized' });
+
     return optimizedResponse(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       request,
       { status: 500, cache: CachePresets.noCache }
     );
@@ -197,11 +199,11 @@ export async function POST(request: NextRequest) {
       { status: 201, cache: CachePresets.noCache }
     );
     
-  } catch (error: any) {
-    console.error('[PARTS API] Create error:', error);
-    
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/parts-optimized' });
+
     return optimizedResponse(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       request,
       { status: 500, cache: CachePresets.noCache }
     );

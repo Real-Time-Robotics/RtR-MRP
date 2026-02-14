@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSimulation, getSimulation, deleteSimulation } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/simulation - Get simulations
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(simulations);
   } catch (error) {
-    console.error("Simulation GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/simulation' });
     return NextResponse.json(
       { error: "Failed to get simulations" },
       { status: 500 }
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       simulationId,
     });
   } catch (error) {
-    console.error("Simulation POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/simulation' });
     return NextResponse.json(
       { error: "Failed to create simulation" },
       { status: 500 }
@@ -102,7 +103,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Simulation DELETE error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/mrp/simulation' });
     return NextResponse.json(
       { error: "Failed to delete simulation" },
       { status: 500 }

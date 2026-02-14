@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { runMrpCalculation } from "@/lib/mrp-engine";
+import { logger } from "@/lib/logger";
 
 // ============================================================================
 // MRP API - FIXED: Now runs synchronously (no Redis/BullMQ queue)
@@ -28,10 +29,10 @@ async function cleanupStuckRuns() {
     });
 
     if (result.count > 0) {
-      console.log(`[MRP Cleanup] Marked ${result.count} stuck runs as failed`);
+      logger.info(`[MRP Cleanup] Marked ${result.count} stuck runs as failed`);
     }
   } catch (error) {
-    console.error('[MRP Cleanup] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'MRP Cleanup' });
   }
 }
 
@@ -78,7 +79,7 @@ export async function GET() {
 
     return NextResponse.json(runs);
   } catch (error) {
-    console.error("MRP API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp' });
     return NextResponse.json(
       { error: "Failed to fetch MRP runs" },
       { status: 500 }
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
 
     // Run MRP calculation SYNCHRONOUSLY (no Redis/BullMQ queue)
     // This replaces the old queued approach that caused infinite loading
-    console.log("[MRP API] Starting synchronous MRP calculation...");
+    logger.info("[MRP API] Starting synchronous MRP calculation...");
 
     const mrpRun = await runMrpCalculation({
       planningHorizonDays,
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
       includeSafetyStock,
     });
 
-    console.log("[MRP API] MRP calculation completed:", mrpRun.id);
+    logger.info("[MRP API] MRP calculation completed", { runId: mrpRun.id });
 
     // Fetch the full run with suggestions count
     const fullRun = await prisma.mrpRun.findUnique({
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(fullRun);
   } catch (error) {
-    console.error("MRP API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp' });
     return NextResponse.json(
       { error: "Failed to run MRP calculation" },
       { status: 500 }

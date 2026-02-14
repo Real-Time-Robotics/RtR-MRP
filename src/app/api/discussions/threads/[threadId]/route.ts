@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ threadId: string }>;
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ thread });
   } catch (error) {
-    console.error('Error fetching thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]' });
     return NextResponse.json(
       { error: 'Failed to fetch thread' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ thread });
   } catch (error) {
-    console.error('Error updating thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]' });
     return NextResponse.json(
       { error: 'Failed to update thread' },
       { status: 500 }
@@ -172,7 +173,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]' });
     return NextResponse.json(
       { error: 'Failed to delete thread' },
       { status: 500 }

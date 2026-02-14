@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getStockStatus } from "@/lib/bom-engine";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 // Note: Removed Redis rate limiting - middleware already handles this
 // Redis not available on Render free tier causes 10s timeout
 
@@ -132,7 +133,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Dashboard API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/dashboard' });
     return NextResponse.json(
       { error: "Failed to fetch dashboard data" },
       { status: 500 }

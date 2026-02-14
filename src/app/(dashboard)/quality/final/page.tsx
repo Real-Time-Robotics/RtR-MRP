@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, CheckCircle, XCircle, Award } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface FinalInspection {
@@ -59,17 +58,6 @@ export default function FinalInspectionPage() {
     },
   ];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "passed":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Đạt</Badge>;
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Không đạt</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
   const columns: Column<FinalInspection>[] = useMemo(() => [
     {
       key: 'workOrderNumber',
@@ -112,24 +100,31 @@ export default function FinalInspectionPage() {
       key: 'status',
       header: 'Trạng thái',
       width: '100px',
-      align: 'center',
       sortable: true,
-      render: (value) => getStatusBadge(value),
+      render: (value) => {
+        switch (value) {
+          case 'passed': return 'Dat';
+          case 'failed': return 'Khong dat';
+          default: return value;
+        }
+      },
+      cellClassName: (value) => {
+        switch (value) {
+          case 'passed': return 'bg-green-50 dark:bg-green-950/30';
+          case 'failed': return 'bg-red-50 dark:bg-red-950/30';
+          default: return '';
+        }
+      },
     },
     {
       key: 'certificateIssued',
       header: 'Chứng nhận',
       width: '100px',
-      align: 'center',
-      render: (value) => (
-        value ? (
-          <Badge className="bg-purple-100 text-purple-800">
-            <Award className="h-3 w-3 mr-1" />Đã cấp
-          </Badge>
-        ) : (
-          <Badge variant="secondary">Chờ</Badge>
-        )
-      ),
+      render: (value) => value ? 'Da cap' : 'Cho',
+      cellClassName: (value) =>
+        value
+          ? 'bg-purple-50 dark:bg-purple-950/30'
+          : '',
     },
   ], []);
 
@@ -153,7 +148,7 @@ export default function FinalInspectionPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <ClipboardCheck className="h-8 w-8 text-blue-500" />
+              <ClipboardCheck className="h-8 w-8 text-primary-500" />
               <div>
                 <p className="text-2xl font-bold">18</p>
                 <p className="text-sm text-muted-foreground">Tổng phiếu</p>
@@ -164,7 +159,7 @@ export default function FinalInspectionPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-8 w-8 text-success-500" />
               <div>
                 <p className="text-2xl font-bold">16</p>
                 <p className="text-sm text-muted-foreground">Đạt</p>
@@ -175,7 +170,7 @@ export default function FinalInspectionPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <XCircle className="h-8 w-8 text-red-500" />
+              <XCircle className="h-8 w-8 text-danger-500" />
               <div>
                 <p className="text-2xl font-bold">2</p>
                 <p className="text-sm text-muted-foreground">Không đạt</p>

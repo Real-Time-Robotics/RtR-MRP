@@ -661,7 +661,7 @@ model Warehouse {
   code      String   @unique
   name      String
   location  String?
-  type      String?  // MAIN, QUARANTINE, HOLD, REJECT
+  type      String?  // RECEIVING, QUARANTINE, MAIN, WIP, FINISHED_GOODS, SHIPPING, HOLD, SCRAP
   status    String   @default("active")
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())

@@ -176,7 +176,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                                                     <TableCell className="text-right">{line.quantity} <span className="text-xs text-muted-foreground">{line.part.unit}</span></TableCell>
                                                     <TableCell className="text-right font-mono">
                                                         {line.receivedQty > 0 ? (
-                                                            <span className="text-green-600">{line.receivedQty}</span>
+                                                            <span className="text-success-600">{line.receivedQty}</span>
                                                         ) : (
                                                             <span className="text-slate-300">-</span>
                                                         )}

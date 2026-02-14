@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +11,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
     const type = searchParams.get("type");
-    const days = parseInt(searchParams.get("days") || "7");
+    const days = Math.min(parseInt(searchParams.get("days") || "7") || 7, 90);
 
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ activities });
   } catch (error) {
-    console.error("Failed to fetch activity:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/activity' });
     return NextResponse.json(
       { error: "Failed to fetch activity" },
       { status: 500 }

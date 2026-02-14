@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getSafetyStockOptimizer,
@@ -199,7 +200,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Integratio
     });
 
   } catch (error) {
-    console.error('[MRP Integration] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/mrp-integration' });
     return NextResponse.json(
       {
         success: false,
@@ -370,7 +371,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Integrati
     });
 
   } catch (error) {
-    console.error('[MRP Integration] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/mrp-integration' });
     return NextResponse.json(
       {
         success: false,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   try {
@@ -16,7 +17,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to mark all as read:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/read-all' });
     return NextResponse.json(
       { error: "Failed to mark all as read" },
       { status: 500 }

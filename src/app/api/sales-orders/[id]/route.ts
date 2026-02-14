@@ -7,6 +7,7 @@ import {
   errorResponse,
   notFoundResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
 
 // =============================================================================
@@ -31,7 +32,7 @@ const updateOrderSchema = z.object({
 
 async function getHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
@@ -57,7 +58,7 @@ async function getHandler(
 
 async function putHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
@@ -88,7 +89,7 @@ async function putHandler(
     return validationErrorResponse(errors);
   }
 
-  const updateData: Record<string, unknown> = { ...validation.data };
+  const updateData: any = { ...validation.data };
   if (validation.data.orderDate) updateData.orderDate = new Date(validation.data.orderDate);
   if (validation.data.requiredDate) updateData.requiredDate = new Date(validation.data.requiredDate);
   if (validation.data.promisedDate) updateData.promisedDate = new Date(validation.data.promisedDate);
@@ -108,7 +109,7 @@ async function putHandler(
 
 async function deleteHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);

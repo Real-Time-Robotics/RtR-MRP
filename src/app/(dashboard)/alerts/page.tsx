@@ -173,11 +173,11 @@ export default function AlertsPage() {
   const getSeverityIcon = (severity: AlertSeverity, size = 'w-5 h-5') => {
     switch (severity) {
       case 'CRITICAL':
-        return <AlertTriangle className={cn(size, 'text-red-500')} />;
+        return <AlertTriangle className={cn(size, 'text-danger-500')} />;
       case 'WARNING':
         return <AlertCircle className={cn(size, 'text-orange-500')} />;
       default:
-        return <Info className={cn(size, 'text-blue-500')} />;
+        return <Info className={cn(size, 'text-primary-500')} />;
     }
   };
 
@@ -249,14 +249,14 @@ export default function AlertsPage() {
       <div className="py-3 space-y-3">
         {/* Summary Cards - COMPACT */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <div className="bg-white dark:bg-gunmetal p-3 border border-red-200 dark:border-red-800">
+          <div className="bg-white dark:bg-gunmetal p-3 border border-danger-200 dark:border-danger-800">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500">Nghiêm trọng</p>
-                <p className="text-lg font-semibold font-mono text-red-600">{summary?.bySeverity.critical || 0}</p>
+                <p className="text-lg font-semibold font-mono text-danger-600">{summary?.bySeverity.critical || 0}</p>
               </div>
-              <div className="p-2 bg-red-100 dark:bg-red-900/30">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
+              <div className="p-2 bg-danger-100 dark:bg-danger-900/30">
+                <AlertTriangle className="w-4 h-4 text-danger-600" />
               </div>
             </div>
           </div>
@@ -271,25 +271,25 @@ export default function AlertsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gunmetal p-3 border border-blue-200 dark:border-blue-800">
+          <div className="bg-white dark:bg-gunmetal p-3 border border-primary-200 dark:border-primary-800">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500">Thông tin</p>
-                <p className="text-lg font-semibold font-mono text-blue-600">{summary?.bySeverity.info || 0}</p>
+                <p className="text-lg font-semibold font-mono text-primary-600">{summary?.bySeverity.info || 0}</p>
               </div>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30">
-                <Info className="w-4 h-4 text-blue-600" />
+              <div className="p-2 bg-primary-100 dark:bg-primary-900/30">
+                <Info className="w-4 h-4 text-primary-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-gunmetal p-3 border border-green-200 dark:border-green-800">
+          <div className="bg-white dark:bg-gunmetal p-3 border border-success-200 dark:border-success-800">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-gray-500">Đã xử lý</p>
-                <p className="text-lg font-semibold font-mono text-green-600">{summary?.resolved || 0}</p>
+                <p className="text-lg font-semibold font-mono text-success-600">{summary?.resolved || 0}</p>
               </div>
-              <div className="p-2 bg-green-100 dark:bg-green-900/30">
-                <Check className="w-4 h-4 text-green-600" />
+              <div className="p-2 bg-success-100 dark:bg-success-900/30">
+                <Check className="w-4 h-4 text-success-600" />
               </div>
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function AlertsPage() {
                 placeholder="Tìm kiếm cảnh báo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-blue-500"
+                className="w-full h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500"
               />
             </div>
 
@@ -319,7 +319,7 @@ export default function AlertsPage() {
                   className={cn(
                     'h-9 px-2.5 text-xs font-medium whitespace-nowrap transition-colors',
                     filterStatus === filter.value
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   )}
                 >
@@ -332,7 +332,7 @@ export default function AlertsPage() {
             <select
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value as AlertSeverity | 'all')}
-              className="h-9 px-2.5 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-blue-500"
+              className="h-9 px-2.5 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500"
             >
               {severityFilters.map((filter) => (
                 <option key={filter.value} value={filter.value}>
@@ -351,14 +351,14 @@ export default function AlertsPage() {
               <button
                 onClick={() => handleBulkAction('acknowledge')}
                 disabled={actionLoading}
-                className="h-6 px-2 bg-yellow-100 text-yellow-700 text-[10px] font-medium hover:bg-yellow-200"
+                className="h-6 px-2 bg-warning-100 text-warning-700 text-[10px] font-medium hover:bg-warning-200"
               >
                 Xác nhận
               </button>
               <button
                 onClick={() => handleBulkAction('resolve')}
                 disabled={actionLoading}
-                className="h-6 px-2 bg-green-100 text-green-700 text-[10px] font-medium hover:bg-green-200"
+                className="h-6 px-2 bg-success-100 text-success-700 text-[10px] font-medium hover:bg-success-200"
               >
                 Đã xử lý
               </button>
@@ -388,7 +388,7 @@ export default function AlertsPage() {
             <button
               onClick={handleAcknowledgeAll}
               disabled={actionLoading}
-              className="text-[11px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+              className="text-[11px] text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="w-3.5 h-3.5" />
               Xác nhận tất cả ({summary.active})
@@ -415,7 +415,7 @@ export default function AlertsPage() {
                   type="checkbox"
                   checked={selectedAlerts.length === filteredAlerts.length && filteredAlerts.length > 0}
                   onChange={toggleSelectAll}
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-[11px] text-gray-500">Chọn tất cả</span>
               </div>
@@ -432,7 +432,7 @@ export default function AlertsPage() {
                       'bg-white dark:bg-gunmetal p-2.5 border transition-all',
                       alert.status === 'ACTIVE' && severityConfig.borderColor,
                       alert.status !== 'ACTIVE' && 'border-gray-200 dark:border-mrp-border',
-                      selectedAlerts.includes(alert.id) && 'ring-2 ring-blue-500'
+                      selectedAlerts.includes(alert.id) && 'ring-2 ring-primary-500'
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -441,7 +441,7 @@ export default function AlertsPage() {
                         type="checkbox"
                         checked={selectedAlerts.includes(alert.id)}
                         onChange={() => toggleSelection(alert.id)}
-                        className="mt-0.5 w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="mt-0.5 w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
 
                       {/* Icon */}
@@ -487,7 +487,7 @@ export default function AlertsPage() {
                         {alert.status === 'ACTIVE' && (
                           <button
                             onClick={() => handleAlertAction(alert.id, 'acknowledge')}
-                            className="p-1 text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
+                            className="p-1 text-warning-600 hover:bg-warning-100 dark:hover:bg-warning-900/30"
                             title="Xác nhận"
                           >
                             <Check className="w-3.5 h-3.5" />
@@ -496,7 +496,7 @@ export default function AlertsPage() {
                         {['ACTIVE', 'ACKNOWLEDGED'].includes(alert.status) && (
                           <button
                             onClick={() => handleAlertAction(alert.id, 'resolve')}
-                            className="p-1 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                            className="p-1 text-success-600 hover:bg-success-100 dark:hover:bg-success-900/30"
                             title="Đã xử lý"
                           >
                             <CheckCheck className="w-3.5 h-3.5" />

@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 import { getQualityPredictionEngine } from '@/lib/ai/quality/quality-prediction-engine';
 
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Quality API] GET Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality' });
     return NextResponse.json(
       {
         success: false,
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error('[Quality API] POST Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/quality' });
     return NextResponse.json(
       {
         success: false,

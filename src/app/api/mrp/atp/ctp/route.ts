@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateATP } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/atp/ctp - Calculate CTP (Capable to Promise) for a part
 export async function GET(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       ctpDetails: result.ctpDetails,
     });
   } catch (error) {
-    console.error("CTP GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/atp/ctp' });
     return NextResponse.json(
       { error: "Failed to calculate CTP" },
       { status: 500 }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error("CTP POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/atp/ctp' });
     return NextResponse.json(
       { error: "Failed to check batch CTP" },
       { status: 500 }

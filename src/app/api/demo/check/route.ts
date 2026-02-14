@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { logger } from '@/lib/logger';
 
 const DEMO_USERS = [
   { email: 'admin@demo.rtr-mrp.com', password: 'Admin@Demo2026!', role: 'admin' },
@@ -104,7 +105,7 @@ export async function GET() {
         : 'All checks passed - check AUTH_SECRET configuration',
     });
   } catch (error) {
-    console.error('Demo check error:', error);
+    logger.error('Demo check error', { context: 'GET /api/demo/check', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       {
         success: false,

@@ -211,7 +211,7 @@ export default function ScheduledReportsPage() {
   if (isLoading) {
     return (
       <div className="container py-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
       </div>
     );
   }
@@ -373,7 +373,7 @@ export default function ScheduledReportsPage() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="flex items-center gap-2 p-4 bg-danger-50 border border-danger-200 rounded-lg text-danger-700">
           <AlertCircle className="w-5 h-5" />
           <span>{error}</span>
         </div>
@@ -403,8 +403,8 @@ export default function ScheduledReportsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   {/* Icon */}
-                  <div className="flex-shrink-0 w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                    <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+                  <div className="flex-shrink-0 w-12 h-12 bg-primary-50 rounded-lg flex items-center justify-center">
+                    <FileSpreadsheet className="w-6 h-6 text-primary-600" />
                   </div>
 
                   {/* Info */}
@@ -445,9 +445,9 @@ export default function ScheduledReportsPage() {
                     {schedule.lastRunStatus && (
                       <div className="flex items-center gap-1">
                         {schedule.lastRunStatus === 'success' ? (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-success-600" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-red-600" />
+                          <AlertCircle className="w-4 h-4 text-danger-600" />
                         )}
                       </div>
                     )}

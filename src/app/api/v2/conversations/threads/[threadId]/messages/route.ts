@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -59,7 +60,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Error fetching messages:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/[threadId]/messages' })
     return NextResponse.json(
       { error: 'Failed to fetch messages' },
       { status: 500 }
@@ -166,7 +167,7 @@ export async function POST(
     return NextResponse.json(message, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating message:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/[threadId]/messages' })
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },

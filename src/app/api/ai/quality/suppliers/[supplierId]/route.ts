@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getQualityDataExtractor } from '@/lib/ai/quality/quality-data-extractor';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
@@ -84,14 +85,14 @@ export async function GET(
           recommendation: insights.aiRecommendation,
         };
       } catch (aiError) {
-        console.warn('[Quality API] AI supplier insights failed:', aiError);
+        logger.warn('AI supplier insights failed', { context: 'GET /api/ai/quality/suppliers/[supplierId]', error: String(aiError) });
         response.data.aiInsights = null;
       }
     }
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[Quality API] Supplier Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality/suppliers/[supplierId]' });
     return NextResponse.json(
       {
         success: false,

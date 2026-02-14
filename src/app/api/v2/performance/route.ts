@@ -11,6 +11,7 @@ import {
   getMemoryUsage,
 } from '@/lib/performance/profiler';
 import { getCacheStats } from '@/lib/performance/cache';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // GET /api/v2/performance
@@ -102,10 +103,10 @@ export async function GET(request: NextRequest) {
           },
         });
     }
-  } catch (error: any) {
-    console.error('[PERFORMANCE API] Error:', error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/performance' });
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -150,10 +151,10 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error: any) {
-    console.error('[PERFORMANCE API] Error:', error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/performance' });
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // NOTIFICATION SETTINGS API
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse stored settings or use defaults
-    const storedSettings = user.notificationSettings as Record<string, unknown> | null;
+    const storedSettings = user.notificationSettings as any | null;
 
     const settings = {
       email: {
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
       data: settings,
     });
   } catch (error) {
-    console.error('Error fetching notification settings:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/settings' });
     return NextResponse.json(
       { error: 'Failed to fetch notification settings' },
       { status: 500 }
@@ -149,7 +150,7 @@ export async function PUT(request: NextRequest) {
       message: 'Settings updated successfully',
     });
   } catch (error) {
-    console.error('Error updating notification settings:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/settings' });
     return NextResponse.json(
       { error: 'Failed to update notification settings' },
       { status: 500 }

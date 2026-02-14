@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 
 // =============================================================================
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Optimize API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-schedule/optimize' });
     return NextResponse.json(
       {
         error: 'Không thể tối ưu hóa lịch sản xuất',
@@ -275,7 +276,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Optimize API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-schedule/optimize' });
     return NextResponse.json(
       { error: 'Không thể lấy thông tin thuật toán' },
       { status: 500 }

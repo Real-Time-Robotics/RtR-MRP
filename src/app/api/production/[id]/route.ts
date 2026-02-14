@@ -37,7 +37,7 @@ export const GET = withAuth(
       }
 
       // Backward-compat: if no ProductionReceipt but has legacy LotTransaction PRODUCED
-      let responseData: Record<string, unknown> = { ...workOrder };
+      let responseData: any = { ...workOrder };
       if (!workOrder.productionReceipt) {
         const legacyTx = await prisma.lotTransaction.findFirst({
           where: { transactionType: "PRODUCED", workOrderId: id },
@@ -92,7 +92,7 @@ export const PATCH = withAuth(
       if (status) {
         workOrder = await updateWorkOrderStatus(id, status, completedQty, scrapQty);
       } else {
-        const data: Record<string, unknown> = { ...updateData };
+        const data: any = { ...updateData };
         if (completedQty !== undefined) data.completedQty = completedQty;
         if (scrapQty !== undefined) data.scrapQty = scrapQty;
         if (plannedStart !== undefined) data.plannedStart = plannedStart ? new Date(plannedStart) : null;
@@ -114,7 +114,7 @@ export const PATCH = withAuth(
       if (status) {
         auditStatusChange(request, user, "WorkOrder", id, "previous", status);
       } else {
-        auditUpdate(request, user, "WorkOrder", id, {} as Record<string, unknown>, updateData as Record<string, unknown>);
+        auditUpdate(request, user, "WorkOrder", id, {} as any, updateData as any);
       }
 
       return successResponse(workOrder);

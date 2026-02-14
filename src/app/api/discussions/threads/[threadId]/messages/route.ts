@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { notifyMentions, notifyReply } from '@/lib/notifications';
 import { broadcastNewMessage } from '@/lib/socket/emit';
+import { logger } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ threadId: string }>;
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       nextCursor: messages.length === limit ? messages[messages.length - 1]?.id : null,
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]/messages' });
     return NextResponse.json(
       { error: 'Failed to fetch messages' },
       { status: 500 }
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         mentionedUsers: mentions,
         mentionedById: session.user.id,
         mentionedByName: senderName,
-      }).catch((err) => console.error('Failed to notify mentions:', err));
+      }).catch((err) => logger.error('Failed to notify mentions:', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) }));
     }
 
     // Notify other participants about the reply (excluding mentioned users to avoid duplicates)
@@ -212,7 +213,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       senderId: session.user.id,
       senderName,
       excludeUserIds: mentionedUserIds,
-    }).catch((err) => console.error('Failed to notify reply:', err));
+    }).catch((err) => logger.error('Failed to notify reply:', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) }));
 
     // Broadcast new message via Socket.io
     try {
@@ -227,12 +228,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
         createdAt: message.createdAt.toISOString(),
       });
     } catch (err) {
-      console.error('Failed to broadcast message:', err);
+      logger.error('Failed to broadcast message', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) });
     }
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    console.error('Error creating message:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]/messages' });
     return NextResponse.json(
       { error: 'Failed to create message' },
       { status: 500 }

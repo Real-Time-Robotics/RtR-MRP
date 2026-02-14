@@ -379,13 +379,13 @@ export default function ReceivingInspectionsPage() {
                           <span>SL: {inspection.quantityReceived ?? 0}</span>
                           {inspection.quantityAccepted != null &&
                             inspection.quantityAccepted > 0 && (
-                              <span className="text-green-600">
+                              <span className="text-success-600">
                                 Nhận: {inspection.quantityAccepted}
                               </span>
                             )}
                           {inspection.quantityRejected != null &&
                             inspection.quantityRejected > 0 && (
-                              <span className="text-red-600">
+                              <span className="text-danger-600">
                                 Loại: {inspection.quantityRejected}
                               </span>
                             )}

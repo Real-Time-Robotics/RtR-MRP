@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(equipment, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Equipment API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment' });
     return paginatedError("Failed to fetch equipment", 500);
   }
 }
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(equipment, { status: 201 });
   } catch (error) {
-    console.error("Create equipment error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment' });
     return NextResponse.json(
       { error: "Failed to create equipment" },
       { status: 500 }

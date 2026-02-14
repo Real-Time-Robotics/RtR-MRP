@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/multi-site/transfers - Get transfer orders
 export async function GET(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(transfers);
   } catch (error) {
-    console.error("Transfers GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to get transfer orders" },
       { status: 500 }
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
       transfer,
     });
   } catch (error) {
-    console.error("Transfers POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to create transfer order" },
       { status: 500 }
@@ -193,7 +194,7 @@ export async function PUT(request: NextRequest) {
       transfer: updated,
     });
   } catch (error) {
-    console.error("Transfers PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to update transfer order" },
       { status: 500 }

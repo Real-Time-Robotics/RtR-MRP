@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Helper: Map numeric priority to string
 function getPriorityLabel(priority: number): string {
@@ -93,9 +94,9 @@ export async function GET(req: NextRequest) {
     const summary = {
       totalPicks: results.length,
       rushPicks: results.filter((p: any) => p.priority === 'Rush').length,
-      totalItems: results.reduce((sum: number, pick: any) => sum + pick.items.length, 0),
+      totalItems: results.reduce((sum: number, pick: any) => sum + (pick.items as unknown[]).length, 0),
       itemsPending: results.reduce((sum: number, pick: any) =>
-        sum + pick.items.filter((i: any) => i.qtyPicked < i.qtyToPick).length, 0
+        sum + (pick.items as any[]).filter((i: any) => (i.qtyPicked as number) < (i.qtyToPick as number)).length, 0
       ),
     };
 
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error('Picking API GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/picking' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch pick lists' },
       { status: 500 }
@@ -219,7 +220,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Picking API POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/picking' });
     return NextResponse.json(
       { success: false, error: 'Failed to process pick' },
       { status: 500 }
@@ -321,7 +322,7 @@ export async function PATCH(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error('Picking PATCH error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/picking' });
     return NextResponse.json(
       { success: false, error: 'Failed to update pick list' },
       { status: 500 }

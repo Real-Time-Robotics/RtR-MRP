@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { workflowEngine } from '@/lib/workflow';
+import { logger } from '@/lib/logger';
 
 // GET /api/workflows/approvals - List pending approvals
 export async function GET(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       count: approvals.length,
     });
   } catch (error) {
-    console.error('[API] Pending approvals GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/workflows/approvals' });
     return NextResponse.json(
       { error: 'Failed to fetch pending approvals' },
       { status: 500 }
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       status: result.status,
     });
   } catch (error) {
-    console.error('[API] Approval POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/workflows/approvals' });
     return NextResponse.json(
       { error: 'Failed to submit approval' },
       { status: 500 }

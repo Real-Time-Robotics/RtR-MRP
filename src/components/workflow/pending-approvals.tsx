@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { SLAIndicator } from './sla-indicator';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 interface PendingApproval {
   id: string;
@@ -78,6 +79,7 @@ export function PendingApprovals({
   enableBulkActions = true,
 }: PendingApprovalsProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,8 +124,8 @@ export function PendingApprovals({
     if (!selectedApproval || !actionType) return;
     if (actionType === 'reject' && !comments.trim()) {
       toast({
-        title: 'Lỗi',
-        description: 'Vui lòng nhập lý do từ chối',
+        title: t('approval.error'),
+        description: t('approval.rejectReasonRequired'),
         variant: 'destructive',
       });
       return;
@@ -148,8 +150,10 @@ export function PendingApprovals({
       }
 
       toast({
-        title: actionType === 'approve' ? 'Đã phê duyệt' : 'Đã từ chối',
-        description: `${selectedApproval.instance.workflow.name} đã được ${actionType === 'approve' ? 'phê duyệt' : 'từ chối'}`,
+        title: actionType === 'approve' ? t('approval.approved') : t('approval.rejected'),
+        description: actionType === 'approve'
+          ? t('approval.workflowApproved', { name: selectedApproval.instance.workflow.name })
+          : t('approval.workflowRejected', { name: selectedApproval.instance.workflow.name }),
       });
 
       setSelectedApproval(null);
@@ -159,8 +163,8 @@ export function PendingApprovals({
       onApprovalComplete?.();
     } catch (err) {
       toast({
-        title: 'Lỗi',
-        description: err instanceof Error ? err.message : 'Không thể xử lý yêu cầu',
+        title: t('approval.error'),
+        description: err instanceof Error ? err.message : t('approval.cannotProcess'),
         variant: 'destructive',
       });
     } finally {
@@ -172,8 +176,8 @@ export function PendingApprovals({
     if (selectedIds.size === 0 || !bulkActionType) return;
     if (bulkActionType === 'reject' && !bulkComments.trim()) {
       toast({
-        title: 'Lỗi',
-        description: 'Vui lòng nhập lý do từ chối',
+        title: t('approval.error'),
+        description: t('approval.rejectReasonRequired'),
         variant: 'destructive',
       });
       return;
@@ -205,8 +209,8 @@ export function PendingApprovals({
       const result = await res.json();
 
       toast({
-        title: result.success ? 'Thành công' : 'Hoàn tất với lỗi',
-        description: `${result.summary.successful}/${result.summary.total} yêu cầu đã được xử lý`,
+        title: result.success ? t('approval.success') : t('approval.completedWithErrors'),
+        description: t('approval.bulkResult', { success: String(result.summary.successful), total: String(result.summary.total) }),
         variant: result.success ? 'default' : 'destructive',
       });
 
@@ -218,8 +222,8 @@ export function PendingApprovals({
       onApprovalComplete?.();
     } catch (err) {
       toast({
-        title: 'Lỗi',
-        description: err instanceof Error ? err.message : 'Không thể xử lý yêu cầu hàng loạt',
+        title: t('approval.error'),
+        description: err instanceof Error ? err.message : t('approval.cannotProcessBulk'),
         variant: 'destructive',
       });
     } finally {
@@ -264,7 +268,7 @@ export function PendingApprovals({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Chờ phê duyệt
+            {t('approval.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -284,7 +288,7 @@ export function PendingApprovals({
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Chờ phê duyệt
+              {t('approval.title')}
               {approvals.length > 0 && (
                 <Badge variant="destructive">{approvals.length}</Badge>
               )}
@@ -302,12 +306,12 @@ export function PendingApprovals({
                   {bulkMode ? (
                     <>
                       <XCircle className="w-4 h-4 mr-1" />
-                      Hủy
+                      {t('approval.cancel')}
                     </>
                   ) : (
                     <>
                       <CheckSquare className="w-4 h-4 mr-1" />
-                      Chọn nhiều
+                      {t('approval.bulkSelect')}
                     </>
                   )}
                 </Button>
@@ -331,7 +335,7 @@ export function PendingApprovals({
             <div className="flex items-center justify-between p-3 mb-4 bg-muted rounded-lg">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">
-                  Đã chọn {selectedIds.size} mục
+                  {t('approval.selectedCount', { count: String(selectedIds.size) })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -341,7 +345,7 @@ export function PendingApprovals({
                   onClick={() => setBulkActionType('approve')}
                 >
                   <CheckCircle className="w-4 h-4 mr-1" />
-                  Phê duyệt tất cả
+                  {t('approval.approveAll')}
                 </Button>
                 <Button
                   size="sm"
@@ -350,7 +354,7 @@ export function PendingApprovals({
                   onClick={() => setBulkActionType('reject')}
                 >
                   <XCircle className="w-4 h-4 mr-1" />
-                  Từ chối tất cả
+                  {t('approval.rejectAll')}
                 </Button>
               </div>
             </div>
@@ -364,7 +368,7 @@ export function PendingApprovals({
                 onCheckedChange={toggleSelectAll}
               />
               <span className="text-sm text-muted-foreground">
-                Chọn tất cả ({approvals.length})
+                {t('approval.selectAll', { count: String(approvals.length) })}
               </span>
             </div>
           )}
@@ -372,8 +376,8 @@ export function PendingApprovals({
           {approvals.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
-              <p className="font-medium">Đã xử lý hết!</p>
-              <p className="text-sm">Không có yêu cầu chờ phê duyệt</p>
+              <p className="font-medium">{t('approval.allDone')}</p>
+              <p className="text-sm">{t('approval.noRequests')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -406,7 +410,7 @@ export function PendingApprovals({
                         <div>
                           <p className="font-medium">{approval.instance.workflow.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            Bước {approval.step.stepNumber}: {approval.step.name}
+                            {t('approval.step', { number: String(approval.step.stepNumber), name: approval.step.name })}
                           </p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             <Badge variant="outline" className="text-xs">
@@ -434,7 +438,7 @@ export function PendingApprovals({
                             onClick={() => openDialog(approval, 'approve')}
                           >
                             <CheckCircle className="w-4 h-4 mr-1" />
-                            Duyệt
+                            {t('approval.approve')}
                           </Button>
                           <Button
                             size="sm"
@@ -443,7 +447,7 @@ export function PendingApprovals({
                             onClick={() => openDialog(approval, 'reject')}
                           >
                             <XCircle className="w-4 h-4 mr-1" />
-                            Từ chối
+                            {t('approval.reject')}
                           </Button>
                         </div>
                       )}
@@ -466,7 +470,7 @@ export function PendingApprovals({
               ) : (
                 <XCircle className="w-5 h-5 text-red-600" />
               )}
-              {actionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} yêu cầu
+              {actionType === 'approve' ? t('approval.approveRequest') : t('approval.rejectRequest')}
             </DialogTitle>
           </DialogHeader>
 
@@ -481,15 +485,15 @@ export function PendingApprovals({
 
               <div>
                 <label className="text-sm font-medium">
-                  Ghi chú {actionType === 'reject' && <span className="text-red-500">*</span>}
+                  {t('approval.notes')} {actionType === 'reject' && <span className="text-red-500">*</span>}
                 </label>
                 <Textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
                   placeholder={
                     actionType === 'reject'
-                      ? 'Vui lòng nhập lý do từ chối...'
-                      : 'Ghi chú tùy chọn...'
+                      ? t('approval.rejectPlaceholder')
+                      : t('approval.optionalNotes')
                   }
                   rows={3}
                   className="mt-1"
@@ -500,14 +504,14 @@ export function PendingApprovals({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedApproval(null)}>
-              Hủy
+              {t('approval.cancel')}
             </Button>
             <Button
               onClick={handleSubmitDecision}
               disabled={submitting || (actionType === 'reject' && !comments.trim())}
               className={actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
             >
-              {submitting ? 'Đang xử lý...' : actionType === 'approve' ? 'Phê duyệt' : 'Từ chối'}
+              {submitting ? t('approval.processing') : actionType === 'approve' ? t('approval.approved') : t('approval.rejected')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -523,29 +527,33 @@ export function PendingApprovals({
               ) : (
                 <XCircle className="w-5 h-5 text-red-600" />
               )}
-              {bulkActionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} {selectedIds.size} yêu cầu
+              {bulkActionType === 'approve'
+                ? t('approval.bulkApproveTitle', { count: String(selectedIds.size) })
+                : t('approval.bulkRejectTitle', { count: String(selectedIds.size) })}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm">
-                Bạn sắp {bulkActionType === 'approve' ? 'phê duyệt' : 'từ chối'}{' '}
-                <strong>{selectedIds.size}</strong> yêu cầu cùng lúc.
+                {t('approval.bulkConfirm', {
+                  action: bulkActionType === 'approve' ? t('approval.bulkApprove') : t('approval.bulkReject'),
+                  count: String(selectedIds.size),
+                })}
               </p>
             </div>
 
             <div>
               <label className="text-sm font-medium">
-                Ghi chú chung {bulkActionType === 'reject' && <span className="text-red-500">*</span>}
+                {t('approval.commonNotes')} {bulkActionType === 'reject' && <span className="text-red-500">*</span>}
               </label>
               <Textarea
                 value={bulkComments}
                 onChange={(e) => setBulkComments(e.target.value)}
                 placeholder={
                   bulkActionType === 'reject'
-                    ? 'Vui lòng nhập lý do từ chối chung...'
-                    : 'Ghi chú tùy chọn cho tất cả...'
+                    ? t('approval.bulkRejectPlaceholder')
+                    : t('approval.bulkOptionalNotes')
                 }
                 rows={3}
                 className="mt-1"
@@ -555,7 +563,7 @@ export function PendingApprovals({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkActionType(null)}>
-              Hủy
+              {t('approval.cancel')}
             </Button>
             <Button
               onClick={handleBulkAction}
@@ -563,8 +571,11 @@ export function PendingApprovals({
               className={bulkActionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
             >
               {submitting
-                ? 'Đang xử lý...'
-                : `${bulkActionType === 'approve' ? 'Phê duyệt' : 'Từ chối'} ${selectedIds.size} yêu cầu`}
+                ? t('approval.processing')
+                : t('approval.bulkSubmit', {
+                    action: bulkActionType === 'approve' ? t('approval.approved') : t('approval.rejected'),
+                    count: String(selectedIds.size),
+                  })}
             </Button>
           </DialogFooter>
         </DialogContent>

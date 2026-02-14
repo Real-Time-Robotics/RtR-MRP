@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '@/lib/logger';
 
 const EXCEL_FILE = path.join(process.cwd(), 'data', 'RTR_MRP_StressTest_2024.xls');
 
@@ -63,7 +64,7 @@ export async function GET() {
           sheets,
         };
       } catch (readError) {
-        console.error('Error reading Excel file:', readError);
+        logger.logError(readError instanceof Error ? readError : new Error(String(readError)), { context: '/api/excel/stress-test' });
         // Return file info without sheet details if reading fails
         fileInfo = {
           fileName: 'RTR_MRP_StressTest_2024.xls',
@@ -108,7 +109,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Stress test status error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Failed to get status' }, { status: 500 });
   }
 }
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     // Import Suppliers
     if (shouldImport('suppliers') && workbook.Sheets['Suppliers']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Suppliers']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Suppliers']) as any[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     // Import Parts
     if (shouldImport('parts') && workbook.Sheets['Parts']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Parts']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Parts']) as any[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -241,7 +242,7 @@ export async function POST(request: NextRequest) {
 
     // Import Customers
     if (shouldImport('customers') && workbook.Sheets['Customers']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Customers']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Customers']) as any[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -277,7 +278,7 @@ export async function POST(request: NextRequest) {
 
     // Import Sales Orders
     if (shouldImport('salesOrders') && workbook.Sheets['Sales Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Sales Orders']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Sales Orders']) as any[];
       let processed = 0, errors = 0;
 
       const customers = await prisma.customer.findMany({ select: { id: true, code: true }, orderBy: { createdAt: 'asc' } });
@@ -336,7 +337,7 @@ export async function POST(request: NextRequest) {
 
     // Import Purchase Orders
     if (shouldImport('purchaseOrders') && workbook.Sheets['Purchase Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Purchase Orders']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Purchase Orders']) as any[];
       let processed = 0, errors = 0;
 
       const suppliers = await prisma.supplier.findMany({ select: { id: true, code: true }, orderBy: { createdAt: 'asc' } });
@@ -392,7 +393,7 @@ export async function POST(request: NextRequest) {
 
     // Import Work Orders
     if (shouldImport('workOrders') && workbook.Sheets['Work Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Work Orders']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Work Orders']) as any[];
       let processed = 0, errors = 0;
 
       // Get parts for mapping (Work Orders in this file reference Parts, not Products)
@@ -480,7 +481,7 @@ export async function POST(request: NextRequest) {
 
     // Import NCRs
     if (shouldImport('ncrs') && workbook.Sheets['NCRs']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['NCRs']) as Record<string, unknown>[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['NCRs']) as any[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -530,7 +531,7 @@ export async function POST(request: NextRequest) {
       totals: { processed: totalProcessed, errors: totalErrors },
     });
   } catch (error) {
-    console.error('Stress test import error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });
   }
 }

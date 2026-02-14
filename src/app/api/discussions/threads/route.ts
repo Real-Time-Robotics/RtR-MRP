@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ thread });
   } catch (error) {
-    console.error('Error fetching thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads' });
     return NextResponse.json(
       { error: 'Failed to fetch thread' },
       { status: 500 }
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ thread }, { status: 201 });
   } catch (error) {
-    console.error('Error creating thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads' });
     return NextResponse.json(
       { error: 'Failed to create thread' },
       { status: 500 }

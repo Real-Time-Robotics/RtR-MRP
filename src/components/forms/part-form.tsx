@@ -41,6 +41,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -169,6 +170,7 @@ const PART_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange
 // =============================================================================
 
 export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const isEditing = !!part;
 
@@ -326,15 +328,15 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(isEditing ? 'Cập nhật part thành công!' : 'Tạo part thành công!');
+      toast.success(isEditing ? t('partForm.updateSuccess') : t('partForm.createSuccess'));
       onSuccess?.(result.data || result);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save part:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -376,10 +378,10 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa Part' : 'Thêm Part mới'}
+            {isEditing ? t('partForm.editTitle') : t('partForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin part' : 'Điền thông tin để tạo part mới'}
+            {isEditing ? t('partForm.editDesc') : t('partForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -387,10 +389,10 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid grid-cols-4 w-full">
-                <TabsTrigger value="basic">Cơ bản</TabsTrigger>
-                <TabsTrigger value="physical">Vật lý</TabsTrigger>
-                <TabsTrigger value="procurement">Procurement</TabsTrigger>
-                <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                <TabsTrigger value="basic">{t('partForm.tabBasic')}</TabsTrigger>
+                <TabsTrigger value="physical">{t('partForm.tabPhysical')}</TabsTrigger>
+                <TabsTrigger value="procurement">{t('partForm.tabProcurement')}</TabsTrigger>
+                <TabsTrigger value="compliance">{t('partForm.tabCompliance')}</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
@@ -401,7 +403,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="partNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mã Part *</FormLabel>
+                        <FormLabel>{t('partForm.partNumber')}</FormLabel>
                         <FormControl>
                           <Input placeholder="PART-001" {...field} disabled={isEditing} />
                         </FormControl>
@@ -415,7 +417,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="lifecycleStatus"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Trạng thái</FormLabel>
+                        <FormLabel>{t('form.status')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -423,12 +425,12 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="DEVELOPMENT">Development</SelectItem>
-                            <SelectItem value="PROTOTYPE">Prototype</SelectItem>
-                            <SelectItem value="ACTIVE">Active</SelectItem>
-                            <SelectItem value="PHASE_OUT">Phase Out</SelectItem>
-                            <SelectItem value="OBSOLETE">Obsolete</SelectItem>
-                            <SelectItem value="EOL">End of Life</SelectItem>
+                            <SelectItem value="DEVELOPMENT">{t('lifecycle.development')}</SelectItem>
+                            <SelectItem value="PROTOTYPE">{t('lifecycle.prototype')}</SelectItem>
+                            <SelectItem value="ACTIVE">{t('lifecycle.active')}</SelectItem>
+                            <SelectItem value="PHASE_OUT">{t('lifecycle.phaseOut')}</SelectItem>
+                            <SelectItem value="OBSOLETE">{t('lifecycle.obsolete')}</SelectItem>
+                            <SelectItem value="EOL">{t('lifecycle.eol')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -442,7 +444,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tên Part *</FormLabel>
+                      <FormLabel>{t('partForm.partName')}</FormLabel>
                       <FormControl>
                         <Input placeholder="Tên sản phẩm" {...field} />
                       </FormControl>
@@ -456,9 +458,9 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mô tả</FormLabel>
+                      <FormLabel>{t('partForm.description')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Mô tả chi tiết..." {...field} value={field.value || ''} />
+                        <Textarea placeholder={t('partForm.descPlaceholder')} {...field} value={field.value || ''} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -471,7 +473,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Danh mục *</FormLabel>
+                        <FormLabel>{t('partForm.category')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -494,7 +496,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="unit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Đơn vị *</FormLabel>
+                        <FormLabel>{t('partForm.unit')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -517,7 +519,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="unitCost"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Giá (USD) *</FormLabel>
+                        <FormLabel>{t('partForm.unitCost')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} step={0.01} {...field} />
                         </FormControl>
@@ -533,7 +535,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="manufacturer"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nhà sản xuất</FormLabel>
+                        <FormLabel>{t('partForm.manufacturer')}</FormLabel>
                         <FormControl>
                           <Input placeholder="Manufacturer" {...field} value={field.value || ''} />
                         </FormControl>
@@ -547,7 +549,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="manufacturerPn"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>MPN</FormLabel>
+                        <FormLabel>{t('partForm.mpn')}</FormLabel>
                         <FormControl>
                           <Input placeholder="Manufacturer Part Number" {...field} value={field.value || ''} />
                         </FormControl>
@@ -563,8 +565,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                       <div className="space-y-0.5">
-                        <FormLabel>Critical Part</FormLabel>
-                        <FormDescription>Đánh dấu là part quan trọng</FormDescription>
+                        <FormLabel>{t('partForm.criticalPart')}</FormLabel>
+                        <FormDescription>{t('partForm.criticalDesc')}</FormDescription>
                       </div>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -582,7 +584,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="weightKg"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Trọng lượng (kg)</FormLabel>
+                        <FormLabel>{t('partForm.weightKg')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} step={0.001} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -596,7 +598,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="material"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Chất liệu</FormLabel>
+                        <FormLabel>{t('partForm.material')}</FormLabel>
                         <FormControl>
                           <Input placeholder="Aluminum, Steel, Plastic..." {...field} value={field.value || ''} />
                         </FormControl>
@@ -612,7 +614,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="lengthMm"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Dài (mm)</FormLabel>
+                        <FormLabel>{t('partForm.lengthMm')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -626,7 +628,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="widthMm"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Rộng (mm)</FormLabel>
+                        <FormLabel>{t('partForm.widthMm')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -640,7 +642,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="heightMm"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cao (mm)</FormLabel>
+                        <FormLabel>{t('partForm.heightMm')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -655,7 +657,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                   name="color"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Màu sắc</FormLabel>
+                      <FormLabel>{t('partForm.color')}</FormLabel>
                       <FormControl>
                         <Input placeholder="Black, White, Silver..." {...field} value={field.value || ''} />
                       </FormControl>
@@ -673,7 +675,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="makeOrBuy"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Make/Buy</FormLabel>
+                        <FormLabel>{t('partForm.makeOrBuy')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -681,9 +683,9 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="MAKE">Make</SelectItem>
-                            <SelectItem value="BUY">Buy</SelectItem>
-                            <SelectItem value="BOTH">Both</SelectItem>
+                            <SelectItem value="MAKE">{t('makeOrBuy.make')}</SelectItem>
+                            <SelectItem value="BUY">{t('makeOrBuy.buy')}</SelectItem>
+                            <SelectItem value="BOTH">{t('makeOrBuy.both')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -696,7 +698,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="leadTimeDays"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Lead Time (ngày)</FormLabel>
+                        <FormLabel>{t('partForm.leadTimeDays')}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -723,7 +725,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="moq"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>MOQ</FormLabel>
+                        <FormLabel>{t('partForm.moq')}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -738,7 +740,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                             ref={field.ref}
                           />
                         </FormControl>
-                        <FormDescription>Số lượng đặt hàng tối thiểu</FormDescription>
+                        <FormDescription>{t('partForm.moqDesc')}</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -749,7 +751,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="orderMultiple"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Order Multiple</FormLabel>
+                        <FormLabel>{t('partForm.orderMultiple')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={1} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -765,7 +767,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="minStockLevel"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Min Stock Level</FormLabel>
+                        <FormLabel>{t('partForm.minStockLevel')}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -790,7 +792,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="reorderPoint"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Reorder Point</FormLabel>
+                        <FormLabel>{t('partForm.reorderPoint')}</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -817,7 +819,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="safetyStock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Safety Stock</FormLabel>
+                        <FormLabel>{t('partForm.safetyStock')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -831,7 +833,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="maxStock"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Max Stock</FormLabel>
+                        <FormLabel>{t('partForm.maxStock')}</FormLabel>
                         <FormControl>
                           <Input type="number" min={0} {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -850,11 +852,11 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="countryOfOrigin"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Xuất xứ</FormLabel>
+                        <FormLabel>{t('partForm.origin')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ''}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Chọn quốc gia" />
+                              <SelectValue placeholder={t('partForm.selectCountry')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -873,7 +875,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     name="revision"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Revision</FormLabel>
+                        <FormLabel>{t('partForm.revision')}</FormLabel>
                         <FormControl>
                           <Input placeholder="A" {...field} />
                         </FormControl>
@@ -890,8 +892,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                         <div className="space-y-0.5">
-                          <FormLabel>NDAA Compliant</FormLabel>
-                          <FormDescription>Section 889 compliant</FormDescription>
+                          <FormLabel>{t('partForm.ndaaCompliant')}</FormLabel>
+                          <FormDescription>{t('partForm.ndaaDesc')}</FormDescription>
                         </div>
                         <FormControl>
                           <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -906,8 +908,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                         <div className="space-y-0.5">
-                          <FormLabel>ITAR Controlled</FormLabel>
-                          <FormDescription>Export controlled item</FormDescription>
+                          <FormLabel>{t('partForm.itarControlled')}</FormLabel>
+                          <FormDescription>{t('partForm.itarDesc')}</FormDescription>
                         </div>
                         <FormControl>
                           <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -922,8 +924,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                         <div className="space-y-0.5">
-                          <FormLabel>RoHS Compliant</FormLabel>
-                          <FormDescription>Restriction of Hazardous Substances</FormDescription>
+                          <FormLabel>{t('partForm.rohsCompliant')}</FormLabel>
+                          <FormDescription>{t('partForm.rohsDesc')}</FormDescription>
                         </div>
                         <FormControl>
                           <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -938,8 +940,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                         <div className="space-y-0.5">
-                          <FormLabel>REACH Compliant</FormLabel>
-                          <FormDescription>EU chemical regulations</FormDescription>
+                          <FormLabel>{t('partForm.reachCompliant')}</FormLabel>
+                          <FormDescription>{t('partForm.reachDesc')}</FormDescription>
                         </div>
                         <FormControl>
                           <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -953,11 +955,11 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
 
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                Hủy
+                {t('form.cancel')}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo Part'}
+                {isEditing ? t('form.save') : t('partForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -992,6 +994,7 @@ interface DeletePartDialogProps {
 }
 
 export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: DeletePartDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -1003,15 +1006,15 @@ export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: Delete
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success('Đã xóa part thành công!');
+      toast.success(t('partForm.deleteSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to delete part:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
+      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
     } finally {
       setLoading(false);
     }
@@ -1021,19 +1024,18 @@ export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: Delete
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa part <strong>{part?.name}</strong> ({part?.partNumber})?
-            Hành động này không thể hoàn tác.
+            {t('partForm.deleteConfirmDesc', { name: part?.name || '', code: part?.partNumber || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Hủy
+            {t('form.cancel')}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { generateSuppliers, generateParts, generateCustomers } from '@/lib/stress-test-data';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic'; // Prevent caching
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Seeding error:', error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/admin/seed' });
         return NextResponse.json(
             { error: error instanceof Error ? error.message : 'Seeding failed' },
             { status: 500 }

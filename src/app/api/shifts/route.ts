@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(shifts, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Shifts API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts' });
     return paginatedError("Failed to fetch shifts", 500);
   }
 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(shift, { status: 201 });
   } catch (error) {
-    console.error("Create shift error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts' });
     return NextResponse.json(
       { error: "Failed to create shift" },
       { status: 500 }

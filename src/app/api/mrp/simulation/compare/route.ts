@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { compareSimulations } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // POST /api/mrp/simulation/compare - Compare multiple simulations
 export async function POST(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       comparison,
     });
   } catch (error) {
-    console.error("Simulation compare error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/simulation/compare' });
     return NextResponse.json(
       { error: "Failed to compare simulations" },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error listing threads:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads' })
     return NextResponse.json(
       { error: 'Failed to list threads' },
       { status: 500 }
@@ -219,7 +220,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(completeThread, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating thread:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads' })
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },

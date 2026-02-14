@@ -9,6 +9,7 @@ import {
   createSavedView,
 } from '@/lib/saved-views/saved-views-service';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // Validation schemas
 const createViewSchema = z.object({
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       data: views,
     });
   } catch (error) {
-    console.error('Failed to get saved views:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/saved-views' });
     return NextResponse.json(
       { error: 'Failed to get saved views' },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       message: 'View saved successfully',
     });
   } catch (error) {
-    console.error('Failed to create saved view:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/saved-views' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create saved view' },
       { status: 500 }

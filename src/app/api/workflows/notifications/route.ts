@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { notificationService } from '@/lib/workflow';
+import { logger } from '@/lib/logger';
 
 // GET /api/workflows/notifications - Get user notifications
 export async function GET(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       unreadCount,
     });
   } catch (error) {
-    console.error('[API] Notifications GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/workflows/notifications' });
     return NextResponse.json(
       { error: 'Failed to fetch notifications' },
       { status: 500 }
@@ -72,7 +73,7 @@ export async function PATCH(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error('[API] Notifications PATCH error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/workflows/notifications' });
     return NextResponse.json(
       { error: 'Failed to update notification' },
       { status: 500 }

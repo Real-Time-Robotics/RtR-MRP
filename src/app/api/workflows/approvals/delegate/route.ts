@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { workflowEngine } from '@/lib/workflow';
+import { logger } from '@/lib/logger';
 
 // POST /api/workflows/approvals/delegate - Delegate approval
 export async function POST(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       instanceId: result.instanceId,
     });
   } catch (error) {
-    console.error('[API] Delegation POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/workflows/approvals/delegate' });
     return NextResponse.json(
       { error: 'Failed to delegate approval' },
       { status: 500 }

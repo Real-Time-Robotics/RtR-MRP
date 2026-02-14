@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { generateInspectionNumber } from "@/lib/quality/inspection-engine";
-import { buildSearchQuery } from "@/lib/pagination";
+import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for Inspection creation
@@ -32,11 +34,10 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const { page, pageSize } = parsePaginationParams(request);
 
     const searchQuery = buildSearchQuery(search, ["inspectionNumber", "lotNumber", "notes"]);
-    const where: Record<string, unknown> = {
+    const where: Prisma.InspectionWhereInput = {
       ...searchQuery,
     };
     if (type) where.type = type;
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
-    console.error("Lỗi tải danh sách kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspections' });
     return NextResponse.json(
       { error: "Lỗi tải danh sách kiểm tra" },
       { status: 500 }
@@ -332,7 +333,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(inspection, { status: 201 });
   } catch (error) {
-    console.error("Lỗi tạo kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/inspections' });
     return NextResponse.json(
       { error: "Lỗi tạo kiểm tra" },
       { status: 500 }

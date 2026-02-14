@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -14,6 +16,7 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
 
 // =============================================================================
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get("customerId");
     const priority = searchParams.get("priority");
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.SalesOrderWhereInput = {};
     if (status) where.status = status;
     if (customerId) where.customerId = customerId;
     if (priority) where.priority = priority;
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(orders, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch sales orders:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/sales-orders' });
     return paginatedError("Failed to fetch sales orders", 500);
   }
 }
@@ -100,7 +103,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   let body;
   try {

@@ -402,7 +402,6 @@ function SPCControlChartsPageContent() {
       key: 'primaryValue',
       header: 'X̄',
       width: '100px',
-      align: 'right',
       sortable: true,
       render: (value, row) => (
         <span className={`font-mono ${
@@ -418,7 +417,6 @@ function SPCControlChartsPageContent() {
       key: 'secondaryValue',
       header: chart?.chartType === 'XBAR_S' ? 'S' : 'R',
       width: '90px',
-      align: 'right',
       render: (value) => <span className="font-mono">{value.toFixed(3)}</span>,
     },
     {
@@ -435,13 +433,17 @@ function SPCControlChartsPageContent() {
       key: 'isOutOfControl',
       header: 'Trạng thái',
       width: '90px',
-      align: 'center',
+      cellClassName: (value, row) => {
+        if (value) return 'bg-red-50 dark:bg-red-950/30';
+        if (row.violations.length > 0) return 'bg-yellow-50 dark:bg-yellow-950/30';
+        return 'bg-green-50 dark:bg-green-950/30';
+      },
       render: (value, row) => value ? (
-        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">OOC</span>
+        <span className="text-red-700 dark:text-red-300 text-xs font-medium">OOC</span>
       ) : row.violations.length > 0 ? (
-        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Warning</span>
+        <span className="text-yellow-700 dark:text-yellow-300 text-xs font-medium">Warning</span>
       ) : (
-        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">OK</span>
+        <span className="text-green-700 dark:text-green-300 text-xs font-medium">OK</span>
       ),
     },
   ], [chart]);

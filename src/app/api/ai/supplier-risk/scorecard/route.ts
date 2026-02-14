@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import {
   getSupplierPerformanceScorer,
   getAISupplierAnalyzer,
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[Supplier Risk API] Rankings Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/supplier-risk/scorecard' });
     return NextResponse.json(
       {
         success: false,
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error('[Supplier Risk API] Scorecard Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/supplier-risk/scorecard' });
     return NextResponse.json(
       {
         success: false,

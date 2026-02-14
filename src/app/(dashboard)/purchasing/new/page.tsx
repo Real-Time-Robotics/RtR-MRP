@@ -375,7 +375,7 @@ export default function NewPurchaseOrderPage() {
                             size="icon"
                             onClick={() => removeLine(index)}
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-danger-500" />
                           </Button>
                         </TableCell>
                       </TableRow>

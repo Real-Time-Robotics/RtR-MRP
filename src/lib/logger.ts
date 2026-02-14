@@ -174,12 +174,17 @@ class LoggerImpl {
   }
 
   private async sendToExternalService(entry: LogEntry): Promise<void> {
-    // TODO: Integrate with external logging service (DataDog, LogRocket, etc.)
-    // For now, this is a placeholder
-    // await fetch(process.env.LOG_SERVICE_URL, {
-    //   method: 'POST',
-    //   body: JSON.stringify(entry),
-    // });
+    const serviceUrl = process.env.LOG_SERVICE_URL;
+    if (!serviceUrl) return;
+    try {
+      await fetch(serviceUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      }).catch(() => {}); // Fire and forget
+    } catch {
+      // Swallow errors to prevent logging from crashing the app
+    }
   }
 
   // Set request context

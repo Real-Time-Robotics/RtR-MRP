@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateATP, checkBatchATP, updateATPRecords } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/atp - Calculate ATP for a part
 export async function GET(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     const result = await calculateATP(partId, quantity, date, siteId, horizon);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("ATP GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/atp' });
     return NextResponse.json(
       { error: "Failed to calculate ATP" },
       { status: 500 }
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error("ATP POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/atp' });
     return NextResponse.json(
       { error: "Failed to check batch ATP" },
       { status: 500 }

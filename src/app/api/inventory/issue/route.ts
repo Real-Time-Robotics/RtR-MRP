@@ -7,6 +7,7 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
 
 // =============================================================================
@@ -39,7 +40,7 @@ const issueBodySchema = z.discriminatedUnion('mode', [woIssueSchema, adhocIssueS
 
 async function getHandler(
   _request: NextRequest,
-  { user: _user }: { params?: Record<string, string>; user: any }
+  { user: _user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   // Get allocated (not yet fully issued) WO allocations
   const allocations = await prisma.materialAllocation.findMany({
@@ -98,7 +99,7 @@ async function getHandler(
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   let body;
   try {

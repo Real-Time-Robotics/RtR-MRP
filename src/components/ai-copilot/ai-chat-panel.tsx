@@ -480,7 +480,14 @@ export default function AIChatPanel({
     setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, feedback } : m
     ));
-    // TODO: Send feedback to API
+    // Post feedback to the AI feedback endpoint
+    fetch('/api/ai/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId, feedback, context }),
+    }).catch(() => {
+      // Silently ignore feedback delivery errors
+    });
   };
 
   // Handle action execution

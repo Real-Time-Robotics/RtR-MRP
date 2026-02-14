@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 interface EndpointMetric {
   endpoint: string;
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       baseline: report,
     });
   } catch (error) {
-    console.error('Baseline collection error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/monitoring/baseline' });
     return NextResponse.json(
       { error: 'Failed to collect baseline' },
       { status: 500 }
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
       savedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Baseline save error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/monitoring/baseline' });
     return NextResponse.json(
       { error: 'Failed to save baseline' },
       { status: 500 }

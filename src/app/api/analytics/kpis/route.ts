@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kpiService } from '@/lib/analytics';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching KPI definitions:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/kpis' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch KPI definitions' },
       { status: 500 }
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error seeding KPIs:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/kpis' });
     return NextResponse.json(
       { success: false, error: 'Failed to seed KPIs' },
       { status: 500 }

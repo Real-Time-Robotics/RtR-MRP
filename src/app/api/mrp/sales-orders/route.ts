@@ -4,7 +4,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -12,7 +14,7 @@ import { prisma } from '@/lib/prisma';
 
 interface MRPResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<MRPRespons
     const toDate = searchParams.get('toDate');
 
     // Build where clause dynamically
-    const where: any = {};
+    const where: Prisma.SalesOrderWhereInput = {};
 
     // Filter by status - default to confirmed and in_production orders for MRP
     if (status) {
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<MRPRespons
         },
       },
       orderBy: { requiredDate: 'asc' },
+      take: 1000,
     });
 
     // Transform to match expected format
@@ -104,7 +107,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<MRPRespons
 
     return NextResponse.json({ success: true, data: formattedOrders });
   } catch (error) {
-    console.error('[MRP API] Error fetching orders:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/sales-orders' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch sales orders' },
       { status: 500 }

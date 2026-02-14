@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/[id]/read' });
     return NextResponse.json(
       { error: 'Failed to mark notification as read' },
       { status: 500 }

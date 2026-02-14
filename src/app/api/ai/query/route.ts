@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { processNaturalLanguageQuery, getSupportedQueryTypes } from '@/lib/nl-query-engine';
 
 // =============================================================================
@@ -31,7 +32,7 @@ function checkRateLimit(userId: string): boolean {
 async function logQuery(
   _userId: string,
   _query: string,
-  _result: any,
+  _result: unknown,
   _latencyMs: number
 ) {
   // In production, save to database or logging service
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('NL Query API error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/query' });
     return NextResponse.json(
       { 
         success: false,

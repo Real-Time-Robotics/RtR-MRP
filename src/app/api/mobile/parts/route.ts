@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get("q");
     const partNumber = searchParams.get("sku") || searchParams.get("partNumber");
     const id = searchParams.get("id");
-    const limit = parseInt(searchParams.get("limit") || "100");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100") || 100, 100);
 
     // Get single part by ID or part number
     if (id || partNumber) {
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile parts API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/parts' });
     return NextResponse.json(
       { error: "Failed to fetch parts" },
       { status: 500 }

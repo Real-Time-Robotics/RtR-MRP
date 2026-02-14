@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getQualityDataExtractor } from '@/lib/ai/quality/quality-data-extractor';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 import { getQualityPatternRecognition } from '@/lib/ai/quality/pattern-recognition';
@@ -150,14 +151,14 @@ export async function GET(
           recommendations: insightReport.aiRecommendations,
         };
       } catch (aiError) {
-        console.warn('[Quality API] AI insights generation failed:', aiError);
+        logger.warn('AI insights generation failed', { context: 'GET /api/ai/quality/parts/[partId]', error: String(aiError) });
         response.data.aiInsights = null;
       }
     }
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[Quality API] Part Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality/parts/[partId]' });
     return NextResponse.json(
       {
         success: false,

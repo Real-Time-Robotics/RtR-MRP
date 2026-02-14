@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateImportTemplate, getFieldDefinitions, defaultColumnDefinitions } from "@/lib/excel";
+import { logger } from '@/lib/logger';
 
 // GET - List available templates or download specific template
 export async function GET(request: NextRequest) {
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Template error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/templates' });
     return NextResponse.json(
       { error: "Failed to get templates" },
       { status: 500 }

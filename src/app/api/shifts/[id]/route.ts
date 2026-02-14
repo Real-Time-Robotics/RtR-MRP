@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get shift by ID with assignments
 export async function GET(
@@ -53,7 +54,7 @@ export async function GET(
 
     return NextResponse.json(shift);
   } catch (error) {
-    console.error("Get shift error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch shift" },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function PUT(
 
     return NextResponse.json(shift);
   } catch (error) {
-    console.error("Update shift error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts/[id]' });
     return NextResponse.json(
       { error: "Failed to update shift" },
       { status: 500 }
@@ -258,7 +259,7 @@ export async function PATCH(
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Manage shift assignment error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts/[id]' });
     return NextResponse.json(
       { error: "Failed to manage shift assignment" },
       { status: 500 }
@@ -286,7 +287,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete shift error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts/[id]' });
     return NextResponse.json(
       { error: "Failed to delete shift" },
       { status: 500 }

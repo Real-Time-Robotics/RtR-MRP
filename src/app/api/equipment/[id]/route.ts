@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get equipment by ID with full details
 export async function GET(
@@ -49,7 +50,7 @@ export async function GET(
 
     return NextResponse.json(equipment);
   } catch (error) {
-    console.error("Get equipment error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch equipment" },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function PUT(
 
     return NextResponse.json(equipment);
   } catch (error) {
-    console.error("Update equipment error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment/[id]' });
     return NextResponse.json(
       { error: "Failed to update equipment" },
       { status: 500 }
@@ -115,7 +116,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete equipment error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment/[id]' });
     return NextResponse.json(
       { error: "Failed to delete equipment" },
       { status: 500 }
@@ -154,7 +155,7 @@ export async function PATCH(
 
     return NextResponse.json(equipment);
   } catch (error) {
-    console.error("Update OEE error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/equipment/[id]' });
     return NextResponse.json(
       { error: "Failed to update OEE" },
       { status: 500 }

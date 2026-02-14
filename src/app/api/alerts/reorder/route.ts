@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInventoryAlertService } from '@/lib/alerts/inventory-alert-service';
 import { createAlert } from '@/lib/alerts/alert-engine';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // GET - Fetch reorder alerts and suggestions
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Reorder Alerts] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/alerts/reorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch reorder alerts' },
       { status: 500 }
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Reorder Alerts] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/alerts/reorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to process action' },
       { status: 500 }

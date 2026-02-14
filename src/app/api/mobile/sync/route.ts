@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Mock master data
 const MOCK_PARTS = [
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Sync processing error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(
       { success: false, error: 'Failed to process operation' },
       { status: 500 }
@@ -137,36 +138,36 @@ export async function POST(req: NextRequest) {
 }
 
 // Operation processors
-async function processInventoryAdjust(data: Record<string, unknown>) {
+async function processInventoryAdjust(data: any) {
   // In production: Create inventory transaction
   return { transactionId: `ADJ-${Date.now()}`, status: 'completed' };
 }
 
-async function processInventoryTransfer(data: Record<string, unknown>) {
+async function processInventoryTransfer(data: any) {
   return { transferId: `TRF-${Date.now()}`, status: 'completed' };
 }
 
-async function processInventoryCount(data: Record<string, unknown>) {
+async function processInventoryCount(data: any) {
   return { countId: `CNT-${Date.now()}`, status: 'completed' };
 }
 
-async function processPOReceive(data: Record<string, unknown>) {
+async function processPOReceive(data: any) {
   return { receiptId: `RCV-${Date.now()}`, status: 'completed' };
 }
 
-async function processSOPick(data: Record<string, unknown>) {
+async function processSOPick(data: any) {
   return { pickId: `PICK-${Date.now()}`, status: 'completed' };
 }
 
-async function processWOStart(data: Record<string, unknown>) {
+async function processWOStart(data: any) {
   return { woId: data.woId, status: 'started' };
 }
 
-async function processWOComplete(data: Record<string, unknown>) {
+async function processWOComplete(data: any) {
   return { woId: data.woId, status: 'completed' };
 }
 
-async function processQualityInspect(data: Record<string, unknown>) {
+async function processQualityInspect(data: any) {
   return { inspectionId: `QI-${Date.now()}`, status: 'completed' };
 }
 
@@ -224,7 +225,7 @@ export async function PUT(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Bulk sync error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(
       { success: false, error: 'Failed to process bulk sync' },
       { status: 500 }

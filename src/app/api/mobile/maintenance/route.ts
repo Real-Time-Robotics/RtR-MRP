@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Helper: Transform maintenance order from database
 function transformMaintenanceOrder(mo: any) {
@@ -167,7 +168,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error('Maintenance API GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/maintenance' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch maintenance orders' },
       { status: 500 }
@@ -314,7 +315,7 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Maintenance API POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/maintenance' });
     return NextResponse.json(
       { success: false, error: 'Failed to process maintenance operation' },
       { status: 500 }

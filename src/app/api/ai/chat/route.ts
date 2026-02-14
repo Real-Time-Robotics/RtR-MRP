@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getAIProvider, AIMessage } from '@/lib/ai/provider';
 import { detectIntent, buildPrompt, RESPONSE_TEMPLATES } from '@/lib/ai/prompts';
 import { getQueryExecutor } from '@/lib/ai/query-executor';
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
         ragContext = ragService.buildContextPrompt(ragResult);
       }
     } catch (ragError) {
-      console.warn('[AI Chat] RAG context retrieval failed:', ragError);
+      logger.warn('RAG context retrieval failed', { context: 'POST /api/ai/chat', error: String(ragError) });
       // Continue without RAG context
     }
 
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     });
 
   } catch (error) {
-    console.error('[AI Chat] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/chat' });
 
     // Check if it's a provider error
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

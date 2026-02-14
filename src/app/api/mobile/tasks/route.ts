@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -136,7 +137,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ tasks });
   } catch (error) {
-    console.error("Mobile tasks API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/tasks' });
     return NextResponse.json(
       { error: "Failed to fetch tasks" },
       { status: 500 }

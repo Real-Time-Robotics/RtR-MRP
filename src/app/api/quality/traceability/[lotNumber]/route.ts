@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import {
   getForwardTraceability,
   getBackwardTraceability,
@@ -32,7 +33,7 @@ export async function GET(
       traceability,
     });
   } catch (error) {
-    console.error("Failed to fetch traceability:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/traceability/[lotNumber]' });
     return NextResponse.json(
       { error: "Failed to fetch traceability" },
       { status: 500 }

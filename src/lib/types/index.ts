@@ -134,6 +134,9 @@ export interface Inventory {
   warehouse?: Warehouse;
 }
 
+import type { WarehouseType } from '@/types';
+export type { WarehouseType };
+
 export interface Warehouse {
   id: string;
   code: string;
@@ -143,8 +146,6 @@ export interface Warehouse {
   isActive: boolean;
   tenantId: string;
 }
-
-export type WarehouseType = 'RAW_MATERIAL' | 'WIP' | 'FINISHED_GOODS' | 'QUARANTINE' | 'SHIPPING';
 
 export interface Customer {
   id: string;

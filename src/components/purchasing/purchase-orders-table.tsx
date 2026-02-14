@@ -10,6 +10,7 @@ import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropd
 import { PurchaseOrderForm, DeletePurchaseOrderDialog, PurchaseOrder } from '@/components/forms/purchase-order-form';
 import { POStatusBadge } from '@/components/purchasing/po-status-badge';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
@@ -37,6 +38,7 @@ function formatCurrency(amount: number) {
 // =============================================================================
 
 function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
+  const { t } = useLanguage();
   const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const pendingOrders = orders.filter((o) => !['received', 'cancelled'].includes(o.status));
 
@@ -45,19 +47,19 @@ function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold">{orders.length}</div>
-          <p className="text-xs text-muted-foreground">Tổng PO</p>
+          <p className="text-xs text-muted-foreground">{t('po.totalPO')}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold text-green-600">{formatCurrency(totalValue)}</div>
-          <p className="text-xs text-muted-foreground">Tổng giá trị</p>
+          <p className="text-xs text-muted-foreground">{t('po.totalValue')}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold text-amber-600">{pendingOrders.length}</div>
-          <p className="text-xs text-muted-foreground">Đang xử lý</p>
+          <p className="text-xs text-muted-foreground">{t('po.processing')}</p>
         </CardContent>
       </Card>
       <Card>
@@ -65,7 +67,7 @@ function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
           <div className="text-2xl font-bold text-blue-600">
             {orders.filter((o) => o.status === 'received').length}
           </div>
-          <p className="text-xs text-muted-foreground">Đã nhận</p>
+          <p className="text-xs text-muted-foreground">{t('po.received')}</p>
         </CardContent>
       </Card>
     </div>
@@ -77,6 +79,7 @@ function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
 // =============================================================================
 
 export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTableProps) {
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<PurchaseOrder[]>(initialData);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -142,7 +145,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       }
     } catch (error) {
       console.error('Failed to fetch POs:', error);
-      toast.error('Không thể tải danh sách PO');
+      toast.error(t('po.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -184,7 +187,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa/hủy ${selectedIds.size} PO?`)) {
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: 'PO' }))) {
       return;
     }
 
@@ -197,21 +200,21 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa/hủy ${failedCount} PO`);
+        toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: 'PO' }));
       } else {
-        toast.success(`Đã xóa/hủy ${selectedIds.size} PO`);
+        toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: 'PO' }));
       }
 
       fetchOrders(search, filters.status);
       setSelectedIds(new Set());
     } catch (error) {
-      toast.error('Có lỗi xảy ra');
+      toast.error(t('table.deleteError'));
     }
   };
 
   const handleExport = () => {
     if (orders.length === 0) {
-      toast.info('Không có dữ liệu để xuất');
+      toast.info(t('table.noDataToExport'));
       return;
     }
 
@@ -237,27 +240,27 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       ['Pending Orders', orders.filter(po => !['received', 'cancelled'].includes(po.status)).length.toString()],
     ]);
 
-    toast.success('Đã xuất file Excel thành công');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
-    toast.info('Tính năng import đang được phát triển');
+    toast.info(t('table.importInDev'));
   };
 
   // Create action items for each row
   const createPOActions = (order: PurchaseOrder): ActionDropdownItem[] => [
     {
-      label: 'Xem chi tiết',
+      label: t('table.viewDetails'),
       href: `/purchasing/${order.id}`,
     },
     {
-      label: 'Chỉnh sửa',
+      label: t('common.edit'),
       onClick: () => handleEdit(order),
       permission: 'orders:edit',
       disabled: !['draft', 'pending', 'confirmed'].includes(order.status),
     },
     {
-      label: order.status === 'draft' ? 'Xóa' : 'Hủy PO',
+      label: order.status === 'draft' ? t('common.delete') : t('po.cancelPO'),
       onClick: () => handleDelete(order),
       permission: 'orders:delete',
       variant: 'destructive',
@@ -270,7 +273,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     // ===== HEADER INFO SECTION =====
     {
       key: 'poNumber',
-      header: 'Số PO',
+      header: t('po.poNumber'),
       width: '120px',
       sortable: true,
       sticky: 'left',
@@ -282,7 +285,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     },
     {
       key: 'supplier',
-      header: 'Nhà cung cấp',
+      header: t('po.supplier'),
       width: '180px',
       sortable: true,
       render: (value) => value ? (
@@ -294,31 +297,46 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     },
     {
       key: 'status',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '110px',
-      align: 'center',
       sortable: true,
-      render: (value) => <POStatusBadge status={value} />,
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          draft: 'bg-gray-100 dark:bg-gray-800',
+          pending: 'bg-blue-100 dark:bg-blue-900/30',
+          confirmed: 'bg-green-100 dark:bg-green-900/30',
+          in_progress: 'bg-amber-100 dark:bg-amber-900/30',
+          received: 'bg-emerald-100 dark:bg-emerald-900/30',
+          cancelled: 'bg-red-100 dark:bg-red-900/30',
+        };
+        return map[value] || '';
+      },
+      render: (value) => {
+        const labels: Record<string, string> = {
+          draft: t('status.draft'), pending: t('status.pending'), confirmed: t('status.confirmed'),
+          in_progress: t('status.inProgress'), received: t('status.received'), cancelled: t('status.cancelled'),
+        };
+        return <span className="text-xs font-medium">{labels[value] || value}</span>;
+      },
     },
     {
       key: 'orderDate',
-      header: 'Ngày đặt',
+      header: t('po.orderDate'),
       width: '100px',
       sortable: true,
       render: (value) => formatDateShort(value),
     },
     {
       key: 'expectedDate',
-      header: 'Ngày dự kiến',
+      header: t('po.expectedDate'),
       width: '100px',
       sortable: true,
       render: (value) => formatDateShort(value),
     },
     {
       key: 'currency',
-      header: 'Tiền tệ',
+      header: t('po.currency'),
       width: '80px',
-      align: 'center',
       hidden: true,
       render: (value) => value || 'USD',
     },
@@ -326,18 +344,16 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     // ===== LINE ITEMS SECTION =====
     {
       key: 'lines',
-      header: 'Số dòng',
+      header: t('po.lineCount'),
       width: '80px',
-      align: 'center',
       render: (value) => (
         <span className="font-mono text-xs">{value?.length || 0} items</span>
       ),
     },
     {
       key: 'totalAmount',
-      header: 'Tổng tiền',
+      header: t('column.totalAmount'),
       width: '120px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value, row) => (
@@ -350,7 +366,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     // ===== NOTES SECTION =====
     {
       key: 'notes',
-      header: 'Ghi chú',
+      header: t('column.notes'),
       width: '200px',
       hidden: true,
       render: (value) => value ? (
@@ -366,7 +382,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       sticky: 'right',
       render: (_, row) => <ActionDropdown items={createPOActions(row)} />,
     },
-  ], []);
+  ], [t]);
 
   return (
     <div className="space-y-6">
@@ -374,10 +390,10 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Truck className="h-6 w-6" />
-          Đơn mua hàng (PO)
+          {t('po.pageTitle')}
         </h1>
         <p className="text-muted-foreground">
-          Quản lý đơn đặt hàng từ nhà cung cấp
+          {t('po.pageDesc')}
         </p>
       </div>
 
@@ -390,7 +406,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Tìm kiếm số PO, nhà cung cấp..."
+            searchPlaceholder={t('po.searchPlaceholder')}
             onAdd={handleAdd}
             onImport={handleImport}
             onExport={handleExport}
@@ -398,20 +414,20 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             onRefresh={() => fetchOrders(search, filters.status)}
             addPermission="purchasing:create"
             deletePermission="orders:delete"
-            addLabel="Tạo PO"
+            addLabel={t('po.createPO')}
             selectedCount={selectedIds.size}
             isLoading={loading}
             filters={[
               {
                 key: 'status',
-                label: 'Trạng thái',
+                label: t('column.status'),
                 options: [
-                  { value: 'draft', label: 'Nháp' },
-                  { value: 'pending', label: 'Chờ xử lý' },
-                  { value: 'confirmed', label: 'Đã xác nhận' },
-                  { value: 'in_progress', label: 'Đang thực hiện' },
-                  { value: 'received', label: 'Đã nhận' },
-                  { value: 'cancelled', label: 'Đã hủy' },
+                  { value: 'draft', label: t('status.draft') },
+                  { value: 'pending', label: t('status.pending') },
+                  { value: 'confirmed', label: t('status.confirmed') },
+                  { value: 'in_progress', label: t('status.inProgress') },
+                  { value: 'received', label: t('status.received') },
+                  { value: 'cancelled', label: t('status.cancelled') },
                 ],
               },
             ]}
@@ -428,15 +444,17 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             columns={columns}
             keyField="id"
             loading={loading}
-            emptyMessage="Chưa có PO nào"
+            emptyMessage={t('po.emptyMessage')}
             selectable
             selectedKeys={selectedIds}
             onSelectionChange={setSelectedIds}
             pagination
-            pageSize={20}
+            pageSize={50}
             searchable={false}
             stickyHeader
             columnToggle
+            virtualize
+            virtualRowHeight={36}
             excelMode={{
               enabled: true,
               showRowNumbers: true,

@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { SmartGrid } from "@/components/ui-v2/smart-grid";
 import { Column } from "@/components/ui-v2/data-table";
-import { StockStatusBadge } from "@/components/inventory/stock-status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,10 +84,6 @@ interface PendingReceipt {
 // =============================================================================
 
 const typeConfig: Record<string, { badge: string; label: string }> = {
-  MAIN: {
-    badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-    label: "Kho chính",
-  },
   RECEIVING: {
     badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
     label: "Khu nhận hàng",
@@ -96,6 +91,22 @@ const typeConfig: Record<string, { badge: string; label: string }> = {
   QUARANTINE: {
     badge: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
     label: "Kho cách ly",
+  },
+  MAIN: {
+    badge: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+    label: "Kho chính",
+  },
+  WIP: {
+    badge: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
+    label: "Khu sản xuất",
+  },
+  FINISHED_GOODS: {
+    badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+    label: "Kho thành phẩm",
+  },
+  SHIPPING: {
+    badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
+    label: "Khu xuất hàng",
   },
   HOLD: {
     badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
@@ -145,13 +156,13 @@ function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-amber-600">{totalReserved.toLocaleString()}</div>
+          <div className="text-lg font-semibold font-mono text-warning-600">{totalReserved.toLocaleString()}</div>
           <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Đã giữ</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-red-600">{alertCount}</div>
+          <div className="text-lg font-semibold font-mono text-danger-600">{alertCount}</div>
           <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Cảnh báo</p>
         </CardContent>
       </Card>
@@ -270,7 +281,7 @@ export default function WarehouseDetailPage() {
         <div className="flex items-center gap-2">
           <Link
             href={`/inventory/${row.id}`}
-            className="font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            className="font-mono font-medium text-primary-600 dark:text-primary-400 hover:underline"
           >
             {value}
           </Link>
@@ -293,7 +304,7 @@ export default function WarehouseDetailPage() {
       render: (_: string | undefined, row: InventoryItem) => {
         const po = extractPO(row.lotNumber);
         return po ? (
-          <span className="font-mono text-sm text-blue-600 dark:text-blue-400">{po}</span>
+          <span className="font-mono text-sm text-primary-600 dark:text-primary-400">{po}</span>
         ) : (
           <span className="text-slate-400">-</span>
         );
@@ -306,7 +317,7 @@ export default function WarehouseDetailPage() {
       sortable: true,
       render: (value: string | undefined) =>
         value ? (
-          <span className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+          <span className="font-mono text-sm">
             {value}
           </span>
         ) : (
@@ -326,7 +337,6 @@ export default function WarehouseDetailPage() {
       key: "quantity",
       header: "Tồn kho",
       width: "100px",
-      align: "right",
       type: "number",
       sortable: true,
       render: (value: number) => <span className="font-bold">{value.toLocaleString()}</span>,
@@ -335,27 +345,41 @@ export default function WarehouseDetailPage() {
       key: "reserved",
       header: "Đã giữ",
       width: "90px",
-      align: "right",
       type: "number",
-      render: (value: number) => <span className="text-amber-600">{value.toLocaleString()}</span>,
+      render: (value: number) => <span className="text-warning-600">{value.toLocaleString()}</span>,
     },
     {
       key: "available",
       header: "Khả dụng",
       width: "100px",
-      align: "right",
       type: "number",
       render: (value: number) => (
-        <span className="text-green-600 font-medium">{value.toLocaleString()}</span>
+        <span className="text-success-600 font-medium">{value.toLocaleString()}</span>
       ),
     },
     {
       key: "status",
       header: "Trạng thái",
       width: "120px",
-      align: "center",
       sortable: true,
-      render: (_: StockStatus, row: InventoryItem) => <StockStatusBadge status={row.status} />,
+      cellClassName: (_: StockStatus, row: InventoryItem) => {
+        switch (row.status) {
+          case 'OK': return 'bg-green-50 dark:bg-green-950/30';
+          case 'REORDER': return 'bg-amber-50 dark:bg-amber-950/30';
+          case 'CRITICAL': return 'bg-red-50 dark:bg-red-950/30';
+          case 'OUT_OF_STOCK': return 'bg-red-50 dark:bg-red-950/30';
+          default: return '';
+        }
+      },
+      render: (_: StockStatus, row: InventoryItem) => {
+        switch (row.status) {
+          case 'OK': return <span className="text-green-800 dark:text-green-300">Tốt</span>;
+          case 'REORDER': return <span className="text-amber-800 dark:text-amber-300">Cần đặt hàng</span>;
+          case 'CRITICAL': return <span className="text-red-800 dark:text-red-300">Cấp bách</span>;
+          case 'OUT_OF_STOCK': return <span className="text-red-800 dark:text-red-300">Hết hàng</span>;
+          default: return <span>{row.status}</span>;
+        }
+      },
     },
   ], []);
 
@@ -381,8 +405,8 @@ export default function WarehouseDetailPage() {
     return (
       <div className="p-6 space-y-6">
         <PageHeader title="Lỗi" backHref="/warehouses" />
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
-          <CardContent className="p-6 text-center text-red-600 dark:text-red-400">
+        <Card className="border-danger-200 bg-danger-50 dark:bg-danger-950/20">
+          <CardContent className="p-6 text-center text-danger-600 dark:text-danger-400">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
             <p>{error || "Kho không tồn tại"}</p>
           </CardContent>
@@ -409,7 +433,7 @@ export default function WarehouseDetailPage() {
               variant="secondary"
               className={
                 warehouse.status === "active"
-                  ? "bg-green-100 text-green-800"
+                  ? "bg-success-100 text-success-800"
                   : "bg-gray-100 text-gray-600"
               }
             >
@@ -471,20 +495,20 @@ export default function WarehouseDetailPage() {
             </Card>
           ) : (
             pendingReceipts.map((receipt) => (
-              <Card key={receipt.id} className="border-yellow-200 dark:border-yellow-900/40">
+              <Card key={receipt.id} className="border-warning-200 dark:border-warning-900/40">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-medium text-sm">{receipt.receiptNumber}</span>
-                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
+                        <Badge variant="secondary" className="bg-warning-100 text-warning-800 dark:bg-warning-900/40 dark:text-warning-300">
                           <Clock className="h-3 w-3 mr-1" />
                           Chờ xác nhận
                         </Badge>
                       </div>
                       <p className="font-medium">{receipt.product.name}</p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>WO: <Link href={`/production/${receipt.workOrder.woNumber}`} className="text-blue-600 hover:underline">{receipt.workOrder.woNumber}</Link></span>
+                        <span>WO: <Link href={`/production/${receipt.workOrder.woNumber}`} className="text-primary-600 hover:underline">{receipt.workOrder.woNumber}</Link></span>
                         <span>Số lượng: <strong className="text-foreground">{receipt.quantity}</strong></span>
                         <span>Lot: <span className="font-mono">{receipt.lotNumber}</span></span>
                         <span>Ngày yêu cầu: {formatDateMedium(receipt.requestedAt)}</span>
@@ -494,7 +518,7 @@ export default function WarehouseDetailPage() {
                       <Button
                         size="sm"
                         variant="default"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-success-600 hover:bg-success-700"
                         disabled={processingId === receipt.id}
                         onClick={() => handleConfirm(receipt.id)}
                       >

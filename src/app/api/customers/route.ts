@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -15,6 +16,7 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
 
 const SEARCH_FIELDS = ["name", "code", "contactName", "contactEmail"];
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(customers, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Lỗi tải danh sách khách hàng:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/customers' });
     return paginatedError("Lỗi tải danh sách khách hàng", 500);
   }
 }
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   let body;
   try {

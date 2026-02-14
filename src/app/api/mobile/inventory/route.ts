@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 // Types
 interface InventoryAdjustment {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Inventory API error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/inventory' });
     return NextResponse.json(
       { success: false, error: 'Failed to process inventory operation' },
       { status: 500 }

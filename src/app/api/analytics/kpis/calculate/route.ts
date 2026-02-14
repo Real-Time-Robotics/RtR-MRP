@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kpiService } from '@/lib/analytics';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const calculateSchema = z.object({
   codes: z.array(z.string()).min(1),
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error calculating KPIs:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/kpis/calculate' });
     return NextResponse.json(
       { success: false, error: 'Failed to calculate KPIs' },
       { status: 500 }

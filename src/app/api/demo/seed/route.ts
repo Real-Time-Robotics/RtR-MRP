@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // CONFIGURATION
@@ -598,7 +599,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Demo seed error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/demo/seed' });
     return NextResponse.json(
       {
         success: false,

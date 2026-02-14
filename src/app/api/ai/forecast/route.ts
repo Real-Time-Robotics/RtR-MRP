@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import {
   getForecastEngine,
   getAIEnhancerService,
@@ -30,7 +31,7 @@ interface ForecastRequest {
 
 interface ForecastResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   latency?: number;
 }
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ForecastR
     const accuracyTracker = getAccuracyTrackerService();
     const dataExtractor = getDataExtractorService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'generate': {
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ForecastR
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast' });
     return NextResponse.json(
       {
         success: false,
@@ -290,7 +291,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ForecastRe
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'summary': {
@@ -368,7 +369,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ForecastRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast' });
     return NextResponse.json(
       {
         success: false,

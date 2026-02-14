@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { AIMigrationEngine, DataTransformer, TARGET_SCHEMAS } from '@/lib/migration-engine';
+import { logger } from '@/lib/logger';
 
 const migrationEngine = new AIMigrationEngine();
 const dataTransformer = new DataTransformer();
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Migration analysis error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/migration/analyze' });
     return NextResponse.json(
       { error: 'Failed to analyze files', details: String(error) },
       { status: 500 }
@@ -163,7 +164,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Transform error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/migration/analyze' });
     return NextResponse.json(
       { error: 'Failed to transform data', details: String(error) },
       { status: 500 }

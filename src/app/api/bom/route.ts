@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
+import { parsePaginationParams } from "@/lib/pagination";
 
 // Validation schema for BOM line
 const BomLineSchema = z.object({
@@ -41,8 +43,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
     const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const { page, pageSize } = parsePaginationParams(request);
 
     const where: Record<string, unknown> = {};
     if (productId) where.productId = productId;
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch BOMs:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom' });
     return NextResponse.json(
       { error: "Failed to fetch BOMs" },
       { status: 500 }
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(bomHeader, { status: 201 });
   } catch (error) {
-    console.error("Failed to create BOM:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/bom' });
     return NextResponse.json(
       { error: "Failed to create BOM" },
       { status: 500 }

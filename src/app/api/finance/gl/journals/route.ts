@@ -9,6 +9,7 @@ import {
   voidJournalEntry,
   reverseJournalEntry,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get journal entries
 export async function GET(request: NextRequest) {
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ journals });
   } catch (error) {
-    console.error("GL journals GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/gl/journals' });
     return NextResponse.json(
       { error: "Failed to get journal entries" },
       { status: 500 }
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error("GL journals POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/gl/journals' });
     const message = error instanceof Error ? error.message : "Failed to create journal entry";
     return NextResponse.json(
       { error: message },
@@ -174,7 +175,7 @@ export async function PUT(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("GL journals PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/finance/gl/journals' });
     const message = error instanceof Error ? error.message : "Failed to update journal entry";
     return NextResponse.json(
       { error: message },

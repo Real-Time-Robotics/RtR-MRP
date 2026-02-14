@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getForecastEngine,
@@ -265,7 +266,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<TrainingRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast Training] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/training' });
     return NextResponse.json(
       {
         success: false,
@@ -357,7 +358,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
               });
             }
           } catch (err) {
-            console.error(`[Training] Error evaluating ${modelName}:`, err);
+            logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'POST /api/ai/forecast/training', modelName });
           }
         }
 
@@ -666,7 +667,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
     });
 
   } catch (error) {
-    console.error('[AI Forecast Training] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/training' });
     return NextResponse.json(
       {
         success: false,

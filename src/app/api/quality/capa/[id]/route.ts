@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { transitionCAPA } from "@/lib/quality/capa-workflow";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // Validation schema for CAPA update
 const CAPAUpdateSchema = z.object({
@@ -49,7 +50,7 @@ export async function GET(
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Lỗi tải CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/capa/[id]' });
     return NextResponse.json({ error: "Lỗi tải CAPA" }, { status: 500 });
   }
 }
@@ -117,7 +118,7 @@ export async function PATCH(
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Lỗi cập nhật CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/quality/capa/[id]' });
     return NextResponse.json({ error: "Lỗi cập nhật CAPA" }, { status: 500 });
   }
 }

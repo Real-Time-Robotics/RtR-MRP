@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(employees, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Employees API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees' });
     return paginatedError("Failed to fetch employees", 500);
   }
 }
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(employee, { status: 201 });
   } catch (error) {
-    console.error("Create employee error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees' });
     return NextResponse.json(
       { error: "Failed to create employee" },
       { status: 500 }

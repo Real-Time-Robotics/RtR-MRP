@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { approvalQueueService, QueueFilter, QueueSortOptions } from '@/lib/ai/autonomous/approval-queue-service';
 
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    console.error('[Auto-PO Queue API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-po/queue' });
     return NextResponse.json(
       { error: 'Failed to get queue items' },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
       queueItem,
     });
   } catch (error) {
-    console.error('[Auto-PO Queue API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/queue' });
     return NextResponse.json(
       { error: 'Failed to add to queue', details: (error as Error).message },
       { status: 500 }
@@ -193,7 +194,7 @@ export async function PUT(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Auto-PO Queue API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/queue' });
     return NextResponse.json(
       { error: 'Failed to update queue item' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(revisions);
   } catch (error) {
-    console.error("Failed to fetch revisions:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]/revisions' });
     return NextResponse.json(
       { error: "Failed to fetch revisions" },
       { status: 500 }
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(revision, { status: 201 });
   } catch (error) {
-    console.error("Failed to create revision:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts/[id]/revisions' });
     return NextResponse.json(
       { error: "Failed to create revision" },
       { status: 500 }

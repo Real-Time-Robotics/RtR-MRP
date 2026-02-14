@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 import {
   getSavedView,
   updateSavedView,
@@ -51,7 +52,7 @@ export async function GET(
       data: view,
     });
   } catch (error) {
-    console.error('Failed to get saved view:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/saved-views/[id]' });
     return NextResponse.json(
       { error: 'Failed to get saved view' },
       { status: 500 }
@@ -89,7 +90,7 @@ export async function PUT(
       message: 'View updated successfully',
     });
   } catch (error) {
-    console.error('Failed to update saved view:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/saved-views/[id]' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update saved view' },
       { status: 500 }
@@ -116,7 +117,7 @@ export async function DELETE(
       message: 'View deleted',
     });
   } catch (error) {
-    console.error('Failed to delete saved view:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/saved-views/[id]' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to delete saved view' },
       { status: 500 }
@@ -154,7 +155,7 @@ export async function POST(
       message: 'View duplicated successfully',
     });
   } catch (error) {
-    console.error('Failed to duplicate saved view:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/saved-views/[id]' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to duplicate saved view' },
       { status: 500 }

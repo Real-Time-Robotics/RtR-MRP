@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { setupMFA, verifyMFASetup } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("MFA setup error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/mfa/setup' });
     return NextResponse.json(
       { error: "MFA setup failed" },
       { status: 500 }

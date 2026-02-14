@@ -11,16 +11,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 interface BomStatusSwitcherProps {
   bomHeaderId: string;
   currentStatus: string;
 }
 
-const statusConfig: Record<string, { label: string; variant: "default" | "outline" | "secondary" | "destructive"; icon: typeof CheckCircle }> = {
-  draft: { label: "Draft", variant: "outline", icon: FileEdit },
-  active: { label: "Active", variant: "default", icon: CheckCircle },
-  obsolete: { label: "Obsolete", variant: "secondary", icon: Archive },
+const statusIcons: Record<string, typeof CheckCircle> = {
+  draft: FileEdit,
+  active: CheckCircle,
+  obsolete: Archive,
+};
+
+const statusVariants: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
+  draft: "outline",
+  active: "default",
+  obsolete: "secondary",
+};
+
+const statusLabelKeys: Record<string, string> = {
+  draft: "bomStatus.draft",
+  active: "bomStatus.active",
+  obsolete: "bomStatus.obsolete",
 };
 
 const transitions: Record<string, string[]> = {
@@ -31,19 +44,22 @@ const transitions: Record<string, string[]> = {
 
 export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitcherProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
-  const config = statusConfig[currentStatus] || statusConfig.draft;
-  const Icon = config.icon;
+  const Icon = statusIcons[currentStatus] || FileEdit;
+  const variant = statusVariants[currentStatus] || "outline";
+  const label = t(statusLabelKeys[currentStatus] || "bomStatus.draft");
   const availableTransitions = transitions[currentStatus] || [];
 
   const handleStatusChange = async (newStatus: string) => {
     const confirmMessages: Record<string, string> = {
-      active: "Kích hoạt BOM này? BOM sẽ được sử dụng khi tạo Work Order.",
-      obsolete: "Đánh dấu BOM lỗi thời? BOM sẽ không thể chỉnh sửa hoặc sử dụng nữa.",
+      active: t("bomStatus.confirmActive"),
+      obsolete: t("bomStatus.confirmObsolete"),
     };
 
-    if (!confirm(confirmMessages[newStatus] || `Chuyển sang ${newStatus}?`)) return;
+    const targetLabel = t(statusLabelKeys[newStatus] || "bomStatus.draft");
+    if (!confirm(confirmMessages[newStatus] || t("bomStatus.confirmTransition", { status: targetLabel }))) return;
 
     setLoading(true);
     try {
@@ -57,11 +73,11 @@ export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitc
         router.refresh();
       } else {
         const error = await res.json();
-        alert(error.error || "Không thể cập nhật trạng thái");
+        alert(error.error || t("bomStatus.updateError"));
       }
     } catch (error) {
       console.error("Failed to update BOM status:", error);
-      alert("Lỗi cập nhật trạng thái BOM");
+      alert(t("bomStatus.updateFailed"));
     } finally {
       setLoading(false);
     }
@@ -69,9 +85,9 @@ export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitc
 
   if (availableTransitions.length === 0) {
     return (
-      <Badge variant={config.variant} className="gap-1">
+      <Badge variant={variant} className="gap-1">
         <Icon className="h-3 w-3" />
-        {config.label}
+        {label}
       </Badge>
     );
   }
@@ -85,20 +101,20 @@ export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitc
           ) : (
             <Icon className="h-3.5 w-3.5" />
           )}
-          {config.label}
+          {label}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
         {availableTransitions.map((status) => {
-          const targetConfig = statusConfig[status];
-          const TargetIcon = targetConfig.icon;
+          const TargetIcon = statusIcons[status] || FileEdit;
+          const targetLabel = t(statusLabelKeys[status] || "bomStatus.draft");
           return (
             <DropdownMenuItem
               key={status}
               onClick={() => handleStatusChange(status)}
             >
               <TargetIcon className="h-4 w-4 mr-2" />
-              Chuyển sang {targetConfig.label}
+              {t("bomStatus.switchTo", { label: targetLabel })}
             </DropdownMenuItem>
           );
         })}

@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Users, User, Mail, Phone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -99,6 +100,7 @@ const CUSTOMER_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldCh
 // =============================================================================
 
 export function CustomerForm({ open, onOpenChange, customer, onSuccess }: CustomerFormProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const isEditing = !!customer;
 
@@ -201,14 +203,14 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(isEditing ? 'Cập nhật khách hàng thành công!' : 'Tạo khách hàng thành công!');
+      toast.success(isEditing ? t('customerForm.updateSuccess') : t('customerForm.createSuccess'));
       onSuccess?.(result.data);
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -246,10 +248,10 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
+            {isEditing ? t('customerForm.editTitle') : t('customerForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin khách hàng' : 'Điền thông tin để tạo khách hàng mới'}
+            {isEditing ? t('customerForm.editDesc') : t('customerForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -261,7 +263,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mã khách hàng *</FormLabel>
+                    <FormLabel>{t('customerForm.code')}</FormLabel>
                     <FormControl>
                       <Input placeholder="CUS-001" {...field} disabled={isEditing} />
                     </FormControl>
@@ -275,7 +277,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Trạng thái</FormLabel>
+                    <FormLabel>{t('form.status')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -283,9 +285,9 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="active">Hoạt động</SelectItem>
-                        <SelectItem value="inactive">Ngưng</SelectItem>
-                        <SelectItem value="pending">Chờ duyệt</SelectItem>
+                        <SelectItem value="active">{t('status.active')}</SelectItem>
+                        <SelectItem value="inactive">{t('status.inactiveShort')}</SelectItem>
+                        <SelectItem value="pending">{t('status.approval')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -299,7 +301,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tên khách hàng *</FormLabel>
+                  <FormLabel>{t('customerForm.name')}</FormLabel>
                   <FormControl>
                     <Input placeholder="Công ty ABC" {...field} />
                   </FormControl>
@@ -314,11 +316,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loại khách hàng</FormLabel>
+                    <FormLabel>{t('customerForm.type')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại" />
+                          <SelectValue placeholder={t('customerForm.selectType')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -337,7 +339,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quốc gia</FormLabel>
+                    <FormLabel>{t('customerForm.country')}</FormLabel>
                     <FormControl>
                       <Input placeholder="Việt Nam" {...field} value={field.value || ''} />
                     </FormControl>
@@ -353,7 +355,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="contactName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Người liên hệ</FormLabel>
+                    <FormLabel>{t('customerForm.contactName')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -370,7 +372,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="contactPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số điện thoại</FormLabel>
+                    <FormLabel>{t('customerForm.contactPhone')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -388,7 +390,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="contactEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t('customerForm.contactEmail')}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -405,7 +407,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Địa chỉ thanh toán</FormLabel>
+                  <FormLabel>{t('customerForm.billingAddress')}</FormLabel>
                   <FormControl>
                     <Textarea placeholder="123 Đường ABC, Quận XYZ, TP.HCM" {...field} value={field.value || ''} />
                   </FormControl>
@@ -420,11 +422,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="paymentTerms"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Điều khoản thanh toán</FormLabel>
+                    <FormLabel>{t('customerForm.paymentTerms')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn" />
+                          <SelectValue placeholder={t('form.selectPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -443,7 +445,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="creditLimit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hạn mức tín dụng (USD)</FormLabel>
+                    <FormLabel>{t('customerForm.creditLimit')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -465,11 +467,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                Hủy
+                {t('form.cancel')}
               </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+                {isEditing ? t('form.save') : t('customerForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -504,6 +506,7 @@ interface DeleteCustomerDialogProps {
 }
 
 export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }: DeleteCustomerDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -512,12 +515,12 @@ export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }
     try {
       const response = await fetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      toast.success('Đã xóa khách hàng thành công!');
+      if (!response.ok) throw new Error(result.message || result.error || t('form.error'));
+      toast.success(t('customerForm.deleteSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
+      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
     } finally {
       setLoading(false);
     }
@@ -527,16 +530,16 @@ export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa khách hàng <strong>{customer?.name}</strong> ({customer?.code})?
+            {t('form.deleteConfirmSimple', { itemType: t('customers.pageTitle'), name: customer?.name || '', code: customer?.code || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Hủy</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>{t('form.cancel')}</Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

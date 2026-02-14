@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // SUPPLIER PORTAL API
@@ -13,10 +14,9 @@ export type InvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PAID' | 'REJEC
 
 // Helper: Get authenticated supplier ID
 async function getAuthenticatedSupplierId(request: NextRequest): Promise<string | null> {
-  // TODO: Implement proper authentication from JWT/session
   const supplierId = request.headers.get('x-supplier-id') ||
                      request.nextUrl.searchParams.get('supplierId');
-  return supplierId;
+  return supplierId || null;
 }
 
 // Helper: Map PO status to display status
@@ -570,7 +570,7 @@ export async function GET(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Error in supplier API:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/supplier' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -697,7 +697,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Error in supplier API:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/supplier' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

@@ -214,8 +214,8 @@ export default function QualityDashboardPage() {
                 className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Download className="h-3.5 w-3.5 text-blue-600" />
+                  <div className="h-7 w-7 bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                    <Download className="h-3.5 w-3.5 text-primary-600" />
                   </div>
                   <div>
                     <p className="text-[11px] font-medium">{t("quality.receivingInspection")}</p>
@@ -256,8 +256,8 @@ export default function QualityDashboardPage() {
                 className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <CheckSquare className="h-3.5 w-3.5 text-green-600" />
+                  <div className="h-7 w-7 bg-success-100 dark:bg-success-900/30 flex items-center justify-center">
+                    <CheckSquare className="h-3.5 w-3.5 text-success-600" />
                   </div>
                   <div>
                     <p className="text-[11px] font-medium">{t("quality.finalInspection")}</p>
@@ -281,7 +281,7 @@ export default function QualityDashboardPage() {
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
             <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <AlertTriangle className="h-3.5 w-3.5 text-warning-600" />
               {t("quality.ncrReports")}
             </CardTitle>
             <Button asChild variant="ghost" size="sm" className="h-6 text-[10px]">
@@ -290,7 +290,7 @@ export default function QualityDashboardPage() {
           </CardHeader>
           <CardContent className="px-3 py-2">
             <div className="text-center py-2">
-              <p className="text-2xl font-semibold font-mono text-amber-600">
+              <p className="text-2xl font-semibold font-mono text-warning-600">
                 {stats?.openNCRs || 0}
               </p>
               <p className="text-[10px] text-muted-foreground">{t("quality.openNCRs")}</p>

@@ -20,7 +20,6 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Tooltip,
@@ -37,6 +36,7 @@ import { ImportWizard } from '@/components/excel/import-wizard';
 import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 
 // =============================================================================
@@ -92,6 +92,7 @@ function formatDimensions(length: number | null, width: number | null, height: n
 // =============================================================================
 
 function StatsCards({ parts }: { parts: Part[] }) {
+  const { t } = useLanguage();
   const stats = {
     total: parts.length,
     active: parts.filter((p) => p.lifecycleStatus === 'ACTIVE').length,
@@ -109,7 +110,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <Package className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Tổng số</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.totalCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono">{stats.total}</p>
         </CardContent>
@@ -118,7 +119,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            <span className="text-[10px] text-muted-foreground">Hoạt động</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.activeCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-green-600">{stats.active}</p>
         </CardContent>
@@ -127,7 +128,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <Shield className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-[10px] text-muted-foreground">NDAA</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.ndaaCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-blue-600">{stats.ndaaCompliant}</p>
         </CardContent>
@@ -136,7 +137,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Quan trọng</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.criticalCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.critical}</p>
         </CardContent>
@@ -145,7 +146,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <Package className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="text-[10px] text-muted-foreground">Tự sản xuất</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.makeCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-indigo-600">{stats.make}</p>
         </CardContent>
@@ -154,7 +155,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
             <Package className="h-3.5 w-3.5 text-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Mua</span>
+            <span className="text-[10px] text-muted-foreground">{t('parts.buyCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.buy}</p>
         </CardContent>
@@ -168,6 +169,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
 // =============================================================================
 
 export function PartsTable() {
+  const { t } = useLanguage();
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -246,16 +248,16 @@ export function PartsTable() {
         setParts(normalizedParts);
       } else {
         setParts([]);
-        toast.error('Không thể tải danh sách parts');
+        toast.error(t('parts.fetchError'));
       }
     } catch (error) {
       console.error('Failed to fetch parts:', error);
-      toast.error('Không thể tải danh sách parts');
+      toast.error(t('parts.fetchError'));
       setParts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Load data on mount and when search/filters change (debounced)
   useEffect(() => {
@@ -296,7 +298,7 @@ export function PartsTable() {
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} parts?`)) {
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: t('parts.pageTitle') }))) {
       return;
     }
 
@@ -307,7 +309,7 @@ export function PartsTable() {
       const idsToDelete = new Set(selectedIds);
       setParts(prev => prev.filter(p => !idsToDelete.has(p.id)));
       setSelectedIds(new Set());
-      toast.info(`Đang xóa ${idsToDelete.size} parts...`);
+      toast.info(t('table.bulkDeleting', { count: String(idsToDelete.size), itemType: t('parts.pageTitle') }));
 
       const results = await Promise.all(
         Array.from(idsToDelete).map((id) =>
@@ -317,13 +319,13 @@ export function PartsTable() {
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa ${failedCount} parts (Đã hoàn tác)`);
+        toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: t('parts.pageTitle') }));
         fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy); // Revert/Refresh
       } else {
-        toast.success(`Đã xóa ${idsToDelete.size} parts`);
+        toast.success(t('table.bulkDeleteSuccess', { count: String(idsToDelete.size), itemType: t('parts.pageTitle') }));
       }
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi xóa');
+      toast.error(t('table.deleteError'));
       fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     }
   };
@@ -342,7 +344,7 @@ export function PartsTable() {
     try {
       const newCost = parseFloat(editingCostValue);
       if (isNaN(newCost)) {
-        toast.error('Giá trị không hợp lệ');
+        toast.error(t('parts.invalidValue'));
         return;
       }
 
@@ -356,10 +358,10 @@ export function PartsTable() {
 
       if (!res.ok) throw new Error('Failed to update');
 
-      toast.success('Đã cập nhật đơn giá');
+      toast.success(t('parts.costUpdated'));
       setEditingCostId(null);
     } catch (error) {
-      toast.error('Không thể cập nhật đơn giá');
+      toast.error(t('parts.costUpdateFailed'));
       fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
     }
   };
@@ -374,7 +376,7 @@ export function PartsTable() {
 
   const handleExport = () => {
     if (!parts || parts.length === 0) {
-      toast.warning('Không có dữ liệu để export');
+      toast.warning(t('table.noDataToExport'));
       return;
     }
 
@@ -430,7 +432,7 @@ export function PartsTable() {
       sheetName: 'Parts Master'
     });
 
-    toast.success('Đã xuất file Excel');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
@@ -440,7 +442,7 @@ export function PartsTable() {
   const handleImportSuccess = () => {
     setImportDialogOpen(false);
     fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
-    toast.success('Import thành công!');
+    toast.success(t('parts.importSuccess'));
   };
 
   // Get unique categories
@@ -449,16 +451,16 @@ export function PartsTable() {
   // Create action items for each row
   const createPartActions = (part: Part): ActionDropdownItem[] => [
     {
-      label: 'Xem chi tiết',
+      label: t('table.viewDetails'),
       href: `/parts/${part.id}`,
     },
     {
-      label: 'Chỉnh sửa',
+      label: t('common.edit'),
       onClick: () => handleEdit(part),
       permission: 'orders:edit',
     },
     {
-      label: 'Xóa',
+      label: t('common.delete'),
       onClick: () => handleDelete(part),
       permission: 'orders:delete',
       variant: 'destructive',
@@ -470,7 +472,7 @@ export function PartsTable() {
     // ===== TAB CƠ BẢN (Basic) =====
     {
       key: 'partNumber',
-      header: 'Mã Part',
+      header: t('parts.partNumber'),
       width: '130px',
       sortable: true,
       sticky: 'left',
@@ -485,37 +487,36 @@ export function PartsTable() {
     },
     {
       key: 'name',
-      header: 'Tên Part',
+      header: t('parts.partName'),
       width: '180px',
       sortable: true,
       render: (value) => <div className="truncate max-w-[160px]">{value || '-'}</div>,
     },
     {
       key: 'description',
-      header: 'Mô tả',
+      header: t('parts.descriptionCol'),
       width: '200px',
       hidden: true,
       render: (value) => <div className="truncate max-w-[180px] text-muted-foreground">{value || '-'}</div>,
     },
     {
       key: 'category',
-      header: 'Danh mục',
+      header: t('column.category'),
       width: '100px',
       sortable: true,
-      render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value || '-'}</Badge>,
+      cellClassName: (value) => value ? 'bg-slate-50 dark:bg-slate-900/30' : '',
+      render: (value) => value || '-',
     },
     {
       key: 'unit',
-      header: 'Đơn vị',
+      header: t('column.unit'),
       width: '70px',
-      align: 'center',
       render: (value) => <span className="text-xs">{value || 'EA'}</span>,
     },
     {
       key: 'unitCost',
-      header: 'Đơn giá',
+      header: t('column.unitCost'),
       width: '100px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value, row) => (
@@ -541,43 +542,37 @@ export function PartsTable() {
     },
     {
       key: 'isCritical',
-      header: 'Quan trọng',
-      width: '80px',
-      align: 'center',
-      render: (value) => value ? (
-        <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1 py-0">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Critical
-        </Badge>
-      ) : <span className="text-muted-foreground">-</span>,
+      header: t('parts.critical'),
+      width: '90px',
+      cellClassName: (value) => value ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : '',
+      render: (value) => value ? 'Critical' : <span className="text-muted-foreground">-</span>,
     },
 
     // ===== TAB VẬT LÝ (Physical) =====
     {
       key: 'weightKg',
-      header: 'Trọng lượng',
+      header: t('parts.weight'),
       width: '90px',
-      align: 'right',
       hidden: true,
       render: (value) => value ? `${formatNumber(value, 3)} kg` : '-',
     },
     {
       key: 'dimensions',
-      header: 'Kích thước',
+      header: t('parts.dimensions'),
       width: '140px',
       hidden: true,
       render: (_, row: any) => formatDimensions(row.lengthMm, row.widthMm, row.heightMm),
     },
     {
       key: 'material',
-      header: 'Vật liệu',
+      header: t('parts.material'),
       width: '100px',
       hidden: true,
       render: (value) => <span className="truncate">{value || '-'}</span>,
     },
     {
       key: 'color',
-      header: 'Màu sắc',
+      header: t('parts.color'),
       width: '80px',
       hidden: true,
       render: (value) => value || '-',
@@ -586,86 +581,93 @@ export function PartsTable() {
     // ===== TAB KỸ THUẬT (Engineering) =====
     {
       key: 'makeOrBuy',
-      header: 'Make/Buy',
+      header: t('parts.makeOrBuyFilter'),
       width: '85px',
-      align: 'center',
       sortable: true,
-      render: (value) => (
-        <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
-          {value || 'BUY'}
-        </Badge>
-      ),
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          MAKE: 'bg-indigo-100 dark:bg-indigo-900/30',
+          BUY: 'bg-orange-100 dark:bg-orange-900/30',
+          BOTH: 'bg-teal-100 dark:bg-teal-900/30',
+        };
+        return map[value] || '';
+      },
+      render: (value) => <span className="text-xs font-medium">{value || 'BUY'}</span>,
     },
     {
       key: 'revision',
-      header: 'Rev',
+      header: t('parts.revision'),
       width: '55px',
-      align: 'center',
-      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value || 'A'}</Badge>,
+      cellClassName: () => 'bg-slate-50 dark:bg-slate-900/30',
+      render: (value) => value || 'A',
     },
     {
       key: 'revisionDate',
-      header: 'Ngày Rev',
+      header: t('parts.revisionDate'),
       width: '100px',
       hidden: true,
       render: (value) => formatDate(value),
     },
     {
       key: 'drawingNumber',
-      header: 'Số bản vẽ',
+      header: t('parts.drawingNumber'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
     },
     {
       key: 'manufacturer',
-      header: 'Nhà SX',
+      header: t('parts.manufacturer'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="truncate">{value || '-'}</span>,
     },
     {
       key: 'manufacturerPn',
-      header: 'MPN',
+      header: t('parts.mpn'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
     },
     {
       key: 'lifecycleStatus',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '100px',
       sortable: true,
-      render: (value) => (
-        <Badge className={cn(LIFECYCLE_COLORS[value] || LIFECYCLE_COLORS['ACTIVE'], 'text-[10px] px-1 py-0')}>
-          {value || 'ACTIVE'}
-        </Badge>
-      ),
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          DEVELOPMENT: 'bg-purple-100 dark:bg-purple-900/30',
+          PROTOTYPE: 'bg-blue-100 dark:bg-blue-900/30',
+          ACTIVE: 'bg-green-100 dark:bg-green-900/30',
+          PHASE_OUT: 'bg-yellow-100 dark:bg-yellow-900/30',
+          OBSOLETE: 'bg-red-100 dark:bg-red-900/30',
+          EOL: 'bg-gray-100 dark:bg-gray-800',
+        };
+        return map[value] || '';
+      },
+      render: (value) => <span className="text-xs font-medium">{value || 'ACTIVE'}</span>,
     },
 
     // ===== TAB MUA HÀNG (Procurement) =====
     {
       key: 'leadTimeDays',
-      header: 'Lead Time',
+      header: t('parts.leadTime'),
       width: '85px',
-      align: 'right',
       sortable: true,
       render: (value) => value ? (
-        <span className="font-mono">{value} <span className="text-muted-foreground text-[10px]">ngày</span></span>
+        <span className="font-mono">{value} <span className="text-muted-foreground text-[10px]">{t('parts.daysUnit')}</span></span>
       ) : '-',
     },
     {
       key: 'moq',
-      header: 'MOQ',
+      header: t('parts.moq'),
       width: '70px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
     },
     {
       key: 'orderMultiple',
-      header: 'Bội số đặt',
+      header: t('parts.orderMultiple'),
       width: '80px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
     },
@@ -673,21 +675,18 @@ export function PartsTable() {
       key: 'minStockLevel',
       header: 'Min Stock',
       width: '85px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
     {
       key: 'reorderPoint',
       header: 'ROP',
       width: '70px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
     {
       key: 'safetyStock',
       header: 'Safety Stock',
       width: '90px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
@@ -695,7 +694,6 @@ export function PartsTable() {
       key: 'maxStock',
       header: 'Max Stock',
       width: '85px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{value ? formatNumber(value) : '-'}</span>,
     },
@@ -703,7 +701,7 @@ export function PartsTable() {
     // ===== TAB TUÂN THỦ (Compliance) =====
     {
       key: 'countryOfOrigin',
-      header: 'Xuất xứ',
+      header: t('parts.origin'),
       width: '100px',
       hidden: true,
       render: (value) => (
@@ -717,20 +715,18 @@ export function PartsTable() {
       key: 'ndaaCompliant',
       header: 'NDAA',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+        <CheckCircle className="h-4 w-4 text-green-500 " />
       ) : (
-        <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-red-500 " />
       ),
     },
     {
       key: 'itarControlled',
       header: 'ITAR',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <Shield className="h-4 w-4 text-red-500 mx-auto" />
+        <Shield className="h-4 w-4 text-red-500 " />
       ) : (
         <span className="text-muted-foreground">-</span>
       ),
@@ -739,30 +735,28 @@ export function PartsTable() {
       key: 'rohsCompliant',
       header: 'RoHS',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <Leaf className="h-4 w-4 text-green-500 mx-auto" />
+        <Leaf className="h-4 w-4 text-green-500 " />
       ) : (
-        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-yellow-500 " />
       ),
     },
     {
       key: 'reachCompliant',
       header: 'REACH',
       width: '70px',
-      align: 'center',
       hidden: true,
       render: (value) => value ? (
-        <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+        <CheckCircle className="h-4 w-4 text-green-500 " />
       ) : (
-        <XCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-yellow-500 " />
       ),
     },
 
     // ===== SYSTEM FIELDS =====
     {
       key: 'createdAt',
-      header: 'Ngày tạo',
+      header: t('parts.createdAt'),
       width: '100px',
       hidden: true,
       sortable: true,
@@ -770,7 +764,7 @@ export function PartsTable() {
     },
     {
       key: 'updatedAt',
-      header: 'Cập nhật',
+      header: t('parts.updatedAt'),
       width: '100px',
       hidden: true,
       sortable: true,
@@ -785,7 +779,7 @@ export function PartsTable() {
       sticky: 'right',
       render: (_, row) => <ActionDropdown items={createPartActions(row)} />,
     },
-  ], [editingCostId, editingCostValue]);
+  ], [editingCostId, editingCostValue, t]);
 
   return (
     <TooltipProvider>
@@ -795,10 +789,10 @@ export function PartsTable() {
         <div>
           <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
             <Package className="h-4 w-4" />
-            Parts Master
+            {t('parts.pageTitle')}
           </h1>
           <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
-            Quản lý danh sách parts với AS9100/ITAR compliance
+            {t('parts.pageDesc')}
           </p>
         </div>
 
@@ -811,7 +805,7 @@ export function PartsTable() {
             <DataTableToolbar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="Tìm kiếm part number, tên, manufacturer..."
+              searchPlaceholder={t('parts.searchPlaceholder')}
               onAdd={handleAdd}
               onImport={handleImport}
               onExport={handleExport}
@@ -819,34 +813,34 @@ export function PartsTable() {
               onRefresh={() => fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy)}
               addPermission="parts:create"
               deletePermission="parts:delete"
-              addLabel="Thêm Part"
+              addLabel={t('parts.addPart')}
               selectedCount={selectedIds.size}
               isLoading={loading}
               filters={[
                 {
                   key: 'category',
-                  label: 'Danh mục',
+                  label: t('parts.categoryFilter'),
                   options: categories.map((c) => ({ value: c, label: c })),
                 },
                 {
                   key: 'lifecycle',
-                  label: 'Vòng đời',
+                  label: t('parts.lifecycleFilter'),
                   options: [
-                    { value: 'DEVELOPMENT', label: 'Phát triển' },
-                    { value: 'PROTOTYPE', label: 'Mẫu thử' },
-                    { value: 'ACTIVE', label: 'Hoạt động' },
-                    { value: 'PHASE_OUT', label: 'Ngừng dần' },
-                    { value: 'OBSOLETE', label: 'Lỗi thời' },
-                    { value: 'EOL', label: 'Hết vòng đời' },
+                    { value: 'DEVELOPMENT', label: t('lifecycle.development') },
+                    { value: 'PROTOTYPE', label: t('lifecycle.prototype') },
+                    { value: 'ACTIVE', label: t('lifecycle.active') },
+                    { value: 'PHASE_OUT', label: t('lifecycle.phaseOut') },
+                    { value: 'OBSOLETE', label: t('lifecycle.obsolete') },
+                    { value: 'EOL', label: t('lifecycle.eol') },
                   ],
                 },
                 {
                   key: 'makeOrBuy',
-                  label: 'Sản xuất/Mua',
+                  label: t('parts.makeOrBuyFilter'),
                   options: [
-                    { value: 'MAKE', label: 'Tự sản xuất' },
-                    { value: 'BUY', label: 'Mua' },
-                    { value: 'BOTH', label: 'Cả hai' },
+                    { value: 'MAKE', label: t('makeOrBuy.make') },
+                    { value: 'BUY', label: t('makeOrBuy.buy') },
+                    { value: 'BOTH', label: t('makeOrBuy.both') },
                   ],
                 },
               ]}
@@ -865,15 +859,17 @@ export function PartsTable() {
               columns={columns}
               keyField="id"
               loading={loading}
-              emptyMessage="Không tìm thấy parts"
+              emptyMessage={t('parts.emptyMessage')}
               selectable
               selectedKeys={selectedIds}
               onSelectionChange={setSelectedIds}
               pagination
-              pageSize={20}
+              pageSize={50}
               searchable={false}
               stickyHeader
               columnToggle
+              virtualize
+              virtualRowHeight={36}
               excelMode={{
                 enabled: true,
                 showRowNumbers: true,
@@ -906,7 +902,7 @@ export function PartsTable() {
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Import Parts từ Excel</DialogTitle>
+              <DialogTitle>{t('parts.importFromExcel')}</DialogTitle>
             </DialogHeader>
             <ImportWizard
               defaultEntityType="parts"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/suppliers/check-tax-id?taxId=xxx&excludeId=xxx
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       supplier: existingSupplier,
     });
   } catch (error) {
-    console.error("Error checking tax ID:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/suppliers/check-tax-id' });
     return NextResponse.json({ error: "Lỗi kiểm tra mã số thuế" }, { status: 500 });
   }
 }

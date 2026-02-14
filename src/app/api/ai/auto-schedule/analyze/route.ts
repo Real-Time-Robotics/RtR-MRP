@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { getAISchedulerAnalyzer } from '@/lib/ai/autonomous/ai-scheduler-analyzer';
 import { ScheduleResult } from '@/lib/ai/autonomous/scheduling-engine';
@@ -202,7 +203,7 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    console.error('[Auto-Schedule Analyze API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-schedule/analyze' });
     return NextResponse.json(
       {
         error: 'Không thể phân tích lịch sản xuất',
@@ -315,7 +316,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Analyze API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-schedule/analyze' });
     return NextResponse.json(
       { error: 'Không thể lấy thông tin phân tích' },
       { status: 500 }

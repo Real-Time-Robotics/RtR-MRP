@@ -83,7 +83,7 @@ interface TrialBalanceData {
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
     </div>
   );
 }
@@ -232,7 +232,7 @@ function GeneralLedgerContent() {
     switch (status) {
       case "POSTED":
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-success-100 text-success-800">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Posted
           </Badge>

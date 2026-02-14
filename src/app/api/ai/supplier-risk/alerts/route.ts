@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getEarlyWarningSystem } from '@/lib/ai/supplier-risk';
 
 // =============================================================================
@@ -169,7 +170,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error('[Supplier Risk API] Alerts Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/supplier-risk/alerts' });
     return NextResponse.json(
       {
         success: false,
@@ -255,7 +256,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error('[Supplier Risk API] Alert Action Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/supplier-risk/alerts' });
     return NextResponse.json(
       {
         success: false,

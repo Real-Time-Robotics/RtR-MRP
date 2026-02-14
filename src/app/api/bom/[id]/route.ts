@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -76,7 +77,7 @@ export async function GET(
 
     return NextResponse.json(bomHeader);
   } catch (error) {
-    console.error("Failed to fetch BOM:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch BOM" },
       { status: 500 }
@@ -228,7 +229,7 @@ export async function PUT(
 
     return NextResponse.json(updatedBom);
   } catch (error) {
-    console.error("Failed to update BOM:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/bom/[id]' });
     return NextResponse.json(
       { error: "Failed to update BOM" },
       { status: 500 }
@@ -284,7 +285,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "BOM đã được xóa thành công" });
   } catch (error) {
-    console.error("Failed to delete BOM:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/bom/[id]' });
     return NextResponse.json(
       { error: "Failed to delete BOM" },
       { status: 500 }

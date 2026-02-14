@@ -2,7 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";import { logger } from '@/lib/logger';
+
 import {
   exportToExcelBuffer,
   exportToCSVBuffer,
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     const responseBody = new Uint8Array(result.buffer);
     return new NextResponse(responseBody, { headers });
   } catch (error) {
-    console.error("Export error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/export' });
     return NextResponse.json(
       { error: "Export failed" },
       { status: 500 }
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ jobs });
   } catch (error) {
-    console.error("Export history error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/export' });
     return NextResponse.json(
       { error: "Failed to get export history" },
       { status: 500 }
@@ -161,24 +162,28 @@ async function fetchExportData(
       return prisma.part.findMany({
         where,
         orderBy: { partNumber: "asc" },
+        take: 10000,
       });
 
     case "suppliers":
       return prisma.supplier.findMany({
         where,
         orderBy: { code: "asc" },
+        take: 10000,
       });
 
     case "products":
       return prisma.product.findMany({
         where,
         orderBy: { sku: "asc" },
+        take: 10000,
       });
 
     case "customers":
       return prisma.customer.findMany({
         where,
         orderBy: { code: "asc" },
+        take: 10000,
       });
 
     case "inventory":
@@ -189,6 +194,7 @@ async function fetchExportData(
           warehouse: { select: { code: true, name: true } },
         },
         orderBy: { partId: "asc" },
+        take: 10000,
       });
 
     case "salesOrders":
@@ -199,6 +205,7 @@ async function fetchExportData(
           lines: { include: { product: true } },
         },
         orderBy: { orderDate: "desc" },
+        take: 10000,
       });
 
     case "purchaseOrders":
@@ -209,6 +216,7 @@ async function fetchExportData(
           lines: { include: { part: true } },
         },
         orderBy: { orderDate: "desc" },
+        take: 10000,
       });
 
     case "workOrders":
@@ -218,6 +226,7 @@ async function fetchExportData(
           product: { select: { sku: true, name: true } },
         },
         orderBy: { createdAt: "desc" },
+        take: 10000,
       });
 
     default:
@@ -244,13 +253,14 @@ function buildWhereClause(filters: Record<string, unknown>): Record<string, unkn
   }
 
   if (filters.fromDate || filters.toDate) {
-    where.createdAt = {};
+    const createdAt: Record<string, unknown> = {};
     if (filters.fromDate) {
-      (where.createdAt as Record<string, unknown>).gte = new Date(String(filters.fromDate));
+      createdAt.gte = new Date(String(filters.fromDate));
     }
     if (filters.toDate) {
-      (where.createdAt as Record<string, unknown>).lte = new Date(String(filters.toDate));
+      createdAt.lte = new Date(String(filters.toDate));
     }
+    where.createdAt = createdAt;
   }
 
   return where;

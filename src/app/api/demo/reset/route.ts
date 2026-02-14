@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // DEMO RESET API
@@ -68,7 +69,7 @@ export async function POST() {
       resetBy: userEmail,
     });
   } catch (error) {
-    console.error('[Demo Reset Error]:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/demo/reset' });
 
     return NextResponse.json(
       {
@@ -121,7 +122,7 @@ export async function GET() {
       message: 'Demo data statistics retrieved',
     });
   } catch (error) {
-    console.error('[Demo Stats Error]:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/demo/reset' });
 
     return NextResponse.json(
       {

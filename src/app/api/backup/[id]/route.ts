@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getBackup, getBackupFile } from '@/lib/backup/backup-service';
+import { logger } from '@/lib/logger';
 
 // GET /api/backup/[id] - Get backup details or download
 export async function GET(
@@ -58,7 +59,7 @@ export async function GET(
       data: backup,
     });
   } catch (error) {
-    console.error('Failed to get backup:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/backup/[id]' });
     return NextResponse.json(
       { error: 'Failed to get backup' },
       { status: 500 }

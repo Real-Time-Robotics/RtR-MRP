@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { unifiedAlertService } from '@/lib/ai/alerts';
 
@@ -25,7 +26,7 @@ export async function GET() {
       data: counts,
     });
   } catch (error) {
-    console.error('[Counts API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts/counts' });
     return NextResponse.json(
       { error: 'Failed to fetch counts', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

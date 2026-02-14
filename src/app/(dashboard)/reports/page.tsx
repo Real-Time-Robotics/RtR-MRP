@@ -118,19 +118,19 @@ export default function ReportsPage() {
   };
 
   const getTrendIcon = (trend?: string) => {
-    if (trend === 'UP') return <ArrowUp className="w-4 h-4 text-green-500" />;
-    if (trend === 'DOWN') return <ArrowDown className="w-4 h-4 text-red-500" />;
+    if (trend === 'UP') return <ArrowUp className="w-4 h-4 text-success-500" />;
+    if (trend === 'DOWN') return <ArrowDown className="w-4 h-4 text-danger-500" />;
     return <Minus className="w-4 h-4 text-gray-400" />;
   };
 
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'SUCCESS':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-success-500" />;
       case 'WARNING':
         return <AlertTriangle className="w-5 h-5 text-orange-500" />;
       case 'RECOMMENDATION':
-        return <Lightbulb className="w-5 h-5 text-blue-500" />;
+        return <Lightbulb className="w-5 h-5 text-primary-500" />;
       default:
         return <Info className="w-5 h-5 text-gray-500" />;
     }
@@ -203,7 +203,7 @@ export default function ReportsPage() {
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as ReportPeriod)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500"
               >
                 {PERIOD_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -246,7 +246,7 @@ export default function ReportsPage() {
                         className={cn(
                           'bg-white dark:bg-gray-800 rounded-xl p-5 text-left',
                           'border border-gray-200 dark:border-gray-700',
-                          'hover:border-blue-500 dark:hover:border-blue-500',
+                          'hover:border-primary-500 dark:hover:border-primary-500',
                           'hover:shadow-lg transition-all duration-200',
                           'group'
                         )}
@@ -256,9 +256,9 @@ export default function ReportsPage() {
                             {getIcon(template.icon)}
                           </div>
                           {generating && selectedReport === template.type ? (
-                            <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                            <Loader2 className="w-5 h-5 animate-spin text-primary-500" />
                           ) : (
-                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
                           )}
                         </div>
                         <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
@@ -282,7 +282,7 @@ export default function ReportsPage() {
               <div>
                 <button
                   onClick={() => setReportData(null)}
-                  className="text-sm text-blue-600 hover:text-blue-700 mb-2 flex items-center gap-1 no-print"
+                  className="text-sm text-primary-600 hover:text-primary-700 mb-2 flex items-center gap-1 no-print"
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                   Quay lại danh sách
@@ -295,7 +295,7 @@ export default function ReportsPage() {
               <div className="flex items-center gap-2 no-print">
                 <button
                   onClick={exportToPDF}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center gap-2"
                 >
                   <Download className="w-4 h-4" />
                   Xuất PDF
@@ -324,8 +324,8 @@ export default function ReportsPage() {
                       <div className="flex items-center gap-1 text-sm">
                         {getTrendIcon(card.trend)}
                         <span className={cn(
-                          card.trend === 'UP' ? 'text-green-600' :
-                          card.trend === 'DOWN' ? 'text-red-600' : 'text-gray-500'
+                          card.trend === 'UP' ? 'text-success-600' :
+                          card.trend === 'DOWN' ? 'text-danger-600' : 'text-gray-500'
                         )}>
                           {card.change > 0 ? '+' : ''}{card.change}%
                         </span>
@@ -364,7 +364,7 @@ export default function ReportsPage() {
                             <span className="w-12 text-xs text-gray-500 text-right">{label}</span>
                             <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                className="h-full bg-primary-500 rounded-full transition-all duration-500"
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
@@ -438,7 +438,7 @@ export default function ReportsPage() {
                         return (
                           <div key={idx} className="flex-1 flex flex-col items-center gap-1">
                             <div
-                              className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all duration-500"
+                              className="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t transition-all duration-500"
                               style={{ height: `${height}%` }}
                             />
                             <span className="text-xs text-gray-500">{chart.data.labels[idx]}</span>
@@ -455,7 +455,7 @@ export default function ReportsPage() {
             {reportData.insights && reportData.insights.length > 0 && (
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-yellow-500" />
+                  <Lightbulb className="w-5 h-5 text-warning-500" />
                   Phân tích & Đề xuất
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -464,9 +464,9 @@ export default function ReportsPage() {
                       key={idx}
                       className={cn(
                         'flex items-start gap-3 p-4 rounded-lg',
-                        insight.type === 'SUCCESS' && 'bg-green-50 dark:bg-green-900/20',
+                        insight.type === 'SUCCESS' && 'bg-success-50 dark:bg-success-900/20',
                         insight.type === 'WARNING' && 'bg-orange-50 dark:bg-orange-900/20',
-                        insight.type === 'RECOMMENDATION' && 'bg-blue-50 dark:bg-blue-900/20',
+                        insight.type === 'RECOMMENDATION' && 'bg-primary-50 dark:bg-primary-900/20',
                         insight.type === 'INFO' && 'bg-gray-50 dark:bg-gray-700/50'
                       )}
                     >

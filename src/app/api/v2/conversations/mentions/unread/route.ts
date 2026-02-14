@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching unread mentions:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/mentions/unread' })
     return NextResponse.json(
       { error: 'Failed to fetch unread mentions' },
       { status: 500 }
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Error marking mentions as read:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/mentions/unread' })
     return NextResponse.json(
       { error: 'Failed to mark mentions as read' },
       { status: 500 }

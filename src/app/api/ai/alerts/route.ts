@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import {
   unifiedAlertService,
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Alerts API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts' });
     return NextResponse.json(
       { error: 'Failed to fetch alerts', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Alerts API] POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/alerts' });
     return NextResponse.json(
       { error: 'Failed to process action', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

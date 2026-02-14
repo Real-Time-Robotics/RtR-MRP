@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import { AlertTriangle, Loader2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
@@ -44,19 +43,6 @@ export default function ShortagesPage() {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return <Badge variant="destructive">{priority}</Badge>;
-      case "high":
-        return <Badge variant="default">{priority}</Badge>;
-      case "medium":
-        return <Badge variant="secondary">{priority}</Badge>;
-      default:
-        return <Badge variant="outline">{priority}</Badge>;
-    }
-  };
-
   const totalShortfall = shortages.reduce((sum, s) => sum + s.shortfallQty, 0);
   const criticalCount = shortages.filter((s) => s.priority === "critical").length;
 
@@ -76,28 +62,24 @@ export default function ShortagesPage() {
       key: 'currentStock',
       header: 'Current',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'safetyStock',
       header: 'Safety',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'requiredQty',
       header: 'Required',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
       key: 'shortfallQty',
       header: 'Shortfall',
       width: '90px',
-      align: 'right',
       sortable: true,
       render: (value) => (
         <span className="font-bold text-red-600">-{value}</span>
@@ -127,9 +109,16 @@ export default function ShortagesPage() {
       key: 'priority',
       header: 'Priority',
       width: '90px',
-      align: 'center',
       sortable: true,
-      render: (value) => getPriorityBadge(value),
+      cellClassName: (row) => {
+        switch (row.priority) {
+          case "critical": return "bg-red-50 text-red-800";
+          case "high": return "bg-orange-50 text-orange-800";
+          case "medium": return "bg-yellow-50 text-yellow-800";
+          default: return "bg-gray-50 text-gray-800";
+        }
+      },
+      render: (value) => value,
     },
   ], []);
 

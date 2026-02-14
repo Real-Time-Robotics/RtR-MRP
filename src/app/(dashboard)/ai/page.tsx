@@ -147,8 +147,8 @@ export default function AiDashboardPage() {
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-primary-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Demand Forecasting</p>
@@ -173,8 +173,8 @@ export default function AiDashboardPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Package className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-success-100 rounded-lg">
+              <Package className="h-5 w-5 text-success-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Inventory Optimization</p>
@@ -186,8 +186,8 @@ export default function AiDashboardPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-2 bg-danger-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-danger-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Anomaly Detection</p>
@@ -220,8 +220,8 @@ export default function AiDashboardPage() {
               onClick={() => router.push("/ai/forecast")}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div>
                   <p className="font-medium">Forecast</p>
@@ -262,8 +262,8 @@ export default function AiDashboardPage() {
               onClick={() => router.push("/ai/simulation")}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="p-2 bg-success-100 dark:bg-success-900 rounded-lg">
+                  <Package className="h-5 w-5 text-success-600 dark:text-success-400" />
                 </div>
                 <div>
                   <p className="font-medium">Simulation</p>
@@ -279,8 +279,8 @@ export default function AiDashboardPage() {
           <div className="grid grid-cols-4 gap-4">
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="p-2 bg-danger-100 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-danger-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{highPriority.length}</p>
@@ -290,8 +290,8 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Brain className="h-5 w-5 text-amber-600" />
+                <div className="p-2 bg-warning-100 rounded-lg">
+                  <Brain className="h-5 w-5 text-warning-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{recommendations.length}</p>
@@ -301,8 +301,8 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-success-100 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-success-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">${totalSavings.toLocaleString()}</p>
@@ -312,8 +312,8 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-primary-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-primary-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">87%</p>
@@ -348,7 +348,7 @@ export default function AiDashboardPage() {
                 <div className="space-y-4">
                   {highPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-red-600 mb-2">
+                      <h4 className="text-sm font-medium text-danger-600 mb-2">
                         HIGH PRIORITY ({highPriority.length})
                       </h4>
                       <div className="space-y-3">
@@ -369,7 +369,7 @@ export default function AiDashboardPage() {
 
                   {mediumPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-amber-600 mb-2">
+                      <h4 className="text-sm font-medium text-warning-600 mb-2">
                         MEDIUM PRIORITY ({mediumPriority.length})
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -380,7 +380,7 @@ export default function AiDashboardPage() {
 
                   {lowPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-green-600 mb-2">
+                      <h4 className="text-sm font-medium text-success-600 mb-2">
                         LOW PRIORITY ({lowPriority.length})
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -418,13 +418,13 @@ export default function AiDashboardPage() {
                 <div>
                   <h3 className="font-semibold">Supplier Health</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                    <Badge variant="outline" className="bg-success-100 text-success-800">
                       15 Low Risk
                     </Badge>
-                    <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                    <Badge variant="outline" className="bg-warning-100 text-warning-800">
                       4 Medium
                     </Badge>
-                    <Badge variant="outline" className="bg-red-100 text-red-800">
+                    <Badge variant="outline" className="bg-danger-100 text-danger-800">
                       1 High Risk
                     </Badge>
                   </div>

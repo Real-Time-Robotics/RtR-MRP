@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getForecastEngine,
@@ -201,7 +202,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,
@@ -282,7 +283,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,
@@ -369,7 +370,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,

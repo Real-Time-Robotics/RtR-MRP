@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 import { prisma } from '@/lib/prisma';
@@ -16,22 +17,31 @@ interface ExecutionResult {
 }
 
 async function createPurchaseOrder(
-  suggestion: any,
+  suggestion: Record<string, any>,
   userId: string
 ): Promise<string> {
+  const supplierId = String(suggestion.supplierId || '');
+  const partId = String(suggestion.partId || '');
+  const quantity = Number(suggestion.quantity || 0);
+  const unitPrice = Number(suggestion.unitPrice || 0);
+  const totalAmount = Number(suggestion.totalAmount || 0);
+  const expectedDeliveryDate = suggestion.expectedDeliveryDate as string | undefined;
+  const partNumber = String(suggestion.partNumber || '');
+  const reason = String(suggestion.reason || '');
+
   // Create the actual Purchase Order in the database
   const po = await prisma.purchaseOrder.create({
     data: {
       poNumber: `PO-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-      supplierId: suggestion.supplierId,
+      supplierId,
       status: 'draft',
       orderDate: new Date(),
-      expectedDate: suggestion.expectedDeliveryDate
-        ? new Date(suggestion.expectedDeliveryDate)
+      expectedDate: expectedDeliveryDate
+        ? new Date(expectedDeliveryDate)
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
-      totalAmount: suggestion.totalAmount,
+      totalAmount,
       currency: 'VND',
-      notes: `Auto-generated PO for ${suggestion.partNumber}. ${suggestion.reason || ''}`,
+      notes: `Auto-generated PO for ${partNumber || 'unknown'}. ${reason || ''}`,
     },
   });
 
@@ -40,10 +50,10 @@ async function createPurchaseOrder(
     data: {
       poId: po.id,
       lineNumber: 1,
-      partId: suggestion.partId,
-      quantity: suggestion.quantity,
-      unitPrice: suggestion.unitPrice,
-      lineTotal: suggestion.totalAmount,
+      partId,
+      quantity,
+      unitPrice,
+      lineTotal: totalAmount,
       status: 'pending',
     },
   });
@@ -117,7 +127,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Execute API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/execute' });
     return NextResponse.json(
       {
         error: 'Failed to execute PO suggestion',
@@ -221,7 +231,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Bulk Execute API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/execute' });
     return NextResponse.json(
       {
         error: 'Failed to bulk execute PO suggestions',

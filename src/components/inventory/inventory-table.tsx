@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Package, AlertTriangle, Settings, RefreshCw, Plus, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,10 @@ import { EditableCell } from '@/components/ui-v2/editable-cell';
 import { Column } from '@/components/ui-v2/data-table';
 import { StockStatusBadge } from '@/components/inventory/stock-status-badge';
 import { PermissionButton } from '@/components/ui/permission-button';
+import { usePaginatedData } from '@/hooks/use-paginated-data';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { StockStatus } from '@/types';
 import Link from 'next/link';
 import {
@@ -80,39 +82,34 @@ function formatCurrency(amount: number) {
 // STATS CARDS
 // =============================================================================
 
-function StatsCards({ inventory }: { inventory: InventoryItem[] }) {
-  const criticalCount = inventory.filter(
-    (i) => i.status === 'CRITICAL' || i.status === 'OUT_OF_STOCK'
-  ).length;
-  const reorderCount = inventory.filter((i) => i.status === 'REORDER').length;
-  const okCount = inventory.filter((i) => i.status === 'OK').length;
-
+function StatsCards({ summary }: { summary: { total: number; critical: number; reorder: number; ok: number } }) {
+  const { t } = useLanguage();
   return (
     // COMPACT: gap-4 → gap-2, mb-6 → mb-3
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 shrink-0">
       <Card className="border-gray-200 dark:border-mrp-border">
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{inventory.length}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng SKU</p>
+          <div className="text-lg font-semibold font-mono">{summary.total}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.totalSKU')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-red-600">{criticalCount}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Critical / Hết hàng</p>
+          <div className="text-lg font-semibold font-mono text-red-600">{summary.critical}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.criticalOutOfStock')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-amber-600">{reorderCount}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Cần đặt hàng</p>
+          <div className="text-lg font-semibold font-mono text-amber-600">{summary.reorder}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.reorderNeeded')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-green-600">{okCount}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Đủ hàng</p>
+          <div className="text-lg font-semibold font-mono text-green-600">{summary.ok}</div>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.inStock')}</p>
         </CardContent>
       </Card>
     </div>
@@ -132,8 +129,72 @@ const INVENTORY_FIELD_LABELS: Record<string, { label: string; valueType: FieldCh
 };
 
 export function InventoryTable({ initialData = [] }: InventoryTableProps) {
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
+
+  // Server-side paginated data
+  const {
+    data: rawInventory,
+    loading,
+    pagination,
+    meta,
+    refresh,
+    setSearch,
+    setFilters,
+  } = usePaginatedData<InventoryItem>({
+    endpoint: '/api/inventory',
+    initialPageSize: 50,
+  });
+
+  // Transform raw API data (handle both flat and nested response shapes)
+  const inventory = useMemo(() => {
+    return rawInventory.map((item: any) => ({
+      id: item.id,
+      partId: item.partId || item.part?.id,
+      partNumber: item.partNumber || item.part?.partNumber,
+      name: item.name || item.part?.name,
+      category: item.category || item.part?.category,
+      unit: item.unit || item.part?.unit,
+      unitCost: item.unitCost || item.part?.unitCost || 0,
+      isCritical: item.isCritical || item.part?.isCritical || false,
+      minStockLevel: item.minStockLevel || item.part?.planning?.minStockLevel || 0,
+      reorderPoint: item.reorderPoint || item.part?.planning?.reorderPoint || 0,
+      safetyStock: item.safetyStock || item.part?.planning?.safetyStock || 0,
+      quantity: item.quantity || 0,
+      reserved: item.reserved || item.reservedQty || 0,
+      available: item.available ?? ((item.quantity || 0) - (item.reserved || item.reservedQty || 0)),
+      status: item.status || 'OK',
+      warehouseId: item.warehouseId,
+      warehouseName: item.warehouseName || item.warehouse?.name,
+      lotNumber: item.lotNumber || null,
+      expiryDate: item.expiryDate || null,
+      locationCode: item.locationCode || null,
+    })) as InventoryItem[];
+  }, [rawInventory]);
+
+  // Summary counts from API response (stored alongside pagination)
+  const [summary, setSummary] = useState({ total: 0, critical: 0, reorder: 0, ok: 0 });
+
+  // Fetch summary from the raw API response
+  useEffect(() => {
+    // The API returns summary counts alongside data
+    // We need to extract these from a fresh fetch
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch('/api/inventory?page=1&pageSize=1');
+        const result = await res.json();
+        if (result.summary) {
+          setSummary(result.summary);
+        } else if (result.pagination) {
+          // Fallback: compute from pagination totalItems
+          setSummary(prev => ({ ...prev, total: result.pagination.totalItems }));
+        }
+      } catch {
+        // Fallback: use local data
+      }
+    };
+    fetchSummary();
+  }, [rawInventory]); // Re-fetch summary when data changes
+
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [adjustData, setAdjustData] = useState({
     inventoryId: '',   // inventory record id (unique per part+warehouse+lot)
@@ -154,6 +215,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     item: InventoryItem;
   } | null>(null);
 
+  // Local optimistic state overlay
+  const [localUpdates, setLocalUpdates] = useState<Record<string, Partial<InventoryItem>>>({});
+
+  // Merge server data with local optimistic updates
+  const displayInventory = useMemo(() => {
+    if (Object.keys(localUpdates).length === 0) return inventory;
+    return inventory.map(item => {
+      const updates = localUpdates[item.id];
+      return updates ? { ...item, ...updates } : item;
+    });
+  }, [inventory, localUpdates]);
+
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       // Execute the pending update after confirmation
@@ -173,54 +246,9 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     },
   });
 
-  // Fetch inventory
-  const fetchInventory = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/inventory');
-      const result = await response.json();
-
-      if (response.ok) {
-        // Transform data
-        const items: InventoryItem[] = (result.data || result || []).map((item: any) => ({
-          id: item.id, // Inventory ID
-          partId: item.partId || item.part?.id,
-          partNumber: item.partNumber || item.part?.partNumber,
-          name: item.name || item.part?.name,
-          category: item.category || item.part?.category,
-          unit: item.unit || item.part?.unit,
-          unitCost: item.unitCost || item.part?.unitCost || 0,
-          isCritical: item.isCritical || item.part?.isCritical || false,
-          minStockLevel: item.minStockLevel || item.part?.planning?.minStockLevel || 0,
-          reorderPoint: item.reorderPoint || item.part?.planning?.reorderPoint || 0,
-          safetyStock: item.safetyStock || item.part?.planning?.safetyStock || 0,
-          quantity: item.quantity || 0,
-          reserved: item.reserved || item.reservedQty || 0,
-          available: item.available ?? ((item.quantity || 0) - (item.reserved || item.reservedQty || 0)),
-          status: item.status || 'OK', // This status might be stale if we edit locally, could recalc
-          warehouseId: item.warehouseId,
-          warehouseName: item.warehouseName || item.warehouse?.name,
-          lotNumber: item.lotNumber || null,
-          expiryDate: item.expiryDate || null,
-          locationCode: item.locationCode || null,
-        }));
-        setInventory(items);
-      }
-    } catch (error) {
-      console.error('Failed to fetch inventory:', error);
-      toast.error('Không thể tải danh sách tồn kho');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
-
   const submitAdjustment = async () => {
     if (!adjustData.partId || !adjustData.warehouseId || !adjustData.quantity) {
-      toast.error('Vui lòng chọn part và nhập số lượng');
+      toast.error(t('inv.selectPartError'));
       return;
     }
 
@@ -241,17 +269,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       });
 
       if (res.ok) {
-        toast.success('Điều chỉnh tồn kho thành công');
+        toast.success(t('inv.adjustSuccess'));
         setAdjustDialogOpen(false);
         setAdjustData({ inventoryId: '', partId: '', warehouseId: '', adjustmentType: 'ADD', quantity: '', reason: '' });
-        fetchInventory();
+        setLocalUpdates({});
+        refresh();
       } else {
         const error = await res.json();
-        toast.error(error.error || 'Điều chỉnh thất bại');
+        toast.error(error.error || t('inv.adjustFailed'));
       }
     } catch (error) {
       console.error('Adjustment failed:', error);
-      toast.error('Điều chỉnh thất bại');
+      toast.error(t('inv.adjustFailed'));
     } finally {
       setAdjusting(false);
     }
@@ -261,8 +290,8 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   const executeUpdate = async (rowId: string, field: string, value: any, item: InventoryItem) => {
     const oldValue = (item as any)[field];
 
-    // Optimistic Update
-    setInventory(prev => prev.map(i => i.id === rowId ? { ...i, [field]: value } : i));
+    // Optimistic Update via local overlay
+    setLocalUpdates(prev => ({ ...prev, [rowId]: { ...prev[rowId], [field]: value } }));
 
     try {
       if (field === 'quantity') {
@@ -272,7 +301,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quantity: Number(value) }),
         });
-        toast.success(`Cập nhật số lượng: ${value}`);
+        toast.success(t('inv.updateQtySuccess', { value }));
       } else if (['minStockLevel', 'reorderPoint', 'safetyStock'].includes(field)) {
         // Update Part Planning
         await fetch(`/api/parts/${item.partId}/planning`, {
@@ -280,20 +309,29 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: Number(value) }),
         });
-        toast.success(`Cập nhật định mức: ${value}`);
+        toast.success(t('inv.updatePlanSuccess', { value }));
       }
     } catch (error) {
       console.error('Update failed', error);
-      toast.error('Cập nhật thất bại');
-      // Revert
-      setInventory(prev => prev.map(i => i.id === rowId ? { ...i, [field]: oldValue } : i));
+      toast.error(t('inv.updateFailed'));
+      // Revert optimistic update
+      setLocalUpdates(prev => {
+        const copy = { ...prev };
+        if (copy[rowId]) {
+          const updated = { ...copy[rowId] };
+          delete (updated as any)[field];
+          if (Object.keys(updated).length === 0) delete copy[rowId];
+          else copy[rowId] = updated;
+        }
+        return copy;
+      });
     }
   };
 
   // Update Handler - with Change Impact check
   const handleUpdate = async (rowId: string, field: string, value: any) => {
     // Find item
-    const item = inventory.find(i => i.id === rowId);
+    const item = displayInventory.find(i => i.id === rowId);
     if (!item) return;
 
     const oldValue = (item as any)[field];
@@ -331,7 +369,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     // ===== PART INFO SECTION =====
     {
       key: 'partNumber',
-      header: 'Mã Part',
+      header: t('inv.partNumber'),
       width: '120px',
       sortable: true,
       sticky: 'left',
@@ -346,7 +384,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     },
     {
       key: 'name',
-      header: 'Tên Part',
+      header: t('inv.partName'),
       width: '180px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
@@ -356,38 +394,34 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       header: 'Lot Number',
       width: '120px',
       sortable: true,
-      render: (value) => value ? (
-        <span className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{value}</span>
-      ) : <span className="text-slate-400">-</span>,
+      render: (value) => value ? String(value) : <span className="text-slate-400">-</span>,
     },
     {
       key: 'warehouseName',
-      header: 'Kho',
+      header: t('inv.warehouse'),
       width: '120px',
       sortable: true,
       render: (value) => <span className="text-sm">{value || '-'}</span>,
     },
     {
       key: 'category',
-      header: 'Danh mục',
+      header: t('column.category'),
       width: '120px',
       sortable: true,
       hidden: true,
     },
     {
       key: 'unit',
-      header: 'Đơn vị',
+      header: t('column.unit'),
       width: '70px',
-      align: 'center',
       hidden: true,
     },
 
     // ===== QUANTITY SECTION =====
     {
       key: 'quantity',
-      header: 'Tồn kho',
+      header: t('inv.quantity'),
       width: '100px',
-      align: 'right',
       type: 'number',
       sortable: true,
       render: (value, row) => (
@@ -403,18 +437,16 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     },
     {
       key: 'reserved',
-      header: 'Đã giữ',
+      header: t('inv.reserved'),
       width: '90px',
-      align: 'right',
       type: 'number',
       hidden: true,
       render: (value) => <span className="text-amber-600">{value}</span>,
     },
     {
       key: 'available',
-      header: 'Khả dụng',
+      header: t('inv.available'),
       width: '100px',
-      align: 'right',
       type: 'number',
       render: (value) => <span className="text-green-600 font-medium">{value}</span>,
     },
@@ -424,7 +456,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       key: 'safetyStock',
       header: 'Safety Stock',
       width: '100px',
-      align: 'right',
       type: 'number',
       render: (value, row) => (
         <EditableCell
@@ -441,7 +472,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       key: 'minStockLevel',
       header: 'Min Stock',
       width: '100px',
-      align: 'right',
       type: 'number',
       render: (value, row) => (
         <EditableCell
@@ -458,7 +488,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       key: 'reorderPoint',
       header: 'Reorder Pt',
       width: '100px',
-      align: 'right',
       type: 'number',
       render: (value, row) => (
         <EditableCell
@@ -475,17 +504,29 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     // ===== STATUS & COST SECTION =====
     {
       key: 'status',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '120px',
-      align: 'center',
       sortable: true,
-      render: (_, row) => <StockStatusBadge status={row.status} />
+      cellClassName: (_, row) => {
+        const map: Record<string, string> = {
+          OK: 'bg-green-100 dark:bg-green-900/30',
+          REORDER: 'bg-amber-100 dark:bg-amber-900/30',
+          CRITICAL: 'bg-red-100 dark:bg-red-900/30',
+          OUT_OF_STOCK: 'bg-red-100 dark:bg-red-900/30',
+        };
+        return map[row.status] || '';
+      },
+      render: (_, row) => {
+        const labels: Record<string, string> = {
+          OK: t('inventoryStatus.ok'), REORDER: t('inventoryStatus.reorder'), CRITICAL: t('inventoryStatus.critical'), OUT_OF_STOCK: t('inventoryStatus.outOfStock'),
+        };
+        return <span className="text-xs font-medium">{labels[row.status] || row.status}</span>;
+      },
     },
     {
       key: 'unitCost',
-      header: 'Đơn giá',
+      header: t('column.unitCost'),
       width: '100px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (val) => formatCurrency(val)
@@ -494,12 +535,12 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     // ===== WAREHOUSE SECTION =====
     {
       key: 'warehouseName',
-      header: 'Kho',
+      header: t('inv.warehouse'),
       width: '120px',
       hidden: true,
-      render: (value) => value || 'Mặc định',
+      render: (value) => value || t('inv.defaultWarehouse'),
     },
-  ], [inventory]);
+  ], [displayInventory, t]);
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -508,14 +549,14 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Smart Inventory Grid
+            {t('inv.pageTitle')}
           </h1>
-          <p className="text-xs text-muted-foreground">Excel-mode enabled: Click cells to edit.</p>
+          <p className="text-xs text-muted-foreground">{t('inv.pageDesc')}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchInventory()}>
+          <Button variant="outline" size="sm" onClick={() => { setLocalUpdates({}); refresh(); }}>
             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-            Refresh
+            {t('common.refresh')}
           </Button>
           <PermissionButton
             permission="inventory:adjust"
@@ -528,17 +569,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         </div>
       </div>
 
-      <StatsCards inventory={inventory} />
+      <StatsCards summary={summary} />
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <SmartGrid
-          data={inventory}
+          data={displayInventory}
           columns={columns}
           keyField="id"
           loading={loading}
           searchable
-          pagination
-          pageSize={20}
+          pagination={false}
+          virtualize
+          virtualRowHeight={36}
           stickyHeader
           columnToggle
           excelMode={{
@@ -570,18 +612,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
+            <DialogTitle>{t('inv.adjustTitle')}</DialogTitle>
             <DialogDescription>
-              Thêm hoặc bớt số lượng tồn kho cho một part
+              {t('inv.adjustDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Chọn Part *</Label>
+              <Label>{t('inv.selectPart')}</Label>
               <Select
                 value={adjustData.inventoryId}
                 onValueChange={(value) => {
-                  const item = inventory.find(i => i.id === value);
+                  const item = displayInventory.find(i => i.id === value);
                   if (item) {
                     setAdjustData({
                       ...adjustData,
@@ -593,10 +635,10 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn part cần điều chỉnh" />
+                  <SelectValue placeholder={t('inv.selectPartPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {inventory.map((item) => (
+                  {displayInventory.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.partNumber} - {item.name} [{item.warehouseName || 'N/A'}] (SL: {item.quantity})
                     </SelectItem>
@@ -607,7 +649,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Loại điều chỉnh</Label>
+                <Label>{t('inv.adjustType')}</Label>
                 <Select
                   value={adjustData.adjustmentType}
                   onValueChange={(value) =>
@@ -621,13 +663,13 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
                     <SelectItem value="ADD">
                       <span className="flex items-center gap-2">
                         <Plus className="h-4 w-4 text-green-600" />
-                        Thêm vào
+                        {t('inv.addStock')}
                       </span>
                     </SelectItem>
                     <SelectItem value="SUBTRACT">
                       <span className="flex items-center gap-2">
                         <Minus className="h-4 w-4 text-red-600" />
-                        Trừ đi
+                        {t('inv.subtractStock')}
                       </span>
                     </SelectItem>
                   </SelectContent>
@@ -635,7 +677,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="adjustQty">Số lượng *</Label>
+                <Label htmlFor="adjustQty">{t('inv.quantityLabel')}</Label>
                 <Input
                   id="adjustQty"
                   type="number"
@@ -653,7 +695,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
             {adjustData.inventoryId && adjustData.quantity && (
               <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border">
                 {(() => {
-                  const selectedItem = inventory.find(item => item.id === adjustData.inventoryId);
+                  const selectedItem = displayInventory.find(item => item.id === adjustData.inventoryId);
                   if (!selectedItem) return null;
                   const currentQty = selectedItem.quantity;
                   const adjustQty = parseInt(adjustData.quantity) || 0;
@@ -664,7 +706,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
                   return (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Kết quả sau điều chỉnh:</span>
+                      <span className="text-slate-600 dark:text-slate-400">{t('inv.adjustResult')}</span>
                       <div className="flex items-center gap-2 font-medium">
                         <span>{currentQty}</span>
                         <span className="text-slate-400">→</span>
@@ -672,7 +714,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
                           {newQty}
                         </span>
                         {isNegative && (
-                          <span className="text-xs text-red-500">(không đủ tồn kho!)</span>
+                          <span className="text-xs text-red-500">{t('inv.insufficientStock')}</span>
                         )}
                       </div>
                     </div>
@@ -682,14 +724,14 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Lý do điều chỉnh</Label>
+              <Label htmlFor="reason">{t('inv.adjustReason')}</Label>
               <Textarea
                 id="reason"
                 value={adjustData.reason}
                 onChange={(e) =>
                   setAdjustData({ ...adjustData, reason: e.target.value })
                 }
-                placeholder="Nhập lý do điều chỉnh..."
+                placeholder={t('inv.adjustReasonPlaceholder')}
                 rows={3}
               />
             </div>
@@ -700,10 +742,10 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
                 onClick={() => setAdjustDialogOpen(false)}
                 disabled={adjusting}
               >
-                Hủy
+                {t('common.cancel')}
               </Button>
               <Button onClick={submitAdjustment} disabled={adjusting}>
-                {adjusting ? 'Đang xử lý...' : 'Xác nhận'}
+                {adjusting ? t('common.processing') : t('common.confirm')}
               </Button>
             </div>
           </div>

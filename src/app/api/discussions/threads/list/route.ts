@@ -4,8 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,11 +21,11 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20') || 20, 100);
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.ConversationThreadWhereInput = {
       OR: [
         // Threads user created
         { createdById: session.user.id },
@@ -33,11 +35,11 @@ export async function GET(request: NextRequest) {
     };
 
     if (contextType && contextType !== 'all') {
-      where.contextType = contextType;
+      where.contextType = contextType as Prisma.ConversationThreadWhereInput['contextType'];
     }
 
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as Prisma.ConversationThreadWhereInput['status'];
     }
 
     if (search) {
@@ -137,7 +139,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching threads:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/list' });
     return NextResponse.json(
       { error: 'Failed to fetch threads' },
       { status: 500 }

@@ -111,11 +111,11 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                         <Badge variant="outline" className="font-mono text-base">{supplier.code}</Badge>
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
-                        <Badge className={supplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}>
+                        <Badge className={supplier.status === 'active' ? 'bg-success-100 text-success-800' : 'bg-slate-100 text-slate-800'}>
                             {supplier.status.toUpperCase()}
                         </Badge>
                         {supplier.rating && (
-                            <div className="flex items-center text-yellow-500 text-sm font-medium">
+                            <div className="flex items-center text-warning-500 text-sm font-medium">
                                 <Star className="h-4 w-4 fill-current mr-1" />
                                 {supplier.rating}/5
                             </div>

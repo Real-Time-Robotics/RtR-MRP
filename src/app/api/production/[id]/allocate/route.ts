@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { allocateMaterials, regenerateAllocations } from "@/lib/mrp-engine";
+import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
 
 // POST - Allocate materials to work order
@@ -31,7 +32,7 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Allocate materials error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production/[id]/allocate' });
     return NextResponse.json(
       { error: "Failed to allocate materials" },
       { status: 500 }

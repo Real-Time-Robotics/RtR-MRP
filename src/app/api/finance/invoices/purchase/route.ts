@@ -8,6 +8,7 @@ import {
   recordPurchasePayment,
   getAPAging,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get purchase invoices
 export async function GET(request: NextRequest) {
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ invoices });
   } catch (error) {
-    console.error("Purchase invoices GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/invoices/purchase' });
     return NextResponse.json(
       { error: "Failed to get invoices" },
       { status: 500 }
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error("Purchase invoices POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/invoices/purchase' });
     return NextResponse.json(
       { error: "Failed to process request" },
       { status: 500 }
@@ -212,7 +213,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Purchase invoices PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/finance/invoices/purchase' });
     return NextResponse.json(
       { error: "Failed to update invoice" },
       { status: 500 }

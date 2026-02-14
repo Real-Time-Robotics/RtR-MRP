@@ -111,13 +111,13 @@ export default function SimulationPage() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'demand':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary-100 text-primary-800';
       case 'supply':
         return 'bg-orange-100 text-orange-800';
       case 'capacity':
         return 'bg-purple-100 text-purple-800';
       case 'custom':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-100 text-success-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -160,7 +160,7 @@ export default function SimulationPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-blue-500" />
+              <FileText className="h-5 w-5 text-primary-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Templates</p>
                 <p className="text-2xl font-bold">{templates.length}</p>
@@ -171,7 +171,7 @@ export default function SimulationPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Play className="h-5 w-5 text-green-500" />
+              <Play className="h-5 w-5 text-success-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Active Scenarios</p>
                 <p className="text-2xl font-bold">{scenarios.length}</p>

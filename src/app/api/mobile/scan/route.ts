@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { parseScanBarcode as parseBarcode, getAvailableActions, ScannerEntityType as EntityType } from '@/lib/mobile';
+import { logger } from '@/lib/logger';
 
 // Mock data for demonstration - replace with Prisma queries in production
 const MOCK_PARTS: Record<string, { id: string; partNumber: string; description: string; category: string; onHand: number; reserved: number; reorderPoint: number; uom: string; unitCost: number }> = {
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Scan error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scan' });
     return NextResponse.json(
       { success: false, error: 'Failed to process scan' },
       { status: 500 }

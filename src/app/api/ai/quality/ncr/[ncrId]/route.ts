@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
 interface RouteParams {
@@ -49,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('[Quality API] NCR Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality/ncr/[ncrId]' });
 
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(

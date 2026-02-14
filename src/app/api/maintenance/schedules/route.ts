@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(schedules, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Maintenance schedules API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/schedules' });
     return paginatedError("Failed to fetch maintenance schedules", 500);
   }
 }
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(schedule, { status: 201 });
   } catch (error) {
-    console.error("Create maintenance schedule error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/schedules' });
     return NextResponse.json(
       { error: "Failed to create maintenance schedule" },
       { status: 500 }

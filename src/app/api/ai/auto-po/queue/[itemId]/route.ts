@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
@@ -152,7 +153,7 @@ export async function GET(
       item: enrichedItem,
     });
   } catch (error) {
-    console.error('[Auto-PO Queue Item API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-po/queue/[itemId]' });
     return NextResponse.json(
       { error: 'Failed to get queue item', details: (error as Error).message },
       { status: 500 }

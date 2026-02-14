@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ notification });
   } catch (error) {
-    console.error('Failed to fetch notification:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/[id]' });
     return NextResponse.json(
       { error: 'Failed to fetch notification' },
       { status: 500 }
@@ -80,7 +81,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       notification: updatedNotification,
     });
   } catch (error) {
-    console.error('Failed to update notification:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/[id]' });
     return NextResponse.json(
       { error: 'Failed to update notification' },
       { status: 500 }
@@ -120,7 +121,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       message: 'Notification deleted',
     });
   } catch (error) {
-    console.error('Failed to delete notification:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications/[id]' });
     return NextResponse.json(
       { error: 'Failed to delete notification' },
       { status: 500 }

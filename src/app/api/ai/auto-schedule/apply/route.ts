@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { getScheduleExecutor } from '@/lib/ai/autonomous/schedule-executor';
 import { ScheduleResult } from '@/lib/ai/autonomous/scheduling-engine';
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Apply API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-schedule/apply' });
     return NextResponse.json(
       {
         error: 'Không thể áp dụng lịch sản xuất',
@@ -114,7 +115,7 @@ export async function DELETE(request: NextRequest) {
       result: revertResult,
     });
   } catch (error) {
-    console.error('[Auto-Schedule Apply API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/auto-schedule/apply' });
     return NextResponse.json(
       {
         error: 'Không thể hoàn tác thay đổi',

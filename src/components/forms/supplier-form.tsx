@@ -34,6 +34,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Building2, MapPin, User, Mail, Phone, Clock, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   ChangeImpactDialog,
   useChangeImpact,
@@ -139,6 +140,7 @@ export function SupplierForm({
   supplier,
   onSuccess,
 }: SupplierFormProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const isEditing = !!supplier;
 
@@ -267,15 +269,15 @@ export function SupplierForm({
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(isEditing ? 'Cập nhật nhà cung cấp thành công!' : 'Tạo nhà cung cấp thành công!');
+      toast.success(isEditing ? t('supplierForm.updateSuccess') : t('supplierForm.createSuccess'));
       onSuccess?.(result.data);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save supplier:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
       setPendingSubmitData(null);
@@ -314,12 +316,12 @@ export function SupplierForm({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
+            {isEditing ? t('supplierForm.editTitle') : t('supplierForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Cập nhật thông tin nhà cung cấp'
-              : 'Điền thông tin để tạo nhà cung cấp mới'}
+              ? t('supplierForm.editDesc')
+              : t('supplierForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -328,7 +330,7 @@ export function SupplierForm({
             {/* Basic Info Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Thông tin cơ bản
+                {t('supplierForm.basicInfo')}
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
@@ -337,7 +339,7 @@ export function SupplierForm({
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mã nhà cung cấp *</FormLabel>
+                      <FormLabel>{t('supplierForm.code')}</FormLabel>
                       <FormControl>
                         <Input placeholder="SUP-001" {...field} disabled={isEditing} />
                       </FormControl>
@@ -351,7 +353,7 @@ export function SupplierForm({
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Trạng thái</FormLabel>
+                      <FormLabel>{t('form.status')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -359,9 +361,9 @@ export function SupplierForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">Hoạt động</SelectItem>
-                          <SelectItem value="inactive">Ngưng hoạt động</SelectItem>
-                          <SelectItem value="pending">Chờ duyệt</SelectItem>
+                          <SelectItem value="active">{t('status.active')}</SelectItem>
+                          <SelectItem value="inactive">{t('status.inactiveShort')}</SelectItem>
+                          <SelectItem value="pending">{t('status.approval')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -375,7 +377,7 @@ export function SupplierForm({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tên nhà cung cấp *</FormLabel>
+                    <FormLabel>{t('supplierForm.name')}</FormLabel>
                     <FormControl>
                       <Input placeholder="Công ty TNHH ABC" {...field} />
                     </FormControl>
@@ -390,7 +392,7 @@ export function SupplierForm({
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Quốc gia *</FormLabel>
+                      <FormLabel>{t('supplierForm.country')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -415,14 +417,14 @@ export function SupplierForm({
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Danh mục</FormLabel>
+                      <FormLabel>{t('supplierForm.category')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn danh mục" />
+                            <SelectValue placeholder={t('supplierForm.selectCategory')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -443,7 +445,7 @@ export function SupplierForm({
             {/* Contact Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Thông tin liên hệ
+                {t('supplierForm.contactInfo')}
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
@@ -452,7 +454,7 @@ export function SupplierForm({
                   name="contactName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Người liên hệ</FormLabel>
+                      <FormLabel>{t('supplierForm.contactName')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -469,7 +471,7 @@ export function SupplierForm({
                   name="contactPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Số điện thoại</FormLabel>
+                      <FormLabel>{t('supplierForm.contactPhone')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -487,7 +489,7 @@ export function SupplierForm({
                 name="contactEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('supplierForm.contactEmail')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -510,7 +512,7 @@ export function SupplierForm({
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Địa chỉ</FormLabel>
+                    <FormLabel>{t('supplierForm.address')}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="123 Đường ABC, Quận XYZ, TP.HCM"
@@ -527,7 +529,7 @@ export function SupplierForm({
             {/* Business Terms Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Điều khoản kinh doanh
+                {t('supplierForm.businessTerms')}
               </h4>
 
               <div className="grid grid-cols-3 gap-4">
@@ -536,14 +538,14 @@ export function SupplierForm({
                   name="paymentTerms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Điều khoản thanh toán</FormLabel>
+                      <FormLabel>{t('supplierForm.paymentTerms')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn" />
+                            <SelectValue placeholder={t('form.selectPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -564,7 +566,7 @@ export function SupplierForm({
                   name="leadTimeDays"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lead Time (ngày)</FormLabel>
+                      <FormLabel>{t('supplierForm.leadTimeDays')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -586,7 +588,7 @@ export function SupplierForm({
                   name="rating"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Đánh giá (0-5)</FormLabel>
+                      <FormLabel>{t('supplierForm.rating')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -616,9 +618,9 @@ export function SupplierForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">NDAA Compliant</FormLabel>
+                      <FormLabel className="text-base">{t('supplierForm.ndaaCompliant')}</FormLabel>
                       <FormDescription>
-                        Nhà cung cấp tuân thủ quy định NDAA (Section 889)
+                        {t('supplierForm.ndaaDesc')}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -639,11 +641,11 @@ export function SupplierForm({
                 onClick={() => onOpenChange(false)}
                 disabled={loading || changeImpact.loading}
               >
-                Hủy
+                {t('form.cancel')}
               </Button>
               <Button type="submit" disabled={loading || changeImpact.loading}>
                 {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo nhà cung cấp'}
+                {isEditing ? t('form.save') : t('supplierForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -680,6 +682,7 @@ export function DeleteSupplierDialog({
   supplier,
   onSuccess,
 }: DeleteSupplierDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -694,15 +697,15 @@ export function DeleteSupplierDialog({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success('Đã xóa nhà cung cấp thành công!');
+      toast.success(t('supplierForm.deleteSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to delete supplier:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
+      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
     } finally {
       setLoading(false);
     }
@@ -712,11 +715,9 @@ export function DeleteSupplierDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa nhà cung cấp{' '}
-            <strong>{supplier?.name}</strong> ({supplier?.code})? Hành động này
-            không thể hoàn tác.
+            {t('supplierForm.deleteConfirmDesc', { name: supplier?.name || '', code: supplier?.code || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -725,11 +726,11 @@ export function DeleteSupplierDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            Hủy
+            {t('form.cancel')}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

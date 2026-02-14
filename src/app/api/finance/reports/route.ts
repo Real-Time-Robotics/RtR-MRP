@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getTrialBalance, getVarianceSummary } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get financial reports
 export async function GET(request: NextRequest) {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("Finance reports GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/reports' });
     return NextResponse.json(
       { error: "Failed to generate report" },
       { status: 500 }

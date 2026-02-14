@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { unifiedAlertService, NotificationPreferences } from '@/lib/ai/alerts';
 
@@ -25,7 +26,7 @@ export async function GET() {
       data: preferences,
     });
   } catch (error) {
-    console.error('[Preferences API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts/preferences' });
     return NextResponse.json(
       { error: 'Failed to fetch preferences', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -57,7 +58,7 @@ export async function PUT(request: NextRequest) {
       data: preferences,
     });
   } catch (error) {
-    console.error('[Preferences API] PUT error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/alerts/preferences' });
     return NextResponse.json(
       { error: 'Failed to update preferences', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

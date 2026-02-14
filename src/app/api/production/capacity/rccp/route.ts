@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { calculateRCCP } from "@/lib/production/capacity-engine";
 
 export async function GET(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(rccp);
   } catch (error) {
-    console.error("Failed to calculate RCCP:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/capacity/rccp' });
     return NextResponse.json(
       { error: "Failed to calculate RCCP" },
       { status: 500 }

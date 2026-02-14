@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { getWorkCenterUtilization } from "@/lib/production/capacity-engine";
 
 export async function GET(
@@ -49,7 +50,7 @@ export async function GET(
       todayUtilization: utilization,
     });
   } catch (error) {
-    console.error("Failed to fetch work center:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/work-centers/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch work center" },
       { status: 500 }
@@ -96,7 +97,7 @@ export async function PUT(
 
     return NextResponse.json(workCenter);
   } catch (error) {
-    console.error("Failed to update work center:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/production/work-centers/[id]' });
     return NextResponse.json(
       { error: "Failed to update work center" },
       { status: 500 }
@@ -117,7 +118,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete work center:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/production/work-centers/[id]' });
     return NextResponse.json(
       { error: "Failed to delete work center" },
       { status: 500 }

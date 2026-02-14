@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { workflowEngine } from '@/lib/workflow';
+import { logger } from '@/lib/logger';
 
 interface BulkApprovalItem {
   instanceId: string;
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('[API] Bulk approval error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/workflows/approvals/bulk' });
     return NextResponse.json(
       { error: 'Failed to process bulk approvals' },
       { status: 500 }

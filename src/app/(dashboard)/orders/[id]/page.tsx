@@ -342,10 +342,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
     const getShippedBadge = (shippedQty: number, quantity: number) => {
         if (shippedQty >= quantity) {
-            return <Badge className="bg-green-100 text-green-800 text-xs">{shippedQty}/{quantity}</Badge>;
+            return <Badge className="bg-success-100 text-success-800 text-xs">{shippedQty}/{quantity}</Badge>;
         }
         if (shippedQty > 0) {
-            return <Badge className="bg-amber-100 text-amber-800 text-xs">{shippedQty}/{quantity}</Badge>;
+            return <Badge className="bg-warning-100 text-warning-800 text-xs">{shippedQty}/{quantity}</Badge>;
         }
         return <Badge className="bg-gray-100 text-gray-500 text-xs">0/{quantity}</Badge>;
     };
@@ -648,12 +648,12 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                         <span className="text-muted-foreground text-xs ml-2">({line.productSku})</span>
                                                     </div>
                                                     {isFullyShipped ? (
-                                                        <Badge className="bg-green-100 text-green-800">Đã xuất đủ</Badge>
+                                                        <Badge className="bg-success-100 text-success-800">Đã xuất đủ</Badge>
                                                     ) : (
                                                         <Badge className={
                                                             line.sufficient
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-red-100 text-red-800'
+                                                                ? 'bg-success-100 text-success-800'
+                                                                : 'bg-danger-100 text-danger-800'
                                                         }>
                                                             {line.sufficient ? 'Đủ hàng' : 'Thiếu hàng'}
                                                         </Badge>
@@ -667,7 +667,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                         <span>Đặt hàng: <strong className="text-foreground">{line.orderQty}</strong></span>
                                                         <span>Đã xuất: <strong className="text-foreground">{line.shippedQty}</strong></span>
                                                         <span>Cần xuất: <strong className="text-foreground">{line.requiredQty}</strong></span>
-                                                        <span>Tồn kho: <strong className={line.sufficient ? 'text-green-700' : 'text-red-700'}>{line.totalAvailable}</strong></span>
+                                                        <span>Tồn kho: <strong className={line.sufficient ? 'text-success-700' : 'text-danger-700'}>{line.totalAvailable}</strong></span>
                                                     </div>
 
                                                     {/* Lot details table — only if line is selected */}
@@ -714,10 +714,10 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                                 return (
                                                                     <div className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded ${
                                                                         matched
-                                                                            ? 'bg-green-50 text-green-700'
+                                                                            ? 'bg-success-50 text-success-700'
                                                                             : totalAllocated > required
-                                                                                ? 'bg-red-50 text-red-700'
-                                                                                : 'bg-amber-50 text-amber-700'
+                                                                                ? 'bg-danger-50 text-danger-700'
+                                                                                : 'bg-warning-50 text-warning-700'
                                                                     }`}>
                                                                         {matched ? (
                                                                             <CheckCircle2 className="h-3.5 w-3.5" />

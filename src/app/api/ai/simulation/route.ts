@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import {
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       ...fullResult,
     });
   } catch (error) {
-    console.error('[Simulation API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation' });
     return NextResponse.json(
       { error: 'Failed to run simulation', details: (error as Error).message },
       { status: 500 }
@@ -160,7 +161,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get templates if requested
-    let templates: any[] = [];
+    let templates: unknown[] = [];
     if (includeTemplates) {
       templates = builder.getTemplates();
     }
@@ -181,7 +182,7 @@ export async function GET(request: NextRequest) {
       templateCategories: builder.getTemplateCategories(),
     });
   } catch (error) {
-    console.error('[Simulation API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/simulation' });
     return NextResponse.json(
       { error: 'Failed to fetch simulations' },
       { status: 500 }

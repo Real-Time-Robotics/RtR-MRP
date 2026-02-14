@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
 
@@ -61,7 +62,7 @@ export async function GET(
 
         return NextResponse.json(order);
     } catch (error) {
-        console.error("Failed to fetch order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to fetch order details" },
             { status: 500 }
@@ -125,7 +126,7 @@ export async function PUT(
         }
 
         // Build update data
-        const updateData: Record<string, unknown> = { ...headerData };
+        const updateData: any = { ...headerData };
         if (headerData.requiredDate) {
             updateData.requiredDate = new Date(headerData.requiredDate);
         }
@@ -200,12 +201,12 @@ export async function PUT(
         if (validationResult.data.status && validationResult.data.status !== existing.status) {
             auditStatusChange(request, session.user, "SalesOrder", id, existing.status, validationResult.data.status);
         } else {
-            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
+            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as any, headerData as any);
         }
 
         return NextResponse.json(order);
     } catch (error) {
-        console.error("Failed to update order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to update order" },
             { status: 500 }
@@ -258,7 +259,7 @@ export async function DELETE(
 
         return NextResponse.json({ cancelled: true, id });
     } catch (error) {
-        console.error("Failed to delete/cancel order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to delete order" },
             { status: 500 }

@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyMFALogin, createMFAChallenge, verifyMFAChallenge } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("MFA verification error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/mfa/verify' });
     return NextResponse.json(
       { error: "MFA verification failed" },
       { status: 500 }

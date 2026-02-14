@@ -4,7 +4,9 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Helper: Transform work order from database
 function transformWorkOrder(wo: any) {
@@ -63,7 +65,7 @@ export async function GET(req: NextRequest) {
     const workCenter = searchParams.get('workCenter');
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.WorkOrderWhereInput = {};
 
     if (woId) {
       where.id = woId;
@@ -133,7 +135,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error('Work order API GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/workorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch work orders' },
       { status: 500 }
@@ -446,7 +448,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Work order API POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/workorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to process work order operation' },
       { status: 500 }

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { exportData, type ExportFormat, type ExportEntity } from '@/lib/export/export-service';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // POST /api/export
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       data: result,
     });
   } catch (error) {
-    console.error('[Export API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/export' });
     return NextResponse.json(
       { success: false, error: 'Export failed' },
       { status: 500 }

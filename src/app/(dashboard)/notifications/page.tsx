@@ -228,18 +228,18 @@ export default function NotificationsPage() {
     switch (notification.type) {
       case 'MENTION':
       case 'user_mention':
-        return <AtSign className="h-4 w-4 text-blue-500" />;
+        return <AtSign className="h-4 w-4 text-primary-500" />;
       case 'REPLY':
-        return <MessageSquare className="h-4 w-4 text-green-500" />;
+        return <MessageSquare className="h-4 w-4 text-success-500" />;
       case 'stock_alert':
       case 'ALERT':
         return <Package className="h-4 w-4 text-orange-500" />;
       case 'APPROVAL_REQUEST':
-        return <ClipboardList className="h-4 w-4 text-blue-500" />;
+        return <ClipboardList className="h-4 w-4 text-primary-500" />;
       case 'REMINDER':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning-500" />;
       case 'po_received':
-        return <ShoppingCart className="h-4 w-4 text-emerald-500" />;
+        return <ShoppingCart className="h-4 w-4 text-success-500" />;
       default:
         return <Bell className="h-4 w-4 text-muted-foreground" />;
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createWorkOrder } from "@/lib/mrp-engine";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Production API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production' });
     return paginatedError("Failed to fetch work orders", 500);
   }
 }
@@ -135,15 +136,17 @@ export async function POST(request: NextRequest) {
       data: workOrder,
       message: "Work order created successfully"
     });
-  } catch (error: any) {
-    console.error("[WO CREATE] Error:", error);
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production' });
 
     // Return detailed error for debugging
+    const errMsg = error instanceof Error ? error.message : "Failed to create work order";
+    const errStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Failed to create work order",
-        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+        error: errMsg,
+        details: process.env.NODE_ENV === 'development' ? errStack : undefined
       },
       { status: 500 }
     );

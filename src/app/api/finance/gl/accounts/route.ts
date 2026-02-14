@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAccountBalance, getTrialBalance } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
 // GET - Get GL accounts
 export async function GET(request: NextRequest) {
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ accounts });
   } catch (error) {
-    console.error("GL accounts GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/gl/accounts' });
     return NextResponse.json(
       { error: "Failed to get accounts" },
       { status: 500 }
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
       accountId: account.id,
     });
   } catch (error) {
-    console.error("GL accounts POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/gl/accounts' });
     return NextResponse.json(
       { error: "Failed to create account" },
       { status: 500 }
@@ -185,7 +186,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("GL accounts PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/finance/gl/accounts' });
     return NextResponse.json(
       { error: "Failed to update account" },
       { status: 500 }
@@ -252,7 +253,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("GL accounts DELETE error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/finance/gl/accounts' });
     return NextResponse.json(
       { error: "Failed to delete account" },
       { status: 500 }

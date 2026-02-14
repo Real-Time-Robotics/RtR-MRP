@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { dashboardService } from '@/lib/analytics';
 import type { UserRole } from '@/lib/roles';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // DASHBOARDS API - LIST & CREATE WITH ROLE-BASED ACCESS
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching dashboards:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/dashboards' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch dashboards' },
       { status: 500 }
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating dashboard:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/dashboards' });
     return NextResponse.json(
       { success: false, error: 'Failed to create dashboard' },
       { status: 500 }

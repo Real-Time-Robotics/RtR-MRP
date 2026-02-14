@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Auto-PO Stats API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-po/stats' });
     return NextResponse.json(
       { error: 'Failed to get statistics', details: (error as Error).message },
       { status: 500 }

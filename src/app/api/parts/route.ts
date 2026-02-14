@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/lib/pagination";
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 import { logApi } from "@/lib/audit/audit-logger";
 import { auditCreate } from "@/lib/audit/route-audit";
 
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
     const params = parsePaginationParams(request);
 
     // Build where clause
-    const where: Record<string, unknown> = {};
+    const where: Prisma.PartWhereInput = {};
 
     if (category) where.category = category;
     if (lifecycleStatus) where.lifecycleStatus = lifecycleStatus;
@@ -113,7 +115,7 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(parts, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch parts:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts' });
     return paginatedError("Failed to fetch parts", 500);
   }
 }
@@ -129,11 +131,11 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const bodyResult = await validateBody(PartCreateSchema, request);
     if (!bodyResult.success) {
-      console.error('[Part Create] Validation failed:', JSON.stringify(bodyResult.response, null, 2));
+      logger.error('[Part Create] Validation failed', { context: 'POST /api/parts', details: bodyResult.response });
       return bodyResult.response;
     }
     const data = bodyResult.data;
-    console.log('[Part Create] Validated data:', JSON.stringify(data, null, 2));
+    logger.debug('[Part Create] Validated data', { data });
 
     // Generate ID if not provided
     const id = data.id || `PRT-${Date.now()}`;
@@ -349,18 +351,16 @@ export async function POST(request: NextRequest) {
     auditCreate(request, session.user, "Part", part.id, { partNumber: part.partNumber, name: part.name, category: part.category });
 
     return NextResponse.json(result, { status: 201 });
-  } catch (error: any) {
-    console.error("[Part Create] Failed to create part:", error);
-    console.error("[Part Create] Error details:", {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-    });
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    const errCode = (error as any)?.code;
+    const errMeta = (error as any)?.meta as any | undefined;
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts', code: errCode, meta: errMeta });
     return NextResponse.json(
       {
         error: "Failed to create part",
-        message: error.message,
-        details: error.meta?.cause || error.message
+        message: errMsg,
+        details: errMeta?.cause || errMsg
       },
       { status: 500 }
     );

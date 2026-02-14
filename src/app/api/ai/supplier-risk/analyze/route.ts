@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getAISupplierAnalyzer } from '@/lib/ai/supplier-risk';
 
 // =============================================================================
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error('[Supplier Risk API] AI Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/supplier-risk/analyze' });
     return NextResponse.json(
       {
         success: false,

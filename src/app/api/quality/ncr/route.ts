@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { generateNCRNumber } from "@/lib/quality/ncr-workflow";
-import { buildSearchQuery } from "@/lib/pagination";
+import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // Validation schema for NCR creation
 const NCRCreateSchema = z.object({
@@ -28,8 +29,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const { page, pageSize } = parsePaginationParams(request);
 
     const searchQuery = buildSearchQuery(search, ["ncrNumber", "title", "description", "lotNumber"]);
     const where: Record<string, unknown> = {
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
-    console.error("Lỗi tải danh sách NCR:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/ncr' });
     return NextResponse.json({ error: "Lỗi tải danh sách NCR" }, { status: 500 });
   }
 }
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(ncr, { status: 201 });
   } catch (error) {
-    console.error("Lỗi tạo NCR:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/ncr' });
     return NextResponse.json({ error: "Lỗi tạo NCR" }, { status: 500 });
   }
 }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import { parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 
 // Validation schema for creating a product
@@ -24,12 +27,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const { page, pageSize } = parsePaginationParams(request);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status");
 
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch products:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/products' });
     return NextResponse.json(
       { error: "Failed to fetch products" },
       { status: 500 }
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(product, { status: 201 });
   } catch (error) {
-    console.error("Failed to create product:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/products' });
     return NextResponse.json(
       { error: "Failed to create product" },
       { status: 500 }

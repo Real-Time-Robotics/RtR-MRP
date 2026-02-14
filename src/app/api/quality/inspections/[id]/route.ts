@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(inspection);
   } catch (error) {
-    console.error("Failed to fetch inspection:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspections/[id]' });
     return NextResponse.json({ error: "Failed to fetch inspection" }, { status: 500 });
   }
 }
@@ -68,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const updateData: Record<string, unknown> = {};
+    const updateData: any = {};
     if (data.status) updateData.status = data.status;
     if (data.result) updateData.result = data.result;
     if (data.quantityInspected !== undefined) updateData.quantityInspected = data.quantityInspected;
@@ -255,7 +256,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(inspection);
   } catch (error) {
-    console.error("Failed to update inspection:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/quality/inspections/[id]' });
     return NextResponse.json({ error: "Failed to update inspection" }, { status: 500 });
   }
 }

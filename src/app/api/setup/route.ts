@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { logger } from '@/lib/logger';
 
 // Create a new PrismaClient instance to avoid connection issues
 const prisma = new PrismaClient();
@@ -61,7 +62,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Setup error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/setup' });
     return NextResponse.json(
       {
         success: false,

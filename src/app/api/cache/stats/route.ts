@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Cache stats error:", error);
+    logger.error('Cache stats error', { context: 'GET /api/cache/stats', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Failed to get cache stats" },
       { status: 500 }
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
       message: "Cache management disabled - Redis not available on Render free tier"
     });
   } catch (error) {
-    console.error("Cache management error:", error);
+    logger.error('Cache management error', { context: 'POST /api/cache/stats', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Failed to manage cache" },
       { status: 500 }

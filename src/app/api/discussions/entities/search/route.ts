@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { LinkedEntityType, ENTITY_CONFIG } from '@/types/discussions';
+import { logger } from '@/lib/logger';
 
 interface EntitySearchResult {
   id: string;
@@ -236,7 +237,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ results });
   } catch (error) {
-    console.error('Error searching entities:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/entities/search' });
     return NextResponse.json(
       { error: 'Failed to search entities' },
       { status: 500 }

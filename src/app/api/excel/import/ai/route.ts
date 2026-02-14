@@ -20,6 +20,7 @@ import {
 } from "@/lib/excel/duplicate-detector";
 import { autoDetectMappings, ColumnMapping } from "@/lib/excel/mapper";
 import { detectEntityType } from "@/lib/excel/parser";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -237,7 +238,7 @@ export async function POST(request: NextRequest) {
       ...results,
     });
   } catch (error) {
-    console.error("AI import analysis error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import/ai' });
 
     return NextResponse.json(
       {
@@ -297,7 +298,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("AI capabilities error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import/ai' });
     return NextResponse.json(
       { error: "Failed to get AI capabilities" },
       { status: 500 }

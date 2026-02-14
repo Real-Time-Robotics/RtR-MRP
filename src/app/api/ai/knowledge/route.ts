@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { getRAGKnowledgeService, KnowledgeType } from '@/lib/ai/rag-knowledge-service';
 
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[RAG API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/knowledge' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }
@@ -118,13 +119,13 @@ export async function POST(request: NextRequest) {
 
     // Index all knowledge
     if (action === 'index_all') {
-      console.log('[RAG API] Starting full index...');
+      logger.info('Starting full knowledge base index');
       const startTime = Date.now();
 
       const results = await ragService.indexAll();
 
       const duration = Date.now() - startTime;
-      console.log(`[RAG API] Index completed in ${duration}ms`);
+      logger.info('Knowledge base index completed', { durationMs: duration });
 
       return NextResponse.json({
         success: true,
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('[RAG API] POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/knowledge' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }

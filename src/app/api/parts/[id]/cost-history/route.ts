@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "20") || 20, 100);
 
     const costHistory = await prisma.partCostHistory.findMany({
       where: { partId: id },
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(costHistory);
   } catch (error) {
-    console.error("Failed to fetch cost history:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/[id]/cost-history' });
     return NextResponse.json(
       { error: "Failed to fetch cost history" },
       { status: 500 }
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(costEntry, { status: 201 });
   } catch (error) {
-    console.error("Failed to create cost entry:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts/[id]/cost-history' });
     return NextResponse.json(
       { error: "Failed to create cost entry" },
       { status: 500 }

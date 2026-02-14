@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { getWorkCenterUtilization } from "@/lib/production/capacity-engine";
 
 export async function GET() {
@@ -128,7 +129,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Failed to fetch shop floor data:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/shop-floor' });
     return NextResponse.json(
       { error: "Failed to fetch shop floor data" },
       { status: 500 }

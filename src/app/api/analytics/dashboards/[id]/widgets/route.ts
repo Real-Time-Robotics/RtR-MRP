@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dashboardService } from '@/lib/analytics';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const addWidgetSchema = z.object({
   widgetType: z.enum(['kpi', 'chart-line', 'chart-bar', 'chart-pie', 'chart-area', 'chart-donut', 'gauge', 'table', 'sparkline', 'heatmap']),
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error adding widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/dashboards/[id]/widgets' });
     return NextResponse.json(
       { success: false, error: 'Failed to add widget' },
       { status: 500 }

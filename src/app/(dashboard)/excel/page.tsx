@@ -149,11 +149,11 @@ export default function ExcelHubPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-success-600" />;
       case "failed":
-        return <AlertCircle className="w-4 h-4 text-red-600" />;
+        return <AlertCircle className="w-4 h-4 text-danger-600" />;
       case "processing":
-        return <Clock className="w-4 h-4 text-blue-600 animate-spin" />;
+        return <Clock className="w-4 h-4 text-primary-600 animate-spin" />;
       default:
         return <Clock className="w-4 h-4 text-gray-400" />;
     }
@@ -201,28 +201,28 @@ export default function ExcelHubPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
           href="/excel/import"
-          className="flex items-center gap-4 p-6 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-colors"
+          className="flex items-center gap-4 p-6 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-colors"
         >
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
             <Upload className="w-6 h-6" />
           </div>
           <div>
             <h3 className="font-semibold text-lg">Import Data</h3>
-            <p className="text-blue-100 text-sm">Upload Excel or CSV files</p>
+            <p className="text-primary-100 text-sm">Upload Excel or CSV files</p>
           </div>
           <ArrowRight className="w-5 h-5 ml-auto" />
         </Link>
 
         <Link
           href="/excel/export"
-          className="flex items-center gap-4 p-6 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-colors"
+          className="flex items-center gap-4 p-6 bg-gradient-to-br from-success-500 to-success-600 text-white rounded-xl hover:from-success-600 hover:to-success-700 transition-colors"
         >
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
             <Download className="w-6 h-6" />
           </div>
           <div>
             <h3 className="font-semibold text-lg">Export Data</h3>
-            <p className="text-green-100 text-sm">Download data as Excel</p>
+            <p className="text-success-100 text-sm">Download data as Excel</p>
           </div>
           <ArrowRight className="w-5 h-5 ml-auto" />
         </Link>
@@ -243,7 +243,7 @@ export default function ExcelHubPage() {
       </div>
 
       {/* Stress Test Data Section */}
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl border border-orange-200 dark:border-orange-800 p-6">
+      <div className="bg-gradient-to-br from-orange-50 to-warning-50 dark:from-orange-900/20 dark:to-warning-900/20 rounded-xl border border-orange-200 dark:border-orange-800 p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-orange-500 flex items-center justify-center">
@@ -291,7 +291,7 @@ export default function ExcelHubPage() {
 
         {/* Error State */}
         {stressTestError && !stressTestFetching && (
-          <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
+          <div className="mt-4 p-4 bg-danger-100 dark:bg-danger-900/30 rounded-lg text-danger-800 dark:text-danger-200 text-sm flex items-center gap-2">
             <AlertCircle className="w-5 h-5" />
             {stressTestError}
           </div>
@@ -319,7 +319,7 @@ export default function ExcelHubPage() {
         )}
 
         {stressTestInfo && !stressTestInfo.fileExists && (
-          <div className="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-yellow-800 dark:text-yellow-200 text-sm">
+          <div className="mt-4 p-4 bg-warning-100 dark:bg-warning-900/30 rounded-lg text-warning-800 dark:text-warning-200 text-sm">
             File stress test chưa có. Vui lòng copy file RTR_MRP_StressTest_2024.xls vào thư mục data/
           </div>
         )}
@@ -350,8 +350,8 @@ export default function ExcelHubPage() {
         {stressTestResult && (
           <div className={`mt-4 p-4 rounded-lg ${
             stressTestResult.success
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+              ? 'bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-200'
+              : 'bg-danger-100 dark:bg-danger-900/30 text-danger-800 dark:text-danger-200'
           }`}>
             <div className="flex items-center gap-2 font-medium">
               {stressTestResult.success ? (
@@ -382,7 +382,7 @@ export default function ExcelHubPage() {
             <h2 className="font-semibold text-gray-900 dark:text-white">Recent Imports</h2>
             <Link
               href="/excel/import"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary-600 hover:underline"
             >
               View All
             </Link>
@@ -396,7 +396,7 @@ export default function ExcelHubPage() {
                 <p>No imports yet</p>
                 <Link
                   href="/excel/import"
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                  className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
                 >
                   Start your first import
                 </Link>
@@ -408,7 +408,7 @@ export default function ExcelHubPage() {
                   className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-neutral-700"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
                       {getEntityIcon(job.type)}
                     </div>
                     <div>
@@ -440,7 +440,7 @@ export default function ExcelHubPage() {
             <h2 className="font-semibold text-gray-900 dark:text-white">Recent Exports</h2>
             <Link
               href="/excel/export"
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary-600 hover:underline"
             >
               View All
             </Link>
@@ -454,7 +454,7 @@ export default function ExcelHubPage() {
                 <p>No exports yet</p>
                 <Link
                   href="/excel/export"
-                  className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                  className="text-primary-600 dark:text-primary-400 hover:underline text-sm"
                 >
                   Export your data
                 </Link>
@@ -466,7 +466,7 @@ export default function ExcelHubPage() {
                   className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-neutral-700"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                    <div className="w-10 h-10 rounded-lg bg-success-50 dark:bg-success-900/30 flex items-center justify-center text-success-600 dark:text-success-400">
                       {getEntityIcon(job.type)}
                     </div>
                     <div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 
 const ProductUpdateSchema = z.object({
@@ -41,7 +42,7 @@ export async function GET(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error("Failed to fetch product:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/products/[id]' });
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
   }
 }
@@ -100,7 +101,7 @@ export async function PUT(
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error("Failed to update product:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/products/[id]' });
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
 }

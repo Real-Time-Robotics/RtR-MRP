@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { explodeBOM } from "@/lib/bom-engine";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function GET(
       summary,
     });
   } catch (error) {
-    console.error("BOM Explosion error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/[id]/explode' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to explode BOM" },
       { status: 500 }

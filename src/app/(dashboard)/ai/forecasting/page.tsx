@@ -55,15 +55,15 @@ interface ForecastDetail {
 }
 
 const TREND_ICONS = {
-  UP: <TrendingUp className="w-4 h-4 text-green-500" />,
-  DOWN: <TrendingDown className="w-4 h-4 text-red-500" />,
+  UP: <TrendingUp className="w-4 h-4 text-success-500" />,
+  DOWN: <TrendingDown className="w-4 h-4 text-danger-500" />,
   STABLE: <Minus className="w-4 h-4 text-gray-400" />,
 };
 
 const PRIORITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  CRITICAL: { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', border: 'border-red-200 dark:border-red-800' },
+  CRITICAL: { bg: 'bg-danger-50 dark:bg-danger-900/20', text: 'text-danger-700 dark:text-danger-300', border: 'border-danger-200 dark:border-danger-800' },
   HIGH: { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-200 dark:border-orange-800' },
-  MEDIUM: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-200 dark:border-blue-800' },
+  MEDIUM: { bg: 'bg-primary-50 dark:bg-primary-900/20', text: 'text-primary-700 dark:text-primary-300', border: 'border-primary-200 dark:border-primary-800' },
   LOW: { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', border: 'border-gray-200 dark:border-gray-700' },
 };
 
@@ -128,7 +128,7 @@ export default function DemandForecastingPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary-500 to-cyan-600">
             <TrendingUp className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -138,7 +138,7 @@ export default function DemandForecastingPage() {
         </div>
         <button
           onClick={fetchItems}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
@@ -158,7 +158,7 @@ export default function DemandForecastingPage() {
                 onClick={() => fetchItemDetail(item.itemId)}
                 className={cn(
                   'w-full p-4 text-left border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors',
-                  selectedItem?.itemId === item.itemId && 'bg-blue-50 dark:bg-blue-900/20'
+                  selectedItem?.itemId === item.itemId && 'bg-primary-50 dark:bg-primary-900/20'
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -168,7 +168,7 @@ export default function DemandForecastingPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {item.criticalRecommendations > 0 && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full" />
+                      <span className="w-2 h-2 bg-danger-500 rounded-full" />
                     )}
                     {TREND_ICONS[item.trendDirection]}
                     <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -187,7 +187,7 @@ export default function DemandForecastingPage() {
         <div className="lg:col-span-2 space-y-6">
           {loadingDetail ? (
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+              <RefreshCw className="w-8 h-8 text-primary-600 animate-spin mx-auto mb-4" />
               <p className="text-gray-500">Loading forecast...</p>
             </div>
           ) : selectedItem ? (
@@ -217,7 +217,7 @@ export default function DemandForecastingPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                     <p className="text-sm text-gray-500 mb-1">Accuracy</p>
-                    <p className="text-2xl font-bold text-green-600">{selectedItem.metrics.accuracy}%</p>
+                    <p className="text-2xl font-bold text-success-600">{selectedItem.metrics.accuracy}%</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                     <p className="text-sm text-gray-500 mb-1">MAPE</p>
@@ -237,7 +237,7 @@ export default function DemandForecastingPage() {
               {/* Forecast Chart (Simple representation) */}
               <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-blue-500" />
+                  <BarChart3 className="w-5 h-5 text-primary-500" />
                   Forecast (7 days)
                 </h3>
                 <div className="space-y-3">
@@ -248,14 +248,14 @@ export default function DemandForecastingPage() {
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden relative">
                             <div
-                              className="absolute h-full bg-blue-200 dark:bg-blue-900/50 rounded-full"
+                              className="absolute h-full bg-primary-200 dark:bg-primary-900/50 rounded-full"
                               style={{
                                 left: `${(f.lowerBound / (f.upperBound * 1.2)) * 100}%`,
                                 right: `${100 - (f.upperBound / (f.upperBound * 1.2)) * 100}%`,
                               }}
                             />
                             <div
-                              className="absolute h-full w-1 bg-blue-600 rounded-full"
+                              className="absolute h-full w-1 bg-primary-600 rounded-full"
                               style={{ left: `${(f.predicted / (f.upperBound * 1.2)) * 100}%` }}
                             />
                           </div>
@@ -272,11 +272,11 @@ export default function DemandForecastingPage() {
                 </div>
                 <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-blue-600 rounded" />
+                    <div className="w-3 h-3 bg-primary-600 rounded" />
                     <span>Predicted</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-blue-200 dark:bg-blue-900/50 rounded" />
+                    <div className="w-3 h-3 bg-primary-200 dark:bg-primary-900/50 rounded" />
                     <span>Confidence Interval</span>
                   </div>
                 </div>
@@ -313,7 +313,7 @@ export default function DemandForecastingPage() {
                           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{rec.description}</p>
                           <p className="text-xs text-gray-500">{rec.impact}</p>
                           {rec.suggestedAction && (
-                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-2 font-medium">
+                            <p className="text-sm text-primary-600 dark:text-primary-400 mt-2 font-medium">
                               {rec.suggestedAction}
                             </p>
                           )}
@@ -328,7 +328,7 @@ export default function DemandForecastingPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Package className="w-5 h-5 text-blue-500" />
+                    <Package className="w-5 h-5 text-primary-500" />
                     <span className="text-sm text-gray-500">Current Stock</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -337,7 +337,7 @@ export default function DemandForecastingPage() {
                 </div>
                 <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-5 h-5 text-green-500" />
+                    <Calendar className="w-5 h-5 text-success-500" />
                     <span className="text-sm text-gray-500">Avg Daily Demand</span>
                   </div>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">

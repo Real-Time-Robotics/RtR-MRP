@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generatePegging, savePeggingRecords } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/pegging - Get pegging records or generate for a part
 export async function GET(request: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(records);
   } catch (error) {
-    console.error("Pegging GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/pegging' });
     return NextResponse.json(
       { error: "Failed to get pegging" },
       { status: 500 }
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       pegging: result,
     });
   } catch (error) {
-    console.error("Pegging POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/pegging' });
     return NextResponse.json(
       { error: "Failed to generate pegging" },
       { status: 500 }

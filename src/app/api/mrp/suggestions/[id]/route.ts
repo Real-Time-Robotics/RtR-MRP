@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { approveSuggestion, rejectSuggestion } from "@/lib/mrp-engine";
+import { logger } from "@/lib/logger";
 
 // PATCH - Approve or reject suggestion
 export async function PATCH(
@@ -21,7 +22,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error) {
-    console.error("Suggestion API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/mrp/suggestions/[id]' });
     return NextResponse.json(
       { error: "Failed to update suggestion" },
       { status: 500 }

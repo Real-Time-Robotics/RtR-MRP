@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import {
   getPOSuggestionEngine,
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
           );
           queueItems.push(queueItem);
         } catch (error) {
-          console.error('Failed to add suggestion to queue:', error);
+          logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po', detail: 'Failed to add suggestion to queue' });
         }
       }
     }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po' });
     return NextResponse.json(
       {
         error: 'Failed to generate PO suggestions',
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
       suggestion: enhanced,
     });
   } catch (error) {
-    console.error('[Auto-PO API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-po' });
     return NextResponse.json(
       { error: 'Failed to get PO suggestion' },
       { status: 500 }

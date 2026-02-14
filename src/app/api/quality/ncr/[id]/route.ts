@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { transitionNCR } from "@/lib/quality/ncr-workflow";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 // Validation schema for NCR update
 const NCRUpdateSchema = z.object({
@@ -47,7 +48,7 @@ export async function GET(
 
     return NextResponse.json(ncr);
   } catch (error) {
-    console.error("Failed to fetch NCR:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/ncr/[id]' });
     return NextResponse.json({ error: "Failed to fetch NCR" }, { status: 500 });
   }
 }
@@ -114,7 +115,7 @@ export async function PATCH(
 
     return NextResponse.json(ncr);
   } catch (error) {
-    console.error("Lỗi cập nhật NCR:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/quality/ncr/[id]' });
     return NextResponse.json({ error: "Lỗi cập nhật NCR" }, { status: 500 });
   }
 }

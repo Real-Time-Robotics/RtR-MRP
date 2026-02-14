@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { logger } from '@/lib/logger';
 
 // GET - Get skill by ID with employees
 export async function GET(
@@ -42,7 +43,7 @@ export async function GET(
 
     return NextResponse.json(skill);
   } catch (error) {
-    console.error("Get skill error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills/[id]' });
     return NextResponse.json(
       { error: "Failed to fetch skill" },
       { status: 500 }
@@ -71,7 +72,7 @@ export async function PUT(
 
     return NextResponse.json(skill);
   } catch (error) {
-    console.error("Update skill error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills/[id]' });
     return NextResponse.json(
       { error: "Failed to update skill" },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete skill error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills/[id]' });
     return NextResponse.json(
       { error: "Failed to delete skill" },
       { status: 500 }

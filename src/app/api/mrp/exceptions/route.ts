@@ -8,6 +8,7 @@ import {
   ignoreException,
   clearOldExceptions,
 } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
 
 // GET /api/mrp/exceptions - Get exceptions
 export async function GET(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const exceptionType = searchParams.get("type") || undefined;
     const partId = searchParams.get("partId") || undefined;
     const siteId = searchParams.get("siteId") || undefined;
-    const limit = parseInt(searchParams.get("limit") || "100");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100") || 100, 100);
 
     if (summary) {
       const summaryData = await getExceptionSummary(siteId);
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(exceptions);
   } catch (error) {
-    console.error("Exceptions GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/exceptions' });
     return NextResponse.json(
       { error: "Failed to get exceptions" },
       { status: 500 }
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Exceptions POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/exceptions' });
     return NextResponse.json(
       { error: "Failed to process exception action" },
       { status: 500 }

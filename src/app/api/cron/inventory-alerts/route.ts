@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getInventoryAlertService } from '@/lib/alerts/inventory-alert-service';
+import { logger } from '@/lib/logger';
 
 // Verify cron secret for security
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -35,8 +36,8 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime;
 
     // Log for monitoring
-    console.log(`[Cron:InventoryAlerts] Generated ${alerts.length} alerts in ${duration}ms`);
-    console.log(`[Cron:InventoryAlerts] Summary: ${summary.critical} critical, ${summary.low} low, ${summary.warning} warning`);
+    logger.info(`[Cron:InventoryAlerts] Generated ${alerts.length} alerts in ${duration}ms`);
+    logger.info(`[Cron:InventoryAlerts] Summary: ${summary.critical} critical, ${summary.low} low, ${summary.warning} warning`);
 
     return NextResponse.json({
       success: true,
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Cron:InventoryAlerts] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/cron/inventory-alerts' });
     return NextResponse.json(
       {
         success: false,

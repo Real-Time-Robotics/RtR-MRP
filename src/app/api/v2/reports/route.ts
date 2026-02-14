@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+
 import {
   ReportType,
   ReportPeriod,
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching report templates:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/reports' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch report templates' },
       { status: 500 }
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       data: reportData,
     });
   } catch (error) {
-    console.error('Error generating report:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/reports' });
     return NextResponse.json(
       { success: false, error: 'Failed to generate report' },
       { status: 500 }

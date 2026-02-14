@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get("id");
     const number = searchParams.get("number");
     const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
 
     // Get single work order
     if (id || number) {
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile work orders API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/work-orders' });
     return NextResponse.json(
       { error: "Failed to fetch work orders" },
       { status: 500 }

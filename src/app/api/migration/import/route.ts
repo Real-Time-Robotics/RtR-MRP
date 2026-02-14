@@ -6,12 +6,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { DataTransformer } from '@/lib/migration-engine';
+import { logger } from '@/lib/logger';
 
 const dataTransformer = new DataTransformer();
 
 interface ImportRequest {
   targetTable: string;
-  data: Record<string, any>[];
+  data: any[];
   mappings: any[];
   options?: {
     skipDuplicates?: boolean;
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
       failed: 0,
       skipped: 0,
       errors: [] as any[],
-      created: [] as any[],
-      updated: [] as any[]
+      created: [] as string[],
+      updated: [] as string[]
     };
 
     // Validate only mode
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Import error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/migration/import' });
     return NextResponse.json(
       { error: 'Failed to import data', details: String(error) },
       { status: 500 }
@@ -120,9 +121,9 @@ export async function POST(request: NextRequest) {
 // =============================================================================
 
 async function importPart(
-  data: Record<string, any>,
+  data: any,
   options: any,
-  results: any
+  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
 ) {
   const partNumber = data.partNumber || data.part_number;
 
@@ -289,9 +290,9 @@ async function importPart(
 }
 
 async function importSupplier(
-  data: Record<string, any>,
+  data: any,
   options: any,
-  results: any
+  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
 ) {
   const code = data.supplierCode || data.code;
 
@@ -353,9 +354,9 @@ async function importSupplier(
 }
 
 async function importCustomer(
-  data: Record<string, any>,
+  data: any,
   options: any,
-  results: any
+  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
 ) {
   const code = data.customerCode || data.code;
 
@@ -410,9 +411,9 @@ async function importCustomer(
 }
 
 async function importBOMLine(
-  data: Record<string, any>,
+  data: any,
   options: any,
-  results: any
+  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
 ) {
   const productSku = data.productSku || data.product_sku;
   const partNumber = data.partNumber || data.part_number;
@@ -531,8 +532,8 @@ async function importBOMLine(
 
 async function validateData(
   targetTable: string,
-  data: Record<string, any>[]
-): Promise<any[]> {
+  data: any[]
+): Promise<Record<string, unknown>[]> {
   const errors = [];
 
   for (let i = 0; i < data.length; i++) {

@@ -279,9 +279,9 @@ export default function DashboardsPage() {
 
       {/* Permission Notice */}
       {!permissions.canEdit && (
-        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
-          <Shield className="w-4 h-4 text-amber-600" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+        <div className="flex items-center gap-2 p-3 bg-warning-50 dark:bg-warning-950 rounded-lg border border-warning-200 dark:border-warning-800">
+          <Shield className="w-4 h-4 text-warning-600" />
+          <p className="text-sm text-warning-700 dark:text-warning-300">
             Bạn đang ở chế độ chỉ xem. Liên hệ quản trị viên nếu cần quyền chỉnh sửa.
           </p>
         </div>

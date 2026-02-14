@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Approve API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/approve' });
     return NextResponse.json(
       { error: 'Failed to approve PO suggestion', details: (error as Error).message },
       { status: 500 }
@@ -146,7 +147,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Bulk Approve API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/approve' });
     return NextResponse.json(
       { error: 'Failed to bulk approve PO suggestions', details: (error as Error).message },
       { status: 500 }

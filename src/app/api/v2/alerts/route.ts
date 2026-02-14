@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+
 import {
   Alert,
   AlertStatus,
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching alerts:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/alerts' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch alerts' },
       { status: 500 }
@@ -298,7 +299,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Error processing alert action:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/alerts' });
     return NextResponse.json(
       { success: false, error: 'Failed to process alert action' },
       { status: 500 }

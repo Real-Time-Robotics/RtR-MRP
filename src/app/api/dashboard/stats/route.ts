@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { dataService } from '@/lib/data/data-service';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // GET /api/dashboard/stats
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('[Dashboard API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/dashboard/stats' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch dashboard stats' },
       { status: 500 }

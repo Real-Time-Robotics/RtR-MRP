@@ -8,6 +8,7 @@ import {
   revokeAllUserSessions,
   getSessionStatistics,
 } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const sessions = await getUserActiveSessions(session.user.id);
     return NextResponse.json({ sessions });
   } catch (error) {
-    console.error("Sessions query error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/compliance/sessions' });
     return NextResponse.json(
       { error: "Query failed" },
       { status: 500 }
@@ -77,7 +78,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Session revocation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/compliance/sessions' });
     return NextResponse.json(
       { error: "Revocation failed" },
       { status: 500 }
