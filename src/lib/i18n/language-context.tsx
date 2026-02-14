@@ -1284,6 +1284,17 @@ const translations: Record<Language, Record<string, string>> = {
     "dashBuilder.width": "Width (1-12)",
     "dashBuilder.height": "Height",
     "dashBuilder.widgets": "widgets",
+    // Warehouse Page
+    "warehouse.title": "Warehouse Management",
+    "warehouse.description": "Warehouse system overview",
+    "warehouse.totalSKU": "Total SKU",
+    "warehouse.totalQuantity": "Total Quantity",
+    "warehouse.alerts": "Alerts",
+    "warehouse.warehouseCount": "Warehouses",
+    "warehouse.items": "Items",
+    "warehouse.quantity": "Quantity",
+    "warehouse.critical": "Critical",
+    "warehouse.errorLoading": "Error loading data",
   },
   vi: {
     // Sidebar
@@ -2557,6 +2568,17 @@ const translations: Record<Language, Record<string, string>> = {
     "dashBuilder.width": "Chiều rộng (1-12)",
     "dashBuilder.height": "Chiều cao",
     "dashBuilder.widgets": "widgets",
+    // Warehouse Page
+    "warehouse.title": "Quản lý Kho",
+    "warehouse.description": "Tổng quan hệ thống kho hàng",
+    "warehouse.totalSKU": "Tổng SKU",
+    "warehouse.totalQuantity": "Tổng số lượng",
+    "warehouse.alerts": "Cảnh báo",
+    "warehouse.warehouseCount": "Số kho",
+    "warehouse.items": "Mặt hàng",
+    "warehouse.quantity": "Số lượng",
+    "warehouse.critical": "Cấp bách",
+    "warehouse.errorLoading": "Lỗi tải dữ liệu",
   },
 };
 

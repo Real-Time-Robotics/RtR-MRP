@@ -6,6 +6,7 @@ import { Warehouse, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
+import { useLanguage } from "@/lib/i18n/language-context";
 
 // Types for API responses
 interface WarehouseData {
@@ -91,6 +92,7 @@ function getTypeColor(type?: string) {
 }
 
 export default function WarehousesPage() {
+  const { t } = useLanguage();
   const [warehouses, setWarehouses] = useState<WarehouseWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +135,7 @@ export default function WarehousesPage() {
 
         setWarehouses(merged);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
+        setError(err instanceof Error ? err.message : t("warehouse.errorLoading"));
       } finally {
         setLoading(false);
       }
@@ -151,7 +153,7 @@ export default function WarehousesPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <PageHeader title="Quản lý Kho" description="Tổng quan hệ thống kho hàng" />
+        <PageHeader title={t("warehouse.title")} description={t("warehouse.description")} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -180,7 +182,7 @@ export default function WarehousesPage() {
   if (error) {
     return (
       <div className="p-6 space-y-6">
-        <PageHeader title="Quản lý Kho" description="Tổng quan hệ thống kho hàng" />
+        <PageHeader title={t("warehouse.title")} description={t("warehouse.description")} />
         <Card className="border-danger-200 bg-danger-50 dark:bg-danger-950/20">
           <CardContent className="p-6 text-center text-danger-600 dark:text-danger-400">
             <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
@@ -193,32 +195,32 @@ export default function WarehousesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <PageHeader title="Quản lý Kho" description="Tổng quan hệ thống kho hàng" />
+      <PageHeader title={t("warehouse.title")} description={t("warehouse.description")} />
 
       {/* Summary Stats - compact style giống InventoryTable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardContent className="p-3">
             <div className="text-lg font-semibold font-mono">{totalSKU}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng SKU</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.totalSKU")}</p>
           </CardContent>
         </Card>
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardContent className="p-3">
             <div className="text-lg font-semibold font-mono">{totalQuantity.toLocaleString()}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng số lượng</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.totalQuantity")}</p>
           </CardContent>
         </Card>
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardContent className="p-3">
             <div className="text-lg font-semibold font-mono text-danger-600">{totalAlerts}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Cảnh báo</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.alerts")}</p>
           </CardContent>
         </Card>
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardContent className="p-3">
             <div className="text-lg font-semibold font-mono">{warehouseCount}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Số kho</p>
+            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.warehouseCount")}</p>
           </CardContent>
         </Card>
       </div>
@@ -249,17 +251,17 @@ export default function WarehousesPage() {
                 <CardContent className="pt-0 mt-auto">
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     <div>
-                      <p className="text-xs text-muted-foreground">Items</p>
+                      <p className="text-xs text-muted-foreground">{t("warehouse.items")}</p>
                       <p className="text-lg font-bold">{wh.itemCount}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Số lượng</p>
+                      <p className="text-xs text-muted-foreground">{t("warehouse.quantity")}</p>
                       <p className="text-lg font-bold">
                         {wh.totalQuantity.toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Cấp bách</p>
+                      <p className="text-xs text-muted-foreground">{t("warehouse.critical")}</p>
                       <p
                         className={`text-lg font-bold ${
                           wh.criticalCount > 0
