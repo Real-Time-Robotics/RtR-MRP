@@ -22,6 +22,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // LOGIN CONTENT COMPONENT
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 function LoginContent() {
   const router = useRouter();
   const { status } = useSession();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') || '/home';
   const error = searchParams?.get('error');
@@ -55,16 +57,16 @@ function LoginContent() {
     if (error) {
       switch (error) {
         case 'CredentialsSignin':
-          setLoginError('Email hoặc mật khẩu không đúng');
+          setLoginError(t('login.errorCredentials'));
           break;
         case 'SessionRequired':
-          setLoginError('Vui lòng đăng nhập để tiếp tục');
+          setLoginError(t('login.errorSession'));
           break;
         default:
-          setLoginError('Đã có lỗi xảy ra. Vui lòng thử lại');
+          setLoginError(t('login.errorGeneric'));
       }
     }
-  }, [error]);
+  }, [error, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,14 +86,14 @@ function LoginContent() {
           setShowMFA(true);
           setLoginError(null);
         } else {
-          setLoginError('Email hoặc mật khẩu không đúng');
+          setLoginError(t('login.errorCredentials'));
         }
       } else if (result?.ok) {
         router.push(callbackUrl);
         router.refresh();
       }
     } catch {
-      setLoginError('Đã có lỗi xảy ra. Vui lòng thử lại');
+      setLoginError(t('login.errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -175,12 +177,12 @@ function LoginContent() {
           {/* Form Header */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {showMFA ? 'Xác thực 2 bước' : 'Đăng nhập'}
+              {showMFA ? t('login.mfaTitle') : t('login.heading')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
               {showMFA
-                ? 'Nhập mã OTP từ ứng dụng authenticator'
-                : 'Đăng nhập để truy cập hệ thống quản lý sản xuất'
+                ? t('login.mfaDescription')
+                : t('login.description')
               }
             </p>
           </div>
@@ -191,7 +193,7 @@ function LoginContent() {
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                  Đăng nhập thất bại
+                  {t('login.failed')}
                 </p>
                 <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">
                   {loginError}
@@ -210,11 +212,11 @@ function LoginContent() {
                     htmlFor="email"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
-                    Email
+                    {t('login.email')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                      <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
                       id="email"
@@ -245,11 +247,11 @@ function LoginContent() {
                     htmlFor="password"
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
-                    Mật khẩu
+                    {t('login.password')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+                      <Lock className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
                       id="password"
@@ -278,9 +280,9 @@ function LoginContent() {
                       tabIndex={-1}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <EyeOff className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       ) : (
-                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                        <Eye className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
                       )}
                     </button>
                   </div>
@@ -293,17 +295,17 @@ function LoginContent() {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700"
                     />
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Ghi nhớ đăng nhập
+                      {t('login.rememberMe')}
                     </span>
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    Quên mật khẩu?
+                    {t('login.forgotPassword')}
                   </Link>
                 </div>
               </>
@@ -314,11 +316,11 @@ function LoginContent() {
                   htmlFor="totp"
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                 >
-                  Mã xác thực (OTP)
+                  {t('login.mfaLabel')}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <KeyRound className="h-5 w-5 text-gray-400" />
+                    <KeyRound className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                   </div>
                   <input
                     id="totp"
@@ -343,7 +345,7 @@ function LoginContent() {
                   />
                 </div>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Nhập mã 6 số từ ứng dụng Google Authenticator
+                  {t('login.mfaHint')}
                 </p>
                 <button
                   type="button"
@@ -351,9 +353,9 @@ function LoginContent() {
                     setShowMFA(false);
                     setTotpCode('');
                   }}
-                  className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+                  className="mt-3 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  ← Quay lại đăng nhập
+                  ← {t('login.mfaBack')}
                 </button>
               </div>
             )}
@@ -374,11 +376,11 @@ function LoginContent() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Đang xử lý...</span>
+                  <span>{t('login.processing')}</span>
                 </>
               ) : (
                 <>
-                  <span>{showMFA ? 'Xác thực' : 'Đăng nhập'}</span>
+                  <span>{showMFA ? t('login.mfaVerify') : t('login.signIn')}</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -391,10 +393,10 @@ function LoginContent() {
               <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900 dark:text-blue-100">
-                  Bảo mật dữ liệu
+                  {t('login.securityTitle')}
                 </p>
                 <p className="text-blue-700 dark:text-blue-300 mt-1">
-                  Kết nối được mã hóa SSL. Không chia sẻ mật khẩu với bất kỳ ai.
+                  {t('login.securityDesc')}
                 </p>
               </div>
             </div>
@@ -405,17 +407,17 @@ function LoginContent() {
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Demo Account Available
+                {t('login.demoAvailable')}
               </p>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">Email</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('login.email')}</p>
                   <p className="font-mono text-gray-900 dark:text-gray-100">admin@demo.rtr-mrp.com</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">Password</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('login.password')}</p>
                   <p className="font-mono text-gray-900 dark:text-gray-100">Admin@Demo2026!</p>
                 </div>
               </div>
@@ -428,7 +430,7 @@ function LoginContent() {
               }}
               className="mt-3 w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors"
             >
-              Use Demo Account
+              {t('login.useDemoAccount')}
             </button>
           </div>
 
@@ -436,13 +438,13 @@ function LoginContent() {
           <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800/30">
             <div className="text-center">
               <p className="text-sm text-green-800 dark:text-green-200 mb-2">
-                Want to try different roles?
+                {t('login.tryRoles')}
               </p>
               <Link
                 href="/demo"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                Try Demo with Role Selector
+                {t('login.tryDemoRoles')}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -451,9 +453,9 @@ function LoginContent() {
           {/* Footer Links */}
           <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-              Having issues?{' '}
-              <Link href="/help" className="text-blue-600 hover:text-blue-700 font-medium">
-                Contact support
+              {t('login.havingIssues')}{' '}
+              <Link href="/help" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                {t('login.contactSupport')}
               </Link>
             </p>
           </div>
