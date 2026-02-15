@@ -150,6 +150,11 @@ const nextConfig = {
   // Standalone mode disabled for Render compatibility
   // Enable for Docker: output: "standalone",
 
+  // Server-side packages that should not be bundled by webpack
+  experimental: {
+    serverComponentsExternalPackages: ['pdfkit'],
+  },
+
   // Production optimizations
   poweredByHeader: false,
 

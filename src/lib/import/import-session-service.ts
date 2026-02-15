@@ -1,7 +1,7 @@
 // src/lib/import/import-session-service.ts
 // Import Session Service - Track and manage import sessions
 
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { detectEntityType, autoMapHeaders } from './vietnamese-headers';
 
 // Types

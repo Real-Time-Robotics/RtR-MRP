@@ -1,7 +1,7 @@
 // src/lib/reports/report-scheduler.ts
 // Report Scheduler Service - Manage scheduled report execution
 
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { getReportTemplate, ReportTemplateConfig } from './report-templates';
 
 // Types

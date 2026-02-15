@@ -66,6 +66,7 @@ import {
   Home,
   PauseCircle,
   Trash2,
+  FileUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScreenshotButton } from '@/components/ui/screenshot-button';
@@ -122,6 +123,7 @@ const navigationTabs: NavTab[] = [
           { id: 'inventory', labelKey: 'header.inventoryItem', descriptionKey: 'header.desc.inventory', icon: <Package className="w-5 h-5" />, href: '/inventory', color: 'text-emerald-600 bg-emerald-50' },
           { id: 'parts', labelKey: 'header.partsMaster', descriptionKey: 'header.desc.partsMaster', icon: <Box className="w-5 h-5" />, href: '/parts', color: 'text-teal-600 bg-teal-50' },
           { id: 'bom', labelKey: 'header.billOfMaterials', descriptionKey: 'header.desc.bom', icon: <Layers className="w-5 h-5" />, href: '/bom', color: 'text-cyan-600 bg-cyan-50' },
+          { id: 'smart-import', labelKey: 'header.smartImport', descriptionKey: 'header.desc.smartImport', icon: <FileUp className="w-5 h-5" />, href: '/import/smart', color: 'text-purple-600 bg-purple-50', isNew: true },
         ]
       },
       {
