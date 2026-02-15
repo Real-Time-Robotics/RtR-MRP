@@ -705,9 +705,13 @@ input[type="checkbox"]:disabled {
    GLOBAL TYPOGRAPHY ENHANCEMENT - Bolder, Sharper Text
    ============================================================================= */
 
-/* All headings bolder */
-:root:not(.dark) h1, :root:not(.dark) h2, :root:not(.dark) h3,
-:root:not(.dark) h4, :root:not(.dark) h5, :root:not(.dark) h6 {
+/* All headings bolder — only in dashboard/content areas, not on elements with explicit text color */
+:root:not(.dark) h1:not([class*="text-white"]):not([class*="text-gray-"]),
+:root:not(.dark) h2:not([class*="text-white"]):not([class*="text-gray-"]),
+:root:not(.dark) h3:not([class*="text-white"]):not([class*="text-gray-"]),
+:root:not(.dark) h4:not([class*="text-white"]):not([class*="text-gray-"]),
+:root:not(.dark) h5:not([class*="text-white"]):not([class*="text-gray-"]),
+:root:not(.dark) h6:not([class*="text-white"]):not([class*="text-gray-"]) {
   font-weight: 700;
   color: hsl(222 47% 6%);
 }
