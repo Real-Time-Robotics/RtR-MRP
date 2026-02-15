@@ -63,7 +63,9 @@ import {
   CreditCard,
   BadgeCheck,
   LayoutGrid,
-  Home
+  Home,
+  PauseCircle,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScreenshotButton } from '@/components/ui/screenshot-button';
@@ -197,6 +199,8 @@ const navigationTabs: NavTab[] = [
         items: [
           { id: 'alerts', labelKey: 'header.alertCenter', descriptionKey: 'header.desc.alerts', icon: <AlertTriangle className="w-5 h-5" />, href: '/alerts', color: 'text-orange-600 bg-orange-50', badge: '5' },
           { id: 'nc', labelKey: 'header.nonConformance', descriptionKey: 'header.desc.nc', icon: <X className="w-5 h-5" />, href: '/quality/ncr', color: 'text-red-600 bg-red-50' },
+          { id: 'hold', labelKey: 'header.holdInventory', descriptionKey: 'header.desc.hold', icon: <PauseCircle className="w-5 h-5" />, href: '/quality/hold', color: 'text-amber-600 bg-amber-50' },
+          { id: 'scrap', labelKey: 'header.scrapInventory', descriptionKey: 'header.desc.scrap', icon: <Trash2 className="w-5 h-5" />, href: '/quality/scrap', color: 'text-red-600 bg-red-50' },
         ]
       },
     ],

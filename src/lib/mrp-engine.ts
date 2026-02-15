@@ -1,4 +1,5 @@
 import prisma from "./prisma";
+import { isFeatureEnabled, FEATURE_FLAGS } from "./features/feature-flags";
 
 interface MrpParams {
   planningHorizonDays: number;
@@ -337,7 +338,14 @@ export async function allocateMaterials(workOrderId: string) {
 }
 
 // Issue materials from work order (actual warehouse withdrawal)
+// When USE_WIP_WAREHOUSE flag is ON: deducts from source + creates in WIP
+// When OFF: deducts from source only (original behavior)
 export async function issueMaterials(workOrderId: string, allocationIds?: string[]) {
+  const useWip = await isFeatureEnabled(FEATURE_FLAGS.USE_WIP_WAREHOUSE);
+  const wipWarehouse = useWip
+    ? await prisma.warehouse.findFirst({ where: { type: "WIP", status: "active" } })
+    : null;
+
   // 1. Get allocated (not yet fully issued) allocations
   const whereClause: Record<string, unknown> = {
     workOrderId,
@@ -388,7 +396,7 @@ export async function issueMaterials(workOrderId: string, allocationIds?: string
       },
     });
 
-    // Create LotTransaction for traceability
+    // Create LotTransaction for source deduction
     if (alloc.lotNumber) {
       await prisma.lotTransaction.create({
         data: {
@@ -400,10 +408,60 @@ export async function issueMaterials(workOrderId: string, allocationIds?: string
           newQty: inventory.quantity - issueQty,
           workOrderId,
           fromWarehouseId: alloc.warehouseId,
-          notes: `Issued to WO ${workOrderId}`,
+          toWarehouseId: wipWarehouse?.id || undefined,
+          notes: useWip && wipWarehouse ? "Issued to WIP" : `Issued to WO ${workOrderId}`,
           userId: "system",
         },
       });
+    }
+
+    // WIP tracking: create/increment inventory in WIP warehouse
+    if (useWip && wipWarehouse) {
+      const lotNum = alloc.lotNumber || null;
+      await prisma.inventory.upsert({
+        where: {
+          partId_warehouseId_lotNumber: {
+            partId: alloc.partId,
+            warehouseId: wipWarehouse.id,
+            lotNumber: lotNum ?? "",
+          },
+        },
+        create: {
+          partId: alloc.partId,
+          warehouseId: wipWarehouse.id,
+          quantity: issueQty,
+          lotNumber: lotNum,
+        },
+        update: {
+          quantity: { increment: issueQty },
+        },
+      });
+
+      // Log WIP receipt transaction
+      if (alloc.lotNumber) {
+        const wipInv = await prisma.inventory.findFirst({
+          where: {
+            partId: alloc.partId,
+            warehouseId: wipWarehouse.id,
+            lotNumber: alloc.lotNumber,
+          },
+        });
+        await prisma.lotTransaction.create({
+          data: {
+            lotNumber: alloc.lotNumber,
+            transactionType: "RECEIVED",
+            partId: alloc.partId,
+            quantity: issueQty,
+            previousQty: (wipInv?.quantity || issueQty) - issueQty,
+            newQty: wipInv?.quantity || issueQty,
+            workOrderId,
+            toWarehouseId: wipWarehouse.id,
+            fromWarehouseId: alloc.warehouseId,
+            notes: `Received from ${alloc.warehouseId} to WIP for production`,
+            userId: "system",
+          },
+        });
+      }
     }
   }
 
@@ -601,10 +659,23 @@ export async function receiveProductionOutput(workOrderId: string, userId: strin
     });
   }
 
-  // 4. Find Main Warehouse (type=MAIN → isDefault → oldest active)
-  let warehouse = await prisma.warehouse.findFirst({
-    where: { type: "MAIN", status: "active" },
-  });
+  // 4. Determine target warehouse for finished goods
+  // When USE_FG_WAREHOUSE is ON → target FINISHED_GOODS warehouse
+  // When OFF → target MAIN warehouse (old behavior)
+  const useFg = await isFeatureEnabled(FEATURE_FLAGS.USE_FG_WAREHOUSE);
+  let warehouse = null;
+
+  if (useFg) {
+    warehouse = await prisma.warehouse.findFirst({
+      where: { type: "FINISHED_GOODS", status: "active" },
+    });
+  }
+
+  if (!warehouse) {
+    warehouse = await prisma.warehouse.findFirst({
+      where: { type: "MAIN", status: "active" },
+    });
+  }
 
   if (!warehouse) {
     warehouse = await prisma.warehouse.findFirst({
@@ -675,12 +746,27 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
       },
     });
 
-    // 2. Upsert Inventory
+    // 2. Determine target warehouse for finished goods
+    // When USE_FG_WAREHOUSE is ON → route to FINISHED_GOODS warehouse
+    // When OFF → use receipt's original warehouse (MAIN, old behavior)
+    const useFg = await isFeatureEnabled(FEATURE_FLAGS.USE_FG_WAREHOUSE);
+    let targetWarehouseId = receipt.warehouseId;
+
+    if (useFg) {
+      const fgWarehouse = await tx.warehouse.findFirst({
+        where: { type: "FINISHED_GOODS", status: "active" },
+      });
+      if (fgWarehouse) {
+        targetWarehouseId = fgWarehouse.id;
+      }
+    }
+
+    // 3. Upsert Inventory in target warehouse
     const existingInventory = receipt.partId ? await tx.inventory.findUnique({
       where: {
         partId_warehouseId_lotNumber: {
           partId: receipt.partId,
-          warehouseId: receipt.warehouseId,
+          warehouseId: targetWarehouseId,
           lotNumber: receipt.lotNumber,
         },
       },
@@ -696,14 +782,14 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
       inventory = await tx.inventory.create({
         data: {
           partId: receipt.partId,
-          warehouseId: receipt.warehouseId,
+          warehouseId: targetWarehouseId,
           lotNumber: receipt.lotNumber,
           quantity: receipt.quantity,
         },
       });
     }
 
-    // 3. Create LotTransaction PRODUCED
+    // 4. Create LotTransaction PRODUCED
     if (receipt.partId) {
       await tx.lotTransaction.create({
         data: {
@@ -714,12 +800,64 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
           quantity: receipt.quantity,
           previousQty: existingInventory?.quantity ?? 0,
           newQty: (existingInventory?.quantity ?? 0) + receipt.quantity,
-          toWarehouseId: receipt.warehouseId,
+          toWarehouseId: targetWarehouseId,
           workOrderId: receipt.workOrderId,
           userId,
-          notes: `Nhập kho thành phẩm từ WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (phiếu ${receipt.receiptNumber})`,
+          notes: useFg
+            ? `Production output to FG from WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (${receipt.receiptNumber})`
+            : `Nhập kho thành phẩm từ WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (phiếu ${receipt.receiptNumber})`,
         },
       });
+    }
+
+    // 5. Consume WIP inventory (only if USE_WIP_WAREHOUSE flag is ON)
+    const useWip = await isFeatureEnabled(FEATURE_FLAGS.USE_WIP_WAREHOUSE);
+    if (useWip) {
+      const wipWarehouse = await tx.warehouse.findFirst({
+        where: { type: "WIP", status: "active" },
+      });
+      if (wipWarehouse) {
+        const wipInventory = await tx.inventory.findMany({
+          where: {
+            warehouseId: wipWarehouse.id,
+            quantity: { gt: 0 },
+          },
+        });
+
+        // Filter to items linked to this WO's allocations
+        const woAllocations = await tx.materialAllocation.findMany({
+          where: { workOrderId: receipt.workOrderId, status: "issued" },
+        });
+        const allocPartIds = new Set(woAllocations.map((a) => a.partId));
+
+        for (const inv of wipInventory) {
+          if (!allocPartIds.has(inv.partId)) continue;
+
+          // Log consumption transaction
+          if (inv.lotNumber) {
+            await tx.lotTransaction.create({
+              data: {
+                lotNumber: inv.lotNumber,
+                transactionType: "CONSUMED",
+                partId: inv.partId,
+                quantity: inv.quantity,
+                previousQty: inv.quantity,
+                newQty: 0,
+                workOrderId: receipt.workOrderId,
+                fromWarehouseId: wipWarehouse.id,
+                notes: `Consumed in production for WO ${receipt.workOrder.woNumber}`,
+                userId,
+              },
+            });
+          }
+
+          // Zero out WIP inventory
+          await tx.inventory.update({
+            where: { id: inv.id },
+            data: { quantity: 0 },
+          });
+        }
+      }
     }
 
     return { receipt: updatedReceipt, inventory };
@@ -899,6 +1037,154 @@ export async function createShipment(
   };
 }
 
+// Pick items for shipment — move from FG/MAIN to SHIP staging area
+// Only active when USE_SHIP_WAREHOUSE flag is ON
+export async function pickForShipment(shipmentId: string, userId: string) {
+  const useShip = await isFeatureEnabled(FEATURE_FLAGS.USE_SHIP_WAREHOUSE);
+  if (!useShip) {
+    return { success: true, pickedItems: 0, message: "Shipping staging disabled, skipping pick" };
+  }
+
+  const shipment = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: {
+      salesOrder: true,
+      lines: { include: { product: true } },
+    },
+  });
+
+  if (!shipment) {
+    throw new Error("Phiếu xuất kho không tồn tại");
+  }
+
+  if (shipment.status !== "PREPARING") {
+    throw new Error(`Shipment must be in PREPARING status to pick (current: ${shipment.status})`);
+  }
+
+  const shipWarehouse = await prisma.warehouse.findFirst({
+    where: { type: "SHIPPING", status: "active" },
+  });
+  if (!shipWarehouse) {
+    throw new Error("SHIPPING warehouse not found");
+  }
+
+  // Determine source warehouse: FG if enabled, else MAIN
+  const useFg = await isFeatureEnabled(FEATURE_FLAGS.USE_FG_WAREHOUSE);
+  let sourceWarehouse = null;
+  if (useFg) {
+    sourceWarehouse = await prisma.warehouse.findFirst({
+      where: { type: "FINISHED_GOODS", status: "active" },
+    });
+  }
+  if (!sourceWarehouse) {
+    sourceWarehouse = await prisma.warehouse.findFirst({
+      where: { type: "MAIN", status: "active" },
+    });
+  }
+  if (!sourceWarehouse) {
+    throw new Error("No source warehouse found for picking");
+  }
+
+  let pickedItems = 0;
+
+  await prisma.$transaction(async (tx) => {
+    for (const line of shipment.lines) {
+      const part = await tx.part.findFirst({
+        where: { partNumber: line.product.sku },
+      });
+      if (!part) {
+        throw new Error(`Part not found for product ${line.product.name} (SKU: ${line.product.sku})`);
+      }
+
+      // Find inventory in source warehouse
+      const sourceInventory = await tx.inventory.findMany({
+        where: { partId: part.id, warehouseId: sourceWarehouse!.id },
+        orderBy: { quantity: "desc" },
+      });
+
+      const totalStock = sourceInventory.reduce((sum, inv) => sum + inv.quantity, 0);
+      if (totalStock < line.quantity) {
+        throw new Error(
+          `Insufficient stock for ${line.product.name} in ${sourceWarehouse!.code}. Need: ${line.quantity}, have: ${totalStock}`
+        );
+      }
+
+      // Deduct from source, add to SHIP
+      let remaining = line.quantity;
+      for (const inv of sourceInventory) {
+        if (remaining <= 0) break;
+        const pickQty = Math.min(remaining, inv.quantity);
+
+        // Deduct from source
+        await tx.inventory.update({
+          where: { id: inv.id },
+          data: { quantity: { decrement: pickQty } },
+        });
+
+        // Log transfer out
+        await tx.lotTransaction.create({
+          data: {
+            lotNumber: inv.lotNumber || `PICK-${shipment.shipmentNumber}`,
+            transactionType: "SHIPPED",
+            partId: part.id,
+            productId: line.productId,
+            quantity: pickQty,
+            previousQty: inv.quantity,
+            newQty: inv.quantity - pickQty,
+            fromWarehouseId: sourceWarehouse!.id,
+            toWarehouseId: shipWarehouse.id,
+            salesOrderId: shipment.salesOrderId,
+            soLineNumber: line.lineNumber,
+            userId,
+            notes: `Picked for shipment ${shipment.shipmentNumber} - moved to SHIP staging`,
+          },
+        });
+
+        // Upsert into SHIP warehouse
+        const existingShipInv = await tx.inventory.findFirst({
+          where: {
+            partId: part.id,
+            warehouseId: shipWarehouse.id,
+            lotNumber: inv.lotNumber ?? null,
+          },
+        });
+
+        if (existingShipInv) {
+          await tx.inventory.update({
+            where: { id: existingShipInv.id },
+            data: { quantity: { increment: pickQty } },
+          });
+        } else {
+          await tx.inventory.create({
+            data: {
+              partId: part.id,
+              warehouseId: shipWarehouse.id,
+              quantity: pickQty,
+              lotNumber: inv.lotNumber,
+            },
+          });
+        }
+
+        remaining -= pickQty;
+      }
+
+      pickedItems++;
+    }
+
+    // Update shipment status to PICKED
+    await tx.shipment.update({
+      where: { id: shipmentId },
+      data: { status: "PICKED" },
+    });
+  });
+
+  return {
+    success: true,
+    pickedItems,
+    message: `Picked ${pickedItems} items to shipping staging area`,
+  };
+}
+
 // Confirm shipment — deduct inventory, mark as SHIPPED
 export async function confirmShipment(
   shipmentId: string,
@@ -925,9 +1211,16 @@ export async function confirmShipment(
     throw new Error("Phiếu xuất kho không tồn tại");
   }
 
-  if (shipment.status !== "PREPARING") {
+  // When USE_SHIP_WAREHOUSE is ON, shipment must be PICKED first
+  // When OFF, shipment must be PREPARING (old behavior)
+  const useShip = await isFeatureEnabled(FEATURE_FLAGS.USE_SHIP_WAREHOUSE);
+  const expectedStatus = useShip ? "PICKED" : "PREPARING";
+
+  if (shipment.status !== expectedStatus) {
     throw new Error(
-      `Phiếu xuất kho đã được xử lý (trạng thái: ${shipment.status})`
+      useShip
+        ? `Shipment must be picked before confirming (current: ${shipment.status})`
+        : `Phiếu xuất kho đã được xử lý (trạng thái: ${shipment.status})`
     );
   }
 
@@ -945,19 +1238,33 @@ export async function confirmShipment(
         );
       }
 
-      // Find MAIN warehouse
-      let warehouse = await tx.warehouse.findFirst({
-        where: { type: "MAIN", status: "active" },
-      });
+      // Determine source warehouse based on feature flags
+      // SHIP ON → deduct from SHIPPING (items already staged)
+      // SHIP OFF, FG ON → deduct from FINISHED_GOODS
+      // Both OFF → deduct from MAIN (old behavior)
+      let warehouse = null;
+
+      if (useShip) {
+        warehouse = await tx.warehouse.findFirst({
+          where: { type: "SHIPPING", status: "active" },
+        });
+      } else {
+        const useFg = await isFeatureEnabled(FEATURE_FLAGS.USE_FG_WAREHOUSE);
+        if (useFg) {
+          warehouse = await tx.warehouse.findFirst({
+            where: { type: "FINISHED_GOODS", status: "active" },
+          });
+        }
+      }
+
       if (!warehouse) {
         warehouse = await tx.warehouse.findFirst({
-          where: { isDefault: true, status: "active" },
+          where: { type: "MAIN", status: "active" },
         });
       }
       if (!warehouse) {
         warehouse = await tx.warehouse.findFirst({
-          where: { status: "active" },
-          orderBy: { createdAt: "asc" },
+          where: { isDefault: true, status: "active" },
         });
       }
 

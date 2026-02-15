@@ -242,6 +242,7 @@ model Part {
   partRevisions      PartRevision[]
   partCostsHistory   PartCostHistory[]
   partCertifications PartCertification[]
+  scrapDisposals     ScrapDisposal[]
 
   @@index([category])
   @@index([lifecycleStatus])
@@ -1946,6 +1947,39 @@ model LotTransaction {
   @@index([transactionType])
   @@index([createdAt])
   @@map("lot_transactions")
+}
+
+// ============ SYSTEM SETTINGS (Feature Flags) ============
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("system_settings")
+}
+
+// ============ SCRAP DISPOSAL (Quality) ============
+model ScrapDisposal {
+  id                String   @id @default(cuid())
+  partId            String
+  part              Part     @relation(fields: [partId], references: [id])
+  lotNumber         String?
+  quantity          Int
+  unitCost          Float
+  totalValue        Float
+  disposalMethod    String   // PHYSICAL_DESTRUCTION, RECYCLING, HAZARDOUS_WASTE, OTHER
+  disposalReference String?
+  notes             String?
+  disposedBy        String
+  disposedAt        DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([partId])
+  @@index([disposedAt])
+  @@map("scrap_disposals")
 }
 
 // ============ CERTIFICATES ============
