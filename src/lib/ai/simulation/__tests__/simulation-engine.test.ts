@@ -59,7 +59,6 @@ describe('SimulationEngine', () => {
     description: 'A test scenario',
     baselineDate: new Date(),
     simulationHorizonDays: 90,
-    monteCarloIterations: 100,
     createdAt: new Date(),
     updatedAt: new Date(),
     config: {
@@ -67,7 +66,8 @@ describe('SimulationEngine', () => {
       parameters: {
         demandChange: 20,
         affectedProducts: [],
-        seasonalFactor: 1.0,
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       },
     },
     ...overrides,
@@ -97,9 +97,11 @@ describe('SimulationEngine', () => {
         config: {
           type: 'supply',
           parameters: {
-            affectedSuppliers: ['SUP-001'],
+            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'partial', severity: 50, durationDays: 14 }],
             leadTimeChange: 7,
             priceChange: 10,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -117,6 +119,8 @@ describe('SimulationEngine', () => {
           parameters: {
             capacityChange: -15,
             affectedWorkCenters: ['WC-001'],
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -132,6 +136,8 @@ describe('SimulationEngine', () => {
         config: {
           type: 'custom',
           parameters: {
+            name: 'Custom',
+            description: 'Custom scenario',
             demandFactors: { demandChange: 10 },
             supplyFactors: { priceChange: 5 },
             capacityFactors: { capacityChange: -10 },
@@ -165,7 +171,8 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 50, // 50% increase
             affectedProducts: [],
-            seasonalFactor: 1.0,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -228,7 +235,8 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 100, // Large demand increase
             affectedProducts: [],
-            seasonalFactor: 1.0,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -247,6 +255,8 @@ describe('SimulationEngine', () => {
           parameters: {
             capacityChange: -50, // 50% capacity reduction
             affectedWorkCenters: ['WC-001'],
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -270,9 +280,11 @@ describe('SimulationEngine', () => {
         config: {
           type: 'supply',
           parameters: {
-            affectedSuppliers: ['SUP-001'],
+            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'partial', severity: 50, durationDays: 14 }],
             leadTimeChange: 30,
             priceChange: 20,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -290,7 +302,9 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 80,
             affectedProducts: [],
-            seasonalFactor: 1.5,
+            seasonalAdjustment: true,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -315,7 +329,8 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 30,
             affectedProducts: [],
-            seasonalFactor: 1.0,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -332,9 +347,11 @@ describe('SimulationEngine', () => {
         config: {
           type: 'supply',
           parameters: {
-            affectedSuppliers: ['SUP-001'],
+            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'delay', severity: 40, durationDays: 14 }],
             leadTimeChange: 14,
             priceChange: 10,
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -352,6 +369,8 @@ describe('SimulationEngine', () => {
           parameters: {
             capacityChange: -25,
             affectedWorkCenters: [],
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
         },
       });

@@ -30,7 +30,7 @@ describe('Dashboard Stats API', () => {
         openNCRs: 5,
       };
 
-      vi.mocked(dataService.getDashboardStats).mockResolvedValue(mockStats);
+      vi.mocked(dataService.getDashboardStats).mockResolvedValue(mockStats as any);
 
       const request = new NextRequest('http://localhost:3000/api/dashboard/stats');
       const response = await GET(request);
