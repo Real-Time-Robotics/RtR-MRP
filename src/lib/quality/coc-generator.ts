@@ -1,7 +1,5 @@
 // lib/quality/coc-generator.ts
 import { prisma } from "@/lib/prisma";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export async function generateCertificateNumber(): Promise<string> {
   const year = new Date().getFullYear();
@@ -33,6 +31,8 @@ export async function generateCoCPDF(cocId: string): Promise<Blob> {
     throw new Error("Certificate not found");
   }
 
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 

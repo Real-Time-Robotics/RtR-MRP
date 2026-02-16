@@ -1,6 +1,4 @@
 // lib/pdf-generator.ts
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 interface ReportColumn {
   header: string;
@@ -18,6 +16,8 @@ interface ReportConfig {
 }
 
 export async function generatePdfReport(config: ReportConfig): Promise<Blob> {
+  const { jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 

@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     if (!bodyResult.success) {
       return bodyResult.response;
     }
-    const { productId, quantity, salesOrderId, salesOrderLine, plannedStart, priority } = bodyResult.data;
+    const { productId, quantity, salesOrderId, salesOrderLine, plannedStart, priority, woType, batchSize } = bodyResult.data;
 
     const workOrder = await createWorkOrder(
       productId,
@@ -126,7 +126,10 @@ export async function POST(request: NextRequest) {
       salesOrderId,
       salesOrderLine,
       plannedStart ? new Date(plannedStart) : undefined,
-      priority
+      priority,
+      session.user?.id,
+      woType,
+      batchSize
     );
 
     // Note: Cache invalidation disabled - Redis not available on Render free tier

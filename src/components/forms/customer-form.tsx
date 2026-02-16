@@ -10,6 +10,7 @@ import {
   detectChanges,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
+import { useMutation } from '@/hooks/use-mutation';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Users, User, Mail, Phone, CreditCard } from 'lucide-react';
-import { toast } from 'sonner';
 import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
@@ -101,7 +101,6 @@ const CUSTOMER_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldCh
 
 export function CustomerForm({ open, onOpenChange, customer, onSuccess }: CustomerFormProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const isEditing = !!customer;
 
   // Change Impact state
@@ -123,6 +122,21 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
       creditLimit: null,
       status: 'active',
     },
+  });
+
+  const mutation = useMutation<CustomerFormData, Customer>({
+    url: isEditing ? `/api/customers/${customer!.id}` : '/api/customers',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/customers'],
+    successMessage: isEditing ? t('customerForm.updateSuccess') : t('customerForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      contactEmail: data.contactEmail || null,
+      type: data.type || null,
+      country: data.country || null,
+    }),
   });
 
   useEffect(() => {
@@ -159,62 +173,17 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
     onError: () => {
-      // Even on error, proceed with save (impact check is informational)
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
   });
-
-  const performSave = async (data: CustomerFormData) => {
-    setLoading(true);
-    try {
-      const cleanData = {
-        ...data,
-        contactEmail: data.contactEmail || null,
-        type: data.type || null,
-        country: data.country || null,
-      };
-
-      const url = isEditing ? `/api/customers/${customer.id}` : '/api/customers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof CustomerFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(isEditing ? t('customerForm.updateSuccess') : t('customerForm.createSuccess'));
-      onSuccess?.(result.data);
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('form.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSubmit = async (data: CustomerFormData) => {
     // Only check impact when editing and there are tracked changes
@@ -239,7 +208,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
     }
 
     // No tracked changes or new record - save directly
-    performSave(data);
+    mutation.mutate(data);
   };
 
   return (
@@ -466,11 +435,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isLoading}>
                 {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={mutation.isLoading}>
+                {mutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? t('form.save') : t('customerForm.createBtn')}
               </Button>
             </DialogFooter>
@@ -507,24 +476,14 @@ interface DeleteCustomerDialogProps {
 
 export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }: DeleteCustomerDialogProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
-    if (!customer) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || result.error || t('form.error'));
-      toast.success(t('customerForm.deleteSuccess'));
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/customers/${customer?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/customers'],
+    successMessage: t('customerForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -536,9 +495,9 @@ export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>{t('form.cancel')}</Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleteMutation.isLoading}>{t('form.cancel')}</Button>
+          <Button variant="destructive" onClick={() => customer && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t('form.delete')}
           </Button>
         </DialogFooter>

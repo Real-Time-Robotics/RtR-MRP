@@ -495,6 +495,8 @@ export const WorkOrderCreateSchema = z.object({
   salesOrderId: z.string().max(50).optional(),
   salesOrderLine: z.number().int().min(1).optional(),
   notes: z.string().max(2000).optional(),
+  woType: z.enum(['DISCRETE', 'BATCH']).default('DISCRETE'),
+  batchSize: z.number().int().min(1).optional(),
 });
 
 // =============================================================================

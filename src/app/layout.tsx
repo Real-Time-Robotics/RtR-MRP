@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/pwa";
+import { WebVitals } from "@/components/web-vitals";
 
 // Primary body font (Industrial Precision)
 const ibmPlexSans = IBM_Plex_Sans({
@@ -81,6 +82,7 @@ export default function RootLayout({
       </head>
       <body className={`${beVietnamPro.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetBrainsMono.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>
+          <WebVitals />
           <PWAProvider>
             {children}
           </PWAProvider>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // CONSTANTS
@@ -170,8 +171,6 @@ function StatsCards({ parts }: { parts: Part[] }) {
 
 export function PartsTable() {
   const { t } = useLanguage();
-  const [parts, setParts] = useState<Part[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -193,81 +192,52 @@ export function PartsTable() {
     makeOrBuy: 'all',
   });
 
-  // Fetch parts
-  const fetchParts = useCallback(async (searchTerm?: string, categoryFilter?: string, lifecycleFilter?: string, makeOrBuyFilter?: string) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm);
-      if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
-      if (lifecycleFilter && lifecycleFilter !== 'all') params.set('lifecycleStatus', lifecycleFilter);
-      if (makeOrBuyFilter && makeOrBuyFilter !== 'all') params.set('makeOrBuy', makeOrBuyFilter);
-      // Include relations for full column data (planning, costs, specs)
-      params.set('includeRelations', 'true');
+  // Transform: flatten nested relations (planning, costs, specs, compliance) for display
+  const transformParts = useCallback((raw: any): Part[] => {
+    const partsArray = Array.isArray(raw.data) ? raw.data : (raw.data || []);
+    return partsArray.map((p: any) => ({
+      ...p,
+      unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
+      isCritical: p.isCritical ?? false,
+      makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+      lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+      weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+      lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+      widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+      heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+      material: p.specs?.material ?? p.material ?? '',
+      color: p.specs?.color ?? p.color ?? '',
+      manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+      manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+      drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+      leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+      moq: p.planning?.moq ?? p.moq ?? 1,
+      orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+      minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+      reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+      safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+      maxStock: p.planning?.maxStock ?? null,
+      countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+      ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? false,
+      itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+      rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? false,
+      reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? false,
+    }));
+  }, []);
 
-      const response = await fetch(`/api/parts?${params.toString()}`);
-      const result = await response.json();
+  // SWR-based data fetching with debounced search
+  const { data: parts, loading, refresh } = useApiData<Part>(
+    '/api/parts',
+    {
+      search,
+      category: filters.category,
+      lifecycleStatus: filters.lifecycle,
+      makeOrBuy: filters.makeOrBuy,
+      includeRelations: 'true',
+    },
+    { debounce: search ? 300 : 0, transform: transformParts }
+  );
 
-      if (response.ok) {
-        // Ensure we have an array and each part has required fields with defaults
-        // Flatten nested relations (planning, costs, specs, compliance) for display
-        const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
-        const normalizedParts = partsArray.map((p: any) => ({
-          ...p,
-          // Basic
-          unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
-          isCritical: p.isCritical ?? false,
-          // Engineering
-          makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
-          lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
-          // Physical (from specs)
-          weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
-          lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
-          widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
-          heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
-          material: p.specs?.material ?? p.material ?? '',
-          color: p.specs?.color ?? p.color ?? '',
-          manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
-          manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
-          drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
-          // Procurement (from planning)
-          leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
-          moq: p.planning?.moq ?? p.moq ?? 1,
-          orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
-          minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
-          reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
-          safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
-          maxStock: p.planning?.maxStock ?? null,
-          // Compliance
-          countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
-          ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? false,
-          itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
-          rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? false,
-          reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? false,
-        }));
-        setParts(normalizedParts);
-      } else {
-        setParts([]);
-        toast.error(t('parts.fetchError'));
-      }
-    } catch (error) {
-      console.error('Failed to fetch parts:', error);
-      toast.error(t('parts.fetchError'));
-      setParts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  // Load data on mount and when search/filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
-    }, search ? 300 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [search, filters.category, filters.lifecycle, filters.makeOrBuy, fetchParts]);
-
-  // Filtered parts (client-side additional filtering)
   const filteredParts = parts;
 
   // Handlers
@@ -287,11 +257,11 @@ export function PartsTable() {
   };
 
   const handleFormSuccess = () => {
-    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+    refresh();
     setSelectedIds(new Set());
   };
 
@@ -303,16 +273,12 @@ export function PartsTable() {
     }
 
     try {
-      // Optimistic delete for bulk (harder to revert, but we can try)
-      // For safety on delete, we usually wait.
-      // But let's speed up the UI feedback.
-      const idsToDelete = new Set(selectedIds);
-      setParts(prev => prev.filter(p => !idsToDelete.has(p.id)));
+      const idsToDelete = Array.from(selectedIds);
       setSelectedIds(new Set());
-      toast.info(t('table.bulkDeleting', { count: String(idsToDelete.size), itemType: t('parts.pageTitle') }));
+      toast.info(t('table.bulkDeleting', { count: String(idsToDelete.length), itemType: t('parts.pageTitle') }));
 
       const results = await Promise.all(
-        Array.from(idsToDelete).map((id) =>
+        idsToDelete.map((id) =>
           fetch(`/api/parts/${id}`, { method: 'DELETE' })
         )
       );
@@ -320,13 +286,13 @@ export function PartsTable() {
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
         toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: t('parts.pageTitle') }));
-        fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy); // Revert/Refresh
       } else {
-        toast.success(t('table.bulkDeleteSuccess', { count: String(idsToDelete.size), itemType: t('parts.pageTitle') }));
+        toast.success(t('table.bulkDeleteSuccess', { count: String(idsToDelete.length), itemType: t('parts.pageTitle') }));
       }
+      refresh();
     } catch (error) {
       toast.error(t('table.deleteError'));
-      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+      refresh();
     }
   };
 
@@ -348,8 +314,6 @@ export function PartsTable() {
         return;
       }
 
-      setParts(prev => prev.map(p => p.id === part.id ? { ...p, unitCost: newCost } : p));
-
       const res = await fetch(`/api/parts/${part.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -360,9 +324,10 @@ export function PartsTable() {
 
       toast.success(t('parts.costUpdated'));
       setEditingCostId(null);
+      refresh();
     } catch (error) {
       toast.error(t('parts.costUpdateFailed'));
-      fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+      refresh();
     }
   };
 
@@ -441,7 +406,7 @@ export function PartsTable() {
 
   const handleImportSuccess = () => {
     setImportDialogOpen(false);
-    fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy);
+    refresh();
     toast.success(t('parts.importSuccess'));
   };
 
@@ -810,7 +775,7 @@ export function PartsTable() {
               onImport={handleImport}
               onExport={handleExport}
               onBulkDelete={handleBulkDelete}
-              onRefresh={() => fetchParts(search, filters.category, filters.lifecycle, filters.makeOrBuy)}
+              onRefresh={refresh}
               addPermission="parts:create"
               deletePermission="parts:delete"
               addLabel={t('parts.addPart')}

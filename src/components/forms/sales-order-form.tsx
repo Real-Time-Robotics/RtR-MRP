@@ -40,7 +40,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Loader2, ShoppingCart, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
   ChangeImpactDialog,
@@ -49,6 +48,7 @@ import {
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { useMutation } from '@/hooks/use-mutation';
 
 // =============================================================================
 // CHANGE IMPACT CONFIGURATION
@@ -132,7 +132,6 @@ interface SalesOrderFormProps {
 
 export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOrderFormProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const isEditing = !!order;
@@ -236,70 +235,37 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
     }
   }, [open, order, form]);
 
+  const mutation = useMutation<SalesOrderFormData, SalesOrder>({
+    url: isEditing ? `/api/sales-orders/${order!.id}` : '/api/sales-orders',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/sales-orders'],
+    successMessage: isEditing ? t('soForm.updateSuccess') : t('soForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      promisedDate: data.promisedDate || null,
+      notes: data.notes || null,
+    }),
+  });
+
   // Change Impact hook
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
     onError: () => {
-      // Even on error, proceed with save (impact check is informational)
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
   });
 
-  const performSave = async (data: SalesOrderFormData) => {
-    setLoading(true);
-
-    try {
-      const cleanData = {
-        ...data,
-        promisedDate: data.promisedDate || null,
-        notes: data.notes || null,
-      };
-
-      const url = isEditing ? `/api/sales-orders/${order.id}` : '/api/sales-orders';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof SalesOrderFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(isEditing ? t('soForm.updateSuccess') : t('soForm.createSuccess'));
-      onSuccess?.(result.data || result);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save order:', error);
-      toast.error(error instanceof Error ? error.message : t('form.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const onSubmit = async (data: SalesOrderFormData) => {
-    // Only check impact when editing and there are tracked changes
     if (isEditing && order && originalValuesRef.current) {
       const changes = detectChanges(
         originalValuesRef.current,
@@ -314,8 +280,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
       }
     }
 
-    // No tracked changes or new record - save directly
-    performSave(data);
+    mutation.mutate(data);
   };
 
   const addLine = () => {
@@ -617,11 +582,11 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isLoading}>
                 {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={mutation.isLoading}>
+                {mutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? t('form.save') : t('soForm.createBtn')}
               </Button>
             </DialogFooter>
@@ -658,30 +623,14 @@ interface DeleteSalesOrderDialogProps {
 
 export function DeleteSalesOrderDialog({ open, onOpenChange, order, onSuccess }: DeleteSalesOrderDialogProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
-    if (!order) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/sales-orders/${order.id}`, { method: 'DELETE' });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(result.deleted ? t('soForm.deleteSuccess') : t('soForm.cancelSuccess'));
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete order:', error);
-      toast.error(error instanceof Error ? error.message : t('form.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/sales-orders/${order?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/sales-orders'],
+    successMessage: order?.status === 'draft' ? t('soForm.deleteSuccess') : t('soForm.cancelSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -697,11 +646,11 @@ export function DeleteSalesOrderDialog({ open, onOpenChange, order, onSuccess }:
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleteMutation.isLoading}>
             {t('form.no')}
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="destructive" onClick={() => order && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {order?.status === 'draft' ? t('form.delete') : t('soForm.cancelBtn')}
           </Button>
         </DialogFooter>

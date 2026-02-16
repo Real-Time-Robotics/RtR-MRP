@@ -386,9 +386,8 @@ export function useAIImport(): UseAIImportReturn {
   );
 
   const acceptDuplicateResolution = useCallback(
-    (resolution: AIDuplicateResolution) => {
+    (_resolution: AIDuplicateResolution) => {
       // Mark this resolution as accepted - could be used to update UI state
-      console.log("Accepted resolution:", resolution);
     },
     []
   );

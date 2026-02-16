@@ -159,7 +159,6 @@ export default function DemoPage() {
 
     try {
       const creds = DEMO_CREDENTIALS[role];
-      console.log('[DEMO] Attempting login with:', creds.email);
 
       const result = await signIn('credentials', {
         redirect: false,
@@ -167,13 +166,10 @@ export default function DemoPage() {
         password: creds.password,
       });
 
-      console.log('[DEMO] SignIn result:', result);
-
       if (result?.error) {
         console.error('[DEMO] Login error:', result.error);
         setError(`Login failed: ${result.error}`);
       } else if (result?.ok) {
-        console.log('[DEMO] Login success, redirecting...');
         router.push('/home');
         router.refresh();
       } else {

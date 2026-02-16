@@ -81,7 +81,6 @@ export default function NewSalesOrderPage() {
       if (res.ok) {
         const result = await res.json();
         const items = result.data || result.products || [];
-        console.log("[fetchProducts] loaded:", items.length, "products");
         setProducts(items);
       } else {
         console.error("[fetchProducts] API error:", res.status);

@@ -33,7 +33,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Building2, MapPin, User, Mail, Phone, Clock, Star } from 'lucide-react';
-import { toast } from 'sonner';
 import { useLanguage } from '@/lib/i18n/language-context';
 import {
   ChangeImpactDialog,
@@ -41,6 +40,7 @@ import {
   detectChanges,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
+import { useMutation } from '@/hooks/use-mutation';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -141,26 +141,11 @@ export function SupplierForm({
   onSuccess,
 }: SupplierFormProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const isEditing = !!supplier;
 
   // Store original values for change impact detection
   const originalValuesRef = useRef<Record<string, unknown> | null>(null);
   const [pendingSubmitData, setPendingSubmitData] = useState<SupplierFormData | null>(null);
-
-  // Change Impact hook
-  const changeImpact = useChangeImpact({
-    onSuccess: () => {
-      if (pendingSubmitData) {
-        performSave(pendingSubmitData);
-      }
-    },
-    onError: () => {
-      if (pendingSubmitData) {
-        performSave(pendingSubmitData);
-      }
-    },
-  });
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -178,6 +163,37 @@ export function SupplierForm({
       rating: null,
       category: '',
       status: 'active',
+    },
+  });
+
+  const mutation = useMutation<SupplierFormData, Supplier>({
+    url: isEditing ? `/api/suppliers/${supplier!.id}` : '/api/suppliers',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/suppliers'],
+    successMessage: isEditing ? t('supplierForm.updateSuccess') : t('supplierForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      contactName: data.contactName || null,
+      contactEmail: data.contactEmail || null,
+      contactPhone: data.contactPhone || null,
+      address: data.address || null,
+      category: data.category || null,
+    }),
+  });
+
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        mutation.mutate(pendingSubmitData);
+      }
+    },
+    onError: () => {
+      if (pendingSubmitData) {
+        mutation.mutate(pendingSubmitData);
+      }
     },
   });
 
@@ -232,80 +248,24 @@ export function SupplierForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, supplier, form]);
 
-  // Perform the actual save operation
-  const performSave = async (data: SupplierFormData) => {
-    setLoading(true);
-
-    try {
-      // Clean up empty strings to null
-      const cleanData = {
-        ...data,
-        contactName: data.contactName || null,
-        contactEmail: data.contactEmail || null,
-        contactPhone: data.contactPhone || null,
-        address: data.address || null,
-        category: data.category || null,
-      };
-
-      const url = isEditing ? `/api/suppliers/${supplier!.id}` : '/api/suppliers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          // Validation errors
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof SupplierFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(isEditing ? t('supplierForm.updateSuccess') : t('supplierForm.createSuccess'));
-      onSuccess?.(result.data);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save supplier:', error);
-      toast.error(error instanceof Error ? error.message : t('form.error'));
-    } finally {
-      setLoading(false);
-      setPendingSubmitData(null);
-    }
-  };
-
   // Handle submit with change impact check
   const onSubmit = async (data: SupplierFormData) => {
-    // For new suppliers, just save directly
     if (!isEditing || !supplier?.id || !originalValuesRef.current) {
-      performSave(data);
+      mutation.mutate(data);
       return;
     }
 
-    // Detect changes in impactable fields
     const changes = detectChanges(
       originalValuesRef.current,
       data as unknown as Record<string, unknown>,
       SUPPLIER_IMPACT_FIELDS
     );
 
-    // If no impactable fields changed, save directly
     if (changes.length === 0) {
-      performSave(data);
+      mutation.mutate(data);
       return;
     }
 
-    // Store pending data and check impact
     setPendingSubmitData(data);
     await changeImpact.checkImpact('supplier', supplier.id, changes);
   };
@@ -639,12 +599,12 @@ export function SupplierForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={loading || changeImpact.loading}
+                disabled={mutation.isLoading || changeImpact.loading}
               >
                 {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading || changeImpact.loading}>
-                {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={mutation.isLoading || changeImpact.loading}>
+                {(mutation.isLoading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? t('form.save') : t('supplierForm.createBtn')}
               </Button>
             </DialogFooter>
@@ -683,33 +643,14 @@ export function DeleteSupplierDialog({
   onSuccess,
 }: DeleteSupplierDialogProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
-    if (!supplier) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/suppliers/${supplier.id}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(t('supplierForm.deleteSuccess'));
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete supplier:', error);
-      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/suppliers/${supplier?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/suppliers'],
+    successMessage: t('supplierForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -724,12 +665,12 @@ export function DeleteSupplierDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading}
+            disabled={deleteMutation.isLoading}
           >
             {t('form.cancel')}
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="destructive" onClick={() => supplier && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t('form.delete')}
           </Button>
         </DialogFooter>

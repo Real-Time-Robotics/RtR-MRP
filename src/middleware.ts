@@ -188,6 +188,29 @@ export async function middleware(request: NextRequest) {
   // Generate or preserve request ID (Gate 5.3 requirement)
   const requestId = request.headers.get('x-request-id') ?? uuidv4();
 
+  // SSO: Detect Supabase auth cookie and redirect to SSO callback if no NextAuth session
+  if (process.env.ENABLE_SUPABASE_SSO === 'true' && !isPublicRoute(pathname) && pathname !== '/api/auth/sso-callback') {
+    const hasSupabaseCookie = Array.from(request.cookies.getAll()).some(c =>
+      c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+    );
+    const isProduction = process.env.NODE_ENV === 'production';
+    const nextAuthCookie = request.cookies.get(
+      isProduction ? '__Secure-authjs.session-token' : 'authjs.session-token'
+    );
+
+    if (hasSupabaseCookie && !nextAuthCookie) {
+      // Find the Supabase auth cookie value
+      const sbCookie = Array.from(request.cookies.getAll()).find(c =>
+        c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+      );
+      if (sbCookie) {
+        const callbackUrl = new URL('/api/auth/sso-callback', request.url);
+        callbackUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(callbackUrl);
+      }
+    }
+  }
+
   // Create new headers with requestId
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);

@@ -22,8 +22,6 @@ interface InventoryResponse {
   pageSize: number;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export function useInventoryData(params?: {
   page?: number;
   pageSize?: number;
@@ -43,12 +41,8 @@ export function useInventoryData(params?: {
 
   const { data, error, isLoading, mutate } = useSWR<InventoryResponse>(
     url,
-    fetcher,
     {
-      dedupingInterval: 5000,
-      refreshInterval: 30000,
-      revalidateOnFocus: true,
-      keepPreviousData: true,
+      refreshInterval: 60000,
     }
   );
 
@@ -67,10 +61,6 @@ export function useInventoryData(params?: {
 export function useInventoryItem(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/api/inventory/${id}` : null,
-    fetcher,
-    {
-      dedupingInterval: 5000,
-    }
   );
 
   return {

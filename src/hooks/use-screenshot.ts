@@ -1,7 +1,17 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import html2canvas from 'html2canvas'
+import type html2canvas from 'html2canvas'
+
+type Html2Canvas = typeof html2canvas;
+let _html2canvas: Html2Canvas | null = null;
+
+async function getHtml2Canvas(): Promise<Html2Canvas> {
+  if (!_html2canvas) {
+    _html2canvas = (await import('html2canvas')).default;
+  }
+  return _html2canvas;
+}
 
 // =============================================================================
 // UTILS
@@ -121,7 +131,8 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       // Capture the entire document (including fixed headers)
-      const canvas = await html2canvas(document.documentElement, {
+      const html2canvasFn = await getHtml2Canvas();
+      const canvas = await html2canvasFn(document.documentElement, {
         backgroundColor: '#1A1D23',
         scale: 2,
         logging: false,
@@ -238,7 +249,8 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
         htmlElement.offsetHeight
       )
 
-      const canvas = await html2canvas(document.documentElement, {
+      const html2canvasFn = await getHtml2Canvas();
+      const canvas = await html2canvasFn(document.documentElement, {
         backgroundColor: '#1A1D23',
         scale: 2,
         logging: false,
@@ -346,7 +358,8 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
     setError(null)
 
     try {
-      const canvas = await html2canvas(document.documentElement, {
+      const html2canvasFn = await getHtml2Canvas();
+      const canvas = await html2canvasFn(document.documentElement, {
         backgroundColor: '#1A1D23',
         scale: 2,
         logging: false,

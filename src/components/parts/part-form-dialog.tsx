@@ -261,10 +261,6 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
                 }
             });
 
-            console.log('=== SUBMITTING FORM DATA ===');
-            console.log('Form Mode:', formMode, '| Saved Part ID:', savedPartId);
-            console.log(JSON.stringify(cleanData, null, 2));
-
             // Use savedPartId for edit mode (handles case when part was just created)
             const url = isEditing ? `/api/parts/${savedPartId}` : '/api/parts';
             const method = isEditing ? 'PUT' : 'POST';
@@ -321,8 +317,6 @@ export function PartFormDialog({ open, onOpenChange, part, onSuccess }: PartForm
             // CRITICAL FIX: After first CREATE, switch to EDIT mode
             // This prevents "Part already exists" error when saving subsequent tabs
             if (formMode === 'create' && data?.id) {
-                console.log('=== SWITCHING TO EDIT MODE ===');
-                console.log('New Part ID:', data.id);
                 setSavedPartId(data.id);
                 setFormMode('edit');
                 // Store original values for change impact detection

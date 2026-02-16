@@ -7,16 +7,11 @@ interface DashboardStats {
   quality: { total: number; pending: number };
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export function useDashboardData() {
   const { data, error, isLoading, mutate } = useSWR<DashboardStats>(
     '/api/dashboard',
-    fetcher,
     {
-      dedupingInterval: 5000,
-      refreshInterval: 30000,
-      revalidateOnFocus: true,
+      refreshInterval: 60000,
     }
   );
 
@@ -41,11 +36,8 @@ interface DashboardDetail {
 export function useDashboardDetail() {
   const { data, error, isLoading, mutate } = useSWR<DashboardDetail>(
     '/api/dashboard/detail',
-    fetcher,
     {
-      dedupingInterval: 5000,
-      refreshInterval: 30000,
-      revalidateOnFocus: true,
+      refreshInterval: 60000,
     }
   );
 

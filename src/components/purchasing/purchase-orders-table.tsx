@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Truck, DollarSign, FileText, Calendar, Package } from 'lucide-react';
@@ -15,6 +15,7 @@ import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // TYPES
@@ -80,8 +81,6 @@ function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
 
 export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTableProps) {
   const { t } = useLanguage();
-  const [orders, setOrders] = useState<PurchaseOrder[]>(initialData);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -129,35 +128,12 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     status: 'all',
   });
 
-  // Fetch orders
-  const fetchOrders = useCallback(async (searchTerm?: string, statusFilter?: string) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-
-      const response = await fetch(`/api/purchase-orders?${params.toString()}`);
-      const result = await response.json();
-
-      if (response.ok) {
-        setOrders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch POs:', error);
-      toast.error(t('po.fetchError'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load data on mount and when search/filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchOrders(search, filters.status);
-    }, search ? 300 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [search, filters.status, fetchOrders]);
+  // SWR-based data fetching with debounced search
+  const { data: orders, loading, refresh } = useApiData<PurchaseOrder>(
+    '/api/purchase-orders',
+    { search, status: filters.status },
+    { debounce: search ? 300 : 0 }
+  );
 
   // Handlers
   const handleAdd = () => {
@@ -176,11 +152,11 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   };
 
   const handleFormSuccess = () => {
-    fetchOrders(search, filters.status);
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchOrders(search, filters.status);
+    refresh();
     setSelectedIds(new Set());
   };
 
@@ -205,7 +181,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
         toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: 'PO' }));
       }
 
-      fetchOrders(search, filters.status);
+      refresh();
       setSelectedIds(new Set());
     } catch (error) {
       toast.error(t('table.deleteError'));
@@ -411,7 +387,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={() => fetchOrders(search, filters.status)}
+            onRefresh={refresh}
             addPermission="purchasing:create"
             deletePermission="orders:delete"
             addLabel={t('po.createPO')}

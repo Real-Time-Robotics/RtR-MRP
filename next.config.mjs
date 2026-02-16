@@ -153,6 +153,20 @@ const nextConfig = {
   // Server-side packages that should not be bundled by webpack
   experimental: {
     serverComponentsExternalPackages: ['pdfkit'],
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      'date-fns',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-popover',
+      'sonner',
+    ],
   },
 
   // Production optimizations

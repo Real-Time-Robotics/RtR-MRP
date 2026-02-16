@@ -19,8 +19,6 @@ interface OrdersResponse {
   pageSize: number;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export function useOrdersData(params?: {
   page?: number;
   pageSize?: number;
@@ -42,12 +40,8 @@ export function useOrdersData(params?: {
 
   const { data, error, isLoading, mutate } = useSWR<OrdersResponse>(
     url,
-    fetcher,
     {
-      dedupingInterval: 5000,
-      refreshInterval: 30000,
-      revalidateOnFocus: true,
-      keepPreviousData: true,
+      refreshInterval: 60000,
     }
   );
 
@@ -66,10 +60,6 @@ export function useOrdersData(params?: {
 export function useOrderDetail(id: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/api/sales-orders/${id}` : null,
-    fetcher,
-    {
-      dedupingInterval: 5000,
-    }
   );
 
   return {

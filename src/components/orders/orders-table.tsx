@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Calendar, FileText, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // TYPES
@@ -84,8 +85,6 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
 
 export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   const { t } = useLanguage();
-  const [orders, setOrders] = useState<SalesOrder[]>(initialData);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -101,36 +100,12 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     priority: 'all',
   });
 
-  // Fetch orders
-  const fetchOrders = useCallback(async (searchTerm?: string, statusFilter?: string, priorityFilter?: string) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-      if (priorityFilter && priorityFilter !== 'all') params.set('priority', priorityFilter);
-
-      const response = await fetch(`/api/sales-orders?${params.toString()}`);
-      const result = await response.json();
-
-      if (response.ok) {
-        setOrders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      toast.error(t('orders.fetchError'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load data on mount and when search/filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchOrders(search, filters.status, filters.priority);
-    }, search ? 300 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [search, filters.status, filters.priority, fetchOrders]);
+  // SWR-based data fetching with debounced search
+  const { data: orders, loading, refresh } = useApiData<SalesOrder>(
+    '/api/sales-orders',
+    { search, status: filters.status, priority: filters.priority },
+    { debounce: search ? 300 : 0 }
+  );
 
   // Handlers
   const handleAdd = () => {
@@ -149,11 +124,11 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   };
 
   const handleFormSuccess = () => {
-    fetchOrders(search, filters.status, filters.priority);
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchOrders(search, filters.status, filters.priority);
+    refresh();
     setSelectedIds(new Set());
   };
 
@@ -178,7 +153,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('orders.title').toLowerCase() }));
       }
 
-      fetchOrders(search, filters.status, filters.priority);
+      refresh();
       setSelectedIds(new Set());
     } catch (error) {
       toast.error(t('error.occurred'));
@@ -441,7 +416,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={() => fetchOrders(search, filters.status, filters.priority)}
+            onRefresh={refresh}
             addPermission="orders:create"
             deletePermission="orders:delete"
             addLabel={t('orders.createOrder')}

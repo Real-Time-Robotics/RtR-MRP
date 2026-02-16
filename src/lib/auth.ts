@@ -123,6 +123,41 @@ async function resetFailedAttempts(userId: string): Promise<void> {
 // NEXTAUTH CONFIGURATION
 // =============================================================================
 
+// =============================================================================
+// SSO PROVIDER (conditional)
+// =============================================================================
+
+function getSSOProvider() {
+  if (process.env.ENABLE_SUPABASE_SSO !== 'true') return [];
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return [];
+
+  const { createSupabaseSSOProvider } = require('@prismy/sso');
+
+  return [createSupabaseSSOProvider({
+    appId: 'mrp' as const,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    findLocalUser: async ({ id }: { id: string }) => {
+      const user = await prisma.user.findUnique({ where: { id } });
+      return user ? { id: user.id, tenantId: user.tenantId || undefined } : null;
+    },
+    createLocalUser: async ({ email, name, role, organizationId }: {
+      email: string; name: string; role: string; organizationId: string;
+    }) => {
+      const user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          password: '', // SSO users don't need a password
+          role: role || 'viewer',
+          status: 'active',
+        },
+      });
+      return { id: user.id };
+    },
+  })];
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -217,6 +252,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       },
     }),
+    ...getSSOProvider(),
   ],
   callbacks: {
     async signIn({ user }) {

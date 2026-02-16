@@ -85,8 +85,7 @@ export default function DashboardViewPage({ params }: PageProps) {
 
   // Handle drill-down
   const handleDrillDown = (widget: any, item: any) => {
-    // Navigate to detail view or open modal
-    console.log("Drill down:", widget, item);
+    // TODO: Navigate to detail view or open modal
   };
 
   if (isLoading) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Users, Mail, Eye, Edit2, Trash2, Phone, MapPin, CreditCard, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // STATS
@@ -63,8 +64,6 @@ interface CustomersTableProps {
 
 export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   const { t } = useLanguage();
-  const [customers, setCustomers] = useState<Customer[]>(initialData);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({ status: 'all', type: 'all' });
@@ -74,31 +73,12 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
 
-  const fetchCustomers = useCallback(async (searchTerm?: string, statusFilter?: string, typeFilter?: string) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-      if (typeFilter && typeFilter !== 'all') params.set('type', typeFilter);
-
-      const response = await fetch(`/api/customers?${params.toString()}`);
-      const result = await response.json();
-      if (response.ok) setCustomers(result.data || []);
-    } catch (error) {
-      console.error('Failed to fetch customers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load data on mount and when search/filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchCustomers(search, filters.status, filters.type);
-    }, search ? 300 : 0);
-    return () => clearTimeout(timeoutId);
-  }, [search, filters.status, filters.type, fetchCustomers]);
+  // SWR-based data fetching with debounced search
+  const { data: customers, loading, refresh } = useApiData<Customer>(
+    '/api/customers',
+    { search, status: filters.status, type: filters.type },
+    { debounce: search ? 300 : 0 }
+  );
 
   const handleAdd = () => { setEditingCustomer(null); setFormOpen(true); };
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setFormOpen(true); };
@@ -110,7 +90,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     try {
       await Promise.all(Array.from(selectedIds).map((id) => fetch(`/api/customers/${id}`, { method: 'DELETE' })));
       toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('customers.pageTitle') }));
-      fetchCustomers(search, filters.status, filters.type);
+      refresh();
       setSelectedIds(new Set());
     } catch { toast.error(t('table.deleteError')); }
   };
@@ -289,7 +269,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             searchPlaceholder={t('customers.searchPlaceholder')}
             onAdd={handleAdd}
             onBulkDelete={handleBulkDelete}
-            onRefresh={() => fetchCustomers(search, filters.status, filters.type)}
+            onRefresh={refresh}
             onExport={handleExport}
             onImport={handleImport}
             addPermission="orders:create"
@@ -350,8 +330,8 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
         </CardContent>
       </Card>
 
-      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={() => fetchCustomers(search, filters.status, filters.type)} />
-      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={() => fetchCustomers(search, filters.status, filters.type)} />
+      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={refresh} />
+      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={refresh} />
     </div>
   );
 }

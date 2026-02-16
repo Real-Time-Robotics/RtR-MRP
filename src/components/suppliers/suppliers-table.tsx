@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, CheckCircle, XCircle, Building2, AlertTriangle, Shield, User, Mail, Phone, MapPin, CreditCard, Clock, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // TYPES
@@ -81,8 +82,6 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   const { t } = useLanguage();
 
   // State
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialData);
-  const [fetchState, setFetchState] = useState<FetchState>({ loading: false, error: null });
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -98,40 +97,12 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
     country: 'all',
   });
 
-  // Fetch suppliers function
-  const fetchSuppliers = useCallback(async (searchTerm?: string, statusFilter?: string) => {
-    setFetchState({ loading: true, error: null });
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm);
-      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-
-      const response = await fetch(`/api/suppliers?${params.toString()}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch suppliers');
-      }
-
-      setSuppliers(result.data || []);
-    } catch (error) {
-      console.error('Failed to fetch suppliers:', error);
-      setFetchState({
-        loading: false,
-        error: error instanceof Error ? error.message : t('error.occurred'),
-      });
-    } finally {
-      setFetchState((prev) => ({ ...prev, loading: false }));
-    }
-  }, []);
-
-  // Load data on mount and when search/filters change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchSuppliers(search, filters.status);
-    }, search ? 300 : 0); // No delay on initial load
-    return () => clearTimeout(timeoutId);
-  }, [search, filters.status, fetchSuppliers]);
+  // SWR-based data fetching with debounced search
+  const { data: suppliers, loading, refresh } = useApiData<Supplier>(
+    '/api/suppliers',
+    { search, status: filters.status },
+    { debounce: search ? 300 : 0 }
+  );
 
   // Filtered data
   const filteredSuppliers = suppliers.filter((supplier) => {
@@ -158,11 +129,11 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
   };
 
   const handleFormSuccess = () => {
-    fetchSuppliers(search, filters.status);
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchSuppliers(search, filters.status);
+    refresh();
     setSelectedIds(new Set());
   };
 
@@ -187,7 +158,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
         toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('suppliers.title').toLowerCase() }));
       }
 
-      fetchSuppliers(search, filters.status);
+      refresh();
       setSelectedIds(new Set());
     } catch (error) {
       toast.error(t('table.deleteError'));
@@ -410,12 +381,12 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={() => fetchSuppliers(search, filters.status)}
+            onRefresh={refresh}
             addPermission="orders:create"
             deletePermission="orders:delete"
             addLabel={t('suppliers.addSupplier')}
             selectedCount={selectedIds.size}
-            isLoading={fetchState.loading}
+            isLoading={loading}
             filters={[
               {
                 key: 'status',
@@ -444,7 +415,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
             data={filteredSuppliers}
             columns={columns}
             keyField="id"
-            loading={fetchState.loading}
+            loading={loading}
             emptyMessage={t('suppliers.emptyMessage')}
             selectable
             selectedKeys={selectedIds}
