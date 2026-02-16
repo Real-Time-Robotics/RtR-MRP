@@ -40,8 +40,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Package } from 'lucide-react';
-import { toast } from 'sonner';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { useMutation } from '@/hooks/use-mutation';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -84,6 +84,10 @@ const partSchema = z.object({
   rohsCompliant: z.boolean(),
   reachCompliant: z.boolean(),
 
+  // Manufacturing
+  manufacturingStrategy: z.enum(['MTS', 'MTO', 'ATO']).optional().nullable(),
+  pickingStrategy: z.enum(['FIFO', 'FEFO', 'ANY']).optional().nullable(),
+
   // Engineering
   revision: z.string().max(20),
   manufacturer: z.string().max(100).optional().nullable(),
@@ -109,6 +113,8 @@ export interface Part {
   color?: string | null;
   makeOrBuy: string;
   procurementType?: string | null;
+  manufacturingStrategy?: string | null;
+  pickingStrategy?: string | null;
   leadTimeDays: number;
   moq: number;
   orderMultiple?: number | null;
@@ -171,7 +177,6 @@ const PART_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange
 
 export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
   const isEditing = !!part;
 
   // Change Impact state
@@ -220,6 +225,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           color: part.color || '',
           makeOrBuy: part.makeOrBuy as 'MAKE' | 'BUY' | 'BOTH',
           procurementType: part.procurementType || '',
+          manufacturingStrategy: (part.manufacturingStrategy as 'MTS' | 'MTO' | 'ATO') || null,
+          pickingStrategy: (part.pickingStrategy as 'FIFO' | 'FEFO' | 'ANY') || null,
           leadTimeDays: part.leadTimeDays,
           moq: part.moq,
           orderMultiple: part.orderMultiple,
@@ -275,75 +282,44 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
     }
   }, [open, part, form]);
 
+  const mutation = useMutation<PartFormData, Part>({
+    url: isEditing ? `/api/parts/${part!.id}` : '/api/parts',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/parts'],
+    successMessage: isEditing ? t('partForm.updateSuccess') : t('partForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      description: data.description || null,
+      material: data.material || null,
+      color: data.color || null,
+      procurementType: data.procurementType || null,
+      manufacturingStrategy: data.manufacturingStrategy || null,
+      pickingStrategy: data.pickingStrategy || null,
+      countryOfOrigin: data.countryOfOrigin || null,
+      manufacturer: data.manufacturer || null,
+      manufacturerPn: data.manufacturerPn || null,
+    }),
+  });
+
   // Change Impact hook
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
     onError: () => {
-      // Even on error, proceed with save (impact check is informational)
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
   });
 
-  const performSave = async (data: PartFormData) => {
-    setLoading(true);
-
-    try {
-      const cleanData = {
-        ...data,
-        description: data.description || null,
-        material: data.material || null,
-        color: data.color || null,
-        procurementType: data.procurementType || null,
-        countryOfOrigin: data.countryOfOrigin || null,
-        manufacturer: data.manufacturer || null,
-        manufacturerPn: data.manufacturerPn || null,
-      };
-
-      const url = isEditing ? `/api/parts/${part.id}` : '/api/parts';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof PartFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(isEditing ? t('partForm.updateSuccess') : t('partForm.createSuccess'));
-      onSuccess?.(result.data || result);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save part:', error);
-      toast.error(error instanceof Error ? error.message : t('form.error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const onSubmit = async (data: PartFormData) => {
-    // Only check impact when editing and there are tracked changes
     if (isEditing && part && originalValuesRef.current) {
       const newValues = {
         unitCost: data.unitCost,
@@ -368,8 +344,7 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
       }
     }
 
-    // No tracked changes or new record - save directly
-    performSave(data);
+    mutation.mutate(data);
   };
 
   return (
@@ -722,6 +697,56 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
+                    name="manufacturingStrategy"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('partForm.manufacturingStrategy')}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t('partForm.selectStrategy')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="MTS">{t('strategy.mts')}</SelectItem>
+                            <SelectItem value="MTO">{t('strategy.mto')}</SelectItem>
+                            <SelectItem value="ATO">{t('strategy.ato')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>{t('partForm.manufacturingStrategyDesc')}</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="pickingStrategy"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('partForm.pickingStrategy')}</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={t('partForm.selectPicking')} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="FIFO">{t('picking.fifo')}</SelectItem>
+                            <SelectItem value="FEFO">{t('picking.fefo')}</SelectItem>
+                            <SelectItem value="ANY">{t('picking.any')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>{t('partForm.pickingStrategyDesc')}</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
                     name="moq"
                     render={({ field }) => (
                       <FormItem>
@@ -954,11 +979,11 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
             </Tabs>
 
             <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isLoading}>
                 {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={mutation.isLoading}>
+                {mutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditing ? t('form.save') : t('partForm.createBtn')}
               </Button>
             </DialogFooter>
@@ -995,30 +1020,14 @@ interface DeletePartDialogProps {
 
 export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: DeletePartDialogProps) {
   const { t } = useLanguage();
-  const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
-    if (!part) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/parts/${part.id}`, { method: 'DELETE' });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || t('form.error'));
-      }
-
-      toast.success(t('partForm.deleteSuccess'));
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete part:', error);
-      toast.error(error instanceof Error ? error.message : t('form.errorDeleting'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/parts/${part?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/parts'],
+    successMessage: t('partForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1030,11 +1039,11 @@ export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: Delete
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleteMutation.isLoading}>
             {t('form.cancel')}
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="destructive" onClick={() => part && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t('form.delete')}
           </Button>
         </DialogFooter>

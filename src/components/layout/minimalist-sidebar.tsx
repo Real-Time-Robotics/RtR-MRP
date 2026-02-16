@@ -25,7 +25,13 @@ import {
   PanelLeft,
   MessageSquare,
   Warehouse,
-  PackageMinus
+  PackageMinus,
+  FileSpreadsheet,
+  BarChart3,
+  PackageX,
+  Truck,
+  ClipboardList,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,9 +68,15 @@ const toolItems: SidebarItem[] = [
   { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-3.5 h-3.5" />, href: '/suppliers' },
   { id: 'warehouses', label: 'WAREHOUSES', labelVi: 'KHO', icon: <Warehouse className="w-3.5 h-3.5" />, href: '/warehouses' },
   { id: 'issue', label: 'ISSUE', labelVi: 'XUẤT KHO', icon: <PackageMinus className="w-3.5 h-3.5" />, href: '/inventory/issue' },
+  { id: 'finance', label: 'FINANCE', labelVi: 'KẾ TOÁN', icon: <FileSpreadsheet className="w-3.5 h-3.5" />, href: '/finance/misa-export' },
+  { id: 'reports', label: 'REPORTS', labelVi: 'BÁO CÁO', icon: <BarChart3 className="w-3.5 h-3.5" />, href: '/reports' },
 ];
 
 const utilityItems: SidebarItem[] = [
+  { id: 'backorders', label: 'BACKORDERS', labelVi: 'GIAO THIẾU', icon: <PackageX className="w-3.5 h-3.5" />, href: '/orders/backorders' },
+  { id: 'subcontracting', label: 'SUBCONTRACT', labelVi: 'GIA CÔNG', icon: <Truck className="w-3.5 h-3.5" />, href: '/production/subcontracting' },
+  { id: 'cycle-count', label: 'CYCLE COUNT', labelVi: 'KIỂM KÊ', icon: <ClipboardList className="w-3.5 h-3.5" />, href: '/inventory/cycle-count' },
+  { id: 'expiry', label: 'EXPIRY', labelVi: 'HẾT HẠN', icon: <Clock className="w-3.5 h-3.5" />, href: '/inventory/expiry-alerts' },
   { id: 'discussions', label: 'DISCUSS', labelVi: 'THẢO LUẬN', icon: <MessageSquare className="w-3.5 h-3.5" />, href: '/discussions' },
   { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-3.5 h-3.5" />, href: '/mobile' },
   { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-3.5 h-3.5" />, href: '/alerts' },

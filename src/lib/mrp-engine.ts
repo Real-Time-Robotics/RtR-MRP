@@ -1,5 +1,8 @@
 import prisma from "./prisma";
 import { isFeatureEnabled, FEATURE_FLAGS } from "./features/feature-flags";
+import { allocateByStrategy, getSortedInventory } from "./inventory/picking-engine";
+import { triggerWorkOrderWorkflow } from "./workflow/workflow-triggers";
+import { recordMaterialCost } from "./finance/wo-cost-service";
 
 interface MrpParams {
   planningHorizonDays: number;
@@ -171,9 +174,17 @@ export async function createWorkOrder(
   salesOrderId?: string,
   salesOrderLine?: number,
   plannedStart?: Date,
-  priority: string = "normal"
+  priority: string = "normal",
+  userId?: string,
+  woType: "DISCRETE" | "BATCH" = "DISCRETE",
+  batchSize?: number
 ) {
   const woNumber = `WO-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+
+  // For BATCH work orders, auto-generate an output lot number
+  const outputLotNumber = woType === "BATCH"
+    ? `LOT-${woNumber}`
+    : undefined;
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -203,6 +214,9 @@ export async function createWorkOrder(
       salesOrderLine,
       priority,
       status: "draft",
+      woType,
+      batchSize: woType === "BATCH" ? (batchSize ?? quantity) : undefined,
+      outputLotNumber,
       plannedStart: start,
       plannedEnd: end,
       allocations: bom
@@ -221,6 +235,21 @@ export async function createWorkOrder(
       product: true,
     },
   });
+
+  // Trigger approval workflow (non-blocking)
+  if (userId) {
+    try {
+      await triggerWorkOrderWorkflow(workOrder.id, userId, {
+        productId,
+        productName: product?.name,
+        quantity,
+        priority,
+        plannedStart: start.toISOString(),
+      });
+    } catch (err) {
+      console.error('[MRP] WO workflow trigger error:', err);
+    }
+  }
 
   return workOrder;
 }
@@ -296,33 +325,41 @@ export async function allocateMaterials(workOrderId: string) {
   });
 
   for (const alloc of allocations) {
-    const inventory = await prisma.inventory.findFirst({
-      where: {
-        partId: alloc.partId,
-        quantity: { gt: 0 },
-      },
-      orderBy: { quantity: "desc" },
+    // Use picking engine for strategy-aware allocation (FIFO/FEFO/ANY)
+    // Find any warehouse that has this part
+    const inventoryRecord = await prisma.inventory.findFirst({
+      where: { partId: alloc.partId, quantity: { gt: 0 } },
+      select: { warehouseId: true },
     });
 
-    if (inventory) {
-      const availableQty = inventory.quantity - inventory.reservedQty;
-      const allocateQty = Math.min(availableQty, alloc.requiredQty);
+    if (inventoryRecord) {
+      const pickResult = await allocateByStrategy({
+        partId: alloc.partId,
+        warehouseId: inventoryRecord.warehouseId,
+        requiredQty: alloc.requiredQty,
+      });
 
-      if (allocateQty > 0) {
-        await prisma.inventory.update({
-          where: { id: inventory.id },
-          data: { reservedQty: { increment: allocateQty } },
-        });
+      if (pickResult.allocations.length > 0) {
+        // Use the first allocation (primary lot)
+        const pick = pickResult.allocations[0];
+        const allocateQty = Math.min(pick.quantity, alloc.requiredQty);
 
-        await prisma.materialAllocation.update({
-          where: { id: alloc.id },
-          data: {
-            allocatedQty: allocateQty,
-            warehouseId: inventory.warehouseId,
-            lotNumber: inventory.lotNumber,
-            status: allocateQty >= alloc.requiredQty ? "allocated" : "pending",
-          },
-        });
+        if (allocateQty > 0) {
+          await prisma.inventory.update({
+            where: { id: pick.inventoryId },
+            data: { reservedQty: { increment: allocateQty } },
+          });
+
+          await prisma.materialAllocation.update({
+            where: { id: alloc.id },
+            data: {
+              allocatedQty: allocateQty,
+              warehouseId: inventoryRecord.warehouseId,
+              lotNumber: pick.lotNumber,
+              status: allocateQty >= alloc.requiredQty ? "allocated" : "pending",
+            },
+          });
+        }
       }
     }
   }
@@ -395,6 +432,20 @@ export async function issueMaterials(workOrderId: string, allocationIds?: string
         status: "issued",
       },
     });
+
+    // Record actual material cost (non-blocking)
+    try {
+      await recordMaterialCost({
+        workOrderId,
+        partId: alloc.partId,
+        quantity: issueQty,
+        unitCost: alloc.part.unitCost,
+        lotNumber: alloc.lotNumber || undefined,
+        sourceId: alloc.id,
+      });
+    } catch (err) {
+      console.error('[MRP] Failed to record material cost:', err);
+    }
 
     // Create LotTransaction for source deduction
     if (alloc.lotNumber) {
@@ -789,7 +840,20 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
       });
     }
 
-    // 4. Create LotTransaction PRODUCED
+    // 4. Collect parent lots from issued materials (for backward traceability)
+    const issuedAllocations = await tx.materialAllocation.findMany({
+      where: { workOrderId: receipt.workOrderId, status: "issued" },
+      select: { partId: true, lotNumber: true, issuedQty: true },
+    });
+    const parentLots = issuedAllocations
+      .filter((a) => a.lotNumber)
+      .map((a) => ({
+        lotNumber: a.lotNumber!,
+        partId: a.partId,
+        quantity: a.issuedQty,
+      }));
+
+    // 5. Create LotTransaction PRODUCED with parentLots for traceability
     if (receipt.partId) {
       await tx.lotTransaction.create({
         data: {
@@ -803,6 +867,7 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
           toWarehouseId: targetWarehouseId,
           workOrderId: receipt.workOrderId,
           userId,
+          parentLots: parentLots.length > 0 ? parentLots : undefined,
           notes: useFg
             ? `Production output to FG from WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (${receipt.receiptNumber})`
             : `Nhập kho thành phẩm từ WO ${receipt.workOrder.woNumber} - ${receipt.product.name} (phiếu ${receipt.receiptNumber})`,
@@ -810,7 +875,7 @@ export async function confirmProductionReceipt(receiptId: string, userId: string
       });
     }
 
-    // 5. Consume WIP inventory (only if USE_WIP_WAREHOUSE flag is ON)
+    // 6. Consume WIP inventory (only if USE_WIP_WAREHOUSE flag is ON)
     const useWip = await isFeatureEnabled(FEATURE_FLAGS.USE_WIP_WAREHOUSE);
     if (useWip) {
       const wipWarehouse = await tx.warehouse.findFirst({
@@ -1096,11 +1161,12 @@ export async function pickForShipment(shipmentId: string, userId: string) {
         throw new Error(`Part not found for product ${line.product.name} (SKU: ${line.product.sku})`);
       }
 
-      // Find inventory in source warehouse
-      const sourceInventory = await tx.inventory.findMany({
-        where: { partId: part.id, warehouseId: sourceWarehouse!.id },
-        orderBy: { quantity: "desc" },
-      });
+      // Find inventory in source warehouse using picking strategy
+      const sourceInventory = await getSortedInventory(
+        part.id,
+        sourceWarehouse!.id,
+        part.pickingStrategy
+      );
 
       const totalStock = sourceInventory.reduce((sum, inv) => sum + inv.quantity, 0);
       if (totalStock < line.quantity) {
@@ -1334,11 +1400,12 @@ export async function confirmShipment(
           });
         }
       } else {
-        // --- Auto-allocate (backward compatible) ---
-        const inventoryRecords = await tx.inventory.findMany({
-          where: { partId: part.id, warehouseId: warehouse.id },
-          orderBy: { quantity: "desc" },
-        });
+        // --- Auto-allocate using picking strategy (FIFO/FEFO/ANY) ---
+        const inventoryRecords = await getSortedInventory(
+          part.id,
+          warehouse.id,
+          part.pickingStrategy
+        );
 
         const totalStock = inventoryRecords.reduce((sum, inv) => sum + inv.quantity, 0);
 

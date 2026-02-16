@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateInternalRequest } from '@/lib/api/internal-auth'
+import { triggerWorkOrderWorkflow } from '@/lib/workflow/workflow-triggers'
 
 export async function POST(req: NextRequest) {
   const authError = validateInternalRequest(req)
@@ -88,6 +89,20 @@ export async function POST(req: NextRequest) {
         status: true,
       },
     })
+
+    // Trigger approval workflow (non-blocking)
+    try {
+      await triggerWorkOrderWorkflow(workOrder.id, 'system', {
+        productId: product.id,
+        quantity: items.reduce(
+          (sum: number, item: { quantity: number }) => sum + item.quantity,
+          0
+        ),
+        priority: 'normal',
+      })
+    } catch (err) {
+      console.error('[Internal API] WO workflow trigger error:', err)
+    }
 
     return NextResponse.json(
       {

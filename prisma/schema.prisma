@@ -7,6 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ ENUMS (Manufacturing Strategy) ============
+enum ManufacturingStrategy {
+  MTS // Make-to-Stock
+  MTO // Make-to-Order
+  ATO // Assemble-to-Order
+}
+
+enum PickingStrategy {
+  FIFO // First In First Out (by createdAt)
+  FEFO // First Expiry First Out (by expiryDate)
+  ANY  // No preference (current behavior)
+}
+
+enum WorkOrderType {
+  DISCRETE // One product at a time
+  BATCH    // Batch processing
+}
+
 // ============ ENUMS (Parts Enhancement v2.0) ============
 enum MakeOrBuy {
   MAKE
@@ -135,7 +153,10 @@ model Part {
 
   // === Procurement & Sourcing ===
   makeOrBuy       MakeOrBuy       @default(BUY)
-  procurementType ProcurementType @default(STOCK)
+  procurementType       ProcurementType       @default(STOCK)
+  manufacturingStrategy ManufacturingStrategy @default(MTS)
+  pickingStrategy       PickingStrategy       @default(ANY)
+  abcClass              String?               // A, B, or C (ABC classification)
   buyerCode       String?
   moq             Int             @default(1)
   orderMultiple   Int             @default(1)
@@ -396,6 +417,7 @@ model PartSupplier {
   qualificationDate   DateTime?
   qualificationExpiry DateTime?
   status              String    @default("active")
+  receivingTolerance  Float?    // Allowed over/under delivery % (e.g. 5.0 = +/-5%)
   notes               String?
   updatedAt           DateTime  @updatedAt
 
@@ -1015,9 +1037,12 @@ model WorkOrder {
   salesOrderLine Int?
   quantity       Int
   priority       String    @default("normal")
-  status         String    @default("draft")
-  plannedStart   DateTime?
-  plannedEnd     DateTime?
+  status          String        @default("draft")
+  woType          WorkOrderType @default(DISCRETE)
+  batchSize       Int?
+  outputLotNumber String?
+  plannedStart    DateTime?
+  plannedEnd      DateTime?
   actualStart    DateTime?
   actualEnd      DateTime?
   assignedTo     String?

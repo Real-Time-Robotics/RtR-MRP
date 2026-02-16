@@ -18,6 +18,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from "@/lib/api/with-permission";
+import { triggerPurchaseOrderWorkflow } from "@/lib/workflow/workflow-triggers";
 
 // =============================================================================
 // VALIDATION
@@ -173,6 +174,21 @@ async function postHandler(
       lines: { include: { part: true } },
     },
   });
+
+  // Trigger approval workflow (non-blocking — errors are logged, not thrown)
+  try {
+    await triggerPurchaseOrderWorkflow(order.id, user.id, {
+      totalAmount,
+      supplierId: validation.data.supplierId,
+      supplierName: supplier.name,
+      lineCount: lines?.length ?? 0,
+    });
+  } catch (err) {
+    logger.logError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: 'PO workflow trigger' }
+    );
+  }
 
   return successResponse(order, 201);
 }
