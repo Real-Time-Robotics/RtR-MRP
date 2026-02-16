@@ -57,7 +57,7 @@ function getBarColor(type?: string, value?: number, avg?: number) {
     if (value > avg * 1.2) return "#22c55e";
     if (value < avg * 0.8) return "#f97316";
   }
-  return "#3b82f6"; // blue
+  return "#30a46c"; // green (primary)
 }
 
 // =============================================================================

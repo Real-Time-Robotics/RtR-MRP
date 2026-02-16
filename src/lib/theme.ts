@@ -8,19 +8,19 @@
 // -----------------------------------------------------------------------------
 
 export const colors = {
-  // Primary Brand Colors
+  // Primary Brand Colors (Prismy Green)
   primary: {
-    50: '#EFF6FF',
-    100: '#DBEAFE',
-    200: '#BFDBFE',
-    300: '#93C5FD',
-    400: '#60A5FA',
-    500: '#3B82F6',  // Main primary
-    600: '#2563EB',
-    700: '#1D4ED8',
-    800: '#1E40AF',
-    900: '#1E3A8A',
-    950: '#172554',
+    50: '#f0fdf4',
+    100: '#dcfce7',
+    200: '#bbf7d0',
+    300: '#86efac',
+    400: '#3ecf8e',
+    500: '#30a46c',  // Main primary
+    600: '#249163',
+    700: '#1a7f4f',
+    800: '#166534',
+    900: '#14532d',
+    950: '#052e16',
   },
 
   // Navy (Sidebar, Headers)
@@ -137,7 +137,7 @@ export const colors = {
 // Chart color palette (6 colors for data visualization)
 export const chartColors = {
   palette: [
-    '#3B82F6', // Blue
+    '#30a46c', // Prismy Green
     '#10B981', // Green
     '#F59E0B', // Yellow
     '#EF4444', // Red
@@ -145,11 +145,11 @@ export const chartColors = {
     '#06B6D4', // Cyan
   ],
   extended: [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4',
+    '#30a46c', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4',
     '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16', '#0EA5E9',
   ],
   gradient: {
-    blue: ['#3B82F6', '#60A5FA'],
+    blue: ['#30a46c', '#3ecf8e'],
     green: ['#10B981', '#34D399'],
     purple: ['#8B5CF6', '#A78BFA'],
     orange: ['#F59E0B', '#FBBF24'],
@@ -312,7 +312,7 @@ export const shadows = {
   '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
   inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
   // Colored shadows
-  primary: '0 4px 14px 0 rgb(59 130 246 / 0.3)',
+  primary: '0 4px 14px 0 rgb(48 164 108 / 0.3)',
   success: '0 4px 14px 0 rgb(16 185 129 / 0.3)',
   warning: '0 4px 14px 0 rgb(245 158 11 / 0.3)',
   danger: '0 4px 14px 0 rgb(239 68 68 / 0.3)',
@@ -379,11 +379,11 @@ export const breakpoints = {
 
 export const layout = {
   sidebar: {
-    width: '240px',
-    collapsedWidth: '64px',
+    width: '220px',
+    collapsedWidth: '48px',
   },
   topbar: {
-    height: '64px',
+    height: '48px',
   },
   content: {
     maxWidth: '1440px',

@@ -344,7 +344,7 @@ export function GanttChart({
                     y1={0}
                     x2={i * DAY_WIDTH[viewMode]}
                     y2={gridHeight}
-                    stroke={isToday(day) ? '#3b82f6' : '#e5e7eb'}
+                    stroke={isToday(day) ? '#30a46c' : '#e5e7eb'}
                     strokeWidth={isToday(day) ? 2 : 1}
                   />
                 ))}
@@ -369,7 +369,7 @@ export function GanttChart({
                     y={0}
                     width={DAY_WIDTH[viewMode]}
                     height={gridHeight}
-                    fill="#3b82f6"
+                    fill="#30a46c"
                     opacity={0.05}
                   />
                 )}

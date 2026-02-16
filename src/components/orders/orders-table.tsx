@@ -415,8 +415,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   ], [t]);
 
   return (
-    // COMPACT: space-y-6 → space-y-3
-    <div className="space-y-3">
+    <div className="h-full flex flex-col gap-3">
       {/* Header - COMPACT */}
       <div>
         <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-2">
@@ -432,8 +431,8 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       <StatsCards orders={orders} />
 
       {/* Table Card - COMPACT */}
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardHeader className="px-3 py-2">
+      <Card className="border-gray-200 dark:border-mrp-border flex-1 flex flex-col min-h-0 overflow-hidden">
+        <CardHeader className="px-3 py-2 shrink-0">
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
@@ -482,7 +481,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             onClearFilters={() => setFilters({ status: 'all', priority: 'all' })}
           />
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
           <DataTable
             data={orders}
             columns={columns}

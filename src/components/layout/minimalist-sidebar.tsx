@@ -187,10 +187,10 @@ export function MinimalistSidebar({
   return (
     <aside
       className={cn(
-        // COMPACT: w-56 → w-48 (224px → 192px)
+        // Prismy: sidebar width 220px expanded, 48px collapsed
         'flex flex-col h-full transition-all duration-200',
         'bg-white dark:bg-steel-dark border-r border-gray-200 dark:border-mrp-border',
-        collapsed ? 'w-12' : 'w-48'
+        collapsed ? 'w-12' : 'w-[220px]'
       )}
     >
       {/* Header - Product Name & Toggle */}

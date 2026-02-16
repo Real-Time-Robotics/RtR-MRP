@@ -250,7 +250,7 @@ export function MonteCarloChart({
                   />
                   <Bar
                     dataKey="count"
-                    fill="#3b82f6"
+                    fill="#30a46c"
                     name="Frequency"
                     radius={[2, 2, 0, 0]}
                   />
@@ -415,7 +415,7 @@ export function MonteCarloChart({
                   <Tooltip content={<CustomTooltip />} />
                   <Bar
                     dataKey="elasticity"
-                    fill="#3b82f6"
+                    fill="#30a46c"
                     name="Elasticity %"
                     radius={[0, 4, 4, 0]}
                   />

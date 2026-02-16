@@ -108,7 +108,7 @@ function generateEmailTemplate(options: ReportEmailOptions): string {
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
-    <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 24px; border-radius: 12px 12px 0 0;">
+    <div style="background: linear-gradient(135deg, #166534 0%, #3ecf8e 100%); color: white; padding: 24px; border-radius: 12px 12px 0 0;">
       <h2 style="margin: 0; font-size: 20px; font-weight: 600;">
         📊 ${options.reportNameVi}
       </h2>
@@ -141,7 +141,7 @@ function generateEmailTemplate(options: ReportEmailOptions): string {
       <!-- CTA Button -->
       <a href="${mrpUrl}" style="
         display: inline-block;
-        background: #1e40af;
+        background: #166534;
         color: white;
         padding: 12px 24px;
         border-radius: 8px;
@@ -161,7 +161,7 @@ function generateEmailTemplate(options: ReportEmailOptions): string {
       </p>
       <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">
         Quản lý lịch gửi tại
-        <a href="${mrpUrl}/reports/scheduled" style="color: #3b82f6; text-decoration: none;">
+        <a href="${mrpUrl}/reports/scheduled" style="color: #30a46c; text-decoration: none;">
           Settings → Reports
         </a>
       </p>

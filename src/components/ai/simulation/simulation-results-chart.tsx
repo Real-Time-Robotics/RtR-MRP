@@ -125,7 +125,7 @@ export function SimulationResultsChart({
                 <Line
                   type="monotone"
                   dataKey="demand"
-                  stroke="#3b82f6"
+                  stroke="#30a46c"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   name="Demand"

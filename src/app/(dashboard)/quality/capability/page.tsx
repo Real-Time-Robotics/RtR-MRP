@@ -100,8 +100,8 @@ const HistogramSVG: React.FC<{
             y={yScale(count)}
             width={barWidth}
             height={chartHeight - (yScale(count) - padding.top)}
-            fill={isOutOfSpec ? 'rgba(239, 68, 68, 0.7)' : 'rgba(59, 130, 246, 0.7)'}
-            stroke={isOutOfSpec ? '#ef4444' : '#3b82f6'}
+            fill={isOutOfSpec ? 'rgba(239, 68, 68, 0.7)' : 'rgba(62, 207, 142, 0.7)'}
+            stroke={isOutOfSpec ? '#ef4444' : '#30a46c'}
             strokeWidth={1}
           />
         );
@@ -153,10 +153,10 @@ const HistogramSVG: React.FC<{
         y1={padding.top}
         x2={xScale(mean)}
         y2={padding.top + chartHeight}
-        stroke="#3b82f6"
+        stroke="#30a46c"
         strokeWidth={2}
       />
-      
+
       {/* X-axis */}
       <line
         x1={padding.left}
@@ -184,7 +184,7 @@ const HistogramSVG: React.FC<{
             y={height - padding.bottom + 28}
             textAnchor="middle"
             fontSize="9"
-            fill={i === 1 ? '#3b82f6' : '#ef4444'}
+            fill={i === 1 ? '#30a46c' : '#ef4444'}
             fontWeight="bold"
           >
             {i === 0 ? 'LSL' : i === 1 ? 'Mean' : 'USL'}
@@ -194,7 +194,7 @@ const HistogramSVG: React.FC<{
       
       {/* Legend */}
       <g transform={`translate(${width - 120}, 10)`}>
-        <rect x={0} y={0} width={10} height={10} fill="rgba(59, 130, 246, 0.7)" />
+        <rect x={0} y={0} width={10} height={10} fill="rgba(62, 207, 142, 0.7)" />
         <text x={15} y={9} fontSize="9" fill="#666">Trong spec</text>
         <rect x={0} y={15} width={10} height={10} fill="rgba(239, 68, 68, 0.7)" />
         <text x={15} y={24} fontSize="9" fill="#666">Ngoài spec</text>
@@ -218,7 +218,7 @@ const CapabilityGauge: React.FC<{
   
   let color = '#ef4444'; // Red for < 1.0
   if (value >= 1.67) color = '#22c55e'; // Green for >= 1.67
-  else if (value >= 1.33) color = '#3b82f6'; // Blue for >= 1.33
+  else if (value >= 1.33) color = '#30a46c'; // Green for >= 1.33
   else if (value >= 1.0) color = '#f59e0b'; // Yellow for >= 1.0
   
   return (

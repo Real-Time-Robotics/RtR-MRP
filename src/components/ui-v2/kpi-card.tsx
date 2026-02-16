@@ -76,7 +76,7 @@ const iconColors = {
 };
 
 const sparklineColors = {
-  primary: '#3B82F6',
+  primary: '#30a46c',
   success: '#10B981',
   warning: '#F59E0B',
   danger: '#EF4444',
@@ -94,7 +94,7 @@ export interface SparklineProps {
 // Mini sparkline component
 const Sparkline: React.FC<SparklineProps> = ({
   data,
-  color = '#3B82F6',
+  color = '#30a46c',
   width = 80,
   height = 24,
   className,

@@ -149,14 +149,14 @@ export default function CustomerSupportPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100%-100px)]">
         {/* Tickets List */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))] overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Tìm ticket..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
               />
             </div>
           </div>
@@ -202,11 +202,11 @@ export default function CustomerSupportPage() {
         </div>
 
         {/* Ticket Detail / Chat */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+        <div className="lg:col-span-2 bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))] overflow-hidden flex flex-col">
           {selectedTicket ? (
             <>
               {/* Ticket Header */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))]">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -240,7 +240,7 @@ export default function CustomerSupportPage() {
                     <div className={`max-w-[80%] ${
                       message.sender === 'CUSTOMER' 
                         ? 'bg-emerald-500 text-white' 
-                        : 'bg-gray-100 dark:bg-gray-700'
+                        : 'bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))]'
                     } rounded-2xl px-4 py-3`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs font-medium ${
@@ -262,13 +262,13 @@ export default function CustomerSupportPage() {
 
               {/* Reply Input */}
               {!['RESOLVED', 'CLOSED'].includes(selectedTicket.status) && (
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="p-4 border-t border-gray-200 dark:border-[rgb(var(--border-primary))]">
                   <div className="flex items-end gap-3">
                     <textarea
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Nhập tin nhắn..."
-                      className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="flex-1 px-4 py-3 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       rows={2}
                     />
                     <button
@@ -296,7 +296,7 @@ export default function CustomerSupportPage() {
       {/* New Ticket Modal */}
       {showNewTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl max-w-lg w-full">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Tạo ticket hỗ trợ mới</h3>
@@ -312,7 +312,7 @@ export default function CustomerSupportPage() {
                     <select
                       value={newTicket.category}
                       onChange={(e) => setNewTicket(t => ({ ...t, category: e.target.value as SupportTicket['category'] }))}
-                      className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+                      className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     >
                       <option value="ORDER">Đơn hàng</option>
                       <option value="DELIVERY">Giao hàng</option>
@@ -326,7 +326,7 @@ export default function CustomerSupportPage() {
                     <select
                       value={newTicket.priority}
                       onChange={(e) => setNewTicket(t => ({ ...t, priority: e.target.value as SupportTicket['priority'] }))}
-                      className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+                      className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     >
                       <option value="LOW">Thấp</option>
                       <option value="MEDIUM">Trung bình</option>
@@ -342,7 +342,7 @@ export default function CustomerSupportPage() {
                     type="text"
                     value={newTicket.soNumber}
                     onChange={(e) => setNewTicket(t => ({ ...t, soNumber: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     placeholder="VD: SO-2025-0001"
                   />
                 </div>
@@ -353,7 +353,7 @@ export default function CustomerSupportPage() {
                     type="text"
                     value={newTicket.subject}
                     onChange={(e) => setNewTicket(t => ({ ...t, subject: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     placeholder="Tóm tắt vấn đề của bạn"
                   />
                 </div>
@@ -363,7 +363,7 @@ export default function CustomerSupportPage() {
                   <textarea
                     value={newTicket.description}
                     onChange={(e) => setNewTicket(t => ({ ...t, description: e.target.value }))}
-                    className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl resize-none focus:outline-none"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl resize-none focus:outline-none"
                     rows={4}
                     placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
                   />
@@ -371,10 +371,10 @@ export default function CustomerSupportPage() {
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-[rgb(var(--border-primary))] flex justify-end gap-3">
               <button
                 onClick={() => setShowNewTicket(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] rounded-xl"
               >
                 Hủy
               </button>

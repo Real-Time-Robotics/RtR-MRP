@@ -176,8 +176,8 @@ function MenuItem({ item, stage, isActive, isCollapsed, t }: MenuItemProps) {
         'group relative flex items-center gap-2.5 px-3 py-1.5 rounded-lg',
         'transition-all duration-200 ease-out',
         isActive
-          ? cn('bg-white dark:bg-gray-800 shadow-sm', stage.color, 'border-l-3', stage.borderColor)
-          : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white'
+          ? cn('bg-white dark:bg-[rgb(var(--bg-secondary))] shadow-sm', stage.color, 'border-l-3', stage.borderColor)
+          : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[rgb(var(--bg-secondary))/0.6] hover:text-gray-900 dark:hover:text-white'
       )}
       title={isCollapsed ? label : undefined}
     >
@@ -206,7 +206,7 @@ function MenuItem({ item, stage, isActive, isCollapsed, t }: MenuItemProps) {
         <span className={cn(
           'px-2 py-0.5 text-xs font-bold rounded-full',
           isActive
-            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+            ? 'bg-white dark:bg-[rgb(var(--bg-tertiary))] text-gray-900 dark:text-white'
             : 'bg-red-500 text-white'
         )}>
           {item.badge}
@@ -222,7 +222,7 @@ function MenuItem({ item, stage, isActive, isCollapsed, t }: MenuItemProps) {
       {isCollapsed && (
         <div className={cn(
           'absolute left-full ml-3 px-3 py-2 rounded-lg shadow-lg',
-          'bg-gray-900 dark:bg-gray-700 text-white text-sm font-medium',
+          'bg-gray-900 dark:bg-[rgb(var(--bg-tertiary))] text-white text-sm font-medium',
           'opacity-0 invisible group-hover:opacity-100 group-hover:visible',
           'transition-all duration-200 z-50 whitespace-nowrap'
         )}>
@@ -233,7 +233,7 @@ function MenuItem({ item, stage, isActive, isCollapsed, t }: MenuItemProps) {
             </span>
           )}
           {/* Arrow */}
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-[rgb(var(--bg-tertiary))] rotate-45" />
         </div>
       )}
     </Link>
@@ -342,7 +342,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 p-2.5 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 lg:hidden"
+        className="fixed top-4 left-4 z-50 p-2.5 bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-xl shadow-lg border border-gray-200 dark:border-[rgb(var(--border-primary))] lg:hidden"
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
@@ -360,8 +360,8 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
       <aside
         className={cn(
           'fixed top-0 left-0 z-40 h-screen',
-          'bg-gray-50 dark:bg-gray-900',
-          'border-r border-gray-200 dark:border-gray-800',
+          'bg-gray-50 dark:bg-[rgb(var(--bg-primary))]',
+          'border-r border-gray-200 dark:border-[rgb(var(--border-primary))]',
           'flex flex-col',
           'transition-all duration-300 ease-out',
           isCollapsed ? 'w-[72px]' : 'w-64',
@@ -372,7 +372,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <Link href="/home" className="flex items-center gap-3">
             {/* Bloomberg-style Logo */}
             <div className="h-8 w-8 rounded bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center">
@@ -389,7 +389,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
             {/* Collapse button - desktop only */}
             <button
               onClick={toggleCollapsed}
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[rgb(var(--sidebar-item-hover))] transition-colors"
               title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             >
               {isCollapsed ? (
@@ -402,7 +402,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
             {/* Mobile close */}
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 lg:hidden"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-[rgb(var(--sidebar-item-hover))] lg:hidden"
             >
               <X className="w-5 h-5" />
             </button>
@@ -429,7 +429,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
         </div>
 
         {/* Divider */}
-        <div className="mx-4 my-1 border-t border-gray-200 dark:border-gray-700" />
+        <div className="mx-4 my-1 border-t border-gray-200 dark:border-[rgb(var(--border-primary))]" />
 
         {/* Navigation stages */}
         <nav className="flex-1 overflow-y-auto px-3 py-1 space-y-0">
@@ -445,7 +445,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
         </nav>
 
         {/* Divider */}
-        <div className="mx-4 my-1 border-t border-gray-200 dark:border-gray-700" />
+        <div className="mx-4 my-1 border-t border-gray-200 dark:border-[rgb(var(--border-primary))]" />
 
         {/* User & Settings - Combined section */}
         <div className={cn(
@@ -460,7 +460,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
                   pathname === '/settings'
-                    ? 'text-blue-600 bg-white dark:bg-gray-800 shadow-sm'
+                    ? 'text-blue-600 bg-white dark:bg-[rgb(var(--bg-secondary))] shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800'
                 )}
                 title={t('sidebar.settings')}
@@ -473,7 +473,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
             </>
           ) : (
             /* Expanded: Horizontal layout */
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-gray-800 shadow-sm">
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-[rgb(var(--bg-secondary))] shadow-sm">
               {/* Avatar */}
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0">
                 AU
@@ -497,7 +497,7 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                     'p-1.5 rounded-lg transition-colors',
                     pathname === '/settings'
                       ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30'
-                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]'
                   )}
                   title={t('sidebar.settings')}
                 >

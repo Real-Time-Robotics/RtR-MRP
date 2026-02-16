@@ -94,15 +94,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const accentColor = isCustomerPortal ? 'emerald' : 'blue';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-[rgb(var(--bg-primary))]">
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 z-50">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-[rgb(var(--bg-secondary))] border-b border-gray-200 dark:border-[rgb(var(--border-primary))] z-50">
         <div className="flex items-center justify-between h-full px-4">
           {/* Left - Logo & Mobile Menu */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] lg:hidden"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -119,13 +119,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
           {/* Right - Actions */}
           <div className="flex items-center gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]">
               <Bell className="w-5 h-5" />
               <span className={`absolute -top-0.5 -right-0.5 w-4 h-4 bg-${accentColor}-500 rounded-full text-[10px] text-white flex items-center justify-center`}>
                 3
               </span>
             </button>
-            <div className="hidden sm:flex items-center gap-2 ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
+            <div className="hidden sm:flex items-center gap-2 ml-2 pl-2 border-l border-gray-200 dark:border-[rgb(var(--border-primary))]">
               <div className={`w-8 h-8 bg-${accentColor}-100 rounded-full flex items-center justify-center`}>
                 <User className={`w-4 h-4 text-${accentColor}-600`} />
               </div>
@@ -134,7 +134,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 <p className="text-xs text-gray-500">{config.userCode}</p>
               </div>
             </div>
-            <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500">
+            <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] text-gray-500">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -142,7 +142,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </header>
 
       {/* Sidebar - Desktop */}
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 hidden lg:block">
+      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-white dark:bg-[rgb(var(--bg-secondary))] border-r border-gray-200 dark:border-[rgb(var(--border-primary))] hidden lg:block">
         <nav className="p-4 space-y-1">
           {config.navItems.map(item => (
             <Link
@@ -151,7 +151,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 isActive(item.href)
                   ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/30 text-${accentColor}-600 dark:text-${accentColor}-400 font-medium`
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]'
               }`}
             >
               {item.icon}
@@ -162,7 +162,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </nav>
 
         {/* Help Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <div className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/30 rounded-xl p-4`}>
             <h4 className={`font-medium text-${accentColor}-900 dark:text-${accentColor}-300 text-sm flex items-center gap-2`}>
               <HelpCircle className="w-4 h-4" />
@@ -182,8 +182,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white dark:bg-gray-800">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-white dark:bg-[rgb(var(--bg-secondary))]">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))]">
               <span className="font-bold">Menu</span>
               <button onClick={() => setSidebarOpen(false)}>
                 <X className="w-5 h-5" />

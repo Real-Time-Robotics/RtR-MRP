@@ -81,9 +81,9 @@ export const emailTemplates = {
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: #2563eb; color: white; padding: 20px; text-align: center; }
+          .header { background: #30a46c; color: white; padding: 20px; text-align: center; }
           .content { padding: 20px; background: #f9fafb; }
-          .button { display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-top: 16px; }
+          .button { display: inline-block; padding: 12px 24px; background: #30a46c; color: white; text-decoration: none; border-radius: 6px; margin-top: 16px; }
           .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
         </style>
       </head>
@@ -195,7 +195,7 @@ This is an automated message from RTR-MRP System.
     actionUrl?: string;
   }) => {
     const severityColors = {
-      low: '#3b82f6',
+      low: '#30a46c',
       medium: '#f59e0b',
       high: '#f97316',
       critical: '#dc2626',

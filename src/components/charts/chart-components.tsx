@@ -39,11 +39,11 @@ import { cn } from '@/lib/utils';
 
 export const chartColors = {
   primary: ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'],
-  blue: ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
+  blue: ['#30a46c', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'],
   green: ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
   orange: ['#F59E0B', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'],
   red: ['#EF4444', '#F87171', '#FCA5A5', '#FECACA', '#FEE2E2'],
-  mixed: ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6'],
+  mixed: ['#8B5CF6', '#30a46c', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6'],
 };
 
 export const statusColors = {

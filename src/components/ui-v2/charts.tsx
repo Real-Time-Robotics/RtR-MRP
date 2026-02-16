@@ -27,8 +27,8 @@ import { cn, formatNumber, formatCurrency } from '@/lib/utils';
 
 export const chartTheme = {
   colors: {
-    primary: ['#3B82F6', '#60A5FA', '#93C5FD'],
-    palette: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'],
+    primary: ['#30a46c', '#60A5FA', '#93C5FD'],
+    palette: ['#30a46c', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'],
     success: '#10B981',
     warning: '#F59E0B',
     danger: '#EF4444',
@@ -540,7 +540,7 @@ const ComposedChart: React.FC<ComposedChartProps> = ({
   xAxisKey = 'name',
   barKeys,
   lineKeys,
-  barColors = ['#3B82F6', '#10B981'],
+  barColors = ['#30a46c', '#10B981'],
   lineColors = ['#F59E0B', '#EF4444'],
   showGrid = true,
   showLegend = true,
@@ -610,7 +610,7 @@ export interface SparklineProps {
 
 const Sparkline: React.FC<SparklineProps> = ({
   data,
-  color = '#3B82F6',
+  color = '#30a46c',
   width = 100,
   height = 30,
   showArea = true,

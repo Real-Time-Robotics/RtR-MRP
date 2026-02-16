@@ -55,7 +55,7 @@ const revenueData = [
 // Orders by status
 const ordersByStatus = [
   { name: 'Chờ xác nhận', value: 12, color: '#F59E0B' },
-  { name: 'Đang sản xuất', value: 8, color: '#3B82F6' },
+  { name: 'Đang sản xuất', value: 8, color: '#30a46c' },
   { name: 'Đã giao', value: 45, color: '#10B981' },
   { name: 'Hoàn thành', value: 85, color: '#8B5CF6' },
   { name: 'Đã hủy', value: 6, color: '#EF4444' },
@@ -177,7 +177,7 @@ function KPISummary() {
         subtitle="đơn trong tháng"
         trend={{ value: 8.2, label: 'vs tháng trước' }}
         chartData={ordersSparkline}
-        chartColor="#3B82F6"
+        chartColor="#30a46c"
         icon={<ShoppingCart className="w-5 h-5 text-blue-600" />}
       />
       <StatCardWithChart
@@ -360,7 +360,7 @@ export function AnalyticsDashboard() {
             data={supplierPerformance}
             dataKey={['onTime', 'quality']}
             xAxisKey="name"
-            colors={['#3B82F6', '#10B981']}
+            colors={['#30a46c', '#10B981']}
             height={300}
             valueFormatter={formatPercent}
           />

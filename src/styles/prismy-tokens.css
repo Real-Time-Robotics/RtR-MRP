@@ -1,0 +1,41 @@
+/* =============================================================================
+   PRISMY DESIGN SYSTEM - Reference Token Palette
+   Namespaced --prismy-* vars for gradual migration
+   ============================================================================= */
+
+:root {
+  /* Gray Scale (Supabase-style warm neutrals) */
+  --prismy-gray-100: #f8f9fa;
+  --prismy-gray-200: #e9ecef;
+  --prismy-gray-300: #dee2e6;
+  --prismy-gray-400: #ced4da;
+  --prismy-gray-500: #adb5bd;
+  --prismy-gray-600: #868e96;
+  --prismy-gray-700: #495057;
+  --prismy-gray-800: #343a40;
+  --prismy-gray-900: #212529;
+  --prismy-gray-1000: #16191d;
+  --prismy-gray-1100: #0d0f12;
+  --prismy-gray-1200: #08090a;
+
+  /* Brand Scale (Prismy Green) */
+  --prismy-brand-50: #f0fdf4;
+  --prismy-brand-100: #dcfce7;
+  --prismy-brand-200: #bbf7d0;
+  --prismy-brand-300: #86efac;
+  --prismy-brand-400: #3ecf8e;
+  --prismy-brand-500: #30a46c;
+  --prismy-brand-600: #249163;
+  --prismy-brand-700: #15803d;
+  --prismy-brand-800: #166534;
+  --prismy-brand-900: #14532d;
+
+  /* Radius Tokens */
+  --prismy-radius-sm: 4px;
+  --prismy-radius-default: 6px;
+  --prismy-radius-md: 8px;
+  --prismy-radius-lg: 12px;
+
+  /* Vietnamese Font Reference */
+  --prismy-font-vietnamese: 'Be Vietnam Pro', 'IBM Plex Sans', system-ui, sans-serif;
+}

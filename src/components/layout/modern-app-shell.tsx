@@ -112,7 +112,7 @@ export function ModernAppShell({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-[#010409]">
+    <div className="min-h-screen bg-gray-100 dark:bg-[#08090a]">
       {/* Header */}
       <ModernHeader
         user={user}

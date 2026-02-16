@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Sans, IBM_Plex_Mono, JetBrains_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Sans, IBM_Plex_Mono, JetBrains_Mono, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -30,6 +30,14 @@ const jetBrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Vietnamese-optimized font
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-be-vietnam-pro",
+  display: "swap",
+});
+
 // Fallback font
 const inter = Inter({
   subsets: ["latin"],
@@ -51,7 +59,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b82f6",
+  themeColor: "#30a46c",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -71,7 +79,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetBrainsMono.variable} ${inter.variable} font-sans antialiased`}>
+      <body className={`${beVietnamPro.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetBrainsMono.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>
           <PWAProvider>
             {children}

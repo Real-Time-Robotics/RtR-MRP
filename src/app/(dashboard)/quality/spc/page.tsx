@@ -121,7 +121,7 @@ const ControlChartSVG: React.FC<{
           y1={yScale(v)}
           x2={padding.left + chartWidth}
           y2={yScale(v)}
-          stroke={v === ucl || v === lcl ? '#ef4444' : v === cl ? '#3b82f6' : '#e5e7eb'}
+          stroke={v === ucl || v === lcl ? '#ef4444' : v === cl ? '#30a46c' : '#e5e7eb'}
           strokeWidth={v === ucl || v === lcl || v === cl ? 2 : 1}
           strokeDasharray={v === ucl || v === lcl ? '5,5' : 'none'}
         />
@@ -155,10 +155,10 @@ const ControlChartSVG: React.FC<{
       <path
         d={linePath}
         fill="none"
-        stroke="#3b82f6"
+        stroke="#30a46c"
         strokeWidth={2}
       />
-      
+
       {/* Data points */}
       {dataPoints.map((d, i) => (
         <g key={d.id}>
@@ -166,7 +166,7 @@ const ControlChartSVG: React.FC<{
             cx={xScale(i)}
             cy={yScale(d.primaryValue)}
             r={d.isOutOfControl ? 8 : 5}
-            fill={d.isOutOfControl ? '#ef4444' : d.violations.length > 0 ? '#f59e0b' : '#3b82f6'}
+            fill={d.isOutOfControl ? '#ef4444' : d.violations.length > 0 ? '#f59e0b' : '#30a46c'}
             stroke="white"
             strokeWidth={2}
           />
@@ -187,7 +187,7 @@ const ControlChartSVG: React.FC<{
       
       {/* Y-axis labels */}
       <text x={padding.left - 10} y={yScale(ucl)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">UCL</text>
-      <text x={padding.left - 10} y={yScale(cl)} textAnchor="end" fontSize="10" fill="#3b82f6" dominantBaseline="middle">CL</text>
+      <text x={padding.left - 10} y={yScale(cl)} textAnchor="end" fontSize="10" fill="#30a46c" dominantBaseline="middle">CL</text>
       <text x={padding.left - 10} y={yScale(lcl)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">LCL</text>
       
       {/* Values */}
@@ -252,7 +252,7 @@ const SecondaryChartSVG: React.FC<{
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
       {/* Control limit lines */}
       <line x1={padding.left} y1={yScale(uclSecondary)} x2={padding.left + chartWidth} y2={yScale(uclSecondary)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5,5" />
-      <line x1={padding.left} y1={yScale(clSecondary)} x2={padding.left + chartWidth} y2={yScale(clSecondary)} stroke="#3b82f6" strokeWidth={2} />
+      <line x1={padding.left} y1={yScale(clSecondary)} x2={padding.left + chartWidth} y2={yScale(clSecondary)} stroke="#30a46c" strokeWidth={2} />
       {lclSecondary > 0 && (
         <line x1={padding.left} y1={yScale(lclSecondary)} x2={padding.left + chartWidth} y2={yScale(lclSecondary)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5,5" />
       )}
@@ -275,7 +275,7 @@ const SecondaryChartSVG: React.FC<{
       
       {/* Labels */}
       <text x={padding.left - 10} y={yScale(uclSecondary)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">UCL</text>
-      <text x={padding.left - 10} y={yScale(clSecondary)} textAnchor="end" fontSize="10" fill="#3b82f6" dominantBaseline="middle">CL</text>
+      <text x={padding.left - 10} y={yScale(clSecondary)} textAnchor="end" fontSize="10" fill="#30a46c" dominantBaseline="middle">CL</text>
       
       <text x={width - padding.right + 5} y={yScale(uclSecondary)} textAnchor="start" fontSize="9" fill="#666" dominantBaseline="middle">{uclSecondary.toFixed(3)}</text>
       <text x={width - padding.right + 5} y={yScale(clSecondary)} textAnchor="start" fontSize="9" fill="#666" dominantBaseline="middle">{clSecondary.toFixed(3)}</text>

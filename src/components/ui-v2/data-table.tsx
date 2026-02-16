@@ -443,7 +443,7 @@ function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn(
-      'overflow-hidden min-w-0 flex flex-col',
+      'overflow-hidden min-w-0 flex flex-col flex-1',
       isExcelMode
         ? 'bg-white dark:bg-slate-950 rounded-md border border-[#217346]/30 dark:border-[#70AD47]/30'
         : 'bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800',
@@ -490,7 +490,7 @@ function DataTable<T extends Record<string, any>>({
       {/* Table */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-[200px] overflow-auto"
+        className="flex-1 min-h-0 overflow-auto"
         style={virtualize ? { maxHeight: maxHeight || 'calc(100vh - 280px)' } : undefined}
       >
         <table className="w-full table-fixed">

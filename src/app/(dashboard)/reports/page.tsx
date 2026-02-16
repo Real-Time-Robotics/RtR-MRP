@@ -471,7 +471,7 @@ export default function ReportsPage() {
                           {chart.data.datasets[0].data.map((value, idx) => {
                             const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
                             const percentage = (value / total) * 100;
-                            const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+                            const colors = ['#30a46c', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
                             const offset = chart.data.datasets[0].data
                               .slice(0, idx)
                               .reduce((a, b) => a + (b / total) * 100, 0);

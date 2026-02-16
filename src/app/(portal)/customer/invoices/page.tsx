@@ -89,7 +89,7 @@ export default function CustomerInvoicesPage() {
         </div>
         <button
           onClick={() => fetchInvoices()}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -97,7 +97,7 @@ export default function CustomerInvoicesPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-blue-600" />
@@ -111,7 +111,7 @@ export default function CustomerInvoicesPage() {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-green-600" />
@@ -125,7 +125,7 @@ export default function CustomerInvoicesPage() {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
               <Clock className="w-6 h-6 text-yellow-600" />
@@ -141,7 +141,7 @@ export default function CustomerInvoicesPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -150,13 +150,13 @@ export default function CustomerInvoicesPage() {
               placeholder="Tìm theo số hóa đơn, đơn hàng..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+            className="px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="SENT">Đã gửi</option>
@@ -309,7 +309,7 @@ export default function CustomerInvoicesPage() {
       {/* Invoice Detail Modal */}
       {selectedInvoice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-auto">
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
@@ -353,7 +353,7 @@ export default function CustomerInvoicesPage() {
               </div>
               
               {/* Items */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+              <div className="border-t border-gray-200 dark:border-[rgb(var(--border-primary))] pt-4 mb-4">
                 <h4 className="font-medium mb-3">Chi tiết</h4>
                 <table className="w-full text-sm">
                   <thead>
@@ -374,7 +374,7 @@ export default function CustomerInvoicesPage() {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="border-t border-gray-200 dark:border-gray-700">
+                  <tfoot className="border-t border-gray-200 dark:border-[rgb(var(--border-primary))]">
                     <tr>
                       <td colSpan={3} className="pt-2 text-right text-gray-500">Tạm tính:</td>
                       <td className="pt-2 text-right">{selectedInvoice.subtotal.toLocaleString('vi-VN')}</td>
@@ -408,14 +408,14 @@ export default function CustomerInvoicesPage() {
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-[rgb(var(--border-primary))] flex justify-end gap-3">
               <button
                 onClick={() => setSelectedInvoice(null)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] rounded-xl"
               >
                 Đóng
               </button>
-              <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl flex items-center gap-2">
+              <button className="px-4 py-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] rounded-xl flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Tải PDF
               </button>

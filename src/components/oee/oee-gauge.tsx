@@ -35,7 +35,7 @@ export function OEEGauge({
 
   const getColor = (val: number) => {
     if (val >= 85) return { stroke: '#22c55e', bg: 'bg-green-100', text: 'text-green-600' };
-    if (val >= 70) return { stroke: '#3b82f6', bg: 'bg-blue-100', text: 'text-blue-600' };
+    if (val >= 70) return { stroke: '#30a46c', bg: 'bg-green-100', text: 'text-green-600' };
     if (val >= 50) return { stroke: '#eab308', bg: 'bg-yellow-100', text: 'text-yellow-600' };
     return { stroke: '#ef4444', bg: 'bg-red-100', text: 'text-red-600' };
   };
@@ -121,7 +121,7 @@ export function OEEMiniGauge({ value, label, color, className }: OEEMiniGaugePro
   const safeValue = Math.min(100, Math.max(0, value));
 
   const colors = {
-    blue: { stroke: '#3b82f6', text: 'text-blue-600' },
+    blue: { stroke: '#30a46c', text: 'text-green-600' },
     green: { stroke: '#22c55e', text: 'text-green-600' },
     purple: { stroke: '#a855f7', text: 'text-purple-600' },
     orange: { stroke: '#f97316', text: 'text-orange-600' },

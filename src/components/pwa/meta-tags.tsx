@@ -14,7 +14,7 @@ interface PWAMetaTagsProps {
 export function PWAMetaTags({
   title = 'RTR MRP',
   description = 'Enterprise Manufacturing Resource Planning System',
-  themeColor = '#2563eb',
+  themeColor = '#30a46c',
 }: PWAMetaTagsProps) {
   return (
     <>

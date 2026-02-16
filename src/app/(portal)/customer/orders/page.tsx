@@ -92,14 +92,14 @@ export default function CustomerOrdersPage() {
         </div>
         <button
           onClick={() => fetchOrders()}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
         <div className="flex flex-wrap items-center gap-4">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px]">
@@ -109,7 +109,7 @@ export default function CustomerOrdersPage() {
               placeholder="Tìm theo mã SO, sản phẩm..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -122,7 +122,7 @@ export default function CustomerOrdersPage() {
                 className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                   statusFilter === filter.value
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    : 'bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] text-gray-600 dark:text-[rgb(var(--text-tertiary))] hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 {filter.label}
@@ -135,12 +135,12 @@ export default function CustomerOrdersPage() {
       {/* Orders List */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-8 text-center border border-gray-200 dark:border-[rgb(var(--border-primary))]">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-3" />
             <p className="text-gray-500">Đang tải...</p>
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-8 text-center border border-gray-200 dark:border-[rgb(var(--border-primary))]">
             <ShoppingCart className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">Không có đơn hàng nào</p>
           </div>
@@ -151,10 +151,10 @@ export default function CustomerOrdersPage() {
             return (
               <div
                 key={order.id}
-                className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))] overflow-hidden"
               >
                 {/* Order Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                <div className="p-4 border-b border-gray-100 dark:border-[rgb(var(--border-primary))]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div>
@@ -196,7 +196,7 @@ export default function CustomerOrdersPage() {
 
                 {/* Progress Steps */}
                 {order.status !== 'CANCELLED' && currentStep >= 0 && (
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-[rgb(var(--border-primary))]">
                     <div className="flex items-center justify-between">
                       {orderSteps.map((step, idx) => {
                         const isCompleted = idx <= currentStep;
@@ -231,7 +231,7 @@ export default function CustomerOrdersPage() {
 
                 {/* Production Progress */}
                 {order.status === 'IN_PRODUCTION' && order.productionProgress !== undefined && (
-                  <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/20 border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/20 border-b border-gray-100 dark:border-[rgb(var(--border-primary))]">
                     <div className="flex items-center gap-4">
                       <Factory className="w-5 h-5 text-purple-600" />
                       <div className="flex-1">
@@ -323,7 +323,7 @@ export default function CustomerOrdersPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Link href={`/customer/support?so=${order.soNumber}`}>
-                        <button className="px-4 py-2 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm">
+                        <button className="px-4 py-2 text-gray-600 dark:text-[rgb(var(--text-tertiary))] rounded-xl hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] flex items-center gap-2 text-sm">
                           Liên hệ hỗ trợ
                         </button>
                       </Link>
