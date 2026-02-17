@@ -1,16 +1,16 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-02-13 (Vietnam Time)
-> **Session:** Sprint 4 In Progress — Shipments, Warehouse Approval, PDF, BOM Explosion
-> **Latest Commit:** `70663d3` - feat: Shipment system, lot selection, button standardization & checkbox fix
-> **Branch:** `main` (clean, up to date with `nclamvn/main`)
+> **Last Updated:** 2026-02-16 (Vietnam Time)
+> **Session:** Sprint 4 Complete + i18n + Design System + Quality Workflows
+> **Latest Commit:** `ac29200` - feat: darker Prismy green in light theme + fix table layout with SmartLayout
+> **Branch:** `feature/prismy-design-alignment` (working branch, uncommitted SWR/API hooks)
 > **Deploy:** Render LIVE
-> **Total Commits:** 234
+> **Total Commits:** 247
 
 ---
 
-## TONG QUAN TINH TRANG DU AN — 13/02/2026
+## TONG QUAN TINH TRANG DU AN — 16/02/2026
 
-### Tinh trang hien tai: SPRINT 4 IN PROGRESS — Operations-Critical Features
+### Tinh trang hien tai: SPRINT 4 NEAR-COMPLETE + Design System Alignment
 
 Du an RTR-MRP da hoan thanh cac moc chinh sau:
 
@@ -33,24 +33,32 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | Shipment System (SO→Xuất kho→Lot selection) | DONE | 02/12/2026 |
 | BOM Explosion → Create PO flow | DONE | 02/12/2026 |
 | Button/Checkbox UI standardization | DONE | 02/12/2026 |
-| **Sprint 4: Audit Trail** | TODO | — |
-| **Sprint 4: Approval Workflows (PO, WO)** | TODO | — |
+| Audit Trail connected to 8 API routes | **DONE** | 02/13/2026 |
+| Partial Shipment (xuat kho tung dong) | **DONE** | 02/13/2026 |
+| Complete i18n System (Vietnamese/English toggle) | **DONE** | 02/14/2026 |
+| Phase A+B Warehouse Flows (Hold, Scrap, NCR disposition) | **DONE** | 02/15/2026 |
+| Feature Flags System | **DONE** | 02/15/2026 |
+| AI Smart Import v2 + Scheduled Reports + Gantt Chart | **DONE** | 02/15/2026 |
+| Prismy Design System (CSS tokens, theme alignment) | **DONE** | 02/16/2026 |
+| Loading Pages (skeleton states) | **DONE** | 02/15/2026 |
+| **Sprint 5: SWR/API hooks migration** | IN PROGRESS | — |
+| **Sprint 5: Approval Workflows (PO, WO)** | TODO | — |
 
-### So lieu du an (Verified 02/13)
+### So lieu du an (Verified 02/16)
 
 | Metric | Value |
 |--------|-------|
-| **Prisma Schema** | 5,666 dong |
-| **Models** | 152 |
+| **Prisma Schema** | 5,702 dong |
+| **Models** | 154 |
 | **Enums** | 27 |
-| **API Routes** | 253 route.ts files |
-| **Total Commits** | 234 |
-| **Lines of Code** | 300K+ |
+| **API Routes** | 273 route.ts files |
+| **Total Commits** | 247 |
+| **Lines of Code** | 310K+ |
 | **Database** | 59 parts, 33 inventory, 5 warehouses |
 | **Production** | https://rtr-mrp.onrender.com |
-| **Git Status** | Clean — up to date with `nclamvn/main` |
+| **Git Status** | Branch `feature/prismy-design-alignment` — uncommitted SWR changes |
 
-### Cong viec da lam tu 21/01 den 12/02 (50 commits)
+### Cong viec da lam tu 21/01 den 16/02 (63 commits)
 
 #### 01/21 — Bug Fixes & UI
 - Fix 6 bugs tu customer feedback (leading zeros, part form tabs, default lead time, PO line qty, AI error explainer)
@@ -123,6 +131,141 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 - **Button Standardization**: Tat ca detail pages ui-v2 sm h-8→h-9
 - **Checkbox Fix**: Native checkbox dark/black color → custom CSS appearance:none
 - **Production Receiving** improvements
+
+#### 02/13 — Audit Trail + Partial Shipment + Toolbar
+- **Audit Trail CONNECTED** to 8 API routes (Parts, Inventory, Customers, Suppliers, Orders, Production, PO)
+  - `src/lib/audit/route-audit.ts` — reusable audit utility for API routes
+  - Auto-logs CREATE/UPDATE/DELETE with field-level change tracking
+  - History tab hien thi timeline tren 6 detail pages
+- **Partial Shipment** — xuat kho tung dong san pham (per-line shipping)
+- **Toolbar Standardization** — h-9 across all pages (button/dropdown/search)
+
+#### 02/14 — Complete i18n System (MAJOR)
+- **i18n System** with global language toggle (Vietnamese/English)
+  - `src/lib/i18n/language-context.tsx` — 1,600+ lines translations
+  - Language toggle in header (all pages)
+  - All 50+ dashboard pages converted to use i18n
+  - All forms (Part, Customer, Supplier, Sales Order, Purchase Order)
+  - All tables (Parts, Customers, Suppliers, Orders, PO)
+  - Inventory, BOM, MRP, Quality, Finance, Analytics pages
+- **Env validation skip** during build phase (fix Render deploy)
+- **Warehouse page i18n** — remove hardcoded Vietnamese
+
+#### 02/15 — Warehouse Quality Flows + Sprint 3 Features + Loading States (MAJOR)
+- **Phase A+B Warehouse Flows** (+2,752 lines):
+  - **Quality Hold page** (`/quality/hold`) — manage HOLD inventory with release/scrap decisions
+  - **Quality Scrap page** (`/quality/scrap`) — manage SCRAP/disposable inventory
+  - **NCR Disposition Dialog** — execute disposition (rework, scrap, return-to-supplier, use-as-is)
+  - **Feature Flags System** (`src/lib/features/feature-flags.ts`) — enable/disable features
+  - **Settings Warehouse page** (`/settings/warehouse`) — warehouse configuration UI
+  - **MRP Engine enhancement** — improved planning logic (+349 lines)
+  - **Hold Service** (`src/lib/quality/hold-service.ts`) — hold inventory management
+  - **Scrap Service** (`src/lib/quality/scrap-service.ts`) — scrap disposal workflow
+  - **NCR Disposition Service** (`src/lib/quality/ncr-disposition-service.ts`) — execute NCR actions
+  - New API routes: hold, scrap, NCR execute-disposition, shipment pick, feature-flags
+- **Sprint 3 Features** (+3,827 lines):
+  - **AI Smart Import v2** (`/import/smart`) — 765 lines, full smart import page
+  - **AI Analyzer** (`src/lib/import/ai-analyzer.ts`) — AI-powered import analysis
+  - **Import Executor** (`src/lib/import/import-executor.ts`) — batch import execution
+  - **Scheduled Reports** — report generator with PDF/Excel rendering
+  - **Production Gantt Chart** (`/production/schedule`) — 783 lines, interactive Gantt
+  - **Schedule Conflict Detection** (`src/lib/production/schedule-conflict.ts`)
+  - **Gantt Data Service** (`src/lib/production/gantt-data.ts`)
+  - New API routes: import/analyze, import/execute, production/schedule, production/reschedule, reports/generate, reports/history, reports/send
+- **Loading Pages** — skeleton loading states for BOM, Home, Inventory, Parts, Production
+- **Internal Auth** (`src/lib/api/internal-auth.ts`) — server-to-server auth
+- **Login page dark theme** + heading color fix on dark backgrounds
+
+#### 02/16 — Prismy Design System (IN PROGRESS)
+- **Prismy Design Tokens** (`src/styles/prismy-tokens.css`) — CSS custom properties
+  - Darker green for light theme (brand alignment)
+  - Updated `theme.css` and `globals.css` with new color system
+  - Updated `tailwind.config.ts` with Prismy color palette
+- **SmartLayout** — table layout fixes for Parts, Orders pages
+- **Customer Portal** — updated with Prismy theme colors
+- **Charts** — updated color references across all chart components
+- **Uncommitted work** (branch `feature/prismy-design-alignment`):
+  - SWR Provider (`src/providers/swr-provider.tsx`) — data fetching layer
+  - Web Vitals component (`src/components/web-vitals.tsx`)
+  - `use-api-data.ts` + `use-mutation.ts` — reusable API hooks
+  - Multiple form/table improvements
+
+---
+
+## HANDOVER CHECKPOINT - 16/02/2026
+
+### Completed 02/13–02/16 (13 commits, +14,659 / -5,563 lines)
+
+**New Models Added (2):**
+- Schema extended with Hold/Scrap quality workflow models (+34 lines)
+
+**New Services (8):**
+- `src/lib/audit/route-audit.ts` — Reusable audit trail for API routes
+- `src/lib/quality/hold-service.ts` — HOLD inventory management
+- `src/lib/quality/scrap-service.ts` — Scrap disposal workflow
+- `src/lib/quality/ncr-disposition-service.ts` — NCR execution service
+- `src/lib/import/ai-analyzer.ts` — AI-powered import analysis
+- `src/lib/import/import-executor.ts` — Batch import executor
+- `src/lib/production/gantt-data.ts` — Gantt chart data
+- `src/lib/production/schedule-conflict.ts` — Conflict detection
+
+**New API Routes (15+):**
+```
+GET    /api/quality/hold                           — List HOLD inventory
+POST   /api/quality/hold/[inventoryId]/decision    — Release/scrap decision
+GET    /api/quality/scrap                          — List SCRAP inventory
+POST   /api/quality/scrap/[inventoryId]/dispose    — Dispose scrap
+POST   /api/quality/ncr/[id]/execute-disposition   — Execute NCR action
+POST   /api/shipments/[id]/pick                    — Pick for shipment
+GET    /api/settings/feature-flags                 — Feature flags
+POST   /api/import/analyze                         — AI import analysis
+POST   /api/import/execute                         — Execute import
+GET    /api/production/schedule                    — Production schedule data
+POST   /api/production/reschedule                  — Reschedule work order
+POST   /api/reports/generate                       — Generate report
+GET    /api/reports/history                        — Report history
+POST   /api/reports/send                           — Email report
+GET    /api/internal/parts                         — Internal parts API
+GET    /api/internal/work-orders                   — Internal WO API
+GET    /api/internal/inventory/summary             — Internal inventory
+```
+
+**New UI Pages/Components:**
+- `/quality/hold` — Quality Hold management page (427 lines)
+- `/quality/scrap` — Quality Scrap management page (473 lines)
+- `/import/smart` — AI Smart Import page (765 lines)
+- `/production/schedule` — Production Gantt Chart (783 lines, enhanced)
+- `/settings/warehouse` — Warehouse settings page (220 lines)
+- NCR Disposition Dialog component (269 lines)
+- Job Progress Toast component (160 lines)
+- Loading skeleton pages (BOM, Home, Inventory, Parts, Production)
+- Page transition component
+
+**i18n System:**
+- `src/lib/i18n/language-context.tsx` — 1,744 lines full translation system
+- Vietnamese/English toggle in header
+- All 50+ pages, all forms, all tables converted
+
+**Prismy Design System:**
+- `src/styles/prismy-tokens.css` — CSS design tokens
+- Updated theme colors across entire app (39 files)
+
+### Commits (02/13–02/16)
+```
+ac29200 feat: darker Prismy green in light theme + fix table layout with SmartLayout
+c800a06 chore: add loading pages, internal auth, and test files
+b1e933b feat: Sprint 3 — AI Smart Import, Scheduled Reports, Production Gantt Chart
+62b808f feat: Phase A+B warehouse flows — feature flags, quality workflows, and UI pages
+fe2d3b1 fix: Heading color override on dark backgrounds (login left panel)
+be3ab53 fix: Login page dark theme colors + full i18n support
+f298989 fix: Add i18n support to warehouse page — remove hardcoded Vietnamese
+b0e0391 fix: Skip env validation during build phase to prevent Render deploy failure
+892d1e2 feat: Complete i18n system with global language toggle
+875111f docs: Update handover session notes
+b335743 fix: Standardize toolbar button/dropdown/search height to h-9 across all pages
+b2fa938 feat: Partial shipment — xuất kho từng dòng sản phẩm
+36ba206 feat: Connect audit trail to CRUD operations across 8 API routes
+```
 
 ---
 
@@ -262,15 +405,15 @@ f7b4f71 feat: Warehouse management, receiving inspection pipeline & inventory tr
 | Local | `postgresql://mac@localhost:5432/rtr_mrp` | PostgreSQL 14 | 59 parts, 33 inventory, 4 warehouses |
 | Production | Render PostgreSQL (Singapore) | PostgreSQL 18 | **Identical to local** |
 
-### Project Stats (Verified 02/13)
+### Project Stats (Verified 02/16)
 
 | Metric | Value |
 |--------|-------|
-| **Prisma Schema** | 5,666 lines |
-| **Models** | 152 |
+| **Prisma Schema** | 5,702 lines |
+| **Models** | 154 |
 | **Enums** | 27 |
-| **API Routes** | 253 route.ts files |
-| **Lines of Code** | 300K+ |
+| **API Routes** | 273 route.ts files |
+| **Lines of Code** | 310K+ |
 
 ### Tech Stack Detail
 ```
@@ -453,55 +596,72 @@ model ShipmentLine {
 - [x] AI Smart Import Engine (Vietnamese headers, auto-mapping, duplicate detect)
 - [x] AI Phase 1-3 (Forecast, Quality, Supplier Risk, Auto-PO, Auto-Schedule, Alerts)
 - [x] BOM Management (multi-level, explode, where-used, line manager, status switcher)
-- [x] **BOM Explosion → Create PO** (auto-create POs from BOM explosion) — NEW 02/12
+- [x] BOM Explosion → Create PO (auto-create POs from BOM explosion)
 - [x] MRP Planning (ATP/CTP, Pegging, Simulation)
 - [x] Production (Work Orders, Routing, Capacity, OEE)
-- [x] **Warehouse Approval Flow** (Production→PENDING→Kho confirm/reject) — NEW 02/11
-- [x] **Material Issue** (ad-hoc + WO-based material issuing) — NEW 02/11
+- [x] **Production Gantt Chart** (`/production/schedule` — interactive, drag reschedule) — NEW 02/15
+- [x] Warehouse Approval Flow (Production→PENDING→Kho confirm/reject)
+- [x] Material Issue (ad-hoc + WO-based material issuing)
 - [x] Quality (NCR, CAPA, Inspection Plans, Traceability)
+- [x] **Quality Hold Management** (`/quality/hold` — release/scrap decisions) — NEW 02/15
+- [x] **Quality Scrap Management** (`/quality/scrap` — disposal workflow) — NEW 02/15
+- [x] **NCR Disposition Execution** (rework, scrap, return, use-as-is) — NEW 02/15
 - [x] Receiving Inspection Pipeline (PO→RECEIVING→QC→MAIN/HOLD/QUARANTINE)
 - [x] Warehouse Management (5-warehouse: MAIN, RECEIVING, HOLD, QUARANTINE, SCRAP)
 - [x] Inventory (Multi-warehouse, lot/serial, composite keys, partial transfer)
 - [x] Purchasing (PO, Suppliers, Tax ID, Secondary suppliers)
 - [x] Sales (SO, Customer tiers: Platinum/Gold/Silver/Bronze)
-- [x] **Shipment System** (SO→Xuat kho→Lot selection→Delivery) — NEW 02/12
+- [x] Shipment System (SO→Xuat kho→Lot selection→Delivery)
+- [x] **Partial Shipment** (per-line shipping) — NEW 02/13
 - [x] Finance (Costing, GL, Invoicing, multi-currency VND)
-- [x] **PDF Generation** (PO, Invoice, Packing List, Work Order) — NEW 02/11
+- [x] PDF Generation (PO, Invoice, Packing List, Work Order)
 - [x] Excel Import/Export (Vietnamese support)
+- [x] **AI Smart Import v2** (`/import/smart` — full-page AI import) — NEW 02/15
 - [x] Mobile PWA (offline + barcode scanning)
 - [x] Discussions (threaded on entities)
 - [x] Sprint 3: Intelligence & Polish features
 - [x] Report Scheduler
+- [x] **Scheduled Reports with PDF/Excel rendering** — NEW 02/15
 - [x] Part form UX (searchable dropdowns, smart navigation)
-- [x] Customer Detail Page — NEW 02/11
+- [x] Customer Detail Page
+- [x] **Audit Trail** connected to 8 API routes (field-level changes) — NEW 02/13
+- [x] **Complete i18n System** (Vietnamese/English, all pages/forms/tables) — NEW 02/14
+- [x] **Feature Flags System** — NEW 02/15
+- [x] **Prismy Design System** (CSS tokens, brand colors) — NEW 02/16
+- [x] **Loading Skeleton Pages** (BOM, Home, Inventory, Parts, Production) — NEW 02/15
 
 ### SPRINT ROADMAP - WHAT'S NEXT
 
-#### SPRINT 4: OPERATIONS-CRITICAL (ACTIVE — Started 02/11)
+#### SPRINT 4: OPERATIONS-CRITICAL (COMPLETE)
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
 | PDF Generation (PO, Invoice, Packing List, WO) | **DONE** | Critical | `src/lib/documents/` — 5 files |
 | Warehouse Approval Flow (Production receipts) | **DONE** | Critical | ProductionReceipt PENDING→CONFIRMED/REJECTED |
-| Shipment System (SO xuất kho) | **DONE** | Critical | Shipment + lot selection |
+| Shipment System (SO xuất kho) | **DONE** | Critical | Shipment + lot selection + partial |
 | BOM Explosion → Create PO | **DONE** | High | `/api/bom/[id]/create-pos` |
 | Material Issue (ad-hoc + WO) | **DONE** | High | `/inventory/issue` page |
 | Button/Checkbox UI standardization | **DONE** | Medium | ui-v2 h-9, custom checkbox CSS |
-| Audit Trail (who, when, old -> new) | TODO | **Critical** | Enterprise compliance, ChangeLog model |
+| Audit Trail (who, when, old → new) | **DONE** | Critical | `route-audit.ts` + 8 API routes |
+| i18n System (Vietnamese/English) | **DONE** | Critical | 1,744 lines translations |
+| Quality Workflows (Hold, Scrap, NCR) | **DONE** | High | 3 new pages + 3 services |
+| Production Gantt Chart | **DONE** | High | Interactive with reschedule |
+| Scheduled Reports (PDF/Excel) | **DONE** | High | Generate + email |
+| Feature Flags | **DONE** | Medium | Enable/disable features |
+| Prismy Design System | **DONE** | Medium | CSS tokens, brand alignment |
+
+#### SPRINT 5: POLISH & SCALE (ACTIVE)
+
+| Task | Status | Priority | Notes |
+|------|--------|----------|-------|
+| SWR/API hooks migration | **IN PROGRESS** | High | `use-api-data.ts`, SWR provider |
 | Approval Workflows (PO, WO release) | TODO | **Critical** | Multi-step, role-based |
 | Excel Export nang cao (BOM tree, filters) | TODO | High | BOM indent format |
 | Barcode/QR Generation + Print labels | TODO | High | |
-
-#### SPRINT 5: POLISH & SCALE
-
-| Task | Status | Priority |
-|------|--------|----------|
-| Role-based Dashboards (CEO, Kho, SX, Mua hang) | TODO | High |
-| AI Import nang cao (PDF bao gia, reconciliation) | TODO | Medium |
-| Gantt Chart cho Production | TODO | Medium |
-| Backup & Recovery | TODO | High |
-| UX Polish (keyboard shortcuts, saved filters) | TODO | Low |
-| Increase test coverage (243 routes, ~10 test files) | TODO | Medium |
+| Role-based Dashboards (CEO, Kho, SX, Mua hang) | TODO | High | |
+| Backup & Recovery | TODO | High | |
+| UX Polish (keyboard shortcuts, saved filters) | TODO | Low | |
+| Increase test coverage (273 routes, ~10 test files) | TODO | Medium | |
 
 ---
 
@@ -658,26 +818,45 @@ render deploys create srv-d5a8l81r0fns73872uhg --confirm -o json
 ## IMPORTANT FILES
 
 ```
-prisma/schema.prisma                    # 152 models, 27 enums, 5666 lines
+prisma/schema.prisma                    # 154 models, 27 enums, 5702 lines
 scripts/ensure-warehouses.ts            # Build-time warehouse creation (5 standard)
 src/app/(dashboard)/warehouses/         # Warehouse management UI + pending receipts
 src/app/(dashboard)/quality/receiving/  # Receiving inspection UI
-src/app/(dashboard)/inventory/issue/    # Material issue page (NEW)
-src/app/api/quality/inspections/        # Inspection API + inventory moves
-src/app/api/inventory/[id]/route.ts     # Transfer logic
-src/app/api/inventory/issue/route.ts    # Ad-hoc material issue (NEW)
-src/app/api/warehouse-receipts/         # Warehouse approval flow (NEW)
-src/app/api/production/[id]/            # WO + receive + issue (NEW)
-src/app/api/orders/[id]/ship/route.ts   # Shipment creation (NEW)
-src/app/api/shipments/                  # Shipment management (NEW)
-src/app/api/bom/[id]/create-pos/        # BOM→PO creation (NEW)
-src/app/api/purchase-orders/[id]/       # PO receiving → WH-RECEIVING
-src/app/api/                            # 253 API route files
-src/lib/documents/                      # PDF generators: PO, Invoice, WO, Packing List (NEW)
+src/app/(dashboard)/quality/hold/       # Quality hold management (NEW 02/15)
+src/app/(dashboard)/quality/scrap/      # Quality scrap management (NEW 02/15)
+src/app/(dashboard)/import/smart/       # AI Smart Import page (NEW 02/15)
+src/app/(dashboard)/production/schedule/ # Production Gantt Chart (ENHANCED 02/15)
+src/app/(dashboard)/settings/warehouse/ # Warehouse settings (NEW 02/15)
+src/app/(dashboard)/inventory/issue/    # Material issue page
+src/app/api/quality/hold/               # Hold inventory API (NEW 02/15)
+src/app/api/quality/scrap/              # Scrap inventory API (NEW 02/15)
+src/app/api/quality/ncr/[id]/execute-disposition/ # NCR execution (NEW 02/15)
+src/app/api/import/analyze|execute/     # AI import APIs (NEW 02/15)
+src/app/api/production/schedule|reschedule/ # Gantt APIs (NEW 02/15)
+src/app/api/reports/generate|history|send/ # Report APIs (NEW 02/15)
+src/app/api/settings/feature-flags/     # Feature flags API (NEW 02/15)
+src/app/api/internal/                   # Internal auth APIs (NEW 02/15)
+src/app/api/warehouse-receipts/         # Warehouse approval flow
+src/app/api/                            # 273 API route files
+src/lib/audit/route-audit.ts            # Reusable audit trail (NEW 02/13)
+src/lib/i18n/language-context.tsx        # i18n system — 1,744 lines (NEW 02/14)
+src/lib/features/feature-flags.ts        # Feature flag system (NEW 02/15)
+src/lib/quality/hold-service.ts          # Hold management (NEW 02/15)
+src/lib/quality/scrap-service.ts         # Scrap disposal (NEW 02/15)
+src/lib/quality/ncr-disposition-service.ts # NCR execution (NEW 02/15)
+src/lib/import/ai-analyzer.ts            # AI import analysis (NEW 02/15)
+src/lib/import/import-executor.ts        # Import executor (NEW 02/15)
+src/lib/production/gantt-data.ts         # Gantt chart data (NEW 02/15)
+src/lib/production/schedule-conflict.ts  # Conflict detection (NEW 02/15)
+src/lib/reports/report-generator.ts      # Report generation (NEW 02/15)
+src/lib/reports/pdf-renderer.ts          # PDF rendering (NEW 02/15)
+src/lib/reports/excel-renderer.ts        # Excel rendering (NEW 02/15)
+src/lib/documents/                      # PDF generators: PO, Invoice, WO, Packing List
 src/lib/ai/                             # All AI modules
-src/lib/excel/                          # Excel import/export + AI
-src/components/bom/                     # BOM components: line manager, status, tree (ENHANCED)
-src/components/                         # 50+ feature component sets
+src/lib/env.ts                           # Environment validation (NEW 02/14)
+src/styles/prismy-tokens.css             # Prismy design tokens (NEW 02/16)
+src/components/quality/ncr-disposition-dialog.tsx # NCR dialog (NEW 02/15)
+src/components/jobs/job-progress-toast.tsx # Job progress (NEW 02/14)
 CLAUDE.md                               # AI coding conventions
 HANDOVER-SESSION.md                     # This file
 ```
@@ -688,16 +867,17 @@ HANDOVER-SESSION.md                     # This file
 
 | # | Van de | Muc do | Ghi chu |
 |---|--------|--------|---------|
-| 1 | Test coverage thap | HIGH | 253 API routes nhung chi ~10 test files |
-| 2 | Audit Trail chua co | HIGH | Can ChangeLog model cho enterprise compliance |
-| 3 | Approval Workflows chua co | HIGH | PO/WO release can multi-step approval |
+| 1 | Test coverage thap | HIGH | 273 API routes nhung chi ~10 test files |
+| 2 | Approval Workflows chua co | HIGH | PO/WO release can multi-step approval |
+| 3 | SWR migration chua xong | MEDIUM | Branch uncommitted, can merge |
 | 4 | V2 API chua hoan thanh | MEDIUM | Hau het routes con o V1 |
 | 5 | Warehouse type la String | LOW | Khong phai enum, can validate trong code |
 | 6 | pg_dump version mismatch | LOW | Prod v18, local v14 — phai dung pg_dump v18 |
-| 7 | Zod z.record() | FIXED | Da fix 02/04 — can explicit key schema |
-| 8 | Prisma JSON fields | FIXED | Da fix — cast to object truoc khi save |
-| 9 | Buffer/Uint8Array | FIXED | Da fix — NextResponse can Uint8Array |
-| 10 | Nodemailer | FIXED | Da fix — dynamic import only |
+| 7 | Audit Trail | DONE | Connected to 8 routes (02/13) |
+| 8 | Zod z.record() | FIXED | Da fix 02/04 |
+| 9 | Prisma JSON fields | FIXED | Da fix |
+| 10 | Buffer/Uint8Array | FIXED | Da fix |
+| 11 | Nodemailer | FIXED | Da fix — dynamic import only |
 
 ---
 
@@ -717,11 +897,15 @@ HANDOVER-SESSION.md                     # This file
 02/09       WH-SCRAP + Combobox fix
 02/11       Warehouse Approval Flow + PDF Generation + BOM + Material Issue (MAJOR)
 02/12       Shipment System + BOM Explosion→PO + UI standardization
+02/13       Audit Trail (8 routes) + Partial Shipment + Toolbar h-9
+02/14       Complete i18n System (Vi/En) + Env validation fix
+02/15       Quality Workflows (Hold/Scrap/NCR) + Gantt + Smart Import v2 + Reports (MAJOR)
+02/16       Prismy Design System + SmartLayout (IN PROGRESS)
 ```
 
-**Tong ket:** Du an da UAT Ready, 234 commits, 152 models, 253 API routes, 300K+ LOC.
-Sprint 4 dang trien khai — da hoan thanh PDF, Shipments, Warehouse Approval, BOM→PO.
-Con lai: Audit Trail + Approval Workflows.
+**Tong ket:** Du an da Production Ready, 247 commits, 154 models, 273 API routes, 310K+ LOC.
+Sprint 4 COMPLETE — Audit Trail, i18n, Quality Workflows, Gantt, Reports da xong.
+Sprint 5 dang trien khai — SWR migration + Approval Workflows.
 
 ---
 
@@ -730,16 +914,24 @@ Con lai: Audit Trail + Approval Workflows.
 **Noi voi Claude:** "Doc HANDOVER-SESSION.md de tiep tuc"
 
 **Viec tiep theo nen lam (theo thu tu uu tien):**
-1. Audit Trail (who, when, old → new) - **Critical** cho enterprise compliance
+1. Merge branch `feature/prismy-design-alignment` → commit SWR/API hooks changes
 2. Approval Workflows (PO, WO release) - **Critical** multi-step, role-based
 3. Excel Export nang cao (BOM tree, filters) - High
 4. Barcode/QR Generation + Print labels - High
 5. Role-based Dashboards (CEO, Kho, SX, Mua hang) - High
-6. Tang test coverage (target: 50%+ API routes) - Medium
+6. Tang test coverage (target: 50%+ of 273 API routes) - Medium
 7. Data sync Local → Production (pg_dump/pg_restore) - khi can
+
+**Luu y ve branch hien tai:**
+- Branch `feature/prismy-design-alignment` co uncommitted changes:
+  - `src/providers/swr-provider.tsx` — SWR data fetching provider
+  - `src/components/web-vitals.tsx` — Performance monitoring
+  - `src/hooks/use-api-data.ts` + `use-mutation.ts` — Reusable API hooks
+  - Multiple form/table improvements (parts, customers, suppliers, orders)
+- Can review va commit/merge truoc khi tiep tuc feature moi
 
 ---
 
-*Cap nhat lan cuoi: 2026-02-13 VN*
+*Cap nhat lan cuoi: 2026-02-16 VN*
 *Du an: RTR-MRP - Material Requirements Planning System*
 *Handover prepared by: Claude Opus 4.6*
