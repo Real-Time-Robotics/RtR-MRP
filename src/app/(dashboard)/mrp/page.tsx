@@ -117,7 +117,7 @@ export default function MrpPage() {
     try {
       const res = await fetch("/api/mrp");
       const data = await res.json();
-      setRuns(data);
+      setRuns(Array.isArray(data) ? data : []);
     } catch (error) {
       clientLogger.error("Failed to fetch runs:", error);
     } finally {
