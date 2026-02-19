@@ -132,7 +132,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 100; // requests per window
+const RATE_LIMIT_MAX = 500; // requests per window
 
 // Check if running in test environment
 function isTestEnvironment(): boolean {

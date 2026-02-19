@@ -46,7 +46,10 @@ interface ThreadPanelProps {
   className?: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => {
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+});
 
 export function ThreadPanel({
   contextType,

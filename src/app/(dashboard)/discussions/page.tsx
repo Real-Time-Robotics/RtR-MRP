@@ -98,7 +98,10 @@ const STATUS_ICONS: Record<ThreadStatus, React.ElementType> = {
 // FETCHER
 // =============================================================================
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => {
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+});
 
 // =============================================================================
 // COMPONENTS
@@ -362,7 +365,7 @@ function DiscussionsPageContent() {
     }
   }, [selectedThreadId, router]);
 
-  const selectedThread = data?.threads.find((t) => t.id === selectedThreadId);
+  const selectedThread = data?.threads?.find((t) => t.id === selectedThreadId);
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">
