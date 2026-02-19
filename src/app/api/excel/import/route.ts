@@ -28,6 +28,25 @@ const formData = await request.formData();
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // Validate file size (max 10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File quá lớn. Tối đa ${MAX_FILE_SIZE / (1024 * 1024)}MB` },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExt = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    if (!allowedExtensions.includes(fileExt)) {
+      return NextResponse.json(
+        { error: `Chỉ chấp nhận file ${allowedExtensions.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Read file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

@@ -82,6 +82,7 @@ describe('Quality NCR API', () => {
   // ===========================================================================
   describe('GET /api/quality/ncr', () => {
     it('should return paginated NCR list successfully', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       const mockNCRs = [
         {
           id: 'ncr-1',
@@ -101,7 +102,7 @@ describe('Quality NCR API', () => {
       (prisma.nCR.count as Mock).mockResolvedValue(1);
 
       const request = new NextRequest('http://localhost:3000/api/quality/ncr');
-      const response = await getNCRList(request);
+      const response = await getNCRList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -112,11 +113,12 @@ describe('Quality NCR API', () => {
     });
 
     it('should filter NCRs by status', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.nCR.findMany as Mock).mockResolvedValue([]);
       (prisma.nCR.count as Mock).mockResolvedValue(0);
 
       const request = new NextRequest('http://localhost:3000/api/quality/ncr?status=open');
-      const response = await getNCRList(request);
+      const response = await getNCRList(request, mockContext);
 
       expect(response.status).toBe(200);
       const findManyCall = (prisma.nCR.findMany as Mock).mock.calls[0][0];
@@ -124,11 +126,12 @@ describe('Quality NCR API', () => {
     });
 
     it('should return 500 when database query fails', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.nCR.findMany as Mock).mockRejectedValue(new Error('DB error'));
       (prisma.nCR.count as Mock).mockRejectedValue(new Error('DB error'));
 
       const request = new NextRequest('http://localhost:3000/api/quality/ncr');
-      const response = await getNCRList(request);
+      const response = await getNCRList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -260,6 +263,7 @@ describe('Quality NCR API', () => {
   // ===========================================================================
   describe('GET /api/quality/ncr/[id]', () => {
     it('should return NCR detail successfully', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       const mockNCR = {
         id: 'ncr-1',
         ncrNumber: 'NCR-2026-0001',
@@ -285,6 +289,7 @@ describe('Quality NCR API', () => {
     });
 
     it('should return 404 when NCR is not found', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.nCR.findUnique as Mock).mockResolvedValue(null);
 
       const request = new NextRequest('http://localhost:3000/api/quality/ncr/nonexistent');
@@ -296,6 +301,7 @@ describe('Quality NCR API', () => {
     });
 
     it('should return 500 when database fetch fails', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.nCR.findUnique as Mock).mockRejectedValue(new Error('DB error'));
 
       const request = new NextRequest('http://localhost:3000/api/quality/ncr/ncr-1');

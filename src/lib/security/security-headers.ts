@@ -32,8 +32,8 @@ export const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self'",
+      "style-src 'self'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
       "connect-src 'self' https://api.sentry.io wss:",

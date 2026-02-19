@@ -83,6 +83,12 @@ export class MrpEngine {
         // Auto-create missing Part records for Products that have no matching Part
         for (const product of products) {
             if (!skuToPartId.has(product.sku)) {
+                logger.warn('MRP auto-creating Part for Product without matching Part record', {
+                    context: 'mrp-core',
+                    productId: product.id,
+                    productSku: product.sku,
+                    mrpRunId: this.runId,
+                });
                 const newPart = await prisma.part.create({
                     data: {
                         partNumber: product.sku,
@@ -218,10 +224,20 @@ export class MrpEngine {
                 const netRequired = Math.max(0, (totalGross + safetyStock) - totalStock);
 
                 if (netRequired > 0) {
-                    // Create Suggestion (Planned Order)
-                    const suggestedDate = new Date(mrpRunDate);
-                    // Logic: For simplest case, take earliest demand date - lead time.
-                    // A proper implementation buckets by date. We aggregate "Bucketless" here for Phase 1.
+                    // Apply MOQ and order multiple rounding
+                    const orderMultiple = part.planning?.orderMultiple || 1;
+                    const minStockLevel = part.planning?.minStockLevel || 0;
+                    let suggestedQty = netRequired;
+
+                    // Round up to nearest order multiple
+                    if (orderMultiple > 1) {
+                        suggestedQty = Math.ceil(suggestedQty / orderMultiple) * orderMultiple;
+                    }
+
+                    // Ensure at least the minimum stock level
+                    if (minStockLevel > 0 && suggestedQty < minStockLevel) {
+                        suggestedQty = Math.ceil(minStockLevel / orderMultiple) * orderMultiple;
+                    }
 
                     suggestionsToCreate.push({
                         mrpRunId: this.runId,
@@ -229,16 +245,16 @@ export class MrpEngine {
                         actionType: 'PURCHASE', // Or MAKE, based on Make/Buy flag. Default to Purchase for test.
                         status: 'pending',
                         priority: 'HIGH',
-                        suggestedQty: netRequired,
+                        suggestedQty: suggestedQty,
                         suggestedDate: new Date(new Date().setDate(new Date().getDate() + leadTime)),
-                        reason: `Gross: ${totalGross}, Stock: ${totalStock}, SS: ${safetyStock}`
+                        reason: `Gross: ${totalGross}, Stock: ${totalStock}, SS: ${safetyStock}, MOQ: ${orderMultiple}`
                     });
 
                     // EXPLODE Dependencies (Pass demand to next level)
                     const children = bomGraph.get(partId);
                     if (children && children.length > 0) {
                         for (const child of children) {
-                            const childReqQty = netRequired * child.qty; // Explode based on PLANNED ORDER, not Gross.
+                            const childReqQty = suggestedQty * child.qty; // Explode based on PLANNED ORDER (with MOQ rounding)
                             // Add to Gross Reqs of child
                             addRequirement(
                                 child.childId,

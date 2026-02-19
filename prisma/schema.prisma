@@ -730,6 +730,7 @@ model Inventory {
   @@index([partId])
   @@index([warehouseId])
   @@index([partId, warehouseId])
+  @@index([quantity])
   @@index([expiryDate])
   @@map("inventory")
 }
@@ -928,6 +929,7 @@ model User {
   // MFA fields
   mfaEnabled     Boolean @default(false)
   mfaMethod      String? // totp, sms, email
+  mfaSecret      String? // Encrypted TOTP secret
   mfaBackupCodes Json? // Encrypted backup codes
 
   // Security fields
@@ -1854,6 +1856,7 @@ model NCR {
   history NCRHistory[]
 
   @@index([status])
+  @@index([priority])
   @@index([lotNumber])
   @@index([partId])
   @@map("ncrs")

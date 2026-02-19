@@ -31,7 +31,16 @@ export async function GET(request: NextRequest) {
     }
 
     // No users exist - create admin user
-    const defaultPassword = process.env.SEED_ADMIN_PASSWORD || "admin123456@";
+    const defaultPassword = process.env.SEED_ADMIN_PASSWORD;
+    if (!defaultPassword) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "SEED_ADMIN_PASSWORD environment variable is required for initial setup",
+        },
+        { status: 500 }
+      );
+    }
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
     await prisma.user.create({

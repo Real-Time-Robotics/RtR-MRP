@@ -23,7 +23,20 @@ const adjustmentSchema = z.object({
   reason: z.string().min(1, 'Lý do điều chỉnh là bắt buộc'),
   reference: z.string().optional(),
   notes: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    // For set and cycle_count, quantity must be >= 0 (cannot set inventory to negative)
+    if (['set', 'cycle_count'].includes(data.adjustmentType)) {
+      return data.quantity >= 0;
+    }
+    // For add and subtract, quantity must be > 0
+    return data.quantity > 0;
+  },
+  {
+    message: 'Số lượng phải >= 0 cho set/cycle_count, hoặc > 0 cho add/subtract',
+    path: ['quantity'],
+  }
+);
 
 const transferSchema = z.object({
   partId: z.string().min(1),

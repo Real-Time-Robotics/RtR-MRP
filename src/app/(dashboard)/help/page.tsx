@@ -20,25 +20,29 @@ const resources = [
     icon: Book,
     title: 'Tài liệu hướng dẫn',
     description: 'Hướng dẫn chi tiết cách sử dụng hệ thống',
-    link: '#',
+    link: '/help/docs',
+    comingSoon: true,
   },
   {
     icon: Video,
     title: 'Video tutorials',
     description: 'Xem video hướng dẫn từng bước',
-    link: '#',
+    link: '/help/videos',
+    comingSoon: true,
   },
   {
     icon: FileText,
     title: 'FAQ',
     description: 'Câu hỏi thường gặp',
-    link: '#',
+    link: '/help/faq',
+    comingSoon: true,
   },
   {
     icon: MessageCircle,
     title: 'Hỗ trợ trực tuyến',
     description: 'Chat với đội ngũ hỗ trợ',
-    link: '#',
+    link: 'mailto:support@rtr.vn',
+    comingSoon: false,
   },
 ];
 
@@ -78,23 +82,44 @@ export default function HelpPage() {
       {/* Resources Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {resources.map((resource) => (
-          <Card key={resource.title} className="hover:shadow-md transition-shadow cursor-pointer group">
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 transition-colors">
-                  <resource.icon className="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600" />
+          <Card key={resource.title} className={`transition-shadow ${resource.comingSoon ? 'opacity-75' : 'hover:shadow-md cursor-pointer'} group`}>
+            {resource.comingSoon ? (
+              <CardContent className="p-5">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <resource.icon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                      {resource.title}
+                      <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-normal">Sắp ra mắt</span>
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {resource.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
-                    {resource.title}
-                    <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {resource.description}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            ) : (
+              <a href={resource.link}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 transition-colors">
+                      <resource.icon className="h-5 w-5 text-gray-600 dark:text-gray-400 group-hover:text-primary-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-1">
+                        {resource.title}
+                        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {resource.description}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </a>
+            )}
           </Card>
         ))}
       </div>

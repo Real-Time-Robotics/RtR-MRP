@@ -123,6 +123,7 @@ describe('Quality CAPA API', () => {
   // ===========================================================================
   describe('GET /api/quality/capa', () => {
     it('should return paginated CAPA list successfully', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       const mockCAPAs = [
         {
           id: 'capa-1',
@@ -139,7 +140,7 @@ describe('Quality CAPA API', () => {
       (prisma.cAPA.count as Mock).mockResolvedValue(1);
 
       const request = new NextRequest('http://localhost:3000/api/quality/capa');
-      const response = await getCAPAList(request);
+      const response = await getCAPAList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -149,11 +150,12 @@ describe('Quality CAPA API', () => {
     });
 
     it('should filter CAPAs by type', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.cAPA.findMany as Mock).mockResolvedValue([]);
       (prisma.cAPA.count as Mock).mockResolvedValue(0);
 
       const request = new NextRequest('http://localhost:3000/api/quality/capa?type=corrective');
-      const response = await getCAPAList(request);
+      const response = await getCAPAList(request, mockContext);
 
       expect(response.status).toBe(200);
       const findManyCall = (prisma.cAPA.findMany as Mock).mock.calls[0][0];
@@ -161,11 +163,12 @@ describe('Quality CAPA API', () => {
     });
 
     it('should return 500 when database query fails', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.cAPA.findMany as Mock).mockRejectedValue(new Error('DB error'));
       (prisma.cAPA.count as Mock).mockRejectedValue(new Error('DB error'));
 
       const request = new NextRequest('http://localhost:3000/api/quality/capa');
-      const response = await getCAPAList(request);
+      const response = await getCAPAList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(500);
@@ -377,11 +380,12 @@ describe('Quality Inspections API', () => {
         },
       ];
 
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.inspection.findMany as Mock).mockResolvedValue(mockInspections);
       (prisma.inspection.count as Mock).mockResolvedValue(1);
 
       const request = new NextRequest('http://localhost:3000/api/quality/inspections');
-      const response = await getInspectionList(request);
+      const response = await getInspectionList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -391,11 +395,12 @@ describe('Quality Inspections API', () => {
     });
 
     it('should filter inspections by type and status', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.inspection.findMany as Mock).mockResolvedValue([]);
       (prisma.inspection.count as Mock).mockResolvedValue(0);
 
       const request = new NextRequest('http://localhost:3000/api/quality/inspections?type=RECEIVING&status=pending');
-      const response = await getInspectionList(request);
+      const response = await getInspectionList(request, mockContext);
 
       expect(response.status).toBe(200);
       const findManyCall = (prisma.inspection.findMany as Mock).mock.calls[0][0];
@@ -404,11 +409,12 @@ describe('Quality Inspections API', () => {
     });
 
     it('should return 500 when database query fails', async () => {
+      (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
       (prisma.inspection.findMany as Mock).mockRejectedValue(new Error('DB error'));
       (prisma.inspection.count as Mock).mockRejectedValue(new Error('DB error'));
 
       const request = new NextRequest('http://localhost:3000/api/quality/inspections');
-      const response = await getInspectionList(request);
+      const response = await getInspectionList(request, mockContext);
       const data = await response.json();
 
       expect(response.status).toBe(500);

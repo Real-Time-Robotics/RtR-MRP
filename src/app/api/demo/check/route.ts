@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { auth } from '@/lib/auth';
 
 const DEMO_USERS = [
   { email: 'admin@demo.rtr-mrp.com', role: 'admin' },
@@ -15,52 +16,56 @@ const DEMO_USERS = [
 
 export async function GET() {
   try {
-    const results = [];
+    // Require authentication to access diagnostic endpoint
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    for (const demoUser of DEMO_USERS) {
-      const user = await prisma.user.findUnique({
-        where: { email: demoUser.email },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          status: true,
-          failedLoginCount: true,
-          lockedUntil: true,
-          createdAt: true,
-        },
-      });
+    // Batch query: single findMany instead of N serial queries
+    const demoEmails = DEMO_USERS.map(u => u.email);
+    const users = await prisma.user.findMany({
+      where: { email: { in: demoEmails } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        status: true,
+        failedLoginCount: true,
+        lockedUntil: true,
+        createdAt: true,
+      },
+    });
+    const userMap = new Map(users.map(u => [u.email, u]));
 
+    const results = DEMO_USERS.map(demoUser => {
+      const user = userMap.get(demoUser.email);
       if (!user) {
-        results.push({
+        return {
           email: demoUser.email,
           exists: false,
           expectedRole: demoUser.role,
-        });
-      } else {
-        const isLocked = user.lockedUntil && new Date(user.lockedUntil) > new Date();
-
-        results.push({
-          email: user.email,
-          exists: true,
-          role: user.role,
-          expectedRole: demoUser.role,
-          roleMatch: user.role === demoUser.role,
-          status: user.status,
-          statusOk: user.status === 'active',
-          failedLoginCount: user.failedLoginCount,
-          isLocked,
-          createdAt: user.createdAt,
-        });
+        };
       }
-    }
+      const isLocked = user.lockedUntil && new Date(user.lockedUntil) > new Date();
+      return {
+        email: user.email,
+        exists: true,
+        role: user.role,
+        expectedRole: demoUser.role,
+        roleMatch: user.role === demoUser.role,
+        status: user.status,
+        statusOk: user.status === 'active',
+        failedLoginCount: user.failedLoginCount,
+        isLocked,
+        createdAt: user.createdAt,
+      };
+    });
 
     const envCheck = {
       hasAuthSecret: !!process.env.AUTH_SECRET,
       hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
-      authSecretLength: process.env.AUTH_SECRET?.length || 0,
-      nextAuthSecretLength: process.env.NEXTAUTH_SECRET?.length || 0,
       nodeEnv: process.env.NODE_ENV,
     };
 

@@ -26,7 +26,8 @@ export const GET = withRoleAuth(['admin', 'manager'], async (request: NextReques
 
   try {
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const parsedLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = isNaN(parsedLimit) ? 50 : Math.min(Math.max(parsedLimit, 1), 200);
     const type = searchParams.get('type') || undefined;
 
     const backups = await listBackups({ limit, type });

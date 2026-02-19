@@ -5,7 +5,7 @@ import { generateCAPANumber } from "@/lib/quality/capa-workflow";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
-import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for CAPA creation
 const CAPACreateSchema = z.object({
@@ -20,8 +20,12 @@ const CAPACreateSchema = z.object({
   ncrIds: z.array(z.string()).optional(),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, _context, _session) => {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
@@ -57,7 +61,7 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/capa' });
     return NextResponse.json({ error: "Lỗi tải danh sách CAPA" }, { status: 500 });
   }
-}
+});
 
 export const POST = withAuth(async (request, context, session) => {
   try {

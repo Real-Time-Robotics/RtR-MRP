@@ -267,7 +267,8 @@ describe('POST /api/bom', () => {
     const data = await res.json();
 
     expect(res.status).toBe(201);
-    expect(data.id).toBe('bom-new');
+    expect(data.success).toBe(true);
+    expect(data.data.id).toBe('bom-new');
   });
 
   it('returns 400 when referenced parts do not exist', async () => {
@@ -301,7 +302,8 @@ describe('POST /api/bom', () => {
     );
     expect(res.status).toBe(500);
     const data = await res.json();
-    expect(data.error).toBe('Failed to create BOM');
+    expect(data.success).toBe(false);
+    expect(data.error).toBeDefined();
   });
 });
 

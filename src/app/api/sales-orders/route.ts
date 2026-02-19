@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
@@ -20,6 +19,17 @@ import {
 } from "@/lib/api/with-permission";
 
 import { checkReadEndpointLimit } from '@/lib/rate-limit';
+
+/** Parse date string ensuring UTC for date-only strings (YYYY-MM-DD) */
+function parseDate(value: string | Date): Date {
+  if (value instanceof Date) return value;
+  // Date-only strings: explicitly append UTC timezone to avoid local-time parsing
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(value + 'T00:00:00.000Z');
+  }
+  return new Date(value);
+}
+
 // =============================================================================
 // VALIDATION
 // =============================================================================
@@ -36,8 +46,8 @@ const createOrderSchema = z.object({
   notes: z.string().optional().nullable(),
   lines: z.array(z.object({
     productId: z.string(),
-    quantity: z.number().int().min(1),
-    unitPrice: z.number().min(0),
+    quantity: z.number().int().min(1).max(999999),
+    unitPrice: z.number().min(0).max(999999999),
     discount: z.number().min(0).max(100).default(0),
   })).optional(),
 });
@@ -46,7 +56,10 @@ const createOrderSchema = z.object({
 // GET - List sales orders
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+async function getHandler(
+  request: NextRequest,
+  { user }: { params?: Record<string, string>; user: AuthUser }
+) {
     // Rate limiting
     const rateLimitResult = await checkReadEndpointLimit(request);
     if (rateLimitResult) return rateLimitResult;
@@ -54,11 +67,6 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
@@ -101,6 +109,8 @@ export async function GET(request: NextRequest) {
     return paginatedError("Failed to fetch sales orders", 500);
   }
 }
+
+export const GET = withPermission(getHandler, { read: 'orders:view' });
 
 // =============================================================================
 // POST - Create sales order
@@ -154,9 +164,9 @@ async function postHandler(
   const order = await prisma.salesOrder.create({
     data: {
       ...orderData,
-      orderDate: new Date(orderData.orderDate),
-      requiredDate: new Date(orderData.requiredDate),
-      promisedDate: orderData.promisedDate ? new Date(orderData.promisedDate) : null,
+      orderDate: parseDate(orderData.orderDate),
+      requiredDate: parseDate(orderData.requiredDate),
+      promisedDate: orderData.promisedDate ? parseDate(orderData.promisedDate) : null,
       totalAmount,
       lines: lines ? {
         create: lines.map((line, index) => ({

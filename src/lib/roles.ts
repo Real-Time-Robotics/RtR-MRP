@@ -16,7 +16,7 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
     manager: 80,
     supervisor: 60,
     planner: 50,
-    quality: 35,
+    quality: 45,
     operator: 40,
     viewer: 20,
     user: 10,

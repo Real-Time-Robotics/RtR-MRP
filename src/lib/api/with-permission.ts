@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { Permission, rolePermissions, UserRole } from '@/lib/auth/auth-types';
 import { logger } from '@/lib/logger';
+import { handleError } from '@/lib/error-handler';
 
 // =============================================================================
 // API PERMISSION MIDDLEWARE
@@ -162,15 +163,7 @@ export function withPermission(
         user,
       });
     } catch (error) {
-      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'api-permission-middleware' });
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Internal Server Error',
-          message: 'Đã xảy ra lỗi khi xử lý yêu cầu',
-        },
-        { status: 500 }
-      );
+      return handleError(error);
     }
   };
 }

@@ -22,16 +22,13 @@ const NCRUpdateSchema = z.object({
   closureNotes: z.string().optional().nullable(),
 });
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (request, context, _session) => {
     // Rate limiting
     const rateLimitResult = await checkReadEndpointLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     const ncr = await prisma.nCR.findUnique({
       where: { id },
@@ -56,7 +53,7 @@ export async function GET(
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/ncr/[id]' });
     return NextResponse.json({ error: "Failed to fetch NCR" }, { status: 500 });
   }
-}
+});
 
 export const PATCH = withAuth(async (request, context, session) => {
     // Rate limiting

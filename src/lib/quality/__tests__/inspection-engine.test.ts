@@ -19,10 +19,12 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     inspection: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
     },
     inspectionPlan: {
+      findFirst: vi.fn(),
       count: vi.fn(),
     },
     lotTransaction: {
@@ -39,7 +41,7 @@ describe('Inspection Engine', () => {
   describe('generateInspectionNumber', () => {
     it('should generate receiving inspection number with RI prefix', async () => {
       const year = new Date().getFullYear();
-      (prisma.inspection.count as Mock).mockResolvedValue(10);
+      (prisma.inspection.findFirst as Mock).mockResolvedValue({ inspectionNumber: `RI-${year}-0010` });
 
       const number = await generateInspectionNumber('RECEIVING');
 
@@ -48,7 +50,7 @@ describe('Inspection Engine', () => {
 
     it('should generate in-process inspection number with IP prefix', async () => {
       const year = new Date().getFullYear();
-      (prisma.inspection.count as Mock).mockResolvedValue(5);
+      (prisma.inspection.findFirst as Mock).mockResolvedValue({ inspectionNumber: `IP-${year}-0005` });
 
       const number = await generateInspectionNumber('IN_PROCESS');
 
@@ -57,7 +59,7 @@ describe('Inspection Engine', () => {
 
     it('should generate final inspection number with FI prefix', async () => {
       const year = new Date().getFullYear();
-      (prisma.inspection.count as Mock).mockResolvedValue(0);
+      (prisma.inspection.findFirst as Mock).mockResolvedValue(null);
 
       const number = await generateInspectionNumber('FINAL');
 
@@ -66,7 +68,7 @@ describe('Inspection Engine', () => {
 
     it('should handle unknown type with FI prefix', async () => {
       const year = new Date().getFullYear();
-      (prisma.inspection.count as Mock).mockResolvedValue(0);
+      (prisma.inspection.findFirst as Mock).mockResolvedValue(null);
 
       const number = await generateInspectionNumber('UNKNOWN');
 
@@ -76,7 +78,7 @@ describe('Inspection Engine', () => {
 
   describe('generateInspectionPlanNumber', () => {
     it('should generate inspection plan number', async () => {
-      (prisma.inspectionPlan.count as Mock).mockResolvedValue(10);
+      (prisma.inspectionPlan.findFirst as Mock).mockResolvedValue({ planNumber: 'IP-010' });
 
       const number = await generateInspectionPlanNumber();
 
@@ -84,7 +86,7 @@ describe('Inspection Engine', () => {
     });
 
     it('should generate first plan number', async () => {
-      (prisma.inspectionPlan.count as Mock).mockResolvedValue(0);
+      (prisma.inspectionPlan.findFirst as Mock).mockResolvedValue(null);
 
       const number = await generateInspectionPlanNumber();
 

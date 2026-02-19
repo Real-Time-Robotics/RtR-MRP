@@ -179,14 +179,23 @@ export async function transitionNCR(
 
 export async function generateNCRNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.nCR.count({
-    where: {
-      ncrNumber: {
-        startsWith: `NCR-${year}`,
-      },
-    },
+  const prefix = `NCR-${year}-`;
+
+  // Use findMany with orderBy to get the last number, avoiding count() race condition
+  const lastNCR = await prisma.nCR.findFirst({
+    where: { ncrNumber: { startsWith: prefix } },
+    orderBy: { ncrNumber: 'desc' },
+    select: { ncrNumber: true },
   });
-  return `NCR-${year}-${String(count + 1).padStart(4, "0")}`;
+
+  let nextNumber = 1;
+  if (lastNCR?.ncrNumber) {
+    const lastSuffix = lastNCR.ncrNumber.replace(prefix, '');
+    const parsed = parseInt(lastSuffix, 10);
+    if (!isNaN(parsed)) nextNumber = parsed + 1;
+  }
+
+  return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 }
 
 export const NCR_STATUS_CONFIG: Record<

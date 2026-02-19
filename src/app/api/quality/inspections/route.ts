@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 import { generateInspectionNumber } from "@/lib/quality/inspection-engine";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
-import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for Inspection creation
 const InspectionCreateSchema = z.object({
@@ -29,8 +29,12 @@ const InspectionCreateSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, _context, _session) => {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
@@ -71,7 +75,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 export const POST = withAuth(async (request, context, session) => {
   try {

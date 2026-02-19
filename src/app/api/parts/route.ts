@@ -14,6 +14,7 @@ import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
 import { logger } from "@/lib/logger";
 import { logApi } from "@/lib/audit/audit-logger";
 import { auditCreate } from "@/lib/audit/route-audit";
+import { handleError } from "@/lib/error-handler";
 
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Allowed filters for parts
@@ -345,15 +346,6 @@ export const POST = withAuth(async (request, context, session) => {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
-    const prismaError = error as { code?: string; meta?: { cause?: string } };
-    const errCode = prismaError?.code;
-    const errMeta = prismaError?.meta;
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts', code: errCode, meta: errMeta });
-    return NextResponse.json(
-      {
-        error: "Failed to create part",
-      },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });

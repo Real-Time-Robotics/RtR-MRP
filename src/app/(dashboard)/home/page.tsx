@@ -492,6 +492,12 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchAllData();
+
+    // Auto-refresh every 60 seconds for real-time dashboard data
+    const interval = setInterval(() => {
+      fetchAllData(false);
+    }, 60000);
+    return () => clearInterval(interval);
   }, [fetchAllData]);
 
   const formatCurrency = (value: number) => {

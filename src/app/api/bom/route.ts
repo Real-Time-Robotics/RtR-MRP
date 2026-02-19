@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/api/with-auth';
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { parsePaginationParams } from "@/lib/pagination";
+import { handleError } from "@/lib/error-handler";
 
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for BOM line
@@ -73,6 +74,7 @@ const { searchParams } = new URL(request.url);
     ]);
 
     return NextResponse.json({
+      success: true,
       data: bomHeaders,
       pagination: {
         page,
@@ -84,7 +86,7 @@ const { searchParams } = new URL(request.url);
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom' });
     return NextResponse.json(
-      { error: "Failed to fetch BOMs" },
+      { success: false, error: "Failed to fetch BOMs" },
       { status: 500 }
     );
   }
@@ -199,12 +201,8 @@ const body = await request.json();
       },
     });
 
-    return NextResponse.json(bomHeader, { status: 201 });
+    return NextResponse.json({ success: true, data: bomHeader }, { status: 201 });
   } catch (error) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/bom' });
-    return NextResponse.json(
-      { error: "Failed to create BOM" },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });

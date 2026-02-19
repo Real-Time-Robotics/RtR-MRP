@@ -103,8 +103,6 @@ export const SHORTCUT_CATEGORIES = [
     shortcuts: [
       { key: 's', meta: true, description: 'Lưu' },
       { key: 'Enter', meta: true, description: 'Submit form' },
-      { key: 'z', meta: true, description: 'Undo' },
-      { key: 'z', meta: true, shift: true, description: 'Redo' },
     ],
   },
 ];

@@ -482,6 +482,9 @@ describe('Setup API', () => {
 
   describe('GET /api/setup', () => {
     it('should handle setup request successfully', async () => {
+      // Set required env var for setup
+      process.env.SEED_ADMIN_PASSWORD = 'TestPassword123!@#';
+
       // The setup route creates its own PrismaClient at module level.
       // Our class-based mock is instantiated once when the module loads.
       // The mock defaults to count=0, so it will attempt to create an admin user.
@@ -491,6 +494,19 @@ describe('Setup API', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
+
+      delete process.env.SEED_ADMIN_PASSWORD;
+    });
+
+    it('should return 500 when SEED_ADMIN_PASSWORD is not set', async () => {
+      delete process.env.SEED_ADMIN_PASSWORD;
+
+      const request = new NextRequest('http://localhost:3000/api/setup');
+      const response = await setupGET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(data.error).toContain('SEED_ADMIN_PASSWORD');
     });
   });
 });

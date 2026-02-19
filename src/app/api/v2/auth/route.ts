@@ -10,6 +10,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import * as OTPAuth from 'otpauth';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -264,20 +265,24 @@ async function handleEnableMFA(user: { id?: string; email?: string | null }) {
     );
   }
 
-  // Generate a random secret for each user
-  // In production, use speakeasy to generate a cryptographically secure secret
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  const randomBase32 = Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  const secret = {
-    base32: randomBase32,
-    otpauth_url: `otpauth://totp/RTR%20MRP:${user.email}?secret=${randomBase32}&issuer=RTR%20MRP`,
-  };
+  // Generate a cryptographically secure TOTP secret
+  const secret = new OTPAuth.Secret({ size: 20 });
 
-  // Store pending MFA (not enabled yet until verified)
+  const totp = new OTPAuth.TOTP({
+    issuer: 'RTR MRP',
+    label: user.email || user.id,
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret,
+  });
+
+  // Store the secret (pending verification) - not enabled yet
   await prisma.user.update({
     where: { id: user.id },
     data: {
       mfaMethod: 'totp',
+      mfaSecret: secret.base32,
       mfaEnabled: false, // Will be enabled after verification
     },
   });
@@ -286,7 +291,7 @@ async function handleEnableMFA(user: { id?: string; email?: string | null }) {
     success: true,
     data: {
       secret: secret.base32,
-      qrCodeUrl: secret.otpauth_url,
+      qrCodeUrl: totp.toString(),
     },
   });
 }
@@ -310,21 +315,30 @@ async function handleVerifyMFA(user: { id?: string; email?: string | null }, bod
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { mfaMethod: true },
+    select: { mfaMethod: true, mfaSecret: true },
   });
 
-  if (!dbUser?.mfaMethod) {
+  if (!dbUser?.mfaMethod || !dbUser.mfaSecret) {
     return NextResponse.json(
       { success: false, error: 'MFA chưa được khởi tạo' },
       { status: 400 }
     );
   }
 
-  // For demo, accept any 6-digit code
-  // In production, use speakeasy to verify TOTP
-  const verified = /^\d{6}$/.test(code);
+  // Verify TOTP code using the stored secret
+  const totp = new OTPAuth.TOTP({
+    issuer: 'RTR MRP',
+    label: user.email || user.id,
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret: OTPAuth.Secret.fromBase32(dbUser.mfaSecret),
+  });
 
-  if (!verified) {
+  // Allow 1 window of drift (±30s)
+  const delta = totp.validate({ token: code, window: 1 });
+
+  if (delta === null) {
     return NextResponse.json(
       { success: false, error: 'Mã xác thực không đúng' },
       { status: 400 }
@@ -388,12 +402,13 @@ async function handleDisableMFA(user: { id?: string; email?: string | null }, bo
     );
   }
 
-  // Disable MFA
+  // Disable MFA and clear secret
   await prisma.user.update({
     where: { id: user.id },
     data: {
       mfaEnabled: false,
       mfaMethod: null,
+      mfaSecret: null,
     },
   });
 

@@ -39,13 +39,19 @@ function calculateAvailableMinutes(
   const minutesPerDay = (endHour - startHour) * 60 - workCenter.breakMinutes;
 
   let totalMinutes = 0;
-  const currentDate = new Date(startDate);
+  // Use UTC methods to avoid DST-related day-length issues
+  const currentDate = new Date(Date.UTC(
+    startDate.getFullYear(), startDate.getMonth(), startDate.getDate()
+  ));
+  const endUTC = new Date(Date.UTC(
+    endDate.getFullYear(), endDate.getMonth(), endDate.getDate()
+  ));
 
-  while (currentDate < endDate) {
-    if (workingDays.includes(currentDate.getDay())) {
+  while (currentDate < endUTC) {
+    if (workingDays.includes(currentDate.getUTCDay())) {
       totalMinutes += minutesPerDay;
     }
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
   return totalMinutes;

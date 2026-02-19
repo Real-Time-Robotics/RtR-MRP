@@ -13,6 +13,20 @@ import { z } from 'zod';
 
 const dataTransformer = new DataTransformer();
 
+/** Safe parseFloat that returns fallback instead of NaN */
+function safeParseFloat(value: unknown, fallback: number | null = null): number | null {
+  if (value == null || value === '') return fallback;
+  const num = parseFloat(String(value));
+  return isNaN(num) ? fallback : num;
+}
+
+/** Safe parseInt that returns fallback instead of NaN */
+function safeParseInt(value: unknown, fallback: number): number {
+  if (value == null || value === '') return fallback;
+  const num = parseInt(String(value), 10);
+  return isNaN(num) ? fallback : num;
+}
+
 interface ImportRequest {
   targetTable: string;
   data: Record<string, unknown>[];
@@ -194,23 +208,23 @@ async function importPart(
           costs: {
             deleteMany: {},
             create: {
-              unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
+              unitCost: safeParseFloat(data.unitCost, 0) as number,
             }
           },
           specs: {
             upsert: {
               create: {
-                weightKg: data.weightKg ? parseFloat(data.weightKg) : null,
-                lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : null,
-                widthMm: data.widthMm ? parseFloat(data.widthMm) : null,
-                heightMm: data.heightMm ? parseFloat(data.heightMm) : null,
+                weightKg: safeParseFloat(data.weightKg, null),
+                lengthMm: safeParseFloat(data.lengthMm, null),
+                widthMm: safeParseFloat(data.widthMm, null),
+                heightMm: safeParseFloat(data.heightMm, null),
                 subCategory: data.subCategory,
               },
               update: {
-                weightKg: data.weightKg ? parseFloat(data.weightKg) : undefined,
-                lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : undefined,
-                widthMm: data.widthMm ? parseFloat(data.widthMm) : undefined,
-                heightMm: data.heightMm ? parseFloat(data.heightMm) : undefined,
+                weightKg: safeParseFloat(data.weightKg, null) ?? undefined,
+                lengthMm: safeParseFloat(data.lengthMm, null) ?? undefined,
+                widthMm: safeParseFloat(data.widthMm, null) ?? undefined,
+                heightMm: safeParseFloat(data.heightMm, null) ?? undefined,
                 subCategory: data.subCategory,
               }
             }
@@ -220,17 +234,17 @@ async function importPart(
               create: {
                 makeOrBuy: data.makeOrBuy || 'BUY',
                 procurementType: data.procurementType || 'STOCK',
-                minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : 0,
-                reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : 0,
-                safetyStock: data.safetyStock ? parseInt(data.safetyStock) : 0,
-                leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
+                minStockLevel: safeParseInt(data.minStockLevel, 0),
+                reorderPoint: safeParseInt(data.reorderPoint, 0),
+                safetyStock: safeParseInt(data.safetyStock, 0),
+                leadTimeDays: safeParseInt(data.leadTimeDays, 14),
               },
               update: {
                 makeOrBuy: data.makeOrBuy,
                 procurementType: data.procurementType,
-                minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : undefined,
-                reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : undefined,
-                safetyStock: data.safetyStock ? parseInt(data.safetyStock) : undefined,
+                minStockLevel: data.minStockLevel ? safeParseInt(data.minStockLevel, 0) : undefined,
+                reorderPoint: data.reorderPoint ? safeParseInt(data.reorderPoint, 0) : undefined,
+                safetyStock: data.safetyStock ? safeParseInt(data.safetyStock, 0) : undefined,
                 leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : undefined,
               }
             }
@@ -290,15 +304,15 @@ async function importPart(
       // Nested Writes
       costs: {
         create: {
-          unitCost: data.unitCost ? parseFloat(data.unitCost) : 0,
+          unitCost: safeParseFloat(data.unitCost, 0) as number,
         }
       },
       specs: {
         create: {
-          weightKg: data.weightKg ? parseFloat(data.weightKg) : null,
-          lengthMm: data.lengthMm ? parseFloat(data.lengthMm) : null,
-          widthMm: data.widthMm ? parseFloat(data.widthMm) : null,
-          heightMm: data.heightMm ? parseFloat(data.heightMm) : null,
+          weightKg: safeParseFloat(data.weightKg, null),
+          lengthMm: safeParseFloat(data.lengthMm, null),
+          widthMm: safeParseFloat(data.widthMm, null),
+          heightMm: safeParseFloat(data.heightMm, null),
           subCategory: data.subCategory,
         }
       },
@@ -306,10 +320,10 @@ async function importPart(
         create: {
           makeOrBuy: data.makeOrBuy || 'BUY',
           procurementType: data.procurementType || 'STOCK',
-          minStockLevel: data.minStockLevel ? parseInt(data.minStockLevel) : 0,
-          reorderPoint: data.reorderPoint ? parseInt(data.reorderPoint) : 0,
-          safetyStock: data.safetyStock ? parseInt(data.safetyStock) : 0,
-          leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
+          minStockLevel: safeParseInt(data.minStockLevel, 0),
+          reorderPoint: safeParseInt(data.reorderPoint, 0),
+          safetyStock: safeParseInt(data.safetyStock, 0),
+          leadTimeDays: safeParseInt(data.leadTimeDays, 14),
         }
       },
       compliance: {
@@ -358,10 +372,10 @@ async function importSupplier(
           address: data.address || data.city,
           contactEmail: data.contactEmail || data.email || existing.contactEmail,
           contactPhone: data.contactPhone || data.phone || existing.contactPhone,
-          leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : existing.leadTimeDays,
+          leadTimeDays: data.leadTimeDays ? safeParseInt(data.leadTimeDays, existing.leadTimeDays) : existing.leadTimeDays,
           paymentTerms: data.paymentTerms,
           ndaaCompliant: data.ndaaCompliant ?? existing.ndaaCompliant,
-          rating: data.rating ? parseFloat(data.rating) : existing.rating,
+          rating: data.rating ? (safeParseFloat(data.rating, null) ?? existing.rating) : existing.rating,
           updatedAt: new Date()
         }
       });
@@ -384,10 +398,10 @@ async function importSupplier(
       address: data.address || data.city,
       contactEmail: data.contactEmail || data.email,
       contactPhone: data.contactPhone || data.phone,
-      leadTimeDays: data.leadTimeDays ? parseInt(data.leadTimeDays) : 14,
+      leadTimeDays: safeParseInt(data.leadTimeDays, 14),
       paymentTerms: data.paymentTerms || 'Net 30',
       ndaaCompliant: data.ndaaCompliant ?? true,
-      rating: data.rating ? parseFloat(data.rating) : 3,
+      rating: safeParseFloat(data.rating, 3) as number,
       status: 'active'
     }
   });
@@ -422,7 +436,7 @@ async function importCustomer(
           country: data.country || existing.country,
           contactEmail: data.contactEmail || data.email || existing.contactEmail,
           contactPhone: data.contactPhone || data.phone || existing.contactPhone,
-          creditLimit: data.creditLimit ? parseFloat(data.creditLimit) : existing.creditLimit,
+          creditLimit: data.creditLimit ? (safeParseFloat(data.creditLimit, null) ?? existing.creditLimit) : existing.creditLimit,
           paymentTerms: data.paymentTerms || existing.paymentTerms
         }
       });
@@ -444,7 +458,7 @@ async function importCustomer(
       country: data.country || 'Unknown',
       contactEmail: data.contactEmail || data.email,
       contactPhone: data.contactPhone || data.phone,
-      creditLimit: data.creditLimit ? parseFloat(data.creditLimit) : null,
+      creditLimit: safeParseFloat(data.creditLimit, null),
       paymentTerms: data.paymentTerms || 'Net 30',
       status: 'active'
     }
@@ -526,12 +540,12 @@ async function importBOMLine(
       await prisma.bomLine.update({
         where: { id: existing.id },
         data: {
-          quantity: data.quantity ? parseFloat(data.quantity) : existing.quantity,
+          quantity: data.quantity ? (safeParseFloat(data.quantity, null) ?? existing.quantity) : existing.quantity,
           unit: data.unit || existing.unit,
           moduleCode: data.moduleCode || data.module,
-          findNumber: data.findNumber ? parseInt(data.findNumber) : existing.findNumber,
+          findNumber: data.findNumber ? safeParseInt(data.findNumber, existing.findNumber ?? 0) : existing.findNumber,
           referenceDesignator: data.referenceDesignator,
-          scrapPercent: data.scrapPercent ? parseFloat(data.scrapPercent) : existing.scrapPercent,
+          scrapPercent: data.scrapPercent ? (safeParseFloat(data.scrapPercent, null) ?? existing.scrapPercent) : existing.scrapPercent,
           isCritical: data.isCritical ?? data.critical ?? existing.isCritical,
           updatedAt: new Date()
         }
@@ -551,19 +565,19 @@ async function importBOMLine(
       bomId: bomHeader.id,
       partId: part.id,
       lineNumber: nextLineNumber,
-      quantity: data.quantity ? parseFloat(data.quantity) : 1,
+      quantity: safeParseFloat(data.quantity, 1) as number,
       unit: data.unit || 'pcs',
       moduleCode: data.moduleCode || data.module,
-      findNumber: data.findNumber ? parseInt(data.findNumber) : null,
+      findNumber: data.findNumber ? safeParseInt(data.findNumber, 0) : null,
       referenceDesignator: data.referenceDesignator,
-      scrapPercent: data.scrapPercent ? parseFloat(data.scrapPercent) : 0,
+      scrapPercent: safeParseFloat(data.scrapPercent, 0) as number,
       revision: version,
       bomType: data.bomType || 'MANUFACTURING',
       isCritical: data.isCritical ?? data.critical ?? false,
       isPrimary: data.isPrimary ?? true,
       phantom: data.phantom ?? false,
       subAssembly: data.subAssembly ?? false,
-      sequence: data.sequence ? parseInt(data.sequence) : 0
+      sequence: safeParseInt(data.sequence, 0)
     }
   });
 

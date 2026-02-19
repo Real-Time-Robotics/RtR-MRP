@@ -97,6 +97,20 @@ export const PATCH = withAuth(
 
       logger.info("Updating work order", { workOrderId: id, userId: user.id, status });
 
+      // Optimistic locking: check if record was modified since client last read it
+      if (body.expectedUpdatedAt) {
+        const existing = await prisma.workOrder.findUnique({ where: { id }, select: { updatedAt: true } });
+        if (existing) {
+          const expectedDate = new Date(body.expectedUpdatedAt);
+          if (existing.updatedAt.getTime() !== expectedDate.getTime()) {
+            return NextResponse.json(
+              { success: false, error: 'Dữ liệu đã bị thay đổi bởi người dùng khác. Vui lòng tải lại và thử lại.' },
+              { status: 409 }
+            );
+          }
+        }
+      }
+
       let workOrder;
 
       if (status) {
@@ -156,8 +170,8 @@ export const DELETE = withAuth(
         throw new NotFoundError("Work order", id);
       }
 
-      // Only allow deletion of DRAFT or CANCELLED orders
-      if (!["DRAFT", "CANCELLED"].includes(existing.status)) {
+      // Only allow deletion of draft or cancelled orders (case-insensitive)
+      if (!["draft", "cancelled"].includes(existing.status.toLowerCase())) {
         return NextResponse.json(
           { success: false, error: "Can only delete DRAFT or CANCELLED work orders" },
           { status: 400 }

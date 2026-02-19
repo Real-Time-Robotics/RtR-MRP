@@ -35,8 +35,8 @@ const createPOSchema = z.object({
   notes: z.string().optional().nullable(),
   lines: z.array(z.object({
     partId: z.string(),
-    quantity: z.number().int().min(1),
-    unitPrice: z.number().min(0),
+    quantity: z.number().int().min(1).max(999999),
+    unitPrice: z.number().min(0).max(999999999),
   })).optional(),
 });
 

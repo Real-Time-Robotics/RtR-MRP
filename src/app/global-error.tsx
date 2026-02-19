@@ -10,12 +10,21 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <html>
+    <html lang="vi">
       <body>
         <div className="flex h-screen flex-col items-center justify-center gap-4">
-          <h2 className="text-2xl font-bold">Something went wrong!</h2>
-          <p className="text-gray-600">{error.message}</p>
-          <Button onClick={() => reset()}>Try again</Button>
+          <h2 className="text-2xl font-bold">Đã xảy ra lỗi</h2>
+          <p className="text-gray-600">
+            {process.env.NODE_ENV === 'development'
+              ? error.message
+              : 'Hệ thống gặp sự cố. Vui lòng thử lại hoặc liên hệ quản trị viên.'}
+          </p>
+          <div className="flex gap-2">
+            <Button onClick={() => reset()}>Thử lại</Button>
+            <Button variant="outline" onClick={() => window.location.href = '/home'}>
+              Về trang chủ
+            </Button>
+          </div>
         </div>
       </body>
     </html>

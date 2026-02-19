@@ -390,7 +390,8 @@ describe('Parts API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe('Failed to create part');
+      expect(data.success).toBe(false);
+      expect(data.error).toBeDefined();
     });
 
     it('should return 400 when category is an invalid enum value', async () => {

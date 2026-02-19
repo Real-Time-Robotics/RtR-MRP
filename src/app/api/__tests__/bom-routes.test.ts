@@ -264,9 +264,10 @@ describe('BOM API Routes', () => {
       const data = await res.json();
 
       expect(res.status).toBe(201);
-      expect(data.id).toBe('bom-1');
-      expect(data.version).toBe('1.0');
-      expect(data.bomLines).toEqual([]);
+      expect(data.success).toBe(true);
+      expect(data.data.id).toBe('bom-1');
+      expect(data.data.version).toBe('1.0');
+      expect(data.data.bomLines).toEqual([]);
     });
 
     it('should return 400 when referenced parts do not exist', async () => {
@@ -297,7 +298,8 @@ describe('BOM API Routes', () => {
       const data = await res.json();
 
       expect(res.status).toBe(500);
-      expect(data.error).toBe('Failed to create BOM');
+      expect(data.success).toBe(false);
+      expect(data.error).toBeDefined();
     });
   });
 

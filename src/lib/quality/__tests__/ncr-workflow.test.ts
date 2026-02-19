@@ -20,6 +20,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: {
     nCR: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
     },
@@ -263,7 +264,7 @@ describe('NCR Workflow', () => {
   describe('generateNCRNumber', () => {
     it('should generate NCR number with current year and sequential number', async () => {
       const year = new Date().getFullYear();
-      (prisma.nCR.count as Mock).mockResolvedValue(5);
+      (prisma.nCR.findFirst as Mock).mockResolvedValue({ ncrNumber: `NCR-${year}-0005` });
 
       const ncrNumber = await generateNCRNumber();
 
@@ -272,7 +273,7 @@ describe('NCR Workflow', () => {
 
     it('should generate first NCR number when no NCRs exist', async () => {
       const year = new Date().getFullYear();
-      (prisma.nCR.count as Mock).mockResolvedValue(0);
+      (prisma.nCR.findFirst as Mock).mockResolvedValue(null);
 
       const ncrNumber = await generateNCRNumber();
 
@@ -281,7 +282,7 @@ describe('NCR Workflow', () => {
 
     it('should pad number to 4 digits', async () => {
       const year = new Date().getFullYear();
-      (prisma.nCR.count as Mock).mockResolvedValue(999);
+      (prisma.nCR.findFirst as Mock).mockResolvedValue({ ncrNumber: `NCR-${year}-0999` });
 
       const ncrNumber = await generateNCRNumber();
 

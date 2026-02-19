@@ -4,21 +4,39 @@ import { prisma } from "@/lib/prisma";
 export async function generateInspectionNumber(type: string): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = type === "RECEIVING" ? "RI" : type === "IN_PROCESS" ? "IP" : "FI";
+  const fullPrefix = `${prefix}-${year}-`;
 
-  const count = await prisma.inspection.count({
-    where: {
-      inspectionNumber: {
-        startsWith: `${prefix}-${year}`,
-      },
-    },
+  // Use findFirst with orderBy desc to get the last number, avoiding count() race condition
+  const lastInspection = await prisma.inspection.findFirst({
+    where: { inspectionNumber: { startsWith: fullPrefix } },
+    orderBy: { inspectionNumber: 'desc' },
+    select: { inspectionNumber: true },
   });
 
-  return `${prefix}-${year}-${String(count + 1).padStart(4, "0")}`;
+  let nextNumber = 1;
+  if (lastInspection?.inspectionNumber) {
+    const lastSuffix = lastInspection.inspectionNumber.replace(fullPrefix, '');
+    const parsed = parseInt(lastSuffix, 10);
+    if (!isNaN(parsed)) nextNumber = parsed + 1;
+  }
+
+  return `${fullPrefix}${String(nextNumber).padStart(4, "0")}`;
 }
 
 export async function generateInspectionPlanNumber(): Promise<string> {
-  const count = await prisma.inspectionPlan.count();
-  return `IP-${String(count + 1).padStart(3, "0")}`;
+  const lastPlan = await prisma.inspectionPlan.findFirst({
+    where: { planNumber: { startsWith: 'IP-' } },
+    orderBy: { planNumber: 'desc' },
+    select: { planNumber: true },
+  });
+
+  let nextNumber = 1;
+  if (lastPlan?.planNumber) {
+    const parsed = parseInt(lastPlan.planNumber.replace('IP-', ''), 10);
+    if (!isNaN(parsed)) nextNumber = parsed + 1;
+  }
+
+  return `IP-${String(nextNumber).padStart(3, "0")}`;
 }
 
 export interface InspectionResultSummary {

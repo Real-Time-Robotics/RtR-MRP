@@ -262,11 +262,12 @@ async function getDemands(
   });
 
   for (const line of salesLines) {
-    // SalesOrderLine doesn't have shippedQty, use quantity as is
-    if (line.quantity > 0 && line.order.requiredDate) {
+    // Subtract already shipped quantity from demand
+    const remainingDemand = line.quantity - (line.shippedQty || 0);
+    if (remainingDemand > 0 && line.order.requiredDate) {
       demands.push({
         date: line.order.requiredDate,
-        quantity: line.quantity,
+        quantity: remainingDemand,
         type: "SO",
       });
     }
@@ -383,8 +384,14 @@ async function calculateCTP(
     }
   }
 
-  // Estimate production time (simplified - could use routing)
-  const estimatedHoursPerUnit = 1; // Default 1 hour per unit
+  // Estimate production time using product data if available
+  const product = await prisma.product.findFirst({
+    where: { OR: [{ id: partId }, { sku: part.partNumber }] },
+    select: { assemblyHours: true, testingHours: true },
+  });
+  const assemblyHours = product?.assemblyHours || 0;
+  const testingHours = product?.testingHours || 0;
+  const estimatedHoursPerUnit = (assemblyHours + testingHours) || 1; // Fallback to 1hr if no data
   const totalProductionHours = quantity * estimatedHoursPerUnit;
   const productionDays = Math.ceil(totalProductionHours / 8); // 8-hour days
 

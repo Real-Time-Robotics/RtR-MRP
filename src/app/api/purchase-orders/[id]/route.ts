@@ -21,8 +21,8 @@ import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limi
 // Schema for PO line item
 const POLineSchema = z.object({
   partId: z.string().min(1, "Part ID là bắt buộc"),
-  quantity: z.number().int().min(1, "Số lượng phải >= 1"),
-  unitPrice: z.number().min(0, "Đơn giá phải >= 0"),
+  quantity: z.number().int().min(1, "Số lượng phải >= 1").max(999999, "Số lượng quá lớn"),
+  unitPrice: z.number().min(0, "Đơn giá phải >= 0").max(999999999, "Đơn giá quá lớn"),
 });
 
 const updatePOSchema = z.object({
@@ -113,6 +113,17 @@ async function putHandler(
 
   const { lines, ...headerData } = validation.data;
 
+  // Optimistic locking: check if record was modified since client last read it
+  if (body.expectedUpdatedAt) {
+    const expectedDate = new Date(body.expectedUpdatedAt);
+    if (existing.updatedAt.getTime() !== expectedDate.getTime()) {
+      return errorResponse(
+        'Dữ liệu đã bị thay đổi bởi người dùng khác. Vui lòng tải lại và thử lại.',
+        409
+      );
+    }
+  }
+
   // Build header update data
   const updateData: Prisma.PurchaseOrderUpdateInput = { ...headerData };
   if (headerData.orderDate) updateData.orderDate = new Date(headerData.orderDate);
@@ -136,7 +147,48 @@ async function putHandler(
     updateData.totalAmount = totalAmount;
   }
 
-  // Use transaction to update header and lines together
+  // === Pre-compute receiving data before transaction (if PO is being received) ===
+  const isBeingReceived =
+    validation.data.status === 'received' && existing.status !== 'received';
+
+  let receivingWarehouse: Awaited<ReturnType<typeof prisma.warehouse.findFirst>> = null;
+  let inspectionNumbers: Record<string, string> = {};
+
+  if (isBeingReceived) {
+    // Find RECEIVING warehouse (pre-transaction reads)
+    receivingWarehouse = await prisma.warehouse.findFirst({
+      where: { type: 'RECEIVING' },
+    });
+    if (!receivingWarehouse) {
+      receivingWarehouse = await prisma.warehouse.findFirst({
+        where: { status: 'active' },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+    if (!receivingWarehouse) {
+      receivingWarehouse = await prisma.warehouse.create({
+        data: {
+          code: 'WH-RECEIVING',
+          name: 'Receiving Area',
+          type: 'RECEIVING',
+          status: 'active',
+        },
+      });
+    }
+
+    // Pre-generate inspection numbers (may have side effects)
+    const poLines = existing.lines;
+    for (const line of poLines) {
+      const existingInspection = await prisma.inspection.findFirst({
+        where: { poLineId: line.id, type: 'RECEIVING' },
+      });
+      if (!existingInspection) {
+        inspectionNumbers[line.id] = await generateInspectionNumber('RECEIVING');
+      }
+    }
+  }
+
+  // Single atomic transaction: PO update + inventory + inspections
   const order = await prisma.$transaction(async (tx) => {
     // Delete existing lines if new lines provided
     if (lines && lines.length > 0) {
@@ -146,7 +198,7 @@ async function putHandler(
     }
 
     // Update header and create new lines
-    return tx.purchaseOrder.update({
+    const updatedOrder = await tx.purchaseOrder.update({
       where: { id },
       data: {
         ...updateData,
@@ -170,120 +222,77 @@ async function putHandler(
         }
       },
     });
-  });
 
-  // Audit trail: log changes
-  if (validation.data.status && validation.data.status !== existing.status) {
-    auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, validation.data.status);
-  } else {
-    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
-  }
+    // If PO is being received, update inventory + create inspections in the SAME transaction
+    if (isBeingReceived && receivingWarehouse) {
+      const poLines = updatedOrder.lines || existing.lines;
 
-  // === INVENTORY UPDATE: When PO status changes to "received" ===
-  const isBeingReceived =
-    validation.data.status === 'received' && existing.status !== 'received';
-
-  if (isBeingReceived) {
-    // Get PO lines (use updated order lines if available, else existing)
-    const poLines = order.lines || existing.lines;
-
-    if (poLines.length > 0) {
-      // Find RECEIVING warehouse (dedicated for incoming goods)
-      let receivingWarehouse = await prisma.warehouse.findFirst({
-        where: { type: 'RECEIVING' },
-      });
-      // Fallback to default warehouse if no RECEIVING warehouse
-      if (!receivingWarehouse) {
-        receivingWarehouse = await prisma.warehouse.findFirst({
-          where: { status: 'active' },
-          orderBy: { createdAt: 'asc' },
-        });
-      }
-      if (!receivingWarehouse) {
-        receivingWarehouse = await prisma.warehouse.create({
-          data: {
-            code: 'WH-RECEIVING',
-            name: 'Receiving Area',
-            type: 'RECEIVING',
-            status: 'active',
-          },
-        });
-      }
-
-      // Generate inspection numbers before transaction (may have side effects)
-      const inspectionNumbers: Record<string, string> = {};
       for (const line of poLines) {
-        const existingInspection = await prisma.inspection.findFirst({
-          where: { poLineId: line.id, type: 'RECEIVING' },
+        const existingInventory = await tx.inventory.findFirst({
+          where: { partId: line.partId, warehouseId: receivingWarehouse.id, locationCode: 'RECEIVING' },
         });
-        if (!existingInspection) {
-          inspectionNumbers[line.id] = await generateInspectionNumber('RECEIVING');
-        }
-      }
 
-      // Atomically update inventory + create audit logs + create inspections
-      await prisma.$transaction(async (tx) => {
-        // Update inventory for each PO line
-        for (const line of poLines) {
-          const existingInventory = await tx.inventory.findFirst({
-            where: { partId: line.partId, warehouseId: receivingWarehouse!.id, locationCode: 'RECEIVING' },
-          });
-
-          if (existingInventory) {
-            await tx.inventory.update({
-              where: { id: existingInventory.id },
-              data: {
-                quantity: existingInventory.quantity + line.quantity,
-                updatedAt: new Date(),
-              },
-            });
-          } else {
-            await tx.inventory.create({
-              data: {
-                partId: line.partId,
-                warehouseId: receivingWarehouse!.id,
-                quantity: line.quantity,
-                reservedQty: 0,
-                locationCode: 'RECEIVING',
-              },
-            });
-          }
-
-          // Create audit log
-          await tx.lotTransaction.create({
+        if (existingInventory) {
+          await tx.inventory.update({
+            where: { id: existingInventory.id },
             data: {
-              lotNumber: `PO-RCV-${existing.poNumber}-${line.lineNumber || Date.now()}`,
+              quantity: existingInventory.quantity + line.quantity,
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          await tx.inventory.create({
+            data: {
               partId: line.partId,
-              transactionType: 'PO_RECEIVED',
+              warehouseId: receivingWarehouse.id,
               quantity: line.quantity,
-              previousQty: existingInventory?.quantity ?? 0,
-              newQty: (existingInventory?.quantity ?? 0) + line.quantity,
-              userId: user.id || 'system',
-              notes: `Nhận hàng từ PO: ${existing.poNumber}`,
+              reservedQty: 0,
+              locationCode: 'RECEIVING',
             },
           });
         }
 
-        // Auto-create receiving inspections for each PO line
-        for (const line of poLines) {
-          if (inspectionNumbers[line.id]) {
-            await tx.inspection.create({
-              data: {
-                inspectionNumber: inspectionNumbers[line.id],
-                type: 'RECEIVING',
-                status: 'pending',
-                partId: line.partId,
-                poLineId: line.id,
-                quantityReceived: line.quantity,
-                quantityInspected: 0,
-                inspectedBy: user.id || 'system',
-                lotNumber: `LOT-${existing.poNumber}-${line.lineNumber || 1}`,
-              },
-            });
-          }
+        // Create audit log
+        await tx.lotTransaction.create({
+          data: {
+            lotNumber: `PO-RCV-${existing.poNumber}-${line.lineNumber || Date.now()}`,
+            partId: line.partId,
+            transactionType: 'PO_RECEIVED',
+            quantity: line.quantity,
+            previousQty: existingInventory?.quantity ?? 0,
+            newQty: (existingInventory?.quantity ?? 0) + line.quantity,
+            userId: user.id || 'system',
+            notes: `Nhận hàng từ PO: ${existing.poNumber}`,
+          },
+        });
+
+        // Auto-create receiving inspection
+        if (inspectionNumbers[line.id]) {
+          await tx.inspection.create({
+            data: {
+              inspectionNumber: inspectionNumbers[line.id],
+              type: 'RECEIVING',
+              status: 'pending',
+              partId: line.partId,
+              poLineId: line.id,
+              quantityReceived: line.quantity,
+              quantityInspected: 0,
+              inspectedBy: user.id || 'system',
+              lotNumber: `LOT-${existing.poNumber}-${line.lineNumber || 1}`,
+            },
+          });
         }
-      });
+      }
     }
+
+    return updatedOrder;
+  });
+
+  // Audit trail (fire-and-forget, outside transaction)
+  if (validation.data.status && validation.data.status !== existing.status) {
+    auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, validation.data.status);
+  } else {
+    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
   }
 
   return successResponse(order);

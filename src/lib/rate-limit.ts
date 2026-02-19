@@ -21,6 +21,7 @@ let writeEndpointLimiter: Ratelimit | null = null;
 let readEndpointLimiter: Ratelimit | null = null;
 
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  // Redis configured - initialize rate limiters
   redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
     token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -95,8 +96,11 @@ export async function checkHeavyEndpointLimit(
     return { success: true, limit: 9999, remaining: 9999, reset: 0 };
   }
 
-  // If Upstash not configured, allow all requests
+  // If Upstash not configured, allow with warning
   if (!heavyEndpointLimiter) {
+    if (!isTestEnvironment()) {
+      console.warn('[rate-limit] Upstash Redis not configured - rate limiting disabled. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.');
+    }
     return { success: true, limit: 60, remaining: 60, reset: 0 };
   }
 
@@ -125,8 +129,11 @@ export async function checkWriteEndpointLimit(
     return null;
   }
 
-  // If Upstash not configured, allow all requests
+  // If Upstash not configured, allow with warning
   if (!writeEndpointLimiter) {
+    if (!isTestEnvironment()) {
+      console.warn('[rate-limit] Upstash Redis not configured - write rate limiting disabled.');
+    }
     return null;
   }
 
@@ -166,8 +173,11 @@ export async function checkReadEndpointLimit(
     return null;
   }
 
-  // If Upstash not configured, allow all requests
+  // If Upstash not configured, allow with warning
   if (!readEndpointLimiter) {
+    if (!isTestEnvironment()) {
+      console.warn('[rate-limit] Upstash Redis not configured - read rate limiting disabled.');
+    }
     return null;
   }
 

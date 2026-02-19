@@ -105,8 +105,10 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "default-src 'self'",
       isDev
         ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-        : "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
+        : "script-src 'self'",
+      isDev
+        ? "style-src 'self' 'unsafe-inline'"
+        : "style-src 'self'",
       "img-src 'self' data: https:",
       "font-src 'self'",
       "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com",
@@ -216,9 +218,8 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
 
-  // Rate limiting for API routes (skip for test requests)
-  const isTestRequest = request.headers.get('x-test-request') === 'true';
-  if (isApiRoute(pathname) && !isTestRequest && !checkRateLimit(ip)) {
+  // Rate limiting for API routes
+  if (isApiRoute(pathname) && !isTestEnvironment() && !checkRateLimit(ip)) {
     return new NextResponse(
       JSON.stringify({ error: 'Too many requests. Please try again later.' }),
       {

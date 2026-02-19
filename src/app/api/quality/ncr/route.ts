@@ -5,7 +5,7 @@ import { generateNCRNumber } from "@/lib/quality/ncr-workflow";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
-import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for NCR creation
 const NCRCreateSchema = z.object({
@@ -25,8 +25,12 @@ const NCRCreateSchema = z.object({
   priority: z.enum(["low", "medium", "high", "critical"]).default("medium"),
 });
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, _context, _session) => {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search");
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/ncr' });
     return NextResponse.json({ error: "Lỗi tải danh sách NCR" }, { status: 500 });
   }
-}
+});
 
 export const POST = withAuth(async (request, context, session) => {
   try {

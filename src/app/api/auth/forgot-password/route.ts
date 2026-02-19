@@ -124,11 +124,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Always log in development for debugging
+    // Log reset request (without exposing token)
     if (process.env.NODE_ENV === 'development') {
       logger.info('Password reset requested', {
         context: 'forgot-password',
-        details: `Reset URL for ${user.email}: ${resetUrl}`,
+        details: `Reset token generated for ${user.email} (token redacted)`,
       });
     }
 

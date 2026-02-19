@@ -12,6 +12,7 @@ import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
 import { MobileNav } from './mobile-nav';
 import { PageTransition } from './page-transition';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
@@ -159,6 +160,12 @@ export function ModernAppShell({
         <main className="flex-1 overflow-y-auto">
           {/* Add bottom padding on mobile for fixed bottom nav (h-14 + safe area) */}
           <div className="p-4 pb-20 md:pb-4">
+            {/* Breadcrumb navigation (hidden on home page) */}
+            {pathname !== '/home' && pathname !== '/' && (
+              <div className="mb-3">
+                <Breadcrumb showHome maxItems={4} />
+              </div>
+            )}
             <PageTransition>{children}</PageTransition>
           </div>
         </main>

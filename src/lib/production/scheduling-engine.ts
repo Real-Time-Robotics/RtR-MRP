@@ -46,10 +46,15 @@ export async function scheduleWorkOrder(
   const conflicts: Array<{ operationId: string; reason: string }> = [];
   let currentTime = new Date(startDate);
 
+  // Pre-fetch all work centers needed to avoid N+1 queries
+  const workCenterIds = [...new Set(workOrder.operations.map(op => op.workCenterId))];
+  const workCenters = await prisma.workCenter.findMany({
+    where: { id: { in: workCenterIds } },
+  });
+  const workCenterMap = new Map(workCenters.map(wc => [wc.id, wc]));
+
   for (const op of workOrder.operations) {
-    const workCenter = await prisma.workCenter.findUnique({
-      where: { id: op.workCenterId },
-    });
+    const workCenter = workCenterMap.get(op.workCenterId);
 
     if (!workCenter || workCenter.status !== "active") {
       conflicts.push({
