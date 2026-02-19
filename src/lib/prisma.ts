@@ -3,6 +3,7 @@
 
 import "@/lib/env";
 import { PrismaClient } from "@prisma/client";
+import { logger } from '@/lib/logger';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -36,7 +37,7 @@ if (process.env.NODE_ENV === "development") {
   // @ts-expect-error - Prisma event typing
   prisma.$on("query", (e: { query: string; duration: number }) => {
     if (e.duration > 100) {
-      console.warn(`[Prisma] Slow query (${e.duration}ms):`, e.query.substring(0, 200));
+      logger.warn(`[Prisma] Slow query (${e.duration}ms): ${e.query.substring(0, 200)}`);
     }
   });
 }

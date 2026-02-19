@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { reportService } from '@/lib/analytics';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const generateSchema = z.object({
   format: z.enum(['pdf', 'xlsx', 'csv']).default('pdf'),
   params: z.record(z.string(), z.any()).optional(),
@@ -12,12 +14,16 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const body = await request.json();
+const body = await request.json();
     const parsed = generateSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -47,4 +53,4 @@ export async function POST(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

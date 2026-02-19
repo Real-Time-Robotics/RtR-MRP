@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw, DollarSign } from "lucide-react";
+import { Loader2, RefreshCw, DollarSign, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -13,12 +13,27 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
-import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
+import { clientLogger } from '@/lib/client-logger';
 
-type Recommendation = ReturnType<typeof generateMockRecommendations>[number];
+interface Recommendation {
+  id: string;
+  type: "REORDER" | "SUPPLIER_CHANGE" | "SAFETY_STOCK" | "EXPEDITE" | "CONSOLIDATE";
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  category: "inventory" | "purchasing" | "production" | "supplier";
+  title: string;
+  description: string;
+  impact?: string;
+  savingsEstimate?: number;
+  confidence: number;
+  partId?: string;
+  supplierId?: string;
+  productId?: string;
+  status: string;
+}
 
 export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -29,10 +44,21 @@ export default function RecommendationsPage() {
 
   const loadRecommendations = async () => {
     setLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRecommendations(generateMockRecommendations());
-    setLoading(false);
+    setError(null);
+    try {
+      const response = await fetch("/api/ai/recommendations");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recommendations (${response.status})`);
+      }
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+    } catch (err) {
+      clientLogger.error("Failed to load recommendations:", err);
+      setError(err instanceof Error ? err.message : "Failed to load recommendations");
+      setRecommendations([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImplement = (id: string) => {
@@ -138,6 +164,14 @@ export default function RecommendationsPage() {
         <div className="flex justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      ) : error ? (
+        <Card className="p-8 text-center">
+          <AlertTriangle className="h-8 w-8 mx-auto mb-2 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={loadRecommendations}>
+            Retry
+          </Button>
+        </Card>
       ) : filteredRecommendations.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">

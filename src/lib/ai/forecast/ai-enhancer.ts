@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { ForecastResult, ForecastPoint } from './forecast-engine';
 import { getUpcomingHolidays, getTetPhase, VN_HOLIDAYS } from './vn-calendar';
 import { getDataExtractorService, CustomerBehavior } from './data-extractor';
@@ -121,7 +122,7 @@ export class AIEnhancerService {
       try {
         return await this.generateAIInsights(forecast);
       } catch (error) {
-        console.warn('[AIEnhancer] AI insights failed, using rule-based:', error);
+        logger.warn('[AIEnhancer] AI insights failed, using rule-based', { context: 'ai-enhancer', error: String(error) });
       }
     }
 
@@ -142,7 +143,7 @@ export class AIEnhancerService {
           summaryVi: parsed.summaryVi || 'Phân tích dự báo hoàn tất',
           keyFactors: parsed.keyFactors || [],
           keyFactorsVi: parsed.keyFactorsVi || [],
-          anomalies: (parsed.anomalies || []).map((a: any) => ({
+          anomalies: (parsed.anomalies || []).map((a: { period: string; type?: string; description?: string; descriptionVi?: string; suggestedAction?: string }) => ({
             period: a.period,
             type: a.type || 'unusual_pattern',
             description: a.description || '',
@@ -153,7 +154,7 @@ export class AIEnhancerService {
         };
       }
     } catch (e) {
-      console.warn('[AIEnhancer] Failed to parse AI response');
+      logger.warn('[AIEnhancer] Failed to parse AI response', { context: 'ai-enhancer' });
     }
 
     return this.generateRuleBasedInsights(forecast);
@@ -562,7 +563,7 @@ Return ONLY valid JSON, no additional text.`;
 
   private async callGeminiAPI(prompt: string): Promise<string> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this.aiModel}:generateContent?key=${this.aiApiKey}`,
+      `${process.env.GOOGLE_AI_API_BASE_URL || 'https://generativelanguage.googleapis.com'}/v1beta/models/${this.aiModel}:generateContent?key=${this.aiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

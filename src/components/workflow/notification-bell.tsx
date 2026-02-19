@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -60,7 +61,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
           setUnreadCount(data.unreadCount || 0);
         }
       } catch (error) {
-        console.error('Failed to load notifications:', error);
+        clientLogger.error('Failed to load notifications', error);
       }
     };
 
@@ -84,7 +85,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      clientLogger.error('Failed to mark as read', error);
     }
   };
 
@@ -101,7 +102,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      clientLogger.error('Failed to mark all as read', error);
     }
   };
 
@@ -118,7 +119,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative">
+        <Button variant="ghost" size="sm" className="relative" aria-label="Thông báo">
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
             <Badge

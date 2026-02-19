@@ -7,6 +7,8 @@
 // JOB DATA TYPES
 // =============================================================================
 
+import { logger } from '@/lib/logger';
+
 export interface MRPJobData {
   tenantId: string;
   userId: string;
@@ -123,7 +125,7 @@ class InMemoryQueue<T = unknown> {
       progress: 0,
     };
     this.jobs.set(id, job);
-    console.log(`[Queue:${this.name}] Job ${id} added (in-memory mode)`);
+    logger.info(`[Queue:${this.name}] Job ${id} added (in-memory mode)`);
     return job;
   }
 
@@ -197,7 +199,7 @@ export const jobs = {
       });
     },
     scheduleRecurring: async (tenantId: string, _cronExpression: string) => {
-      console.log(`[Queue:mrp] Recurring job scheduling not available in in-memory mode`);
+      logger.info(`[Queue:mrp] Recurring job scheduling not available in in-memory mode`);
       return queues.mrp.add('scheduled-mrp', {
         tenantId,
         userId: 'system',
@@ -220,7 +222,7 @@ export const jobs = {
       });
     },
     scheduleRecurring: async (data: ReportJobData, _cronExpression: string) => {
-      console.log(`[Queue:reports] Recurring job scheduling not available in in-memory mode`);
+      logger.info(`[Queue:reports] Recurring job scheduling not available in in-memory mode`);
       return queues.reports.add('scheduled-report', data);
     },
   },

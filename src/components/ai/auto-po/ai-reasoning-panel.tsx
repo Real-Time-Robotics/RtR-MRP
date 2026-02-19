@@ -103,7 +103,7 @@ export function AIReasoningPanel({
                     {shortSummary}
                   </span>
                 )}
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" aria-label={isExpanded ? "Thu gọn" : "Mở rộng"}>
                   {isExpanded ? (
                     <ChevronUp className="h-4 w-4" />
                   ) : (

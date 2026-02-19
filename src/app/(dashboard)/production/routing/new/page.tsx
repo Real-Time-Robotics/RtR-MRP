@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Product {
   id: string;
@@ -47,7 +49,7 @@ export default function NewRoutingPage() {
         setProducts(result.data || result.products || []);
       }
     } catch (error) {
-      console.error("Failed to fetch products:", error);
+      clientLogger.error("Failed to fetch products:", error);
     }
   };
 
@@ -55,12 +57,12 @@ export default function NewRoutingPage() {
     e.preventDefault();
 
     if (!formData.productId) {
-      alert("Vui lòng chọn sản phẩm");
+      toast.error("Vui lòng chọn sản phẩm");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên routing");
+      toast.error("Vui lòng nhập tên routing");
       return;
     }
 
@@ -83,11 +85,11 @@ export default function NewRoutingPage() {
         router.push(`/production/routing/${routing.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Không thể tạo routing");
+        toast.error(error.error || "Không thể tạo routing");
       }
     } catch (error) {
-      console.error("Failed to create routing:", error);
-      alert("Không thể tạo routing");
+      clientLogger.error("Failed to create routing:", error);
+      toast.error("Không thể tạo routing");
     } finally {
       setLoading(false);
     }

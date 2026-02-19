@@ -4,10 +4,19 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { ConflictSeverity, ConflictType } from '@/lib/ai/autonomous/conflict-detector';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const resolveConflictsSchema = z.object({
+  conflictIds: z.array(z.string()).optional(),
+  resolutionIds: z.array(z.string()).optional(),
+  autoResolve: z.boolean().optional(),
+  applyResolutions: z.boolean().optional(),
+});
 // =============================================================================
 // MOCK DATA GENERATORS
 // =============================================================================
@@ -108,14 +117,13 @@ function generateMockConflicts(workCenterId?: string | null): MockConflict[] {
 // GET: Detect conflicts
 // =============================================================================
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const workCenterId = searchParams.get('workCenterId');
     const severity = searchParams.get('severity') as ConflictSeverity | null;
 
@@ -164,26 +172,32 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST: Resolve conflicts
 // =============================================================================
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = resolveConflictsSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       conflictIds,
       resolutionIds,
       autoResolve = false,
       applyResolutions = false,
-    } = body;
+    } = parseResult.data;
 
     // Get all conflicts
     const allConflicts = generateMockConflicts();
@@ -255,4 +269,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

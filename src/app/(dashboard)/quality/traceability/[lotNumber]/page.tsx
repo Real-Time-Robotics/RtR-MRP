@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { clientLogger } from '@/lib/client-logger';
 
 interface LotSummary {
   lotNumber: string;
@@ -78,7 +79,7 @@ export default function LotTraceabilityPage({
         setTraceability(data.traceability);
       }
     } catch (error) {
-      console.error("Failed to fetch traceability:", error);
+      clientLogger.error("Failed to fetch traceability:", error);
     } finally {
       setLoading(false);
     }

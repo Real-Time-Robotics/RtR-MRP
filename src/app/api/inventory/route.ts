@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { getStockStatus } from '@/lib/bom-engine';
 import { validateQuery } from '@/lib/api/validation';
 import { InventoryQuerySchema } from '@/lib/validations';
@@ -13,15 +13,10 @@ import { parsePaginationParams } from '@/lib/pagination';
 // GET - List inventory with aggregation + server-side pagination
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
   try {
     const startTime = Date.now();
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Rate limiting (Gate 5.2)
+// Rate limiting (Gate 5.2)
     const rateLimit = await checkHeavyEndpointLimit(request, session.user?.id);
     if (!rateLimit.success) {
       const requestId = request.headers.get('x-request-id') || 'unknown';
@@ -69,7 +64,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Map helper for flat structure with status calculation
-    const mapInventoryItem = (inv: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mapInventoryItem = (inv: Record<string, any>) => {
       const available = inv.quantity - inv.reservedQty;
       const unitCost = inv.part.costs?.[0]?.unitCost || 0;
       const minStockLevel = inv.part.planning?.minStockLevel || 0;
@@ -154,6 +150,8 @@ export async function GET(request: NextRequest) {
         },
         summary,
         meta: { took: Date.now() - startTime, cached: false },
+      }, {
+        headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
       });
     }
 
@@ -174,6 +172,14 @@ export async function GET(request: NextRequest) {
 
     // For summary counts, we need all statuses. Use a lightweight query
     // to get aggregate counts (only when on page 1 or explicitly requested).
+    //
+    // NOTE: Cannot use Prisma count/groupBy here because stock status is a
+    // computed field: available = quantity - reservedQty, then compared against
+    // per-part planning thresholds (minStockLevel, reorderPoint). These
+    // cross-table computed comparisons cannot be expressed as Prisma where
+    // clauses. A raw SQL approach (e.g. JOIN + CASE WHEN) could work but
+    // would couple us to a specific DB dialect. The lightweight select below
+    // only fetches the 4 numeric fields needed, keeping the payload minimal.
     let summary = { total: totalItems, critical: 0, reorder: 0, ok: 0 };
     if (paginationParams.page === 1) {
       // Fetch all records lightweight for summary (only needed fields)
@@ -219,6 +225,8 @@ export async function GET(request: NextRequest) {
       },
       summary,
       meta: { took: Date.now() - startTime, cached: false },
+    }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
     });
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/inventory' });
@@ -227,7 +235,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 function computeSummary(items: { status: string }[]) {
   let critical = 0, reorder = 0, ok = 0;

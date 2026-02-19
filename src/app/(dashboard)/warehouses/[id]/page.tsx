@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { formatDateMedium } from "@/lib/date";
 import type { StockStatus } from "@/types";
 
@@ -228,12 +229,12 @@ export default function WarehouseDetailPage() {
       const res = await fetch(`/api/warehouse-receipts/${receiptId}/confirm`, { method: "POST" });
       const result = await res.json();
       if (!res.ok) {
-        alert(result.error || result.message || "Lỗi xác nhận phiếu");
+        toast.error(result.error || result.message || "Lỗi xác nhận phiếu");
         return;
       }
       fetchData();
     } catch {
-      alert("Lỗi xác nhận phiếu nhập kho");
+      toast.error("Lỗi xác nhận phiếu nhập kho");
     } finally {
       setProcessingId(null);
     }
@@ -257,12 +258,12 @@ export default function WarehouseDetailPage() {
       });
       const result = await res.json();
       if (!res.ok) {
-        alert(result.error || result.message || "Lỗi từ chối phiếu");
+        toast.error(result.error || result.message || "Lỗi từ chối phiếu");
         return;
       }
       fetchData();
     } catch {
-      alert("Lỗi từ chối phiếu nhập kho");
+      toast.error("Lỗi từ chối phiếu nhập kho");
     } finally {
       setProcessingId(null);
       setRejectTarget(null);

@@ -3,6 +3,8 @@
 // In-memory queue implementation (BullMQ disabled for Render compatibility)
 // =============================================================================
 
+import { logger } from '@/lib/logger';
+
 export const MRP_QUEUE_NAME = 'mrp-calculation-queue';
 
 export interface MrpJobData {
@@ -44,7 +46,7 @@ class InMemoryQueue {
     };
     jobQueue.push(job);
 
-    console.log(`[MRP-Queue] Job ${job.id} added to queue (in-memory mode)`);
+    logger.info(`[MRP-Queue] Job ${job.id} added to queue (in-memory mode)`);
 
     return {
       id: job.id,

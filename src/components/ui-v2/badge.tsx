@@ -212,6 +212,7 @@ const Tag: React.FC<TagProps> = ({
             'focus:outline-none focus:ring-2 focus:ring-primary-500',
             disabled && 'pointer-events-none'
           )}
+          aria-label="Xóa"
         >
           <X className="h-3 w-3" />
         </button>

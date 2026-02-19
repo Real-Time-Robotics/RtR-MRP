@@ -136,7 +136,7 @@ export function ScanResultCard({
               {result.raw}
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleCopy}>
+          <Button variant="ghost" size="icon" onClick={handleCopy} aria-label="Sao chép">
             <Copy className="h-4 w-4" />
           </Button>
         </div>

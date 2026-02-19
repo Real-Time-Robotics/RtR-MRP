@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';import { logger } from '@/lib/logger';
 
 import {
   parsePaginationParams,
@@ -12,20 +13,35 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const maintenanceBodySchema = z.object({
+  equipmentId: z.string(),
+  scheduleId: z.string().optional(),
+  type: z.string(),
+  priority: z.string().optional(),
+  title: z.string(),
+  description: z.string().optional(),
+  problemReported: z.string().optional(),
+  plannedStartDate: z.string().optional(),
+  plannedEndDate: z.string().optional(),
+  estimatedDuration: z.number().optional(),
+  assignedTo: z.string().optional(),
+  assignedTeam: z.string().optional(),
+});
 const ALLOWED_FILTERS = ["status", "type", "priority", "equipmentId", "assignedTo"];
 const SEARCH_FIELDS = ["orderNumber", "title"];
 
 // GET - List maintenance orders
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const params = parsePaginationParams(request);
+const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const upcoming = searchParams.get("upcoming") === "true";
@@ -71,17 +87,23 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance' });
     return paginatedError("Failed to fetch maintenance orders", 500);
   }
-}
+});
 
 // POST - Create maintenance order
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = maintenanceBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       equipmentId,
       scheduleId,
@@ -95,15 +117,7 @@ export async function POST(request: NextRequest) {
       estimatedDuration,
       assignedTo,
       assignedTeam,
-    } = body;
-
-    // Validate required fields
-    if (!equipmentId || !type || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: equipmentId, type, title" },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     // Generate order number
     const lastOrder = await prisma.maintenanceOrder.findFirst({
@@ -157,4 +171,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

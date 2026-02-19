@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateInternalRequest } from '@/lib/api/internal-auth'
+import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   const authError = validateInternalRequest(req)
   if (authError) return authError
+
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
     // Get all parts with their inventory and cost data
@@ -87,7 +93,7 @@ export async function GET(req: NextRequest) {
       outOfStockCount: outOfStock.length,
     })
   } catch (error) {
-    console.error('[Internal API] Inventory summary error:', error)
+    logger.error('[Internal API] Inventory summary error:', { error: String(error) })
     return NextResponse.json(
       { error: 'Failed to get inventory summary' },
       { status: 500 }

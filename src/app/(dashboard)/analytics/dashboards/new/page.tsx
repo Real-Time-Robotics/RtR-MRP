@@ -2,9 +2,19 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DashboardBuilder } from "@/components/analytics/dashboards/DashboardBuilder";
+import dynamic from "next/dynamic";
 import type { Dashboard } from "@/lib/analytics/types";
 import { DEFAULT_LAYOUT } from "@/lib/analytics/dashboard-service";
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load DashboardBuilder (~506 lines, uses charts/widgets internally)
+const DashboardBuilder = dynamic(
+  () => import("@/components/analytics/dashboards/DashboardBuilder").then(mod => mod.DashboardBuilder),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-screen rounded-lg" />,
+  }
+);
 
 export default function NewDashboardPage() {
   const router = useRouter();
@@ -74,7 +84,7 @@ export default function NewDashboardPage() {
       // Navigate to the new dashboard
       router.push(`/analytics/dashboards/${dashboardId}`);
     } catch (error) {
-      console.error("Error creating dashboard:", error);
+      clientLogger.error("Error creating dashboard:", error);
       throw error;
     }
   };

@@ -15,6 +15,7 @@ import {
   EquipmentStatusSummary,
   AlertBadges,
 } from '@/components/oee';
+import { clientLogger } from '@/lib/client-logger';
 
 interface OEEDashboard {
   overallOEE: number;
@@ -55,7 +56,7 @@ export default function OEEDashboardPage() {
         setLastUpdate(new Date());
       }
     } catch (error) {
-      console.error('Failed to fetch OEE:', error);
+      clientLogger.error('Failed to fetch OEE:', error);
     } finally {
       setLoading(false);
     }

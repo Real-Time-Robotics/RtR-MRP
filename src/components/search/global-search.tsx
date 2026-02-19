@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { clientLogger } from "@/lib/client-logger";
 import {
   Search,
   Package,
@@ -109,7 +110,7 @@ export function GlobalSearch() {
           }
         }
       } catch (error) {
-        console.error("Search failed:", error);
+        clientLogger.error("Search failed", error);
         // Fallback to basic search on error
         try {
           const fallbackRes = await fetch(

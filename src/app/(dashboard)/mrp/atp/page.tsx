@@ -15,6 +15,7 @@ import {
 import { ATPGrid } from "@/components/mrp/atp-grid";
 import { Loader2, Calculator, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -65,7 +66,7 @@ export default function ATPPage() {
         setParts(data);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     } finally {
       setIsLoadingParts(false);
     }
@@ -90,7 +91,7 @@ export default function ATPPage() {
         throw new Error("Failed to calculate ATP");
       }
     } catch (error) {
-      console.error("Failed to calculate ATP:", error);
+      clientLogger.error("Failed to calculate ATP:", error);
       toast({ title: "Failed to calculate ATP", variant: "destructive" });
     } finally {
       setIsLoading(false);

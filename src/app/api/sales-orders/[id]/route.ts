@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import {
@@ -9,6 +10,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from '@/lib/api/with-permission';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION
@@ -34,6 +36,10 @@ async function getHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -60,6 +66,10 @@ async function putHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rlResult = await checkWriteEndpointLimit(request);
+  if (rlResult) return rlResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -89,7 +99,7 @@ async function putHandler(
     return validationErrorResponse(errors);
   }
 
-  const updateData: any = { ...validation.data };
+  const updateData: Prisma.SalesOrderUpdateInput = { ...validation.data };
   if (validation.data.orderDate) updateData.orderDate = new Date(validation.data.orderDate);
   if (validation.data.requiredDate) updateData.requiredDate = new Date(validation.data.requiredDate);
   if (validation.data.promisedDate) updateData.promisedDate = new Date(validation.data.promisedDate);
@@ -111,6 +121,10 @@ async function deleteHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rlResult2 = await checkWriteEndpointLimit(request);
+  if (rlResult2) return rlResult2;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 

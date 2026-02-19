@@ -79,6 +79,7 @@ export default function BomVersionsPage() {
               type="text"
               className="flex-1 h-7 px-2 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal"
               placeholder="Nhập Product ID..."
+              aria-label="Product ID"
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchVersions()}

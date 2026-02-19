@@ -4,8 +4,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   CustomerPortalEngine,
   Customer,
@@ -18,6 +21,7 @@ import {
   SOItem,
 } from '@/lib/customer/customer-engine';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 export const dynamic = 'force-dynamic';
 
 // =============================================================================
@@ -35,7 +39,10 @@ async function getAuthenticatedCustomerId(request: NextRequest): Promise<string 
 // HELPER: Transform database records to portal types
 // =============================================================================
 
-function transformCustomer(dbCustomer: any): Customer {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbRecord = Record<string, any>;
+
+function transformCustomer(dbCustomer: DbRecord): Customer {
   return {
     id: dbCustomer.id,
     code: dbCustomer.code,
@@ -69,9 +76,9 @@ function mapOrderStatus(status: string): SalesOrder['status'] {
   return statusMap[status.toLowerCase()] || 'PENDING';
 }
 
-function transformSalesOrder(dbOrder: any): SalesOrder {
-  const lines = (dbOrder.lines ?? []) as any[];
-  const items: SOItem[] = lines.map((line: any) => ({
+function transformSalesOrder(dbOrder: DbRecord): SalesOrder {
+  const lines = (dbOrder.lines ?? []) as DbRecord[];
+  const items: SOItem[] = lines.map((line: DbRecord) => ({
     id: line.id,
     productCode: line.product?.sku || '',
     productName: line.product?.name || '',
@@ -113,7 +120,7 @@ function transformSalesOrder(dbOrder: any): SalesOrder {
   };
 }
 
-function transformInvoice(dbInvoice: any): CustomerInvoice {
+function transformInvoice(dbInvoice: DbRecord): CustomerInvoice {
   return {
     id: dbInvoice.id,
     invoiceNumber: dbInvoice.invoiceNumber,
@@ -131,7 +138,7 @@ function transformInvoice(dbInvoice: any): CustomerInvoice {
     paidAmount: dbInvoice.paidAmount || 0,
     balance: (dbInvoice.totalAmount || 0) - (dbInvoice.paidAmount || 0),
     currency: dbInvoice.currency || 'VND',
-    items: ((dbInvoice.lines ?? []) as any[]).map((line: any) => ({
+    items: ((dbInvoice.lines ?? []) as DbRecord[]).map((line: DbRecord) => ({
       id: line.id,
       description: line.description || '',
       quantity: line.quantity,
@@ -148,7 +155,11 @@ function transformInvoice(dbInvoice: any): CustomerInvoice {
 // GET /api/v2/customer
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session): Promise<Response> => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get('view') || 'dashboard';
@@ -240,7 +251,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const page = parseInt(searchParams.get('page') || '1');
       const limit = parseInt(searchParams.get('limit') || '10');
 
-      const where: any = { customerId };
+      const where: Prisma.SalesOrderWhereInput = { customerId };
       if (status) {
         where.status = status.toLowerCase();
       }
@@ -321,9 +332,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const page = parseInt(searchParams.get('page') || '1');
       const limit = parseInt(searchParams.get('limit') || '10');
 
-      const where: any = { customerId };
+      const where: Prisma.SalesInvoiceWhereInput = { customerId };
       if (status) {
-        where.status = status.toLowerCase();
+        where.status = status.toLowerCase() as Prisma.SalesInvoiceWhereInput['status'];
       }
 
       const [invoices, total] = await Promise.all([
@@ -447,15 +458,42 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST /api/v2/customer
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session): Promise<Response> => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.enum(['create_ticket', 'reply_ticket', 'read_notification', 'request_quote', 'request_cancellation']),
+      category: z.string().optional(),
+      priority: z.string().optional(),
+      subject: z.string().optional(),
+      description: z.string().optional(),
+      soId: z.string().optional(),
+      ticketId: z.string().optional(),
+      message: z.string().optional(),
+      notificationId: z.string().optional(),
+      items: z.array(z.record(z.string(), z.unknown())).optional(),
+      notes: z.string().optional(),
+      orderId: z.string().optional(),
+      reason: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, ...data } = body;
 
     switch (action) {
@@ -548,4 +586,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+});

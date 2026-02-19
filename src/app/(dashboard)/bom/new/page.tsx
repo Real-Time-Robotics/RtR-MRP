@@ -24,6 +24,14 @@ import {
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import { toast } from "sonner";
+import { z } from "zod";
+import { clientLogger } from '@/lib/client-logger';
+
+const bomFormSchema = z.object({
+  productId: z.string().min(1, "Vui lòng chọn sản phẩm"),
+  version: z.string().min(1, "Version là bắt buộc"),
+  effectiveDate: z.string().min(1, "Ngày hiệu lực là bắt buộc"),
+});
 
 interface Product {
   id: string;
@@ -54,6 +62,7 @@ export default function NewBOMPage() {
     new Date().toISOString().split("T")[0]
   );
   const [notes, setNotes] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchProducts();
@@ -67,7 +76,7 @@ export default function NewBOMPage() {
       const productsArray = Array.isArray(data) ? data : (data?.data || []);
       setProducts(productsArray);
     } catch (error) {
-      console.error("Failed to fetch products:", error);
+      clientLogger.error("Failed to fetch products:", error);
       toast.error("Failed to load products");
     } finally {
       setFetchingProducts(false);
@@ -155,7 +164,7 @@ export default function NewBOMPage() {
         toast.error(error.error || (isEdit ? "Lỗi cập nhật product" : "Lỗi tạo product"));
       }
     } catch (error) {
-      console.error("Failed to save product:", error);
+      clientLogger.error("Failed to save product:", error);
       toast.error("Lỗi lưu product");
     } finally {
       setSavingProduct(false);
@@ -165,10 +174,19 @@ export default function NewBOMPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!productId) {
-      toast.error("Please select a product");
+    const result = bomFormSchema.safeParse({ productId, version, effectiveDate });
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!errors[key]) {
+          errors[key] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setLoading(true);
 
@@ -194,7 +212,7 @@ export default function NewBOMPage() {
         toast.error(error.error || "Failed to create BOM");
       }
     } catch (error) {
-      console.error("Failed to create BOM:", error);
+      clientLogger.error("Failed to create BOM:", error);
       toast.error("Failed to create BOM");
     } finally {
       setLoading(false);
@@ -206,7 +224,7 @@ export default function NewBOMPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/bom">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Quay lại">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
@@ -257,6 +275,7 @@ export default function NewBOMPage() {
                     size="icon"
                     onClick={openEditDialog}
                     title="Sửa product đang chọn"
+                    aria-label="Sửa product đang chọn"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -270,6 +289,9 @@ export default function NewBOMPage() {
                   Tạo mới
                 </Button>
               </div>
+              {fieldErrors.productId && (
+                <p className="text-sm text-red-500">{fieldErrors.productId}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Chọn product có sẵn hoặc bấm &quot;Tạo mới&quot; để tạo product mới
               </p>
@@ -286,6 +308,9 @@ export default function NewBOMPage() {
                   placeholder="1.0"
                   required
                 />
+                {fieldErrors.version && (
+                  <p className="text-sm text-red-500">{fieldErrors.version}</p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   BOM version number (e.g., 1.0, 2.0)
                 </p>
@@ -300,6 +325,9 @@ export default function NewBOMPage() {
                   onChange={(e) => setEffectiveDate(e.target.value)}
                   required
                 />
+                {fieldErrors.effectiveDate && (
+                  <p className="text-sm text-red-500">{fieldErrors.effectiveDate}</p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Date when this BOM becomes active
                 </p>

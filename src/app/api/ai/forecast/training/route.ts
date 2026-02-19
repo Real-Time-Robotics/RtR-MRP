@@ -5,6 +5,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
@@ -14,7 +16,19 @@ import {
   ForecastConfig,
   DEFAULT_CONFIG,
 } from '@/lib/ai/forecast';
+import type { ForecastModel } from '@/lib/ai/forecast/forecast-engine';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const trainingBodySchema = z.object({
+  action: z.enum(['evaluate', 'optimize', 'backtest', 'compare-models', 'cross-validate']),
+  productId: z.string().optional(),
+  productIds: z.array(z.string()).optional(),
+  config: z.any().optional(),
+  periodType: z.enum(['weekly', 'monthly']).optional(),
+  testPeriods: z.number().optional(),
+  models: z.array(z.string()).optional(),
+});
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -31,7 +45,7 @@ interface TrainingRequest {
 
 interface TrainingResponse {
   success: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: string;
   latency?: number;
 }
@@ -98,18 +112,35 @@ function calculateMetrics(
 // GET - Get Training Status & Model Performance
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<TrainingResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'status';
     const productId = searchParams.get('productId');
     const periodType = (searchParams.get('periodType') || 'monthly') as 'weekly' | 'monthly';
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: Record<string, any>;
 
     switch (action) {
       case 'status': {
@@ -270,23 +301,46 @@ export async function GET(request: NextRequest): Promise<NextResponse<TrainingRe
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch training data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Train and Optimize Models
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<TrainingResponse>> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const body: TrainingRequest = await request.json();
+const rawBody = await request.json();
+    const parseResult = trainingBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       action,
       productId,
@@ -295,12 +349,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
       periodType = 'monthly',
       testPeriods = 6,
       models = ['exponential_smoothing', 'moving_average', 'holt_winters', 'weighted_ensemble'],
-    } = body;
+    } = parseResult.data;
 
     const forecastEngine = getForecastEngine();
     const dataExtractor = getDataExtractorService();
 
-    let result: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: Record<string, any>;
 
     switch (action) {
       case 'evaluate': {
@@ -341,7 +396,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
             const forecast = await forecastEngine.generateForecast(productId, {
               ...config,
               periodType,
-              model: modelName as any,
+              model: modelName as ForecastModel,
             });
 
             if (forecast && forecast.forecasts.length >= testPeriods) {
@@ -484,7 +539,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
                 const forecast = await forecastEngine.generateForecast(pid, {
                   ...config,
                   periodType,
-                  model: model as any,
+                  model: model as ForecastModel,
                 });
 
                 if (forecast && forecast.forecasts.length > 0) {
@@ -529,14 +584,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
           );
         }
 
-        const comparisons: any[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const comparisons: Array<Record<string, any>> = [];
 
         for (const model of models) {
           try {
             const forecast = await forecastEngine.generateForecast(productId, {
               ...config,
               periodType,
-              model: model as any,
+              model: model as ForecastModel,
             });
 
             if (forecast) {
@@ -606,7 +662,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
               const forecast = await forecastEngine.generateForecast(productId, {
                 ...config,
                 periodType,
-                model: model as any,
+                model: model as ForecastModel,
               });
 
               if (forecast && forecast.metrics) {
@@ -671,10 +727,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<TrainingR
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to train forecast models',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

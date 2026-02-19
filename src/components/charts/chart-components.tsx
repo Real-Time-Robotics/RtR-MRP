@@ -18,6 +18,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import type { PieLabelRenderProps } from 'recharts';
 import {
   TrendingUp,
   TrendingDown,
@@ -71,7 +72,7 @@ interface ChartContainerProps {
 }
 
 interface BaseChartProps {
-  data: any[];
+  data: Record<string, unknown>[];
   height?: number;
   className?: string;
   loading?: boolean;
@@ -111,6 +112,7 @@ export function ChartContainer({
             <button
               onClick={onRefresh}
               className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Làm mới"
             >
               <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             </button>
@@ -119,6 +121,7 @@ export function ChartContainer({
             <button
               onClick={onExport}
               className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Tải xuống"
             >
               <Download className="w-4 h-4" />
             </button>
@@ -127,6 +130,7 @@ export function ChartContainer({
             <button
               onClick={onExpand}
               className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Mở rộng"
             >
               <Maximize2 className="w-4 h-4" />
             </button>
@@ -152,9 +156,17 @@ export function ChartContainer({
 // CUSTOM TOOLTIP
 // =============================================================================
 
+interface TooltipPayloadEntry {
+  color: string;
+  name: string;
+  value: number;
+  dataKey?: string;
+  payload?: Record<string, unknown>;
+}
+
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: TooltipPayloadEntry[];
   label?: string;
   formatter?: (value: number, name: string) => string;
 }
@@ -165,7 +177,7 @@ function CustomTooltip({ active, payload, label, formatter }: CustomTooltipProps
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[150px]">
       <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">{label}</p>
-      {payload.map((entry: any, index: number) => (
+      {payload.map((entry: TooltipPayloadEntry, index: number) => (
         <div key={index} className="flex items-center justify-between gap-4 text-sm">
           <div className="flex items-center gap-2">
             <span
@@ -347,15 +359,16 @@ export function RTRPieChart({
   className,
 }: PieChartProps) {
   const total = useMemo(() =>
-    data.reduce((sum, item) => sum + (item[dataKey] || 0), 0),
+    data.reduce((sum, item) => sum + (Number(item[dataKey]) || 0), 0),
     [data, dataKey]
   );
 
-  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const renderLabel = (props: PieLabelRenderProps) => {
+    const { cx, cy, midAngle, innerRadius: ir, outerRadius: or, percent } = props as { cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number };
     if (!showLabel || percent < 0.05) return null;
 
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const radius = ir + (or - ir) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 

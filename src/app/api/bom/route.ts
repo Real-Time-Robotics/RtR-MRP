@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { parsePaginationParams } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for BOM line
 const BomLineSchema = z.object({
   partId: z.string().min(1, "Part ID là bắt buộc"),
@@ -33,14 +34,13 @@ const BomCreateSchema = z.object({
 });
 
 // GET - List all BOM headers with lines
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
     const status = searchParams.get("status");
     const { page, pageSize } = parsePaginationParams(request);
@@ -88,17 +88,16 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Create new BOM header with lines
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const body = await request.json();
 
     // Validate request body
     const validationResult = BomCreateSchema.safeParse(body);
@@ -208,4 +207,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

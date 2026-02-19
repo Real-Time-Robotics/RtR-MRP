@@ -2,13 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateInternalRequest } from '@/lib/api/internal-auth'
 import { triggerWorkOrderWorkflow } from '@/lib/workflow/workflow-triggers'
+import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
 
 export async function POST(req: NextRequest) {
   const authError = validateInternalRequest(req)
   if (authError) return authError
 
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json()
+    const bodySchema = z.object({
+      source: z.string().optional(),
+      sourceDealId: z.string().optional(),
+      title: z.string(),
+      items: z.array(z.object({
+        partId: z.string(),
+        quantity: z.number(),
+      })),
+      customer: z.string().optional(),
+      dueDate: z.string().optional(),
+    })
+    const rawBody = await req.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const body = parseResult.data
     const { source, sourceDealId, title, items, customer, dueDate } = body
 
     if (!title || !items || !Array.isArray(items) || items.length === 0) {
@@ -101,7 +127,7 @@ export async function POST(req: NextRequest) {
         priority: 'normal',
       })
     } catch (err) {
-      console.error('[Internal API] WO workflow trigger error:', err)
+      logger.error('[Internal API] WO workflow trigger error:', { error: String(err) })
     }
 
     return NextResponse.json(
@@ -113,7 +139,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('[Internal API] Create work order error:', error)
+    logger.error('[Internal API] Create work order error:', { error: String(error) })
     return NextResponse.json(
       { error: 'Failed to create work order' },
       { status: 500 }

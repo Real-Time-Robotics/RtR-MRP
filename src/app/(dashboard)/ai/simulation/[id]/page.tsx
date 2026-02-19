@@ -21,10 +21,204 @@ import {
   Target,
   Loader2,
 } from 'lucide-react';
-import { SimulationResultsChart } from '@/components/ai/simulation/simulation-results-chart';
-import { ImpactComparison } from '@/components/ai/simulation/impact-comparison';
-import { BottleneckAnalysis } from '@/components/ai/simulation/bottleneck-analysis';
-import { MonteCarloChart } from '@/components/ai/simulation/monte-carlo-chart';
+import dynamic from 'next/dynamic';
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load heavy simulation visualization components
+const ImpactComparison = dynamic(
+  () => import('@/components/ai/simulation/impact-comparison').then(mod => mod.ImpactComparison),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-64 rounded-lg" />,
+  }
+);
+
+const BottleneckAnalysis = dynamic(
+  () => import('@/components/ai/simulation/bottleneck-analysis').then(mod => mod.BottleneckAnalysis),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-64 rounded-lg" />,
+  }
+);
+
+// Lazy-load heavy chart components (recharts ~500KB)
+const SimulationResultsChart = dynamic(
+  () => import('@/components/ai/simulation/simulation-results-chart').then(mod => mod.SimulationResultsChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-[400px] bg-muted/50 rounded-xl animate-pulse">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
+
+const MonteCarloChart = dynamic(
+  () => import('@/components/ai/simulation/monte-carlo-chart').then(mod => mod.MonteCarloChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-[400px] bg-muted/50 rounded-xl animate-pulse">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
+
+interface SimulationBaseline {
+  demand: number;
+  supply: number;
+  inventory: number;
+  capacity: number;
+  serviceLevel: number;
+  capacityUtilization: number;
+}
+
+interface SimulationSimulated {
+  demand: number;
+  supply: number;
+  inventory: number;
+  capacity: number;
+  serviceLevel: number;
+  capacityUtilization: number;
+  stockoutRisk: number;
+}
+
+interface SimulationImpacts {
+  serviceLevelChange: number;
+  capacityUtilizationChange: number;
+  costChangePercent: number;
+  costChange: number;
+}
+
+interface SimulationTimelinePoint {
+  week: number;
+  date: string;
+  demand: number;
+  supply: number;
+  inventory: number;
+  capacityUsed: number;
+  capacityAvailable: number;
+  stockouts: number;
+}
+
+interface SimulationAlert {
+  id: string;
+  type: 'critical' | 'warning' | 'info';
+  severity: 'critical' | 'warning' | 'info';
+  message: string;
+  week: number;
+  metric: string;
+  threshold: number;
+  actualValue: number;
+  recommendedAction: string;
+}
+
+interface SimulationBottleneck {
+  id: string;
+  type: 'resource' | 'supplier' | 'capacity' | 'inventory' | 'workforce';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  description: string;
+  impact: string;
+  affectedWeeks: number[];
+  utilizationRate?: number;
+  recommendation: string;
+}
+
+interface MonteCarloStatistics {
+  mean: number;
+  median: number;
+  stdDev: number;
+  variance: number;
+  min: number;
+  max: number;
+  skewness: number;
+  kurtosis: number;
+  confidenceInterval: {
+    lower: number;
+    upper: number;
+    level: number;
+  };
+  percentiles: {
+    p5: number;
+    p10: number;
+    p25: number;
+    p50: number;
+    p75: number;
+    p90: number;
+    p95: number;
+  };
+}
+
+interface MonteCarloRiskMetrics {
+  valueAtRisk: number;
+  conditionalVaR: number;
+  stockoutProbability: number;
+  capacityOverloadProbability: number;
+  expectedShortfall: number;
+}
+
+interface MonteCarloSensitivityResult {
+  variable: string;
+  baseValue: number;
+  elasticity: number;
+  impact: 'high' | 'medium' | 'low';
+  correlation: number;
+}
+
+interface FinancialImpact {
+  revenueLoss: number;
+  additionalCosts: number;
+  inventoryCarryingCost: number;
+  expeditingCost: number;
+  totalImpact: number;
+}
+
+interface OperationalImpact {
+  stockoutRisk: number;
+  capacityUtilization: number;
+  onTimeDeliveryRate: number;
+  leadTimeImpact: number;
+}
+
+interface RiskImpact {
+  overallRiskScore: number;
+  criticalAlerts: number;
+  warnings: number;
+}
+
+interface ImpactAnalysisRecommendation {
+  category: string;
+  action: string;
+  priority: string;
+  expectedImpact: string;
+}
+
+interface ImpactAnalysisSummary {
+  overallSeverity: string;
+  description: string;
+}
+
+interface StrategicRecommendation {
+  priority: string;
+  title: string;
+  description: string;
+  rationale?: string;
+}
+
+interface RiskAnalysis {
+  overallRiskLevel: string;
+  keyRisks: string[];
+  mitigationStrategies: string[];
+}
+
+interface ActionPlan {
+  immediate?: string[];
+  shortTerm?: string[];
+  mediumTerm?: string[];
+  longTerm?: string[];
+}
 
 interface SimulationResultData {
   id: string;
@@ -38,36 +232,36 @@ interface SimulationResultData {
   simulationResult: {
     status: string;
     executionTimeMs: number;
-    baseline: any;
-    simulated: any;
-    impacts: any;
-    timeline: any[];
-    alerts: any[];
-    bottlenecks: any[];
+    baseline: SimulationBaseline;
+    simulated: SimulationSimulated;
+    impacts: SimulationImpacts;
+    timeline: SimulationTimelinePoint[];
+    alerts: SimulationAlert[];
+    bottlenecks: SimulationBottleneck[];
     recommendations: string[];
   };
   monteCarloResult?: {
-    statistics: any;
-    riskMetrics: any;
+    statistics: MonteCarloStatistics;
+    riskMetrics: MonteCarloRiskMetrics;
     distribution: number[];
-    percentiles: any;
-    sensitivityAnalysis: any[];
+    percentiles: MonteCarloStatistics['percentiles'];
+    sensitivityAnalysis: MonteCarloSensitivityResult[];
     iterationCount: number;
   };
   impactAnalysis?: {
-    summary: any;
-    financial: any;
-    operational: any;
-    risk: any;
-    recommendations: any[];
+    summary: ImpactAnalysisSummary;
+    financial: FinancialImpact;
+    operational: OperationalImpact;
+    risk: RiskImpact;
+    recommendations: ImpactAnalysisRecommendation[];
   };
   aiInsight?: {
     executiveSummary: string;
     situationAnalysis: string;
     impactAssessment: string;
-    strategicRecommendations: any[];
-    riskAnalysis: any;
-    actionPlan: any;
+    strategicRecommendations: StrategicRecommendation[];
+    riskAnalysis: RiskAnalysis;
+    actionPlan: ActionPlan;
     confidenceLevel: string;
   };
 }
@@ -126,7 +320,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
         }
       }
     } catch (err) {
-      console.error('Export failed:', err);
+      clientLogger.error('Simulation export failed', err);
     }
   };
 
@@ -395,7 +589,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {aiInsight.strategicRecommendations.map((rec: any, i: number) => (
+                    {aiInsight.strategicRecommendations.map((rec: StrategicRecommendation, i: number) => (
                       <div key={i} className="p-3 bg-muted/50 rounded-lg">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant={
@@ -427,7 +621,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {aiInsight.actionPlan.immediate?.length > 0 && (
+                    {aiInsight.actionPlan.immediate && aiInsight.actionPlan.immediate.length > 0 && (
                       <div>
                         <h4 className="font-medium text-red-600 mb-2">Immediate</h4>
                         <ul className="list-disc list-inside text-sm space-y-1">
@@ -437,7 +631,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
                         </ul>
                       </div>
                     )}
-                    {aiInsight.actionPlan.shortTerm?.length > 0 && (
+                    {aiInsight.actionPlan.shortTerm && aiInsight.actionPlan.shortTerm.length > 0 && (
                       <div>
                         <h4 className="font-medium text-orange-600 mb-2">Short Term</h4>
                         <ul className="list-disc list-inside text-sm space-y-1">
@@ -447,7 +641,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
                         </ul>
                       </div>
                     )}
-                    {aiInsight.actionPlan.mediumTerm?.length > 0 && (
+                    {aiInsight.actionPlan.mediumTerm && aiInsight.actionPlan.mediumTerm.length > 0 && (
                       <div>
                         <h4 className="font-medium text-blue-600 mb-2">Medium Term</h4>
                         <ul className="list-disc list-inside text-sm space-y-1">
@@ -457,7 +651,7 @@ export default function SimulationResultPage({ params }: { params: Promise<{ id:
                         </ul>
                       </div>
                     )}
-                    {aiInsight.actionPlan.longTerm?.length > 0 && (
+                    {aiInsight.actionPlan.longTerm && aiInsight.actionPlan.longTerm.length > 0 && (
                       <div>
                         <h4 className="font-medium text-green-600 mb-2">Long Term</h4>
                         <ul className="list-disc list-inside text-sm space-y-1">

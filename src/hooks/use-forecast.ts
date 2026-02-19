@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -323,10 +324,10 @@ export function useForecastAccuracy(options: { periodType?: 'weekly' | 'monthly'
 
   const [summary, setSummary] = useState<AccuracySummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<{
-    topPerformers: any[];
-    bottomPerformers: any[];
+    topPerformers: Array<{ productId: string; partNumber: string; name: string; sku?: string; metrics?: { mape: number; mae: number } }>;
+    bottomPerformers: Array<{ productId: string; partNumber: string; name: string; sku?: string; metrics?: { mape: number; mae: number } }>;
   } | null>(null);
-  const [trends, setTrends] = useState<any[]>([]);
+  const [trends, setTrends] = useState<Array<{ period: string; accuracy: number; averageAccuracy?: number }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -491,7 +492,7 @@ export function useGenerateForecast() {
 
 export function useForecastTraining() {
   const [isTraining, setIsTraining] = useState(false);
-  const [modelStats, setModelStats] = useState<any>(null);
+  const [modelStats, setModelStats] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Get model statistics
@@ -504,7 +505,7 @@ export function useForecastTraining() {
         setModelStats(data.data);
       }
     } catch (err) {
-      console.error('Failed to fetch model stats:', err);
+      clientLogger.error('Failed to fetch model stats', err);
     }
   }, []);
 

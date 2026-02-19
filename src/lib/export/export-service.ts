@@ -13,6 +13,7 @@ import {
   type WorkOrder,
   type QualityRecord,
 } from '@/lib/data/data-service';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -875,14 +876,14 @@ export async function deliverReportByEmail(options: EmailDeliveryOptions): Promi
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    console.warn('Email delivery skipped: SMTP environment variables not configured (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)');
+    logger.warn('Email delivery skipped: SMTP environment variables not configured (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS)', { context: 'export-service' });
     return { success: false, error: 'SMTP not configured' };
   }
 
   try {
     // Dynamic require to avoid webpack static analysis bundling error
     // nodemailer must be installed separately: pnpm add nodemailer
-    let nodemailer: any;
+    let nodemailer: typeof import('nodemailer');
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const moduleName = 'nodemailer';
@@ -919,7 +920,7 @@ export async function deliverReportByEmail(options: EmailDeliveryOptions): Promi
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('Email delivery failed:', message);
+    logger.error('Email delivery failed', { context: 'export-service', error: message });
     return { success: false, error: message };
   }
 }

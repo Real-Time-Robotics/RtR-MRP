@@ -5,19 +5,38 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import {
   getSupplierPerformanceScorer,
   getAISupplierAnalyzer,
 } from '@/lib/ai/supplier-risk';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // GET - Supplier Rankings and Benchmarks
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category') || undefined;
     const limit = parseInt(searchParams.get('limit') || '20');
     const includeBenchmarks = searchParams.get('includeBenchmarks') !== 'false';
@@ -27,7 +46,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Get supplier rankings
     const rankings = await performanceScorer.getSupplierRankings(category, limit);
 
-    const response: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: Record<string, any> = {
       success: true,
       data: {
         rankings: rankings.map((r) => ({
@@ -69,20 +89,50 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch supplier rankings',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Generate Scorecard or Compare Suppliers
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const body = await request.json();
+const bodySchema = z.object({
+      action: z.enum(['generate', 'compare', 'save']),
+      supplierId: z.string().optional(),
+      supplierIds: z.array(z.string()).optional(),
+      months: z.number().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, supplierId, supplierIds, months = 12 } = body;
 
     const performanceScorer = getSupplierPerformanceScorer();
@@ -194,9 +244,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process scorecard action',
       },
       { status: 500 }
     );
   }
-}
+});

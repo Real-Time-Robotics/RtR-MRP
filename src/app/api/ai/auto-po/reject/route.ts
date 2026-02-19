@@ -4,33 +4,51 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
-export async function POST(request: NextRequest) {
+const rejectPostSchema = z.object({
+  queueItemId: z.string().min(1, 'queueItemId là bắt buộc'),
+  reason: z.string().min(1, 'Lý do từ chối là bắt buộc'),
+  feedback: z.string().optional(),
+});
+
+const bulkRejectSchema = z.object({
+  queueItemIds: z.array(z.string()).min(1, 'queueItemIds array is required'),
+  reason: z.string().min(1, 'reason is required when rejecting'),
+  feedback: z.string().optional(),
+});
+
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { queueItemId, reason, feedback } = body;
-
-    if (!queueItemId) {
+const body = await request.json();
+    const parsed = rejectPostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'queueItemId is required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
-
-    if (!reason) {
-      return NextResponse.json(
-        { error: 'reason is required when rejecting' },
-        { status: 400 }
-      );
-    }
+    const { queueItemId, reason, feedback } = parsed.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -76,31 +94,35 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { queueItemIds, reason, feedback } = body;
-
-    if (!queueItemIds || !Array.isArray(queueItemIds) || queueItemIds.length === 0) {
+const rawBody = await request.json();
+    const parseResult = bulkRejectSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'queueItemIds array is required' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
-
-    if (!reason) {
-      return NextResponse.json(
-        { error: 'reason is required when rejecting' },
-        { status: 400 }
-      );
-    }
+    const { queueItemIds, reason, feedback } = parseResult.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -152,4 +174,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

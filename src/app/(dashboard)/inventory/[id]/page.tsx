@@ -108,10 +108,10 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                 quantity: data.quantity,
                 transferQty: data.quantity,
             });
-        } catch (error: any) {
-            toast.error(error.message);
-            // Optional: Redirect back if not found? 
-            // router.push('/inventory'); 
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
+            // Optional: Redirect back if not found?
+            // router.push('/inventory');
         } finally {
             setLoading(false);
         }

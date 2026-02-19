@@ -5,6 +5,7 @@
 
 import { workflowEngine } from './workflow-engine';
 import { WorkflowEntityType } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 interface TriggerResult {
   triggered: boolean;
@@ -43,7 +44,7 @@ export async function triggerPurchaseOrderWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] PO trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'PO' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -77,7 +78,7 @@ export async function triggerNCRWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] NCR trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'NCR' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -109,7 +110,7 @@ export async function triggerCAPAWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] CAPA trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'CAPA' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -142,7 +143,7 @@ export async function triggerWorkOrderWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] WO trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'WO' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -184,7 +185,7 @@ export async function triggerSalesOrderWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] SO trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'SO' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -223,7 +224,7 @@ export async function triggerInventoryAdjustmentWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] Inventory trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'Inventory' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -256,7 +257,7 @@ export async function triggerEngineeringChangeWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] ECO trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'ECO' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }
@@ -285,7 +286,7 @@ export async function triggerWorkflow(
     }
     return { triggered: false, error: result.error };
   } catch (error) {
-    console.error('[WorkflowTrigger] Generic trigger error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-triggers', trigger: 'Generic' });
     return { triggered: false, error: 'Failed to trigger workflow' };
   }
 }

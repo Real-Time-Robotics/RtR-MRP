@@ -5,7 +5,7 @@
 // Data-dense layout like Bloomberg Terminal / Excel
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -37,6 +37,8 @@ import {
 import { useLanguage } from '@/lib/i18n/language-context';
 import { cn } from '@/lib/utils';
 import { PendingApprovals } from '@/components/workflow';
+import { toast } from 'sonner';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -68,25 +70,55 @@ interface Alert {
   time: string;
 }
 
+interface OEEData {
+  overallOEE: number;
+  avgAvailability: number;
+  avgQuality: number;
+}
+
+interface WorkOrderSummary {
+  completed: number;
+  inProgress: number;
+  pending: number;
+  issues: number;
+}
+
 // =============================================================================
-// MOCK DATA
+// HELPERS
 // =============================================================================
 
-const mockWorkOrders: WorkOrder[] = [
-  { id: '1', number: 'WO-2024-001', product: 'HERA X8 Frame', quantity: 50, completed: 35, status: 'running', progress: 70 },
-  { id: '2', number: 'WO-2024-002', product: 'Motor Assembly', quantity: 200, completed: 180, status: 'running', progress: 90 },
-  { id: '3', number: 'WO-2024-003', product: 'Flight Controller', quantity: 100, completed: 45, status: 'paused', progress: 45 },
-  { id: '4', number: 'WO-2024-004', product: 'Battery Pack', quantity: 80, completed: 80, status: 'completed', progress: 100 },
-  { id: '5', number: 'WO-2024-005', product: 'Propeller Set', quantity: 500, completed: 150, status: 'delayed', progress: 30 },
-];
+/** Map API work order status string to dashboard display status */
+function mapWoStatus(status: string): WorkOrder['status'] {
+  const s = status.toUpperCase();
+  if (s === 'IN_PROGRESS' || s === 'RELEASED') return 'running';
+  if (s === 'ON_HOLD') return 'paused';
+  if (s === 'COMPLETED' || s === 'CLOSED') return 'completed';
+  if (s === 'DELAYED' || s === 'OVERDUE') return 'delayed';
+  // draft, cancelled, etc. fall through
+  return 'paused';
+}
 
-const mockAlertKeys: { id: string; type: Alert['type']; titleKey: string; timeKey: string }[] = [
-  { id: '1', type: 'critical', titleKey: 'dashboard.alertLowStock', timeKey: 'dashboard.timeAgo2m' },
-  { id: '2', type: 'critical', titleKey: 'dashboard.alertMaintenance', timeKey: 'dashboard.timeAgo15m' },
-  { id: '3', type: 'warning', titleKey: 'dashboard.alertDeliveryDelay', timeKey: 'dashboard.timeAgo1h' },
-  { id: '4', type: 'warning', titleKey: 'dashboard.alertQualityIssue', timeKey: 'dashboard.timeAgo2h' },
-  { id: '5', type: 'info', titleKey: 'dashboard.alertSupplierQuote', timeKey: 'dashboard.timeAgo3h' },
-];
+/** Map API alert priority to dashboard alert type */
+function mapAlertPriority(priority: string): Alert['type'] {
+  const p = priority.toUpperCase();
+  if (p === 'CRITICAL') return 'critical';
+  if (p === 'HIGH') return 'warning';
+  return 'info';
+}
+
+/** Format relative time in Vietnamese */
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Vừa xong';
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} ngày trước`;
+}
 
 // =============================================================================
 // ULTRA COMPACT COMPONENTS
@@ -300,7 +332,22 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Real data states (replacing mock data)
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [workOrdersLoading, setWorkOrdersLoading] = useState(true);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertCriticalCount, setAlertCriticalCount] = useState(0);
+  const [alertsLoading, setAlertsLoading] = useState(true);
+  const [oeeData, setOeeData] = useState<OEEData | null>(null);
+  const [oeeLoading, setOeeLoading] = useState(true);
+  const [woSummary, setWoSummary] = useState<WorkOrderSummary>({ completed: 0, inProgress: 0, pending: 0, issues: 0 });
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Fetch all dashboard data
+  const fetchAllData = useCallback(async (showRefreshToast = false) => {
+    if (showRefreshToast) setRefreshing(true);
+
+    // 1. Dashboard stats (existing)
     const fetchStats = async () => {
       try {
         const res = await fetch('/api/dashboard');
@@ -308,17 +355,112 @@ export default function HomePage() {
           const data = await res.json();
           setStats(data);
         } else {
-          setError('Failed to load dashboard');
+          setError('Không thể tải dữ liệu bảng điều khiển');
         }
       } catch (err) {
-        console.error('Failed to fetch dashboard stats:', err);
-        setError('Failed to connect to server');
+        clientLogger.error('Failed to fetch dashboard stats:', err);
+        setError('Không thể kết nối đến máy chủ');
       } finally {
         setLoading(false);
       }
     };
 
-    // Fetch current user ID for workflow approvals
+    // 2. Work orders from /api/production
+    const fetchWorkOrders = async () => {
+      try {
+        const res = await fetch('/api/production?pageSize=10&sortBy=updatedAt&sortOrder=desc');
+        if (res.ok) {
+          const data = await res.json();
+          // data shape: { data: [...], pagination: {...}, meta: {...} }
+          const items = data.data || [];
+
+          // Map API work orders to dashboard WorkOrder shape
+          const mapped: WorkOrder[] = items.map((wo: Record<string, unknown>) => {
+            const quantity = (wo.quantity as number) || 0;
+            const completedQty = (wo.completedQty as number) || 0;
+            const progress = quantity > 0 ? Math.round((completedQty / quantity) * 100) : 0;
+            return {
+              id: wo.id as string,
+              number: wo.woNumber as string,
+              product: (wo.product as Record<string, unknown>)?.name as string || 'N/A',
+              quantity,
+              completed: completedQty,
+              status: mapWoStatus(wo.status as string),
+              progress,
+            };
+          });
+
+          setWorkOrders(mapped.slice(0, 5));
+
+          // Compute today's summary from ALL fetched work orders
+          const summary: WorkOrderSummary = { completed: 0, inProgress: 0, pending: 0, issues: 0 };
+          for (const wo of items) {
+            const s = ((wo as Record<string, unknown>).status as string || '').toUpperCase();
+            if (s === 'COMPLETED' || s === 'CLOSED') summary.completed++;
+            else if (s === 'IN_PROGRESS' || s === 'RELEASED') summary.inProgress++;
+            else if (s === 'DRAFT' || s === 'PLANNED') summary.pending++;
+            else if (s === 'ON_HOLD' || s === 'DELAYED' || s === 'OVERDUE' || s === 'CANCELLED') summary.issues++;
+          }
+          setWoSummary(summary);
+        }
+      } catch (err) {
+        clientLogger.error('Failed to fetch work orders:', err);
+        // Silently fail - work orders section will show empty state
+      } finally {
+        setWorkOrdersLoading(false);
+      }
+    };
+
+    // 3. Alerts from /api/ai/alerts
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('/api/ai/alerts?limit=5&sortField=createdAt&sortDirection=desc');
+        if (res.ok) {
+          const data = await res.json();
+          // data shape: { success, data: { alerts: [...], counts: {...}, pagination: {...} } }
+          const apiAlerts = data.data?.alerts || [];
+          const counts = data.data?.counts;
+
+          const mapped: Alert[] = apiAlerts.map((a: Record<string, unknown>) => ({
+            id: a.id as string,
+            type: mapAlertPriority(a.priority as string),
+            title: a.title as string,
+            time: a.createdAt ? formatRelativeTime(a.createdAt as string) : '',
+          }));
+
+          setAlerts(mapped);
+          setAlertCriticalCount(counts?.critical ?? mapped.filter((a: Alert) => a.type === 'critical').length);
+        }
+      } catch (err) {
+        clientLogger.error('Failed to fetch alerts:', err);
+        // Silently fail - alerts section will show empty state
+      } finally {
+        setAlertsLoading(false);
+      }
+    };
+
+    // 4. OEE from /api/production/oee
+    const fetchOEE = async () => {
+      try {
+        const res = await fetch('/api/production/oee');
+        if (res.ok) {
+          const data = await res.json();
+          // data shape: { overallOEE, avgAvailability, avgPerformance, avgQuality, workCenters: [...] }
+          setOeeData({
+            overallOEE: data.overallOEE ?? 0,
+            avgAvailability: data.avgAvailability ?? 0,
+            avgQuality: data.avgQuality ?? 0,
+          });
+        }
+      } catch (err) {
+        clientLogger.error('Failed to fetch OEE data:', err);
+        // Silently fail - OEE cards will show fallback
+      } finally {
+        setOeeLoading(false);
+      }
+    };
+
+    // 5. User session (existing)
     const fetchUser = async () => {
       try {
         const res = await fetch('/api/auth/session');
@@ -329,13 +471,28 @@ export default function HomePage() {
           }
         }
       } catch (err) {
-        console.error('Failed to fetch user session:', err);
+        clientLogger.error('Failed to fetch user session:', err);
       }
     };
 
-    fetchUser();
-    fetchStats();
+    // Run all fetches in parallel
+    await Promise.allSettled([
+      fetchStats(),
+      fetchWorkOrders(),
+      fetchAlerts(),
+      fetchOEE(),
+      fetchUser(),
+    ]);
+
+    if (showRefreshToast) {
+      setRefreshing(false);
+      toast.success('Dữ liệu đã được cập nhật');
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -352,10 +509,11 @@ export default function HomePage() {
     );
   }
 
-  // OEE metrics
-  const oee = 87.5;
-  const uptime = 94.2;
-  const quality = 98.1;
+  // OEE metrics - from real API or fallback to 0
+  const oee = oeeData?.overallOEE ?? 0;
+  const uptime = oeeData?.avgAvailability ?? 0;
+  const quality = oeeData?.avgQuality ?? 0;
+  const oeeAvailable = !oeeLoading && oeeData !== null;
 
   return (
     // COMPACT: space-y-6 → space-y-3, pb-8 → pb-4
@@ -374,8 +532,12 @@ export default function HomePage() {
           </p>
         </div>
         {/* Refresh button - larger touch target on mobile */}
-        <button className="flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1 min-h-[36px] sm:min-h-0 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors touch-manipulation rounded">
-          <RefreshCw className="w-4 h-4 sm:w-3 sm:h-3" />
+        <button
+          onClick={() => fetchAllData(true)}
+          disabled={refreshing}
+          className="flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1 min-h-[36px] sm:min-h-0 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors touch-manipulation rounded disabled:opacity-50"
+        >
+          <RefreshCw className={cn('w-4 h-4 sm:w-3 sm:h-3', refreshing && 'animate-spin')} />
           <span className="hidden sm:inline">{t('dashboard.refresh')}</span>
         </button>
       </div>
@@ -428,30 +590,29 @@ export default function HomePage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatCard
           title={t('dashboard.oee')}
-          value={`${oee}%`}
+          value={oeeLoading ? '...' : `${oee.toFixed(1)}%`}
           subtitle={t('dashboard.oeeSubtitle')}
           icon={Target}
-          status={oee >= 85 ? 'success' : oee >= 70 ? 'warning' : 'danger'}
+          status={!oeeAvailable ? 'default' : oee >= 85 ? 'success' : oee >= 70 ? 'warning' : 'danger'}
         />
         <StatCard
           title={t('dashboard.uptime')}
-          value={`${uptime}%`}
+          value={oeeLoading ? '...' : `${uptime.toFixed(1)}%`}
           subtitle={t('dashboard.machineAvailability')}
           icon={Activity}
-          trend="up"
-          trendValue={t('dashboard.trendUpThisMonth')}
+          status={!oeeAvailable ? 'default' : uptime >= 90 ? 'success' : uptime >= 75 ? 'warning' : 'danger'}
         />
         <StatCard
           title={t('dashboard.qualityRate')}
-          value={`${quality}%`}
+          value={oeeLoading ? '...' : `${quality.toFixed(1)}%`}
           subtitle={t('dashboard.firstPassYield')}
           icon={CheckCircle2}
-          status="success"
+          status={!oeeAvailable ? 'default' : quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
         />
         <StatCard
           title={t('dashboard.activeWorkOrders')}
-          value={mockWorkOrders.filter(wo => wo.status === 'running').length}
-          subtitle={t('dashboard.totalOrders', { count: String(mockWorkOrders.length) })}
+          value={workOrdersLoading ? '...' : workOrders.filter(wo => wo.status === 'running').length}
+          subtitle={workOrdersLoading ? '' : t('dashboard.totalOrders', { count: String(workOrders.length) })}
           icon={Factory}
           onClick={() => router.push('/production')}
         />
@@ -477,9 +638,20 @@ export default function HomePage() {
           </div>
           {/* COMPACT: p-4 → p-2, space-y-2 → space-y-1 */}
           <div className="p-2 space-y-1">
-            {mockWorkOrders.map((order) => (
-              <ProductionStatusCard key={order.id} order={order} />
-            ))}
+            {workOrdersLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+                <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+              </div>
+            ) : workOrders.length === 0 ? (
+              <div className="flex items-center justify-center py-6">
+                <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có lệnh sản xuất nào</span>
+              </div>
+            ) : (
+              workOrders.map((order) => (
+                <ProductionStatusCard key={order.id} order={order} />
+              ))
+            )}
           </div>
         </div>
 
@@ -489,9 +661,11 @@ export default function HomePage() {
             <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 text-alert-amber" />
               {t('dashboard.alerts')}
-              <span className="px-1 py-0.5 text-[9px] font-bold bg-urgent-red-dim text-urgent-red">
-                {mockAlertKeys.filter(a => a.type === 'critical').length}
-              </span>
+              {alertCriticalCount > 0 && (
+                <span className="px-1 py-0.5 text-[9px] font-bold bg-urgent-red-dim text-urgent-red">
+                  {alertCriticalCount}
+                </span>
+              )}
             </h2>
             <Link
               href="/alerts"
@@ -502,9 +676,20 @@ export default function HomePage() {
           </div>
           {/* COMPACT: max-h reduced */}
           <div className="max-h-[240px] overflow-y-auto">
-            {mockAlertKeys.map((a) => (
-              <AlertItem key={a.id} alert={{ id: a.id, type: a.type, title: t(a.titleKey), time: t(a.timeKey) }} />
-            ))}
+            {alertsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+                <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+              </div>
+            ) : alerts.length === 0 ? (
+              <div className="flex items-center justify-center py-6">
+                <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có cảnh báo nào</span>
+              </div>
+            ) : (
+              alerts.map((a) => (
+                <AlertItem key={a.id} alert={a} />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -577,43 +762,51 @@ export default function HomePage() {
           </div>
           {/* COMPACT: p-4 → p-2, space-y-4 → space-y-1.5 */}
           <div className="p-2 space-y-1.5">
-            {/* COMPACT: p-3 → p-2 */}
-            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center bg-production-green-dim">
-                  <CheckCircle2 className="w-3 h-3 text-production-green" />
-                </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.completed')}</span>
+            {workOrdersLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
               </div>
-              <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">12</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center bg-info-cyan-dim">
-                  <Play className="w-3 h-3 text-info-cyan" />
+            ) : (
+              <>
+                {/* COMPACT: p-3 → p-2 */}
+                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 flex items-center justify-center bg-production-green-dim">
+                      <CheckCircle2 className="w-3 h-3 text-production-green" />
+                    </div>
+                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.completed')}</span>
+                  </div>
+                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.completed}</span>
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.inProgress')}</span>
-              </div>
-              <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">8</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center bg-alert-amber-dim">
-                  <Clock className="w-3 h-3 text-alert-amber" />
+                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 flex items-center justify-center bg-info-cyan-dim">
+                      <Play className="w-3 h-3 text-info-cyan" />
+                    </div>
+                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.inProgress')}</span>
+                  </div>
+                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.inProgress}</span>
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.pending')}</span>
-              </div>
-              <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">5</span>
-            </div>
-            <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 flex items-center justify-center bg-urgent-red-dim">
-                  <AlertTriangle className="w-3 h-3 text-urgent-red" />
+                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 flex items-center justify-center bg-alert-amber-dim">
+                      <Clock className="w-3 h-3 text-alert-amber" />
+                    </div>
+                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.pending')}</span>
+                  </div>
+                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.pending}</span>
                 </div>
-                <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.issues')}</span>
-              </div>
-              <span className="text-sm font-mono font-semibold text-urgent-red">2</span>
-            </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 flex items-center justify-center bg-urgent-red-dim">
+                      <AlertTriangle className="w-3 h-3 text-urgent-red" />
+                    </div>
+                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.issues')}</span>
+                  </div>
+                  <span className="text-sm font-mono font-semibold text-urgent-red">{woSummary.issues}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

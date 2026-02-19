@@ -11,6 +11,7 @@ import {
   Layers,
   Hash,
 } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -181,7 +182,7 @@ export function IssueMaterialsPage() {
         setStats(result.data.stats);
       }
     } catch (error) {
-      console.error('Failed to fetch pending issues:', error);
+      clientLogger.error('Failed to fetch pending issues', error);
       toast.error(t('issueMat.loadError'));
     } finally {
       setLoading(false);
@@ -193,16 +194,16 @@ export function IssueMaterialsPage() {
     try {
       const res = await fetch('/api/inventory');
       const result = await res.json();
-      const items = (result.data || result || []).map((item: any) => ({
-        id: item.id,
-        partId: item.partId || item.part?.id,
-        partNumber: item.partNumber || item.part?.partNumber,
-        partName: item.name || item.part?.name,
-        warehouseId: item.warehouseId,
-        warehouseName: item.warehouseName || item.warehouse?.name || 'N/A',
-        quantity: item.quantity || 0,
-        available: (item.quantity || 0) - (item.reservedQty || 0),
-        lotNumber: item.lotNumber || undefined,
+      const items = (result.data || result || []).map((item: Record<string, unknown> & { part?: Record<string, unknown>; warehouse?: Record<string, unknown> }) => ({
+        id: item.id as string,
+        partId: (item.partId || item.part?.id) as string,
+        partNumber: (item.partNumber || item.part?.partNumber) as string,
+        partName: (item.name || item.part?.name) as string,
+        warehouseId: item.warehouseId as string,
+        warehouseName: (item.warehouseName || item.warehouse?.name || 'N/A') as string,
+        quantity: (item.quantity as number) || 0,
+        available: ((item.quantity as number) || 0) - ((item.reservedQty as number) || 0),
+        lotNumber: (item.lotNumber as string) || undefined,
       }));
       setInventoryOptions(items.filter((i: InventoryOption) => i.available > 0));
     } catch {
@@ -215,12 +216,12 @@ export function IssueMaterialsPage() {
     try {
       const res = await fetch('/api/production?status=in_progress,released&limit=100');
       const result = await res.json();
-      const items = (result.data || result || []).map((wo: any) => ({
-        id: wo.id,
-        woNumber: wo.woNumber,
-        status: wo.status,
-        quantity: wo.quantity,
-        productName: wo.product?.name || wo.productName || '',
+      const items = (result.data || result || []).map((wo: Record<string, unknown> & { product?: Record<string, unknown> }) => ({
+        id: wo.id as string,
+        woNumber: wo.woNumber as string,
+        status: wo.status as string,
+        quantity: wo.quantity as number,
+        productName: (wo.product?.name || wo.productName || '') as string,
       }));
       setActiveWorkOrders(items);
     } catch {
@@ -355,7 +356,7 @@ export function IssueMaterialsPage() {
   // Table columns
   const columns: Column<PendingAllocation>[] = useMemo(() => [
     {
-      key: 'select' as any,
+      key: 'select',
       header: '',
       width: '40px',
       render: (_, row) => (
@@ -419,7 +420,7 @@ export function IssueMaterialsPage() {
       ),
     },
     {
-      key: 'id' as any,
+      key: 'id',
       header: 'Action',
       width: '100px',
       render: (_, row) => (

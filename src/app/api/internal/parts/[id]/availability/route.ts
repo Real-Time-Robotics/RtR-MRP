@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateInternalRequest } from '@/lib/api/internal-auth'
+import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 
 export async function GET(
   req: NextRequest,
@@ -8,6 +10,10 @@ export async function GET(
 ) {
   const authError = validateInternalRequest(req)
   if (authError) return authError
+
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
     const part = await prisma.part.findUnique({
@@ -55,7 +61,7 @@ export async function GET(
       lastUpdated,
     })
   } catch (error) {
-    console.error('[Internal API] Part availability error:', error)
+    logger.error('[Internal API] Part availability error:', { error: String(error) })
     return NextResponse.json(
       { error: 'Failed to get part availability' },
       { status: 500 }

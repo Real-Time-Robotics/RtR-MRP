@@ -3,17 +3,17 @@
 // Note: Redis cache disabled - not available on Render free tier
 
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
-export async function GET() {
+export const GET = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Redis cache disabled - return placeholder stats
+// Redis cache disabled - return placeholder stats
     return NextResponse.json({
       success: true,
       stats: {
@@ -33,17 +33,16 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Clear cache (admin only)
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const writeRateLimitResult = await checkWriteEndpointLimit(request);
+  if (writeRateLimitResult) return writeRateLimitResult;
 
-    // Redis cache disabled - no-op
+  try {
+// Redis cache disabled - no-op
     return NextResponse.json({
       success: true,
       message: "Cache management disabled - Redis not available on Render free tier"
@@ -55,4 +54,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,16 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { rolePermissions, UserRole } from "@/lib/auth/auth-types";
 import { auditUpdate, auditDelete } from "@/lib/audit/route-audit";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+const partPutSchema = z.object({
+  partNumber: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  unit: z.string().optional(),
+  unitCost: z.number().min(0).optional(),
+  standardCost: z.number().min(0).optional(),
+  averageCost: z.number().min(0).optional(),
+  landedCost: z.number().min(0).optional(),
+  freightPercent: z.number().min(0).optional(),
+  dutyPercent: z.number().min(0).optional(),
+  overheadPercent: z.number().min(0).optional(),
+  leadTimeDays: z.number().int().min(0).optional(),
+  minStockLevel: z.number().min(0).optional(),
+  reorderPoint: z.number().min(0).optional(),
+  safetyStock: z.number().min(0).optional(),
+  makeOrBuy: z.string().optional(),
+  procurementType: z.string().optional(),
+  moq: z.number().int().min(1).optional(),
+  orderMultiple: z.number().int().min(1).optional(),
+  revision: z.string().optional(),
+  status: z.string().optional(),
+  lifecycleStatus: z.string().optional(),
+  isCritical: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
+  primarySupplierId: z.string().nullable().optional(),
+  secondarySupplierIds: z.array(z.string()).optional(),
+}).passthrough();
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+import type { Session } from 'next-auth';
 
 // Permission check helper
-async function checkPermission(permission: string): Promise<{ authorized: boolean; session: any }> {
+async function checkPermission(permission: string): Promise<{ authorized: boolean; session: Session | null }> {
   const session = await auth();
   if (!session?.user) return { authorized: false, session: null };
 
@@ -22,14 +54,13 @@ async function checkPermission(permission: string): Promise<{ authorized: boolea
 }
 
 // GET - Get single part with full details
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     const part = await prisma.part.findUnique({
       where: { id },
@@ -93,21 +124,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update part
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { authorized, session } = await checkPermission('orders:edit');
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { authorized } = await checkPermission('orders:edit');
     if (!authorized) {
       return NextResponse.json({ error: "Forbidden - Bạn không có quyền chỉnh sửa" }, { status: 403 });
     }
 
-    const { id } = await params;
-    const data = await request.json();
+    const { id } = await context.params;
+    const body = await request.json();
+    const parsed = partPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = parsed.data as Record<string, any>;
 
     // Check if part exists
     const existing = await prisma.part.findUnique({ where: { id } });
@@ -402,7 +443,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     // Audit trail: log field-level changes
-    auditUpdate(request, session.user, "Part", id, existing as any, data);
+    auditUpdate(request, session.user, "Part", id, existing as Record<string, unknown>, data);
 
     return NextResponse.json(updatedPart);
   } catch (error) {
@@ -412,20 +453,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Delete part
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { authorized, session } = await checkPermission('orders:delete');
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { authorized } = await checkPermission('orders:delete');
     if (!authorized) {
       return NextResponse.json({ error: "Forbidden - Bạn không có quyền xóa" }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Check if part is used in any BOM
     const usedInBom = await prisma.bomLine.findFirst({
@@ -465,4 +507,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

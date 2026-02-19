@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // Note: Redis cache disabled - not available on Render free tier
 // Using HTTP Cache-Control headers for browser caching instead
 
@@ -9,7 +11,11 @@ import { logger } from '@/lib/logger';
 // Comprehensive metrics and chart data for RTR MRP System
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   try {
     const { searchParams } = new URL(request.url);
@@ -95,7 +101,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // INVENTORY METRICS

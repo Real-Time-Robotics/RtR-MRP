@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocketContextSafe } from '@/providers/socket-provider';
+import { clientLogger } from '@/lib/client-logger';
 
 export interface Notification {
   id: string;
@@ -74,7 +75,7 @@ export function useNotifications(
       );
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      clientLogger.error('Failed to fetch notifications', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setIsLoading(false);
@@ -165,7 +166,7 @@ export function useNotifications(
         )
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      clientLogger.error('Failed to mark notification as read', err);
       throw err;
     }
   }, []);
@@ -186,7 +187,7 @@ export function useNotifications(
         prev.map((n) => ({ ...n, isRead: true, readAt: new Date() }))
       );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      clientLogger.error('Failed to mark all notifications as read', err);
       throw err;
     }
   }, []);
@@ -205,7 +206,7 @@ export function useNotifications(
       // Update local state
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      clientLogger.error('Failed to delete notification', err);
       throw err;
     }
   }, []);
@@ -230,7 +231,7 @@ export function useNotifications(
         )
       );
     } catch (err) {
-      console.error('Failed to archive notification:', err);
+      clientLogger.error('Failed to archive notification', err);
       throw err;
     }
   }, []);
@@ -269,6 +270,6 @@ function showBrowserNotification(notification: Notification) {
       tag: notification.id, // Prevents duplicate notifications
     });
   } catch (err) {
-    console.error('Failed to show browser notification:', err);
+    clientLogger.error('Failed to show browser notification', err);
   }
 }

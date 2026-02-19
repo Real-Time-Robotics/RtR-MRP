@@ -4,13 +4,14 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // Types
 export interface NLQueryResult {
   success: boolean;
   query: string;
   naturalLanguage: string;
-  data: any[];
+  data: Record<string, unknown>[];
   metadata: {
     rowCount: number;
     executionTime: number;
@@ -533,7 +534,7 @@ export async function processNaturalLanguageQuery(
         try {
           return await pattern.handler(matches, language);
         } catch (error) {
-          console.error(`Error processing query with intent ${pattern.intent}:`, error);
+          logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'nl-query-engine', intent: pattern.intent });
           return {
             success: false,
             query: '',

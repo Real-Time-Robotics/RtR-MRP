@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/lib/api/with-permission';
 import { generateInspectionNumber } from '@/lib/quality/inspection-engine';
 import { auditUpdate, auditStatusChange, auditDelete } from '@/lib/audit/route-audit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION
@@ -42,6 +44,10 @@ async function getHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -68,6 +74,10 @@ async function putHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -104,7 +114,7 @@ async function putHandler(
   const { lines, ...headerData } = validation.data;
 
   // Build header update data
-  const updateData: any = { ...headerData };
+  const updateData: Prisma.PurchaseOrderUpdateInput = { ...headerData };
   if (headerData.orderDate) updateData.orderDate = new Date(headerData.orderDate);
   if (headerData.expectedDate) updateData.expectedDate = new Date(headerData.expectedDate);
 
@@ -166,7 +176,7 @@ async function putHandler(
   if (validation.data.status && validation.data.status !== existing.status) {
     auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, validation.data.status);
   } else {
-    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as any, headerData as any);
+    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
   }
 
   // === INVENTORY UPDATE: When PO status changes to "received" ===
@@ -287,6 +297,10 @@ async function deleteHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 

@@ -161,6 +161,7 @@ const Modal: React.FC<ModalProps> = ({
               <button
                 onClick={onClose}
                 className="p-1 -mr-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded-lg transition-colors"
+                aria-label="Đóng"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -436,6 +437,7 @@ const Drawer: React.FC<DrawerProps> = ({
               <button
                 onClick={onClose}
                 className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded-lg transition-colors"
+                aria-label="Đóng"
               >
                 <X className="h-5 w-5" />
               </button>

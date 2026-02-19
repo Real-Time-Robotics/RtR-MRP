@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 import {
   Alert,
@@ -105,14 +106,52 @@ export class AlertAggregator {
         },
       });
 
+      // Pre-compute average daily demand per part from recent sales order data (last 90 days)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+      const recentDemand = await prisma.salesOrderLine.groupBy({
+        by: ['productId'],
+        _sum: { quantity: true },
+        where: {
+          order: {
+            orderDate: { gte: ninetyDaysAgo },
+            status: { notIn: ['draft', 'cancelled'] },
+          },
+        },
+      });
+
+      // Map productId -> avg daily demand (total qty / 90 days)
+      const demandByProduct = new Map<string, number>();
+      for (const row of recentDemand) {
+        demandByProduct.set(row.productId, (row._sum.quantity || 0) / 90);
+      }
+
+      // Also get BOM mappings so we can translate product demand to part demand
+      const bomLines = await prisma.bomLine.findMany({
+        select: {
+          partId: true,
+          quantity: true,
+          bom: { select: { productId: true } },
+        },
+      });
+
+      // partId -> avg daily demand (sum across all products that use this part)
+      const demandByPart = new Map<string, number>();
+      for (const bl of bomLines) {
+        const productDemand = demandByProduct.get(bl.bom.productId) || 0;
+        const partDemand = productDemand * bl.quantity;
+        demandByPart.set(bl.partId, (demandByPart.get(bl.partId) || 0) + partDemand);
+      }
+
       for (const part of partsWithLowStock) {
         const totalInventory = part.inventory.reduce(
           (sum, inv) => sum + inv.quantity - inv.reservedQty,
           0
         );
 
-        // Calculate days of supply (assuming average daily demand)
-        const avgDailyDemand = 10; // TODO: Calculate from actual sales data
+        // Calculate days of supply from actual sales order demand (fallback to 1 if no data)
+        const avgDailyDemand = demandByPart.get(part.id) || 1;
         const daysOfSupply = avgDailyDemand > 0 ? totalInventory / avgDailyDemand : 999;
 
         // Check for stockout alert
@@ -234,7 +273,7 @@ export class AlertAggregator {
         }
       }
     } catch (error) {
-      console.error('[AlertAggregator] Error collecting forecast alerts:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-aggregator', operation: 'collectForecastAlerts' });
     }
 
     return alerts;
@@ -379,7 +418,7 @@ export class AlertAggregator {
         }));
       }
     } catch (error) {
-      console.error('[AlertAggregator] Error collecting quality alerts:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-aggregator', operation: 'collectQualityAlerts' });
     }
 
     return alerts;
@@ -504,7 +543,7 @@ export class AlertAggregator {
         }
       }
     } catch (error) {
-      console.error('[AlertAggregator] Error collecting supplier alerts:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-aggregator', operation: 'collectSupplierAlerts' });
     }
 
     return alerts;
@@ -599,7 +638,7 @@ export class AlertAggregator {
         }
       }
     } catch (error) {
-      console.error('[AlertAggregator] Error collecting auto-PO alerts:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-aggregator', operation: 'collectAutoPOAlerts' });
     }
 
     return alerts;
@@ -761,7 +800,7 @@ export class AlertAggregator {
         }
       }
     } catch (error) {
-      console.error('[AlertAggregator] Error collecting schedule alerts:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-aggregator', operation: 'collectScheduleAlerts' });
     }
 
     return alerts;

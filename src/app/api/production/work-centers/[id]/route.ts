@@ -2,13 +2,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getWorkCenterUtilization } from "@/lib/production/capacity-engine";
+import { z } from "zod";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+const WorkCenterUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  type: z.string().optional(),
+  department: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  capacityType: z.string().optional(),
+  capacityPerDay: z.number().optional(),
+  capacityPerHour: z.number().optional().nullable(),
+  efficiency: z.number().min(0).max(200).optional(),
+  utilizationTarget: z.number().min(0).max(100).optional(),
+  workingHoursStart: z.string().optional(),
+  workingHoursEnd: z.string().optional(),
+  breakMinutes: z.number().int().min(0).optional(),
+  workingDays: z.array(z.number().int().min(0).max(6)).optional(),
+  hourlyRate: z.number().optional().nullable(),
+  setupCostPerHour: z.number().optional().nullable(),
+  overheadRate: z.number().optional().nullable(),
+  maxConcurrentJobs: z.number().int().min(1).optional(),
+  requiresOperator: z.boolean().optional(),
+  operatorSkillLevel: z.string().optional().nullable(),
+  status: z.string().optional(),
+  maintenanceInterval: z.number().optional().nullable(),
+  nextMaintenanceDate: z.string().optional().nullable(),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     const workCenter = await prisma.workCenter.findUnique({
       where: { id },
@@ -56,42 +86,52 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
 
+    const validation = WorkCenterUpdateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
     const workCenter = await prisma.workCenter.update({
       where: { id },
       data: {
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        department: body.department,
-        location: body.location,
-        capacityType: body.capacityType,
-        capacityPerDay: body.capacityPerDay,
-        capacityPerHour: body.capacityPerHour,
-        efficiency: body.efficiency,
-        utilizationTarget: body.utilizationTarget,
-        workingHoursStart: body.workingHoursStart,
-        workingHoursEnd: body.workingHoursEnd,
-        breakMinutes: body.breakMinutes,
-        workingDays: body.workingDays,
-        hourlyRate: body.hourlyRate,
-        setupCostPerHour: body.setupCostPerHour,
-        overheadRate: body.overheadRate,
-        maxConcurrentJobs: body.maxConcurrentJobs,
-        requiresOperator: body.requiresOperator,
-        operatorSkillLevel: body.operatorSkillLevel,
-        status: body.status,
-        maintenanceInterval: body.maintenanceInterval,
-        nextMaintenanceDate: body.nextMaintenanceDate,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        department: data.department,
+        location: data.location,
+        capacityType: data.capacityType,
+        capacityPerDay: data.capacityPerDay,
+        capacityPerHour: data.capacityPerHour,
+        efficiency: data.efficiency,
+        utilizationTarget: data.utilizationTarget,
+        workingHoursStart: data.workingHoursStart,
+        workingHoursEnd: data.workingHoursEnd,
+        breakMinutes: data.breakMinutes,
+        workingDays: data.workingDays,
+        hourlyRate: data.hourlyRate,
+        setupCostPerHour: data.setupCostPerHour,
+        overheadRate: data.overheadRate,
+        maxConcurrentJobs: data.maxConcurrentJobs,
+        requiresOperator: data.requiresOperator,
+        operatorSkillLevel: data.operatorSkillLevel,
+        status: data.status,
+        maintenanceInterval: data.maintenanceInterval,
+        nextMaintenanceDate: data.nextMaintenanceDate,
       },
     });
 
@@ -103,14 +143,15 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.workCenter.delete({
       where: { id },
@@ -124,4 +165,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

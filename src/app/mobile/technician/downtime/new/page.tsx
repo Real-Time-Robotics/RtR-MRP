@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // =============================================================================
 // NEW DOWNTIME REPORT PAGE
@@ -33,17 +34,6 @@ interface Equipment {
   name: string;
   location: string;
 }
-
-const mockEquipment: Equipment[] = [
-  { id: '1', code: 'CNC-001', name: 'CNC Mill #1', location: 'Bay A1' },
-  { id: '2', code: 'CNC-002', name: 'CNC Mill #2', location: 'Bay A2' },
-  { id: '3', code: 'ROBOT-001', name: 'Welding Robot', location: 'Bay B2' },
-  { id: '4', code: 'PACK-001', name: 'Packaging Line', location: 'Bay C1' },
-  { id: '5', code: 'CONV-001', name: 'Conveyor Belt #1', location: 'Bay A3' },
-  { id: '6', code: 'CONV-002', name: 'Conveyor Belt #2', location: 'Bay A3' },
-  { id: '7', code: 'LASER-001', name: 'Laser Cutter', location: 'Bay D1' },
-  { id: '8', code: 'PRESS-001', name: 'Hydraulic Press', location: 'Bay E1' },
-];
 
 const categories = [
   { id: 'electrical', label: 'Điện', icon: <Zap className="w-5 h-5" /> },
@@ -84,14 +74,46 @@ function NewDowntimeContent() {
   const searchParams = useSearchParams();
   const preselectedEquipment = searchParams.get('equipment');
 
-  const [step, setStep] = useState(preselectedEquipment ? 2 : 1);
-  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(
-    preselectedEquipment ? mockEquipment.find(e => e.code === preselectedEquipment) || null : null
-  );
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [isLoadingEquipment, setIsLoadingEquipment] = useState(true);
+  const [step, setStep] = useState(1);
+  const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Fetch equipment list from API
+  useEffect(() => {
+    async function fetchEquipment() {
+      try {
+        const res = await fetch('/api/mobile/equipment');
+        if (!res.ok) throw new Error('Không thể tải danh sách thiết bị');
+        const json = await res.json();
+        const items: Equipment[] = (json.data || []).map((e: { id: string; code: string; name: string; location: string }) => ({
+          id: e.id,
+          code: e.code,
+          name: e.name,
+          location: e.location || '',
+        }));
+        setEquipmentList(items);
+
+        // Handle preselected equipment from query param
+        if (preselectedEquipment) {
+          const found = items.find(e => e.code === preselectedEquipment);
+          if (found) {
+            setSelectedEquipment(found);
+            setStep(2);
+          }
+        }
+      } catch (err) {
+        toast.error('Lỗi tải danh sách thiết bị');
+      } finally {
+        setIsLoadingEquipment(false);
+      }
+    }
+    fetchEquipment();
+  }, [preselectedEquipment]);
 
   const handleEquipmentSelect = (equipment: Equipment) => {
     setSelectedEquipment(equipment);
@@ -105,11 +127,32 @@ function NewDowntimeContent() {
 
     setSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const res = await fetch('/api/mobile/equipment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'report_downtime',
+          equipmentId: selectedEquipment.id,
+          data: {
+            reason: selectedCategory,
+            description,
+            severity: selectedSeverity.toLowerCase(),
+          },
+        }),
+      });
 
-    // Navigate back
-    router.push('/mobile/technician/downtime');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Lỗi gửi báo cáo');
+      }
+
+      toast.success('Báo cáo downtime đã được gửi');
+      router.push('/mobile/technician/downtime');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi gửi báo cáo downtime');
+      setSubmitting(false);
+    }
   };
 
   const canSubmit = selectedEquipment && selectedCategory && selectedSeverity && description.trim().length > 0;
@@ -156,20 +199,31 @@ function NewDowntimeContent() {
 
           {/* Equipment List */}
           <div className="space-y-2">
-            {mockEquipment.map((equipment) => (
-              <button
-                key={equipment.id}
-                onClick={() => handleEquipmentSelect(equipment)}
-                className="w-full bg-white dark:bg-gray-800 rounded-xl p-4 text-left flex items-center justify-between shadow-sm"
-              >
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white">{equipment.code}</p>
-                  <p className="text-sm text-gray-500">{equipment.name}</p>
-                  <p className="text-xs text-gray-400">{equipment.location}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
-            ))}
+            {isLoadingEquipment ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                <span className="ml-2 text-gray-500">Đang tải thiết bị...</span>
+              </div>
+            ) : equipmentList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Không có thiết bị nào
+              </div>
+            ) : (
+              equipmentList.map((equipment) => (
+                <button
+                  key={equipment.id}
+                  onClick={() => handleEquipmentSelect(equipment)}
+                  className="w-full bg-white dark:bg-gray-800 rounded-xl p-4 text-left flex items-center justify-between shadow-sm"
+                >
+                  <div>
+                    <p className="font-bold text-gray-900 dark:text-white">{equipment.code}</p>
+                    <p className="text-sm text-gray-500">{equipment.name}</p>
+                    <p className="text-xs text-gray-400">{equipment.location}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </button>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -255,6 +309,7 @@ function NewDowntimeContent() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Mô tả chi tiết tình trạng sự cố..."
+              aria-label="Mô tả sự cố"
               rows={4}
               className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -278,7 +333,10 @@ function NewDowntimeContent() {
             )}
           >
             {submitting ? (
-              <>Đang gửi...</>
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Đang gửi...
+              </>
             ) : (
               <>
                 <Send className="w-5 h-5" />

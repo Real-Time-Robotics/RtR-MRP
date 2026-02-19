@@ -30,7 +30,9 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 type SourceType = "PO" | "NON_PO" | "PRODUCTION";
 
@@ -139,7 +141,7 @@ export default function NewReceivingInspectionPage() {
           setPurchaseOrders(data.data || data.orders || []);
         }
       } catch (error) {
-        console.error("Failed to fetch POs:", error);
+        clientLogger.error("Failed to fetch POs:", error);
       } finally {
         setLoadingPOs(false);
       }
@@ -164,7 +166,7 @@ export default function NewReceivingInspectionPage() {
           })));
         }
       } catch (error) {
-        console.error("Failed to fetch parts:", error);
+        clientLogger.error("Failed to fetch parts:", error);
       } finally {
         setLoadingParts(false);
       }
@@ -184,7 +186,7 @@ export default function NewReceivingInspectionPage() {
           setWorkOrders(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch work orders:", error);
+        clientLogger.error("Failed to fetch work orders:", error);
       } finally {
         setLoadingWOs(false);
       }
@@ -232,7 +234,7 @@ export default function NewReceivingInspectionPage() {
         });
       }
     } catch (error) {
-      console.error("Failed to fetch part QC:", error);
+      clientLogger.error("Failed to fetch part QC:", error);
     } finally {
       setLoadingQC(false);
     }
@@ -266,7 +268,7 @@ export default function NewReceivingInspectionPage() {
         setPOLines(availableLines);
       }
     } catch (error) {
-      console.error("Failed to fetch PO detail:", error);
+      clientLogger.error("Failed to fetch PO detail:", error);
     } finally {
       setLoadingLines(false);
     }
@@ -348,21 +350,21 @@ export default function NewReceivingInspectionPage() {
     // Validation per source type
     if (sourceType === "PO") {
       if (!selectedPOId || !selectedLineId) {
-        alert("Vui lòng chọn Đơn mua hàng và dòng PO");
+        toast.error("Vui lòng chọn Đơn mua hàng và dòng PO");
         return;
       }
     } else if (sourceType === "NON_PO") {
       if (!selectedPartId) {
-        alert("Vui lòng chọn linh kiện");
+        toast.error("Vui lòng chọn linh kiện");
         return;
       }
       if (!formData.quantityReceived || parseInt(formData.quantityReceived) <= 0) {
-        alert("Số lượng nhận phải lớn hơn 0");
+        toast.error("Số lượng nhận phải lớn hơn 0");
         return;
       }
     } else if (sourceType === "PRODUCTION") {
       if (!selectedWOId) {
-        alert("Vui lòng chọn lệnh sản xuất");
+        toast.error("Vui lòng chọn lệnh sản xuất");
         return;
       }
     }
@@ -399,11 +401,11 @@ export default function NewReceivingInspectionPage() {
         router.push("/quality/receiving");
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create inspection");
+        toast.error(error.error || "Failed to create inspection");
       }
     } catch (error) {
-      console.error("Failed to create inspection:", error);
-      alert("Failed to create inspection");
+      clientLogger.error("Failed to create inspection:", error);
+      toast.error("Failed to create inspection");
     } finally {
       setLoading(false);
     }
@@ -901,6 +903,7 @@ export default function NewReceivingInspectionPage() {
                         className="shrink-0 h-9 w-9"
                         onClick={() => setLotEditable(!lotEditable)}
                         title={lotEditable ? "Khóa" : "Sửa số lot"}
+                        aria-label={lotEditable ? "Khóa" : "Sửa số lot"}
                       >
                         {lotEditable ? (
                           <Lock className="h-4 w-4" />

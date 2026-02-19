@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getAIProvider } from "@/lib/ai/provider";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -354,7 +355,7 @@ async function lookupBatch(
         return [];
     }
   } catch (error) {
-    console.error(`Database lookup failed for ${entityType}:`, error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'duplicate-detector', operation: 'databaseLookup', entityType });
     return [];
   }
 }
@@ -559,7 +560,7 @@ Respond ONLY in valid JSON array format (no markdown):
       };
     });
   } catch (error) {
-    console.error("AI duplicate resolution failed:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'duplicate-detector', operation: 'aiDuplicateResolution' });
     return [];
   }
 }

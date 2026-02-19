@@ -27,6 +27,11 @@ import { cn } from '@/lib/utils';
 import { useNotificationSocket } from '@/lib/realtime/use-socket';
 import { type NotificationPayload } from '@/lib/realtime/events';
 
+// Webkit AudioContext type for Safari compatibility
+interface WindowWithWebkitAudio extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 // =============================================================================
 // NOTIFICATION CENTER
 // Real-time notification dropdown
@@ -212,7 +217,10 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
     if (soundEnabled && unreadCount > 0 && !isOpen) {
       // Create a simple beep sound using Web Audio API
       try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const WebkitAudioContext = (window as WindowWithWebkitAudio).webkitAudioContext;
+        const AudioContextClass = window.AudioContext || WebkitAudioContext;
+        if (!AudioContextClass) return;
+        const audioContext = new AudioContextClass();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
@@ -283,6 +291,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                 onClick={() => setSoundEnabled(!soundEnabled)}
                 className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+                aria-label={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
               >
                 {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </button>
@@ -292,6 +301,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                     onClick={markAsRead}
                     className="p-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                     title="Đánh dấu tất cả đã đọc"
+                    aria-label="Đánh dấu tất cả đã đọc"
                   >
                     <CheckCheck className="w-4 h-4" />
                   </button>
@@ -299,6 +309,7 @@ export function NotificationCenter({ className }: NotificationCenterProps) {
                     onClick={clearAll}
                     className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Xóa tất cả"
+                    aria-label="Xóa tất cả"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -387,6 +398,7 @@ export function NotificationToast({ notification, onClose, duration = 5000 }: No
       <button
         onClick={onClose}
         className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
+        aria-label="Đóng"
       >
         <X className="w-4 h-4" />
       </button>

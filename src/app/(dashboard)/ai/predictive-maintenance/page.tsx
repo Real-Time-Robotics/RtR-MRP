@@ -17,6 +17,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // PREDICTIVE MAINTENANCE PAGE
@@ -123,7 +124,7 @@ export default function PredictiveMaintenancePage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching equipment:', error);
+      clientLogger.error('Error fetching equipment:', error);
     } finally {
       setLoading(false);
     }
@@ -138,7 +139,7 @@ export default function PredictiveMaintenancePage() {
         setSelectedEquipment(json.data);
       }
     } catch (error) {
-      console.error('Error fetching equipment detail:', error);
+      clientLogger.error('Error fetching equipment detail:', error);
     } finally {
       setLoadingDetail(false);
     }

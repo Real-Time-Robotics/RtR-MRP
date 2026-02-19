@@ -74,8 +74,8 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
             }
             const data = await res.json();
             setPo(data.data || data); // Wrapper might return { data: ... }
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setLoading(false);
         }

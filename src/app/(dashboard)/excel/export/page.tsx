@@ -19,7 +19,9 @@ import {
   Loader2,
   CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { clientLogger } from '@/lib/client-logger';
 
 const EXPORT_TYPES = [
   {
@@ -131,8 +133,8 @@ export default function ExportPage() {
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (error) {
-      console.error("Export error:", error);
-      alert("Export failed. Please try again.");
+      clientLogger.error("Export error:", error);
+      toast.error("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -254,6 +256,7 @@ export default function ExportPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value || undefined })
                 }
+                aria-label="Bộ lọc trạng thái"
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">All Status</option>
@@ -274,6 +277,7 @@ export default function ExportPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, fromDate: e.target.value || undefined })
                   }
+                  aria-label="Từ ngày"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                   placeholder="From"
                 />
@@ -283,6 +287,7 @@ export default function ExportPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, toDate: e.target.value || undefined })
                   }
+                  aria-label="Đến ngày"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                   placeholder="To"
                 />

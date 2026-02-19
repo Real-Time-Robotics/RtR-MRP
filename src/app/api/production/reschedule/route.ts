@@ -2,27 +2,37 @@
 // POST reschedule a work order with conflict detection
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   checkRescheduleConflicts,
   rescheduleWorkOrder,
 } from '@/lib/production/schedule-conflict';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+const RescheduleSchema = z.object({
+  workOrderId: z.string().min(1, "Work order ID is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  force: z.boolean().default(false),
+});
+
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();
-  const { workOrderId, startDate, endDate, force = false } = body;
 
-  if (!workOrderId || !startDate || !endDate) {
+  const validation = RescheduleSchema.safeParse(body);
+  if (!validation.success) {
     return NextResponse.json(
-      { error: 'Missing required fields' },
+      { error: "Validation failed", details: validation.error.issues },
       { status: 400 }
     );
   }
+
+  const { workOrderId, startDate, endDate, force } = validation.data;
 
   try {
     const newStart = new Date(startDate);
@@ -56,10 +66,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : 'Reschedule failed',
+        error: 'Failed to reschedule work order',
       },
       { status: 500 }
     );
   }
-}
+});

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
 import {
   ReportType,
@@ -11,13 +13,18 @@ import {
   generateMockReportData,
 } from '@/lib/reports/report-engine';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // GET /api/v2/reports
 // Query params:
 //   - view: 'templates' | 'categories' (default: 'templates')
 //   - category: ReportCategory filter
 // =============================================================================
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const view = searchParams.get('view') || 'templates';
@@ -96,7 +103,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST /api/v2/reports
@@ -106,9 +113,27 @@ export async function GET(request: NextRequest) {
 //   - startDate: string (for CUSTOM period)
 //   - endDate: string (for CUSTOM period)
 // =============================================================================
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      type: z.string(),
+      period: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { type, period = 'THIS_WEEK', startDate, endDate } = body;
 
     if (!type) {
@@ -140,4 +165,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

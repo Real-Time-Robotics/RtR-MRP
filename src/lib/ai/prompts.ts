@@ -6,6 +6,97 @@
 import { AIMessage, createSystemMessage, createUserMessage } from './provider';
 
 // =============================================================================
+// INTERNAL TYPES FOR DATA FORMATTING
+// =============================================================================
+
+/** Inventory alert item in data context */
+interface InventoryAlertItem {
+  partNumber: string;
+  partName: string;
+  onHand: number;
+  minStock: number;
+}
+
+/** Inventory item in data context */
+interface InventoryItem {
+  partNumber: string;
+  partName: string;
+  onHand: number;
+  unit: string;
+  status: string;
+}
+
+/** Order item in data context */
+interface OrderDataItem {
+  orderNumber: string;
+  customer: string;
+  value: number;
+  requiredDate?: string;
+  status?: string;
+}
+
+/** Work order item in data context */
+interface WorkOrderItem {
+  orderNumber: string;
+  product: string;
+  status: string;
+  progress: number;
+}
+
+/** Production issue in data context */
+interface ProductionIssue {
+  type: string;
+  description: string;
+}
+
+/** MRP shortage item */
+interface MRPShortageItem {
+  partNumber: string;
+  partName: string;
+  shortage: number;
+  safetyStock: number;
+  unit: string;
+}
+
+/** MRP purchase suggestion */
+interface MRPSuggestionItem {
+  partNumber: string;
+  quantity: number;
+  unit: string;
+  supplier: string;
+  totalCost: number;
+}
+
+/** Purchase data by-supplier info */
+interface PurchaseBySupplierInfo {
+  items: number;
+  total: number;
+}
+
+/** Purchase suggestion item */
+interface PurchaseSuggestionItem {
+  partNumber: string;
+  quantity: number;
+  unit: string;
+  supplier: string;
+  totalCost: number;
+  priority: string;
+}
+
+/** NCR item in quality data */
+interface QualityNCRItem {
+  ncrNumber: string;
+  description: string;
+  status: string;
+}
+
+/** Analytics trend data point */
+interface TrendDataPoint {
+  period: string;
+  value: number;
+}
+
+// =============================================================================
 // SYSTEM CONTEXT
 // =============================================================================
 
@@ -207,7 +298,7 @@ export function detectIntent(query: string): DetectedIntent {
 export interface PromptContext {
   intent: QueryIntent;
   query: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   context?: string; // Legacy context from old AI Copilot
   ragContext?: string; // RAG knowledge context
   language?: 'vi' | 'en';
@@ -242,7 +333,7 @@ export function buildPrompt(context: PromptContext): AIMessage[] {
   return messages;
 }
 
-function buildDataContext(intent: QueryIntent, data: Record<string, any>): string {
+function buildDataContext(intent: QueryIntent, data: Record<string, unknown>): string {
   switch (intent) {
     case 'inventory_status':
     case 'inventory_shortage':
@@ -276,11 +367,13 @@ function buildDataContext(intent: QueryIntent, data: Record<string, any>): strin
 // DATA FORMATTERS
 // =============================================================================
 
-function formatInventoryData(data: Record<string, any>): string {
-  const { summary, items, alerts } = data;
-  
+function formatInventoryData(data: Record<string, unknown>): string {
+  const summary = data.summary as Record<string, number> | undefined;
+  const items = data.items as InventoryItem[] | undefined;
+  const alerts = data.alerts as InventoryAlertItem[] | undefined;
+
   let context = '### Tổng quan tồn kho:\n';
-  
+
   if (summary) {
     context += `- Tổng vật tư: ${summary.totalItems || 0}\n`;
     context += `- Đủ hàng: ${summary.okCount || 0}\n`;
@@ -291,14 +384,14 @@ function formatInventoryData(data: Record<string, any>): string {
 
   if (alerts && alerts.length > 0) {
     context += '\n### Cảnh báo:\n';
-    alerts.slice(0, 10).forEach((alert: any) => {
+    alerts.slice(0, 10).forEach((alert) => {
       context += `- ${alert.partNumber}: ${alert.partName} - Tồn: ${alert.onHand}, Min: ${alert.minStock}\n`;
     });
   }
 
   if (items && items.length > 0) {
     context += '\n### Chi tiết vật tư:\n';
-    items.slice(0, 20).forEach((item: any) => {
+    items.slice(0, 20).forEach((item) => {
       context += `- ${item.partNumber}: ${item.partName} | Tồn: ${item.onHand} ${item.unit} | Trạng thái: ${item.status}\n`;
     });
   }
@@ -306,11 +399,13 @@ function formatInventoryData(data: Record<string, any>): string {
   return context;
 }
 
-function formatOrderData(data: Record<string, any>): string {
-  const { summary, orders, pending } = data;
-  
+function formatOrderData(data: Record<string, unknown>): string {
+  const summary = data.summary as Record<string, number> | undefined;
+  const orders = data.orders as OrderDataItem[] | undefined;
+  const pending = data.pending as OrderDataItem[] | undefined;
+
   let context = '### Tổng quan đơn hàng:\n';
-  
+
   if (summary) {
     context += `- Tổng đơn: ${summary.totalOrders || 0}\n`;
     context += `- Chờ xác nhận: ${summary.pendingCount || 0}\n`;
@@ -321,14 +416,14 @@ function formatOrderData(data: Record<string, any>): string {
 
   if (pending && pending.length > 0) {
     context += '\n### Đơn hàng chờ xử lý:\n';
-    pending.forEach((order: any) => {
+    pending.forEach((order) => {
       context += `- ${order.orderNumber}: ${order.customer} | ${formatCurrency(order.value)} | Giao: ${order.requiredDate}\n`;
     });
   }
 
   if (orders && orders.length > 0) {
     context += '\n### Danh sách đơn hàng:\n';
-    orders.slice(0, 10).forEach((order: any) => {
+    orders.slice(0, 10).forEach((order) => {
       context += `- ${order.orderNumber}: ${order.customer} | ${order.status} | ${formatCurrency(order.value)}\n`;
     });
   }
@@ -336,11 +431,13 @@ function formatOrderData(data: Record<string, any>): string {
   return context;
 }
 
-function formatProductionData(data: Record<string, any>): string {
-  const { summary, workOrders, issues } = data;
-  
+function formatProductionData(data: Record<string, unknown>): string {
+  const summary = data.summary as Record<string, number> | undefined;
+  const workOrders = data.workOrders as WorkOrderItem[] | undefined;
+  const issues = data.issues as ProductionIssue[] | undefined;
+
   let context = '### Tổng quan sản xuất:\n';
-  
+
   if (summary) {
     context += `- Hiệu suất: ${summary.efficiency || 0}%\n`;
     context += `- Đang chạy: ${summary.runningCount || 0} lệnh\n`;
@@ -350,14 +447,14 @@ function formatProductionData(data: Record<string, any>): string {
 
   if (workOrders && workOrders.length > 0) {
     context += '\n### Lệnh sản xuất:\n';
-    workOrders.slice(0, 10).forEach((wo: any) => {
+    workOrders.slice(0, 10).forEach((wo) => {
       context += `- ${wo.orderNumber}: ${wo.product} | ${wo.status} | ${wo.progress}%\n`;
     });
   }
 
   if (issues && issues.length > 0) {
     context += '\n### Vấn đề cần chú ý:\n';
-    issues.forEach((issue: any) => {
+    issues.forEach((issue) => {
       context += `- ${issue.type}: ${issue.description}\n`;
     });
   }
@@ -365,22 +462,23 @@ function formatProductionData(data: Record<string, any>): string {
   return context;
 }
 
-function formatMRPData(data: Record<string, any>): string {
-  const { requirements, shortages, suggestions } = data;
-  
+function formatMRPData(data: Record<string, unknown>): string {
+  const shortages = data.shortages as MRPShortageItem[] | undefined;
+  const suggestions = data.suggestions as MRPSuggestionItem[] | undefined;
+
   let context = '### Kết quả MRP:\n';
-  
+
   if (shortages && shortages.length > 0) {
     context += '\n### Vật tư thiếu hụt:\n';
-    shortages.forEach((item: any) => {
-      const status = item.shortage > item.safetyStock ? '🔴' : '🟡';
+    shortages.forEach((item) => {
+      const status = item.shortage > item.safetyStock ? '\u{1F534}' : '\u{1F7E1}';
       context += `${status} ${item.partNumber}: ${item.partName} | Thiếu: ${item.shortage} ${item.unit}\n`;
     });
   }
 
   if (suggestions && suggestions.length > 0) {
     context += '\n### Đề xuất mua hàng:\n';
-    suggestions.forEach((s: any) => {
+    suggestions.forEach((s) => {
       context += `- ${s.partNumber}: Mua ${s.quantity} ${s.unit} từ ${s.supplier} | ${formatCurrency(s.totalCost)}\n`;
     });
   }
@@ -388,23 +486,25 @@ function formatMRPData(data: Record<string, any>): string {
   return context;
 }
 
-function formatPurchaseData(data: Record<string, any>): string {
-  const { suggestions, bySupplier, totalValue } = data;
-  
+function formatPurchaseData(data: Record<string, unknown>): string {
+  const suggestions = data.suggestions as PurchaseSuggestionItem[] | undefined;
+  const bySupplier = data.bySupplier as Record<string, PurchaseBySupplierInfo> | undefined;
+  const totalValue = data.totalValue as number | undefined;
+
   let context = '### Đề xuất mua hàng:\n';
   context += `Tổng giá trị: ${formatCurrency(totalValue || 0)}\n`;
 
   if (bySupplier) {
     context += '\n### Theo nhà cung cấp:\n';
-    Object.entries(bySupplier).forEach(([supplier, info]: [string, any]) => {
+    Object.entries(bySupplier).forEach(([supplier, info]) => {
       context += `- ${supplier}: ${info.items} items | ${formatCurrency(info.total)}\n`;
     });
   }
 
   if (suggestions && suggestions.length > 0) {
     context += '\n### Chi tiết:\n';
-    suggestions.forEach((s: any) => {
-      const priority = s.priority === 'URGENT' ? '🔴' : s.priority === 'HIGH' ? '🟡' : '🔵';
+    suggestions.forEach((s) => {
+      const priority = s.priority === 'URGENT' ? '\u{1F534}' : s.priority === 'HIGH' ? '\u{1F7E1}' : '\u{1F535}';
       context += `${priority} ${s.partNumber}: ${s.quantity} ${s.unit} | ${s.supplier} | ${formatCurrency(s.totalCost)}\n`;
     });
   }
@@ -412,11 +512,12 @@ function formatPurchaseData(data: Record<string, any>): string {
   return context;
 }
 
-function formatQualityData(data: Record<string, any>): string {
-  const { summary, ncrs, inspections } = data;
-  
+function formatQualityData(data: Record<string, unknown>): string {
+  const summary = data.summary as Record<string, number> | undefined;
+  const ncrs = data.ncrs as QualityNCRItem[] | undefined;
+
   let context = '### Báo cáo chất lượng:\n';
-  
+
   if (summary) {
     context += `- Tỷ lệ đạt: ${summary.passRate || 0}%\n`;
     context += `- NCR mở: ${summary.openNCRs || 0}\n`;
@@ -425,7 +526,7 @@ function formatQualityData(data: Record<string, any>): string {
 
   if (ncrs && ncrs.length > 0) {
     context += '\n### NCR mở:\n';
-    ncrs.forEach((ncr: any) => {
+    ncrs.forEach((ncr) => {
       context += `- ${ncr.ncrNumber}: ${ncr.description} | ${ncr.status}\n`;
     });
   }
@@ -433,11 +534,12 @@ function formatQualityData(data: Record<string, any>): string {
   return context;
 }
 
-function formatAnalyticsData(data: Record<string, any>): string {
-  const { revenue, inventory, production, trends } = data;
-  
+function formatAnalyticsData(data: Record<string, unknown>): string {
+  const revenue = data.revenue as Record<string, number> | undefined;
+  const trends = data.trends as TrendDataPoint[] | undefined;
+
   let context = '### Phân tích:\n';
-  
+
   if (revenue) {
     context += `\n#### Doanh thu:\n`;
     context += `- Tháng này: ${formatCurrency(revenue.thisMonth || 0)}\n`;
@@ -447,7 +549,7 @@ function formatAnalyticsData(data: Record<string, any>): string {
 
   if (trends) {
     context += `\n#### Xu hướng:\n`;
-    context += trends.map((t: any) => `- ${t.period}: ${formatCurrency(t.value)}`).join('\n');
+    context += trends.map((t) => `- ${t.period}: ${formatCurrency(t.value)}`).join('\n');
   }
 
   return context;

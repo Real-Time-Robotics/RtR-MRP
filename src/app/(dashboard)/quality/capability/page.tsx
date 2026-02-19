@@ -23,6 +23,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SPCEngine, ProcessCapability, ProcessCharacteristic } from '@/lib/spc';
+import { clientLogger } from '@/lib/client-logger';
 
 // Loading fallback
 function LoadingFallback() {
@@ -312,7 +313,7 @@ function ProcessCapabilityPageContent() {
         setCharacteristics(charData.data.characteristics);
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error);
+      clientLogger.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
     }

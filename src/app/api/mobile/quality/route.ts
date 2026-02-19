@@ -4,13 +4,32 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+
+const qualityPostSchema = z.object({
+  inspectionId: z.string().min(1, 'Inspection ID là bắt buộc'),
+  checkpointId: z.string().optional(),
+  result: z.string().optional(),
+  value: z.string().optional(),
+  notes: z.string().optional(),
+  qtyPassed: z.number().int().min(0).optional(),
+  qtyFailed: z.number().int().min(0).optional(),
+  disposition: z.string().optional(),
+  userId: z.string().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbInspectionResult = Record<string, any>;
 
 // Helper function to transform inspection data
-function transformInspection(inspection: any) {
+function transformInspection(inspection: DbInspectionResult) {
   // Get characteristics from plan if available
-  const characteristics = inspection.plan?.characteristics?.map((char: any) => ({
+  const characteristics = inspection.plan?.characteristics?.map((char: DbInspectionResult) => ({
     id: char.id,
     name: char.name,
     description: char.description,
@@ -21,8 +40,8 @@ function transformInspection(inspection: any) {
   })) || [];
 
   // Map results to characteristics
-  const resultsByChar: Record<string, any> = {};
-  inspection.results?.forEach((r: any) => {
+  const resultsByChar: Record<string, { result: string; measuredValue: number | null; findings: string | null }> = {};
+  inspection.results?.forEach((r: DbInspectionResult) => {
     resultsByChar[r.characteristicId] = {
       result: r.result,
       measuredValue: r.measuredValue,
@@ -56,15 +75,19 @@ function transformInspection(inspection: any) {
  * GET /api/mobile/quality
  * Get pending inspections
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const inspectionId = searchParams.get('inspectionId');
     const status = searchParams.get('status') || 'pending,in_progress';
     const type = searchParams.get('type');
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.InspectionWhereInput = {};
 
     if (inspectionId) {
       where.id = inspectionId;
@@ -131,24 +154,27 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/mobile/quality
  * Submit inspection result
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { inspectionId, checkpointId, result, value, notes, qtyPassed, qtyFailed, disposition, userId } = body;
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
 
-    // Validate inspectionId
-    if (!inspectionId) {
+  try {
+const body = await req.json();
+    const parsed = qualityPostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Inspection ID required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { inspectionId, checkpointId, result, value, notes, qtyPassed, qtyFailed, disposition, userId } = parsed.data;
 
     // Find the inspection
     const inspection = await prisma.inspection.findUnique({
@@ -289,15 +315,19 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/mobile/quality
  * Complete inspection
  */
-export async function PATCH(req: NextRequest) {
+export const PATCH = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const body = await req.json();
     const { inspectionId, action, finalDisposition, notes } = body;
 
     if (!inspectionId || !action) {
@@ -334,19 +364,19 @@ export async function PATCH(req: NextRequest) {
 
       // Check for critical/major characteristics that haven't been inspected
       const incompleteCharacteristics = characteristics.filter(
-        (char: any) => (char.isCritical || char.isMajor) && !recordedCharIds.has(char.id)
+        (char: { isCritical: boolean; isMajor: boolean; id: string; name: string }) => (char.isCritical || char.isMajor) && !recordedCharIds.has(char.id)
       );
 
       if (incompleteCharacteristics.length > 0) {
         return NextResponse.json({
           success: false,
           error: `${incompleteCharacteristics.length} required characteristics incomplete`,
-          incompleteCheckpoints: incompleteCharacteristics.map((c: any) => c.name),
+          incompleteCheckpoints: incompleteCharacteristics.map((c: { name: string }) => c.name),
         }, { status: 400 });
       }
 
       // Determine final result
-      const hasFailures = recordedResults.some((r: any) => r.result === 'FAIL');
+      const hasFailures = recordedResults.some((r: { result: string }) => r.result === 'FAIL');
       const finalResult = hasFailures ? 'FAIL' : 'PASS';
 
       // Update inspection
@@ -385,4 +415,4 @@ export async function PATCH(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

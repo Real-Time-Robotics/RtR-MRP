@@ -1,28 +1,46 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET - List all products with BOM summary
-export async function GET() {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const products = await prisma.product.findMany({
-      where: { status: "active" },
-      include: {
-        bomHeaders: {
-          where: { status: "active" },
-          include: {
-            bomLines: true,
+  const startTime = Date.now();
+
+  try {
+    const params = parsePaginationParams(request);
+    const where = { status: "active" as const };
+
+    const [totalCount, products] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        ...buildOffsetPaginationQuery(params),
+        include: {
+          bomHeaders: {
+            where: { status: "active" },
+            include: {
+              bomLines: true,
+            },
           },
         },
-      },
-      orderBy: { name: "asc" },
-    });
+        orderBy: params.sortBy
+          ? { [params.sortBy]: params.sortOrder }
+          : { name: "asc" },
+      }),
+    ]);
 
     const data = products.map((product) => {
       const activeBom = product.bomHeaders[0];
@@ -40,12 +58,11 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ data });
+    return paginatedSuccess(
+      buildPaginatedResponse(data, totalCount, params, startTime)
+    );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/products' });
-    return NextResponse.json(
-      { error: "Failed to fetch products" },
-      { status: 500 }
-    );
+    return paginatedError("Failed to fetch products", 500);
   }
-}
+});

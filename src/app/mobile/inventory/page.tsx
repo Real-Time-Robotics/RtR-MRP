@@ -21,6 +21,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 import {
   MobileCard,
   MobileButton,
@@ -297,7 +298,7 @@ function PageContent() {
           setParts(data.data || []);
         }
       } catch (error) {
-        console.error('Failed to fetch inventory:', error);
+        clientLogger.error('Failed to fetch inventory', error);
       } finally {
         setIsLoading(false);
       }

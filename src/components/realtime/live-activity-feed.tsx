@@ -330,6 +330,7 @@ export function LiveActivityFeed({
                   : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
               )}
               title={isPaused ? 'Tiếp tục' : 'Tạm dừng'}
+              aria-label={isPaused ? 'Tiếp tục' : 'Tạm dừng'}
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
             </button>
@@ -337,6 +338,7 @@ export function LiveActivityFeed({
               onClick={handleRefresh}
               className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Làm mới"
+              aria-label="Làm mới"
             >
               <RefreshCw className="w-4 h-4" />
             </button>

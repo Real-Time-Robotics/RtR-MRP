@@ -44,7 +44,8 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     // Sync display value when external value changes
     React.useEffect(() => {
       const newDisplayValue = value !== null && value !== undefined ? String(value) : '';
-      if (displayValue !== newDisplayValue && !document.activeElement?.isSameNode(ref as any)) {
+      const refElement = ref && typeof ref !== 'function' ? ref.current : null;
+      if (displayValue !== newDisplayValue && !document.activeElement?.isSameNode(refElement)) {
         setDisplayValue(newDisplayValue);
       }
     }, [value]);

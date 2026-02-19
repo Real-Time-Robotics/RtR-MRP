@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { generateCycleCountList, recordCycleCount } from "@/lib/inventory/cycle-count-service";
+import { z } from "zod";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+const CycleCountSchema = z.object({
+  inventoryId: z.string().min(1, "Inventory ID is required"),
+  countedQty: z.number({ error: "Counted quantity is required" }),
+  notes: z.string().optional(),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const warehouseId = searchParams.get("warehouseId") || undefined;
@@ -16,21 +26,28 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: "Failed to generate cycle count list" }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { inventoryId, countedQty, notes } = await request.json();
-    if (!inventoryId || countedQty === undefined) {
-      return NextResponse.json({ error: "inventoryId and countedQty required" }, { status: 400 });
+    const body = await request.json();
+    const validation = CycleCountSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
     }
 
+    const { inventoryId, countedQty, notes } = validation.data;
     const result = await recordCycleCount(inventoryId, countedQty, session.user?.id || "system", notes);
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: "Failed to record cycle count" }, { status: 500 });
   }
-}
+});

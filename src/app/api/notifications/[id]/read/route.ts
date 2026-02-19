@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Verify the notification belongs to the current user
     const notification = await prisma.notification.findFirst({
@@ -48,4 +45,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

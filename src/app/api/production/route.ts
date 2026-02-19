@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createWorkOrder } from "@/lib/mrp-engine";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import {
   parsePaginationParams,
@@ -15,24 +15,17 @@ import {
 } from "@/lib/pagination";
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { WorkOrderQuerySchema, WorkOrderCreateSchema } from "@/lib/validations";
-// Note: Redis cache/rate-limit disabled - not available on Render free tier
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Allowed filters for work orders
 const ALLOWED_FILTERS = ["status", "priority", "productId"];
 const SEARCH_FIELDS = ["woNumber"];
 
 // GET - List work orders with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
   const startTime = Date.now();
 
   try {
-    // Rate limiting handled by middleware (in-memory)
-
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Parse pagination params
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -103,15 +96,14 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production' });
     return paginatedError("Failed to fetch work orders", 500);
   }
-}
+});
 
 // POST - Create work order
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
     // Validate request body
     const bodyResult = await validateBody(WorkOrderCreateSchema, request);
@@ -142,16 +134,12 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/production' });
 
-    // Return detailed error for debugging
-    const errMsg = error instanceof Error ? error.message : "Failed to create work order";
-    const errStack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       {
         success: false,
-        error: errMsg,
-        details: process.env.NODE_ENV === 'development' ? errStack : undefined
+        error: "Failed to create work order",
       },
       { status: 500 }
     );
   }
-}
+});

@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { WorkCenterStatus } from "@/components/production/work-center-status";
 import { CapacityBar } from "@/components/production/capacity-bar";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface WorkCenterData {
   id: string;
@@ -57,7 +58,7 @@ export default function ShopFloorPage() {
         setData(result);
       }
     } catch (error) {
-      console.error("Failed to fetch shop floor data:", error);
+      clientLogger.error("Failed to fetch shop floor data:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);

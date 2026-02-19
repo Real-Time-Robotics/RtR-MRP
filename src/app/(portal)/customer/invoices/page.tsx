@@ -11,6 +11,7 @@ import {
   CustomerPortalEngine,
   CustomerInvoice
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 import {
   ExcelPortalTable,
   excelPortalStyles,
@@ -39,7 +40,7 @@ export default function CustomerInvoicesPage() {
         setSummary(result.data.summary || { total: 0, paid: 0, unpaid: 0 });
       }
     } catch (error) {
-      console.error('Failed to fetch invoices:', error);
+      clientLogger.error('Failed to fetch invoices', error);
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +91,7 @@ export default function CustomerInvoicesPage() {
         <button
           onClick={() => fetchInvoices()}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
+          aria-label="Làm mới"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -148,6 +150,7 @@ export default function CustomerInvoicesPage() {
             <input
               type="text"
               placeholder="Tìm theo số hóa đơn, đơn hàng..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
@@ -156,6 +159,7 @@ export default function CustomerInvoicesPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Bộ lọc trạng thái"
             className="px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
           >
             <option value="ALL">Tất cả trạng thái</option>
@@ -253,12 +257,14 @@ export default function CustomerInvoicesPage() {
                           onClick={() => setSelectedInvoice(invoice)}
                           className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                           title="Xem chi tiết"
+                          aria-label="Xem chi tiết"
                         >
                           <Eye className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                         </button>
                         <button
                           className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                           title="Tải xuống"
+                          aria-label="Tải xuống"
                         >
                           <Download className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                         </button>
@@ -266,6 +272,7 @@ export default function CustomerInvoicesPage() {
                           <button
                             className="p-1.5 hover:bg-[#E2EFDA] dark:hover:bg-[#217346]/20 rounded-lg transition-colors"
                             title="Thanh toán"
+                            aria-label="Thanh toán"
                           >
                             <CreditCard className="w-4 h-4 text-[#217346] dark:text-[#70AD47]" />
                           </button>
@@ -316,7 +323,7 @@ export default function CustomerInvoicesPage() {
                   <h3 className="text-xl font-semibold">{selectedInvoice.invoiceNumber}</h3>
                   <p className="text-gray-500">Đơn hàng: {selectedInvoice.soNumber}</p>
                 </div>
-                <button onClick={() => setSelectedInvoice(null)}>
+                <button onClick={() => setSelectedInvoice(null)} aria-label="Đóng">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>

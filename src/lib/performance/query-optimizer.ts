@@ -1,10 +1,9 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - QUERY OPTIMIZATION UTILITIES
 // Prisma query patterns for optimal performance
 // =============================================================================
 
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 // =============================================================================
@@ -189,10 +188,10 @@ export const DEFAULT_SELECTS = {
  * Batch multiple queries into single transaction
  * Reduces database round trips
  */
-export async function batchQueries<T extends Prisma.PrismaPromise<any>[]>(
-  queries: T
-): Promise<Prisma.Awaited<T[number]>[]> {
-  return prisma.$transaction(queries);
+export async function batchQueries<T extends Prisma.PrismaPromise<unknown>[]>(
+  queries: [...T]
+): Promise<{ [K in keyof T]: Awaited<T[K]> }> {
+  return prisma.$transaction(queries) as Promise<{ [K in keyof T]: Awaited<T[K]> }>;
 }
 
 /**
@@ -307,7 +306,7 @@ export function processCursorResult<T extends { id: string }>(
 export function buildSearchConditions(
   search: string | undefined,
   fields: string[]
-): Prisma.Enumerable<any> | undefined {
+): { OR: Record<string, unknown>[] } | undefined {
   if (!search || search.trim().length === 0) {
     return undefined;
   }
@@ -361,34 +360,47 @@ export function buildFullTextSearch(
 /**
  * Efficient count with filters
  */
-export async function countWithFilters<T>(
-  model: any,
-  where: any
+export async function countWithFilters(
+  model: { count: (...args: never[]) => Promise<number> },
+  where: Record<string, unknown>
 ): Promise<number> {
-  return model.count({ where });
+  const countFn = model.count as (args: { where: Record<string, unknown> }) => Promise<number>;
+  return countFn({ where });
 }
 
 /**
  * Parallel count and data fetch
  * Single round trip to database
  */
-export async function findManyWithCount<T>(
-  model: any,
+/**
+ * Parallel count and data fetch.
+ * Single round trip to database.
+ *
+ * The `model` parameter accepts a Prisma delegate (e.g. `prisma.part`).
+ * Because Prisma delegate signatures are very specific, we use a loose
+ * interface that is structurally compatible at runtime.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma delegates have complex generic signatures
+export async function findManyWithCount<T = Record<string, unknown>>(
+  model: { findMany: (...args: never[]) => Prisma.PrismaPromise<unknown[]>; count: (...args: never[]) => Prisma.PrismaPromise<number> },
   args: {
-    where?: any;
-    select?: any;
-    include?: any;
-    orderBy?: any;
+    where?: Record<string, unknown>;
+    select?: Record<string, unknown>;
+    include?: Record<string, unknown>;
+    orderBy?: Record<string, unknown>;
     skip?: number;
     take?: number;
   }
 ): Promise<{ items: T[]; total: number }> {
+  const findManyFn = model.findMany as (args: Record<string, unknown>) => Prisma.PrismaPromise<unknown[]>;
+  const countFn = model.count as (args: Record<string, unknown>) => Prisma.PrismaPromise<number>;
+
   const [items, total] = await prisma.$transaction([
-    model.findMany(args),
-    model.count({ where: args.where }),
+    findManyFn(args),
+    countFn({ where: args.where }),
   ]);
-  
-  return { items, total };
+
+  return { items: items as T[], total };
 }
 
 /**
@@ -451,23 +463,21 @@ export async function chunkOperation<T, R>(
 /**
  * Bulk upsert with conflict handling
  */
-export async function bulkUpsert<T extends { id?: string }>(
-  model: any,
+export async function bulkUpsert<T extends Record<string, unknown> & { id?: string }>(
+  model: { upsert: (args: { where: Record<string, unknown>; create: T; update: T }) => Prisma.PrismaPromise<unknown> },
   data: T[],
   uniqueField: string
 ): Promise<number> {
-  let created = 0;
-  
   await prisma.$transaction(
     data.map(item =>
       model.upsert({
-        where: { [uniqueField]: (item as any)[uniqueField] },
+        where: { [uniqueField]: item[uniqueField] },
         create: item,
         update: item,
       })
     )
   );
-  
+
   return data.length;
 }
 

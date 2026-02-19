@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { clientLogger } from '@/lib/client-logger';
 import {
   ShoppingCart,
   Search,
@@ -91,7 +92,7 @@ function SupplierOrdersContent() {
         setOrders(json.data.orders);
       }
     } catch (error) {
-      console.error('Error fetching orders:', error);
+      clientLogger.error('Failed to fetch supplier orders', error);
     } finally {
       setLoading(false);
     }
@@ -113,7 +114,7 @@ function SupplierOrdersContent() {
         ));
       }
     } catch (error) {
-      console.error('Error confirming order:', error);
+      clientLogger.error('Failed to confirm order', error);
     } finally {
       setConfirming(null);
     }
@@ -160,6 +161,7 @@ function SupplierOrdersContent() {
           <input
             type="text"
             placeholder="Tìm theo mã PO hoặc tên sản phẩm..."
+            aria-label="Tìm kiếm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -172,6 +174,7 @@ function SupplierOrdersContent() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as OrderStatus | 'ALL')}
+            aria-label="Bộ lọc trạng thái"
             className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">Tất cả trạng thái</option>

@@ -15,6 +15,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // DEMAND FORECASTING PAGE
@@ -90,7 +91,7 @@ export default function DemandForecastingPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching items:', error);
+      clientLogger.error('Error fetching items:', error);
     } finally {
       setLoading(false);
     }
@@ -105,7 +106,7 @@ export default function DemandForecastingPage() {
         setSelectedItem(json.data);
       }
     } catch (error) {
-      console.error('Error fetching item detail:', error);
+      clientLogger.error('Error fetching item detail:', error);
     } finally {
       setLoadingDetail(false);
     }

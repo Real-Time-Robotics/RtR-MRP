@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { clientLogger } from '@/lib/client-logger';
 
 // Types
 interface UploadedFile {
@@ -171,7 +172,7 @@ export default function DataMigrationCopilotPage() {
         }]);
       }
     } catch (error) {
-      console.error('Analysis error:', error);
+      clientLogger.error('Analysis error:', error);
       setFiles(prev => prev.map(f => ({ ...f, status: 'error' as const, error: 'Analysis failed' })));
       setAiMessages(prev => [...prev, {
         role: 'assistant',
@@ -230,7 +231,7 @@ export default function DataMigrationCopilotPage() {
         content: `HOÀN THÀNH!\n\nĐã import thành công.\n\nBạn có thể vào menu Parts để xem dữ liệu mới.`
       }]);
     } catch (error) {
-      console.error('Import error:', error);
+      clientLogger.error('Import error:', error);
       setAiMessages(prev => [...prev, {
         role: 'assistant',
         content: 'Có lỗi khi import. Vui lòng thử lại.'
@@ -359,7 +360,7 @@ export default function DataMigrationCopilotPage() {
                             {(file.size / 1024).toFixed(1)} KB
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeFile(file.id)}>
+                        <Button variant="ghost" size="icon" onClick={() => removeFile(file.id)} aria-label="Xóa tệp">
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
@@ -570,7 +571,7 @@ export default function DataMigrationCopilotPage() {
                     placeholder="Hỏi AI Copilot..."
                     className="flex-1 h-10"
                   />
-                  <Button onClick={handleAISend} size="icon" className="shrink-0">
+                  <Button onClick={handleAISend} size="icon" className="shrink-0" aria-label="Gửi tin nhắn">
                     <MessageSquare className="w-5 h-5" />
                   </Button>
                 </div>

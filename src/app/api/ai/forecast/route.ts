@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import {
   getForecastEngine,
@@ -15,6 +16,17 @@ import {
   ForecastResult,
   EnhancedForecast,
 } from '@/lib/ai/forecast';
+import { withAuth } from '@/lib/api/with-auth';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const forecastBodySchema = z.object({
+  productId: z.string().optional(),
+  productIds: z.array(z.string()).optional(),
+  action: z.enum(['generate', 'enhance', 'bulk', 'history', 'accuracy', 'sync-actuals']).optional(),
+  config: z.any().optional(),
+  months: z.number().optional(),
+  periodType: z.enum(['weekly', 'monthly']).optional(),
+});
 
 // =============================================================================
 // TYPES
@@ -37,52 +49,34 @@ interface ForecastResponse {
 }
 
 // =============================================================================
-// RATE LIMITING
-// =============================================================================
-
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 20;
-const RATE_LIMIT_WINDOW = 60 * 1000;
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(ip);
-
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (record.count >= RATE_LIMIT) {
-    return false;
-  }
-
-  record.count++;
-  return true;
-}
-
-// =============================================================================
 // POST - Generate Forecast
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<ForecastResponse>> {
+export const POST = withAuth(async (request: NextRequest, context, session): Promise<Response> => {
   const startTime = Date.now();
 
   try {
-    // Rate limiting
-    const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    if (!checkRateLimit(ip)) {
+    // Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request);
+    if (!rateLimit.success) {
       return NextResponse.json(
         {
           success: false,
           error: 'Rate limit exceeded. Please try again later.',
         },
-        { status: 429 }
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } } as { status: number; headers: Record<string, string> }
       );
     }
 
-    const body: ForecastRequest = await request.json();
-    const { productId, productIds, action = 'generate', config = {}, months = 24, periodType = 'monthly' } = body;
+    const rawBody = await request.json();
+    const parseResult = forecastBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { productId, productIds, action = 'generate', config = {}, months = 24, periodType = 'monthly' } = parseResult.data;
 
     const forecastEngine = getForecastEngine();
     const aiEnhancer = getAIEnhancerService();
@@ -268,19 +262,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ForecastR
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to generate forecast',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET - Accuracy Summary & Model Performance
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<ForecastResponse>> {
+export const GET = withAuth(async (request: NextRequest, context, session): Promise<Response> => {
   const startTime = Date.now();
 
   try {
@@ -373,10 +367,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<ForecastRe
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch forecast data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

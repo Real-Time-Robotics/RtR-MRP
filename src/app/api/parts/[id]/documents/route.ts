@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const documentBodySchema = z.object({
+  documentType: z.enum(["DRAWING", "DATASHEET", "SPECIFICATION", "CERTIFICATE", "TEST_REPORT", "MSDS", "MANUAL", "OTHER"]),
+  documentNumber: z.string().optional(),
+  title: z.string(),
+  revision: z.string().optional(),
+  url: z.string(),
+  effectiveDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+});
 
 // GET - List documents for a part
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     const documents = await prisma.partDocument.findMany({
       where: { partId: id },
@@ -30,18 +38,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Add document to part
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
-    const data = await request.json();
+  try {
+    const { id } = await context.params;
+    const rawBody = await request.json();
+    const parseResult = documentBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const data = parseResult.data;
 
     const document = await prisma.partDocument.create({
       data: {
@@ -66,4 +81,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

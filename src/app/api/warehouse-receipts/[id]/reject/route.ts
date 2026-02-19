@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from 'zod';
 import { withAuth, type AuthUser } from "@/lib/auth/middleware";
 import { rejectProductionReceipt } from "@/lib/mrp-engine";
 import { handleError, successResponse } from "@/lib/error-handler";
 import { logger } from "@/lib/logger";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // POST - Reject a production receipt (warehouse rejects with reason)
 export const POST = withAuth(
@@ -10,9 +12,25 @@ export const POST = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     try {
       const { id } = await params;
-      const body = await request.json();
+      const bodySchema = z.object({
+        reason: z.string(),
+      });
+
+      const rawBody = await request.json();
+      const parseResult = bodySchema.safeParse(rawBody);
+      if (!parseResult.success) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+          { status: 400 }
+        );
+      }
+      const body = parseResult.data;
       const { reason } = body;
 
       if (!reason || typeof reason !== "string" || reason.trim().length === 0) {

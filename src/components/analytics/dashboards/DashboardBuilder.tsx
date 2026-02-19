@@ -150,7 +150,7 @@ export function DashboardBuilder({
   });
 
   // Handle layout change from grid
-  const handleLayoutChange = useCallback((layout: any[]) => {
+  const handleLayoutChange = useCallback((layout: Array<{ i: string; x: number; y: number; w: number; h: number }>) => {
     setDashboard((prev) => ({
       ...prev,
       widgets: prev.widgets.map((widget) => {

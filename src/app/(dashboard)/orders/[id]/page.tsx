@@ -129,8 +129,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             }
             const data = await res.json();
             setOrder(data);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setLoading(false);
         }
@@ -168,8 +168,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             }
             setSelectedLines(preSelected);
             setLotAllocations(prefilled);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setLoadingPreview(false);
         }
@@ -241,8 +241,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             setShipCarrier('');
             setShipTracking('');
             fetchData();
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setShipping(false);
         }
@@ -260,8 +260,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             if (!res.ok) throw new Error(data.error || 'Lỗi khi xác nhận giao hàng');
             toast.success(data.message || 'Đã xác nhận giao hàng');
             fetchData();
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setDeliveringShipmentId(null);
         }
@@ -640,6 +640,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                     checked={isSelected}
                                                     disabled={isFullyShipped}
                                                     onChange={() => handleToggleLine(line.lineNumber)}
+                                                    aria-label={`Chọn dòng ${line.lineNumber}`}
                                                     className="h-4 w-4 rounded border-gray-300"
                                                 />
                                                 <div className="flex-1 flex items-center justify-between">

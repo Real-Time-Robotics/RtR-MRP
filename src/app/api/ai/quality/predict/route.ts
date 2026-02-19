@@ -4,25 +4,50 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { getQualityPredictionEngine } from '@/lib/ai/quality/quality-prediction-engine';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const qualityPredictSchema = z.object({
+  partId: z.string(),
+  monthsAhead: z.number().optional(),
+  includeAI: z.boolean().optional(),
+});
 // =============================================================================
 // POST - Quality Prediction
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json();
-    const { partId, monthsAhead = 1, includeAI = false } = body;
-
-    if (!partId) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { success: false, error: 'partId is required' },
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
+  try {
+const rawBody = await request.json();
+    const parseResult = qualityPredictSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { partId, monthsAhead = 1, includeAI = false } = parseResult.data;
 
     const predictionEngine = getQualityPredictionEngine();
 
@@ -32,7 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       predictionEngine.generateForecast(partId, monthsAhead + 2),
     ]);
 
-    const response: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: Record<string, any> = {
       success: true,
       data: {
         partId,
@@ -97,9 +123,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to generate quality prediction',
       },
       { status: 500 }
     );
   }
-}
+});

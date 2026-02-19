@@ -30,7 +30,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DashboardCard } from "@/components/analytics/dashboards/DashboardCard";
 import type { Dashboard, DashboardTemplate } from "@/lib/analytics/types";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Permissions {
   canCreate: boolean;
@@ -108,7 +110,7 @@ export default function DashboardsPage() {
           setCanCreateMore(permissionsData.data.canCreate);
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        clientLogger.error("Error fetching data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -171,11 +173,11 @@ export default function DashboardsPage() {
         // Navigate to edit the new dashboard
         router.push(`/analytics/dashboards/${data.data.id}/edit`);
       } else {
-        console.error("Error creating dashboard:", data.error);
-        alert(data.error || "Không thể tạo dashboard");
+        clientLogger.error("Error creating dashboard:", data.error);
+        toast.error(data.error || "Không thể tạo dashboard");
       }
     } catch (error) {
-      console.error("Error creating dashboard:", error);
+      clientLogger.error("Error creating dashboard:", error);
     } finally {
       setIsCreating(false);
     }
@@ -188,7 +190,7 @@ export default function DashboardsPage() {
 
   const handleEdit = (id: string) => {
     if (!permissions.canEdit) {
-      alert("Bạn không có quyền chỉnh sửa dashboard");
+      toast.error("Bạn không có quyền chỉnh sửa dashboard");
       return;
     }
     router.push(`/analytics/dashboards/${id}/edit`);
@@ -196,7 +198,7 @@ export default function DashboardsPage() {
 
   const handleDelete = async (id: string) => {
     if (!permissions.canDelete) {
-      alert("Bạn không có quyền xóa dashboard");
+      toast.error("Bạn không có quyền xóa dashboard");
       return;
     }
 
@@ -212,10 +214,10 @@ export default function DashboardsPage() {
       if (data.success) {
         setDashboards((prev) => prev.filter((d) => d.id !== id));
       } else {
-        alert(data.error || "Không thể xóa dashboard");
+        toast.error(data.error || "Không thể xóa dashboard");
       }
     } catch (error) {
-      console.error("Error deleting dashboard:", error);
+      clientLogger.error("Error deleting dashboard:", error);
     }
   };
 
@@ -236,7 +238,7 @@ export default function DashboardsPage() {
         );
       }
     } catch (error) {
-      console.error("Error setting default:", error);
+      clientLogger.error("Error setting default:", error);
     }
   };
 

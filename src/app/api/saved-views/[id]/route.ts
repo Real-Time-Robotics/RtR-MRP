@@ -2,7 +2,7 @@
 // Saved Views API - Single view operations
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import {
   getSavedView,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/saved-views/saved-views-service';
 import { z } from 'zod';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema
 const updateViewSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -30,17 +31,13 @@ const updateViewSchema = z.object({
 });
 
 // GET /api/saved-views/[id] - Get a single view
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
     const view = await getSavedView(id, session.user.id);
 
     if (!view) {
@@ -58,20 +55,16 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/saved-views/[id] - Update a view
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
     const body = await request.json();
     const parsed = updateViewSchema.safeParse(body);
 
@@ -92,24 +85,20 @@ export async function PUT(
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/saved-views/[id]' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update saved view' },
+      { error: 'Failed to update saved view' },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/saved-views/[id] - Delete a view
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
     await deleteSavedView(id, session.user.id);
 
     return NextResponse.json({
@@ -119,24 +108,20 @@ export async function DELETE(
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/saved-views/[id]' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete saved view' },
+      { error: 'Failed to delete saved view' },
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/saved-views/[id] - Duplicate a view
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
     const body = await request.json();
     const newName = body.name;
 
@@ -157,8 +142,8 @@ export async function POST(
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/saved-views/[id]' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to duplicate saved view' },
+      { error: 'Failed to duplicate saved view' },
       { status: 500 }
     );
   }
-}
+});

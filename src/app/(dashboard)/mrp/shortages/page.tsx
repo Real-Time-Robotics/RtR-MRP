@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { clientLogger } from '@/lib/client-logger';
 
 interface ShortageItem {
   id: string;
@@ -37,7 +38,7 @@ export default function ShortagesPage() {
       const data = await res.json();
       setShortages(data);
     } catch (error) {
-      console.error("Failed to fetch shortages:", error);
+      clientLogger.error("Failed to fetch shortages:", error);
     } finally {
       setLoading(false);
     }

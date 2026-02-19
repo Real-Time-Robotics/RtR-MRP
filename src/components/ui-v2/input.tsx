@@ -146,6 +146,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                   iconSizes[size]
                 )}
                 tabIndex={-1}
+                aria-label="Xóa"
               >
                 <X className="h-full w-full" />
               </button>

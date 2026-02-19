@@ -1,64 +1,38 @@
 export default function Loading() {
   return (
-    <div className="p-6 space-y-6">
-      {/* Header with search and actions */}
+    <div className="p-6 space-y-6 animate-pulse">
+      {/* Header skeleton */}
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <div className="h-7 w-32 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-56 bg-white/5 rounded animate-pulse" />
+        <div>
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+          <div className="h-4 w-72 bg-gray-200 dark:bg-gray-700 rounded mt-2" />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="h-9 w-64 bg-white/5 rounded animate-pulse" />
-          <div className="h-9 w-24 bg-white/5 rounded animate-pulse" />
-          <div className="h-9 w-28 bg-white/5 rounded animate-pulse" />
-        </div>
+        <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded-lg" />
       </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3">
+      {/* Stats cards skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-8 w-28 bg-white/5 rounded animate-pulse" />
+          <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-xl" />
         ))}
       </div>
 
-      {/* Data table */}
-      <div className="bg-white/[0.025] border border-white/[0.06] rounded-lg">
-        {/* Table header */}
-        <div className="flex items-center gap-4 px-4 py-3 border-b border-white/[0.06] bg-white/[0.015]">
-          <div className="h-4 w-4 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-24 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-40 bg-white/5 rounded animate-pulse flex-1" />
-          <div className="h-4 w-20 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-20 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
-          <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
+      {/* Table skeleton */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="h-10 w-64 bg-gray-200 dark:bg-gray-700 rounded-lg" />
         </div>
-
-        {/* Table rows */}
-        {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-white/[0.04]">
-            <div className="h-4 w-4 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-24 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-40 bg-white/5 rounded animate-pulse flex-1" />
-            <div className="h-5 w-20 bg-white/5 rounded-full animate-pulse" />
-            <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-20 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
-            <div className="h-4 w-16 bg-white/5 rounded animate-pulse" />
-          </div>
-        ))}
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="h-4 w-40 bg-white/5 rounded animate-pulse" />
-          <div className="flex items-center gap-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 w-8 bg-white/5 rounded animate-pulse" />
-            ))}
-          </div>
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-4 flex items-center gap-4">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded ml-auto" />
+            </div>
+          ))}
         </div>
       </div>
     </div>
-  )
+  );
 }

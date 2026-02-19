@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { clientLogger } from '@/lib/client-logger';
 import { z } from 'zod';
 import {
   Dialog,
@@ -176,7 +177,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
         setCustomers(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
+      clientLogger.error('Failed to fetch customers', error);
     }
   };
 
@@ -188,7 +189,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
         setProducts(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch products:', error);
+      clientLogger.error('Failed to fetch products', error);
     }
   };
 
@@ -556,6 +557,7 @@ export function SalesOrderForm({ open, onOpenChange, order, onSuccess }: SalesOr
                               variant="ghost"
                               size="icon"
                               onClick={() => remove(index)}
+                              aria-label="Xóa dòng"
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>

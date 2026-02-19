@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';import { logger } from '@/lib/logger';
 
 import {
   parsePaginationParams,
@@ -12,20 +13,40 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const employeeBodySchema = z.object({
+  employeeCode: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  position: z.string().optional(),
+  employmentType: z.string().optional(),
+  hireDate: z.string().optional(),
+  defaultWorkCenterId: z.string().optional(),
+  shiftPattern: z.string().optional(),
+  hourlyRate: z.number().optional(),
+  overtimeRate: z.number().optional(),
+  certifications: z.any().optional(),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+});
+
 const ALLOWED_FILTERS = ["status", "department", "employmentType", "defaultWorkCenterId"];
 const SEARCH_FIELDS = ["employeeCode", "firstName", "lastName", "email"];
 
 // GET - List employees
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const params = parsePaginationParams(request);
+const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const withSkills = searchParams.get("withSkills") === "true";
@@ -70,17 +91,23 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/employees' });
     return paginatedError("Failed to fetch employees", 500);
   }
-}
+});
 
 // POST - Create employee
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = employeeBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       employeeCode,
       firstName,
@@ -98,15 +125,7 @@ export async function POST(request: NextRequest) {
       certifications,
       emergencyContact,
       emergencyPhone,
-    } = body;
-
-    // Validate required fields
-    if (!employeeCode || !firstName || !lastName) {
-      return NextResponse.json(
-        { error: "Missing required fields: employeeCode, firstName, lastName" },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     const employee = await prisma.employee.create({
       data: {
@@ -138,4 +157,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

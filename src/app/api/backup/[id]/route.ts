@@ -2,27 +2,24 @@
 // Backup API - Get specific backup and download
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { getBackup, getBackupFile } from '@/lib/backup/backup-service';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET /api/backup/[id] - Get backup details or download
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    // Check admin permission
+  try {
+// Check admin permission
     if (session.user.role !== 'admin' && session.user.role !== 'manager') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const download = searchParams.get('download') === 'true';
 
@@ -65,4 +62,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

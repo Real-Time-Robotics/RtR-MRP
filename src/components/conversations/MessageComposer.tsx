@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, AtSign, Loader2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { clientLogger } from '@/lib/client-logger'
 
 interface MessageComposerProps {
   threadId: string
@@ -54,7 +55,7 @@ export function MessageComposer({ threadId, onSent, disabled }: MessageComposerP
       onSent?.(message)
 
     } catch (error) {
-      console.error('Failed to send message:', error)
+      clientLogger.error('Failed to send message', error)
     } finally {
       setSending(false)
     }
@@ -124,6 +125,7 @@ export function MessageComposer({ threadId, onSent, disabled }: MessageComposerP
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Nhập tin nhắn... (@ để mention)"
+            aria-label="Nhập tin nhắn"
             className={cn(
               "w-full min-h-[36px] max-h-[100px] resize-none pr-8 px-2.5 py-2",
               "bg-white dark:bg-steel-dark border border-gray-200 dark:border-mrp-border",

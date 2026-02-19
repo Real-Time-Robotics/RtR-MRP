@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET - List all manufacturers (from Supplier table)
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     // Get all active suppliers as manufacturers
     const suppliers = await prisma.supplier.findMany({
       where: {
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts/manufacturers' });
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Đã xảy ra lỗi", code: "PARTS_MANUFACTURER_ERROR" },
       { status: 500 }
     );
   }
-}
+});

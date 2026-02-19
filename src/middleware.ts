@@ -70,7 +70,7 @@ function getRequiredRoles(pathname: string): string[] | null {
   return null;
 }
 
-import { hasPermission } from './lib/roles';
+import { hasPermission, type UserRole } from './lib/roles';
 
 // ...
 
@@ -86,7 +86,7 @@ function hasRole(userRole: string, requiredRoles: string[]): boolean {
   // Or is it "Allows [admin, planner]" means "Planner OR Admin"? Yes.
   // So we just need to satisfy one of them.
 
-  return requiredRoles.some(role => hasPermission(userRole, role as any));
+  return requiredRoles.some(role => hasPermission(userRole, role as UserRole));
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -98,20 +98,21 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   // Content Security Policy
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: https:",
-        "font-src 'self'",
-        "connect-src 'self' https://api.anthropic.com",
-        "frame-ancestors 'none'",
-      ].join('; ')
-    );
-  }
+  const isDev = process.env.NODE_ENV === 'development';
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      isDev
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+        : "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  );
 
   // HSTS (only in production with HTTPS)
   if (process.env.NODE_ENV === 'production') {

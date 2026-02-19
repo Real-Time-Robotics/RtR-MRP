@@ -6,13 +6,26 @@ import {
   validateRouting,
   copyRouting,
 } from "@/lib/production/routing-engine";
+import { z } from "zod";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+const RoutingUpdateSchema = z.object({
+  name: z.string().min(1, "Routing name is required").optional(),
+  description: z.string().optional().nullable(),
+});
+
+const RoutingActionSchema = z.object({
+  action: z.enum(["activate", "copy", "validate"]),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     const routing = await prisma.routing.findUnique({
       where: { id },
@@ -37,21 +50,31 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
 
+    const validation = RoutingUpdateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
     const routing = await prisma.routing.update({
       where: { id },
       data: {
-        name: body.name,
-        description: body.description,
+        name: data.name,
+        description: data.description,
       },
     });
 
@@ -63,16 +86,26 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
-    const action = body.action;
+
+    const actionValidation = RoutingActionSchema.safeParse(body);
+    if (!actionValidation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: actionValidation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { action } = actionValidation.data;
 
     switch (action) {
       case "activate": {
@@ -107,14 +140,15 @@ export async function POST(
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.routing.delete({
       where: { id },
@@ -128,4 +162,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { CustomersTable } from "@/components/customers/customers-table";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: 'Customer Management | RTR-MRP',
+  description: 'Manage customer information, orders, and transaction history - Quản lý khách hàng, thông tin đơn hàng và lịch sử giao dịch',
+};
 
 async function getCustomers() {
   const customers = await prisma.customer.findMany({

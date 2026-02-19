@@ -1,21 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const alternateBodySchema = z.object({
+  alternatePartId: z.string(),
+  alternateType: z.enum(["FORM_FIT_FUNCTION", "FUNCTIONAL", "EMERGENCY", "APPROVED_VENDOR"]).optional(),
+  priority: z.number().optional(),
+  conversionFactor: z.number().optional(),
+  approved: z.boolean().optional(),
+  effectiveDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 // GET - List alternates for a part
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     const alternates = await prisma.partAlternate.findMany({
       where: { partId: id },
@@ -33,18 +42,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Add alternate part
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
-    const data = await request.json();
+  try {
+    const { id } = await context.params;
+    const rawBody = await request.json();
+    const parseResult = alternateBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const data = parseResult.data;
 
     // Validate alternate part exists
     const alternatePart = await prisma.part.findUnique({
@@ -101,4 +117,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

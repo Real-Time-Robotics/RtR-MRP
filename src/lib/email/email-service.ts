@@ -3,8 +3,10 @@
 // Abstraction layer for email sending with multiple provider support
 // =============================================================================
 
-// Note: nodemailer is optional. If not installed, emails will be logged to console.
+// Note: nodemailer is optional. If not installed, emails will be logged instead.
 // To enable actual email sending, install nodemailer: npm install nodemailer
+
+import { logger } from '@/lib/logger';
 
 // Nodemailer types - we use dynamic import to make it optional
 interface NodemailerTransporter {
@@ -18,15 +20,23 @@ type NodemailerModule = {
 
 // Will be loaded dynamically if available
 let nodemailer: NodemailerModule | null = null;
+let nodemailerLoaded = false;
 
-// Only try to load nodemailer on server-side and if explicitly configured
-if (typeof window === 'undefined' && process.env.EMAIL_PROVIDER) {
-  try {
-    // Dynamic import to avoid bundling issues
-    nodemailer = eval('require')('nodemailer');
-  } catch {
-    // nodemailer not installed - this is fine, emails will be logged
+// Load nodemailer dynamically (only on server-side and if explicitly configured)
+async function loadNodemailer(): Promise<NodemailerModule | null> {
+  if (nodemailerLoaded) return nodemailer;
+  nodemailerLoaded = true;
+
+  if (typeof window === 'undefined' && process.env.EMAIL_PROVIDER) {
+    try {
+      // Dynamic import - webpackIgnore prevents bundler from resolving
+      const mod = await import(/* webpackIgnore: true */ 'nodemailer');
+      nodemailer = mod.default || mod;
+    } catch {
+      // nodemailer not installed - this is fine, emails will be logged
+    }
   }
+  return nodemailer;
 }
 
 // =============================================================================
@@ -326,19 +336,25 @@ class EmailService {
   private provider: EmailProvider;
   private fromAddress: string;
   private fromName: string;
+  private initialized = false;
 
   constructor() {
     this.provider = (process.env.EMAIL_PROVIDER as EmailProvider) || 'smtp';
     this.fromAddress = process.env.EMAIL_FROM_ADDRESS || 'noreply@rtr-mrp.local';
     this.fromName = process.env.EMAIL_FROM_NAME || 'RTR-MRP System';
+  }
 
+  private async ensureInitialized() {
+    if (this.initialized) return;
+    this.initialized = true;
+    await loadNodemailer();
     this.initializeTransporter();
   }
 
   private initializeTransporter() {
     // If nodemailer is not installed, skip transporter initialization
     if (!nodemailer) {
-      console.warn('[EmailService] nodemailer not available. Emails will be logged to console.');
+      logger.warn('[EmailService] nodemailer not available. Emails will be logged instead.', { context: 'email-service' });
       return;
     }
 
@@ -400,7 +416,7 @@ class EmailService {
           });
         } else {
           // Development: create test account or use console logging
-          console.warn('[EmailService] No SMTP configuration found. Emails will be logged to console.');
+          logger.warn('[EmailService] No SMTP configuration found. Emails will be logged instead.', { context: 'email-service' });
         }
         break;
     }
@@ -411,6 +427,8 @@ class EmailService {
    */
   async send(options: EmailOptions): Promise<EmailResult> {
     try {
+      await this.ensureInitialized();
+
       // Validate
       if (!options.to || (!options.text && !options.html)) {
         return {
@@ -421,11 +439,12 @@ class EmailService {
 
       // If no transporter configured, log to console (development mode)
       if (!this.transporter) {
-        console.log('[EmailService] Email would be sent:');
-        console.log('  To:', options.to);
-        console.log('  Subject:', options.subject);
-        console.log('  Has HTML:', !!options.html);
-        console.log('  Has Attachments:', (options.attachments?.length || 0) > 0);
+        logger.info('[EmailService] Email would be sent', {
+          to: options.to,
+          subject: options.subject,
+          hasHtml: !!options.html,
+          hasAttachments: (options.attachments?.length || 0) > 0,
+        });
 
         return {
           success: true,
@@ -452,14 +471,14 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
 
-      console.log('[EmailService] Email sent successfully:', result.messageId);
+      logger.info('[EmailService] Email sent successfully', { messageId: result.messageId });
 
       return {
         success: true,
         messageId: result.messageId,
       };
     } catch (error) {
-      console.error('[EmailService] Failed to send email:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-service', operation: 'sendEmail' });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send email',
@@ -596,6 +615,8 @@ class EmailService {
    * Verify transporter connection
    */
   async verifyConnection(): Promise<boolean> {
+    await this.ensureInitialized();
+
     if (!this.transporter) {
       return false;
     }
@@ -604,7 +625,7 @@ class EmailService {
       await this.transporter.verify();
       return true;
     } catch (error) {
-      console.error('[EmailService] Connection verification failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-service', operation: 'verifyConnection' });
       return false;
     }
   }

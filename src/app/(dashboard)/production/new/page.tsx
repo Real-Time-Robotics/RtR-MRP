@@ -17,6 +17,14 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { toast } from "sonner";
+import { z } from "zod";
+import { clientLogger } from '@/lib/client-logger';
+
+const workOrderFormSchema = z.object({
+  productId: z.string().min(1, "Vui lòng chọn sản phẩm"),
+  quantity: z.number().int().min(1, "Số lượng phải >= 1"),
+  priority: z.enum(["low", "normal", "high", "urgent"]),
+});
 
 interface Product {
   id: string;
@@ -56,6 +64,7 @@ export default function NewWorkOrderPage() {
   const [plannedStart, setPlannedStart] = useState("");
   const [plannedEnd, setPlannedEnd] = useState("");
   const [notes, setNotes] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchData();
@@ -81,7 +90,7 @@ export default function NewWorkOrderPage() {
       setProducts(productsArray);
       setSalesOrders(ordersArray);
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      clientLogger.error("Failed to fetch data:", error);
       setProducts([]);
       setSalesOrders([]);
     }
@@ -104,14 +113,23 @@ export default function NewWorkOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!productId) {
-      toast.error("Vui lòng chọn sản phẩm");
+    const result = workOrderFormSchema.safeParse({
+      productId,
+      quantity: parseInt(quantity) || 0,
+      priority,
+    });
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!errors[key]) {
+          errors[key] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
       return;
     }
-    if (!quantity || parseInt(quantity) < 1) {
-      toast.error("Số lượng phải >= 1");
-      return;
-    }
+    setFieldErrors({});
 
     setLoading(true);
 
@@ -139,10 +157,10 @@ export default function NewWorkOrderPage() {
       } else {
         const errMsg = data.error || data.message || "Không thể tạo Work Order";
         toast.error(errMsg);
-        console.error("Failed to create work order:", data);
+        clientLogger.error("Failed to create work order:", data);
       }
     } catch (error) {
-      console.error("Failed to create work order:", error);
+      clientLogger.error("Failed to create work order:", error);
       toast.error("Lỗi kết nối server");
     } finally {
       setLoading(false);
@@ -196,6 +214,9 @@ export default function NewWorkOrderPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {fieldErrors.productId && (
+                  <p className="text-sm text-red-500">{fieldErrors.productId}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -208,6 +229,9 @@ export default function NewWorkOrderPage() {
                   onChange={(e) => setQuantity(e.target.value)}
                   required
                 />
+                {fieldErrors.quantity && (
+                  <p className="text-sm text-red-500">{fieldErrors.quantity}</p>
+                )}
               </div>
 
               <div className="space-y-2">

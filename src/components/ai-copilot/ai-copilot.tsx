@@ -6,9 +6,14 @@ import {
   ChevronLeft, ChevronRight, Minimize2, Maximize2,
   HelpCircle, History, Shield, Zap
 } from 'lucide-react';
-import AIChatPanel, { AIChatTrigger } from './ai-chat-panel';
+import dynamic from 'next/dynamic';
 import ProactiveInsights, { InsightsBadge } from './proactive-insights';
 import SmartActionExecutor from './smart-action-executor';
+
+const AIChatPanel = dynamic(() => import('./ai-chat-panel').then(m => ({ default: m.default })), {
+  ssr: false,
+  loading: () => null,
+});
 import { useSmartGridStore } from '@/components/ui-v2/smart-grid';
 
 // =============================================================================
@@ -24,7 +29,7 @@ interface AIAction {
   description: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   requiresApproval: boolean;
-  payload?: any;
+  payload?: Record<string, unknown>;
   endpoint?: string;
 }
 
@@ -181,6 +186,7 @@ export default function AICopilot({
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="hidden sm:block p-1.5 hover:bg-white/20 dark:hover:bg-neutral-800 rounded transition-colors text-white/70 dark:text-neutral-400 hover:text-white"
                 title={isExpanded ? 'Collapse' : 'Expand'}
+                aria-label={isExpanded ? 'Thu nhỏ' : 'Mở rộng'}
               >
                 {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
@@ -188,6 +194,7 @@ export default function AICopilot({
                 onClick={() => setIsOpen(false)}
                 className="p-1.5 hover:bg-white/20 dark:hover:bg-neutral-800 rounded transition-colors text-white/70 dark:text-neutral-400 hover:text-white"
                 title="Close"
+                aria-label="Đóng"
               >
                 <X className="h-4 w-4" />
               </button>

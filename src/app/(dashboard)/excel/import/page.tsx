@@ -4,8 +4,17 @@
 // Import Wizard Page with AI Integration
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ArrowLeft, Sparkles } from "lucide-react";
-import { ImportWizard } from "@/components/excel";
+
+// Lazy-load ImportWizard (~858 lines, imports xlsx library)
+const ImportWizard = dynamic(
+  () => import("@/components/excel/import-wizard").then(mod => mod.ImportWizard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
 
 export default function ImportPage() {
   return (

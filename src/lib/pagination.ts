@@ -262,10 +262,13 @@ export function buildSearchQuery(
 /**
  * Success response with pagination
  */
-export function paginatedSuccess<T>(response: PaginatedResponse<T> | CursorPaginatedResponse<T>) {
+export function paginatedSuccess<T>(
+  response: PaginatedResponse<T> | CursorPaginatedResponse<T>,
+  options?: { cacheControl?: string },
+) {
   return Response.json(response, {
     headers: {
-      'Cache-Control': 'private, max-age=30',
+      'Cache-Control': options?.cacheControl ?? 'private, max-age=30, stale-while-revalidate=60',
       'X-Response-Time': `${response.meta.took}ms`,
       'X-Cached': response.meta.cached ? 'true' : 'false',
     },

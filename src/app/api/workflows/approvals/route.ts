@@ -5,11 +5,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { workflowEngine } from '@/lib/workflow';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET /api/workflows/approvals - List pending approvals
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -34,12 +41,31 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/workflows/approvals - Submit approval decision
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      instanceId: z.string(),
+      approverId: z.string(),
+      decision: z.string(),
+      comments: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { instanceId, approverId, decision, comments } = body;
 
     if (!instanceId || !approverId || !decision) {
@@ -75,7 +101,7 @@ export async function POST(request: NextRequest) {
       result = await workflowEngine.rejectStep({
         instanceId,
         approverId,
-        comments,
+        comments: comments!,
       });
     }
 
@@ -94,4 +120,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

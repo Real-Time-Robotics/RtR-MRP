@@ -1,14 +1,18 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET - Get MRP run details
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ runId: string }> }
-) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { runId } = await params;
+const { runId } = await context.params;
 
     const run = await prisma.mrpRun.findUnique({
       where: { id: runId },
@@ -35,4 +39,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

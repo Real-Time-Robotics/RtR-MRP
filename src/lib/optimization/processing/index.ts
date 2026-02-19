@@ -5,6 +5,7 @@
 
 import { Readable, Writable } from 'stream';
 import * as XLSX from 'xlsx';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -13,10 +14,10 @@ import * as XLSX from 'xlsx';
 export interface ImportOptions {
   batchSize?: number;
   skipHeader?: boolean;
-  validateRow?: (row: any, index: number) => boolean | string;
-  transformRow?: (row: any, index: number) => any;
+  validateRow?: (row: Record<string, unknown>, index: number) => boolean | string;
+  transformRow?: (row: Record<string, unknown>, index: number) => Record<string, unknown>;
   onProgress?: (processed: number, total: number) => void;
-  onError?: (error: Error, row: any, index: number) => void;
+  onError?: (error: Error, row: Record<string, unknown>, index: number) => void;
   continueOnError?: boolean;
   dryRun?: boolean;
 }
@@ -25,7 +26,7 @@ export interface ExportOptions {
   format: 'csv' | 'xlsx' | 'json' | 'jsonl';
   fields?: string[];
   headers?: Record<string, string>;
-  transform?: (row: any) => any;
+  transform?: (row: Record<string, unknown>) => Record<string, unknown>;
   onProgress?: (exported: number) => void;
 }
 
@@ -34,7 +35,7 @@ export interface ImportResult {
   processed: number;
   imported: number;
   skipped: number;
-  errors: Array<{ row: number; error: string; data?: any }>;
+  errors: Array<{ row: number; error: string; data?: Record<string, unknown> }>;
   duration: number;
 }
 
@@ -47,8 +48,8 @@ export interface ValidationRule {
   min?: number;
   max?: number;
   pattern?: RegExp;
-  enum?: any[];
-  custom?: (value: any, row: any) => boolean | string;
+  enum?: (string | number | boolean)[];
+  custom?: (value: unknown, row: Record<string, unknown>) => boolean | string;
 }
 
 // =============================================================================
@@ -59,7 +60,7 @@ export interface ValidationRule {
  * Validate row against rules
  */
 export function validateRow(
-  row: Record<string, any>,
+  row: Record<string, unknown>,
   rules: ValidationRule[]
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -89,22 +90,22 @@ export function validateRow(
           }
           break;
         case 'boolean':
-          if (!['true', 'false', '1', '0', true, false].includes(value)) {
+          if (!['true', 'false', '1', '0', true, false].includes(value as string | boolean)) {
             errors.push(`${rule.field} must be a boolean`);
           }
           break;
         case 'date':
-          if (isNaN(Date.parse(value))) {
+          if (isNaN(Date.parse(String(value)))) {
             errors.push(`${rule.field} must be a valid date`);
           }
           break;
         case 'email':
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value))) {
             errors.push(`${rule.field} must be a valid email`);
           }
           break;
         case 'phone':
-          if (!/^[+]?[\d\s-()]{10,}$/.test(value)) {
+          if (!/^[+]?[\d\s-()]{10,}$/.test(String(value))) {
             errors.push(`${rule.field} must be a valid phone number`);
           }
           break;
@@ -133,7 +134,7 @@ export function validateRow(
     }
 
     // Enum
-    if (rule.enum && !rule.enum.includes(value)) {
+    if (rule.enum && !rule.enum.includes(value as string | number | boolean)) {
       errors.push(`${rule.field} must be one of: ${rule.enum.join(', ')}`);
     }
 
@@ -159,7 +160,7 @@ export function validateRow(
 export function parseCSV(
   content: string | Buffer,
   options: { delimiter?: string; skipHeader?: boolean; columns?: boolean | string[] } = {}
-): any[] {
+): (Record<string, string> | string[])[] {
   const { delimiter = ',', skipHeader = false, columns = true } = options;
 
   const text: string = typeof content === 'string' ? content : content.toString('utf-8');
@@ -171,7 +172,7 @@ export function parseCSV(
   const headerLine = columns === true ? lines[0] : null;
   const headers = Array.isArray(columns) ? columns : headerLine?.split(delimiter).map(h => h.trim().replace(/^"|"$/g, '')) || [];
 
-  const records: any[] = [];
+  const records: (Record<string, string> | string[])[] = [];
   const dataStartLine = columns === true ? 1 : startLine;
 
   for (let i = dataStartLine; i < lines.length; i++) {
@@ -232,7 +233,7 @@ function parseCSVLine(line: string, delimiter: string): string[] {
  * Generate CSV content
  */
 export function generateCSV(
-  data: any[],
+  data: Record<string, unknown>[],
   options: { headers?: string[]; delimiter?: string } = {}
 ): string {
   const { headers, delimiter = ',' } = options;
@@ -268,7 +269,7 @@ export function generateCSV(
 export function parseExcel(
   buffer: Buffer,
   options: { sheet?: string | number; range?: string } = {}
-): any[] {
+): Record<string, unknown>[] {
   const { sheet = 0, range } = options;
   
   const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
@@ -293,8 +294,8 @@ export function parseExcel(
  * Generate Excel file
  */
 export function generateExcel(
-  data: any[] | Record<string, any[]>,
-  options: { 
+  data: Record<string, unknown>[] | Record<string, Record<string, unknown>[]>,
+  options: {
     sheetName?: string;
     headers?: Record<string, string>;
   } = {}
@@ -325,7 +326,7 @@ export function generateExcel(
  */
 export async function streamImport(
   readStream: Readable,
-  processor: (batch: any[]) => Promise<void>,
+  processor: (batch: Record<string, unknown>[]) => Promise<void>,
   options: ImportOptions = {}
 ): Promise<ImportResult> {
   const {
@@ -343,7 +344,7 @@ export async function streamImport(
   let imported = 0;
   let skipped = 0;
   const errors: ImportResult['errors'] = [];
-  let batch: any[] = [];
+  let batch: Record<string, unknown>[] = [];
   let headers: string[] = [];
   let buffer = '';
 
@@ -452,7 +453,7 @@ export async function streamImport(
  * Stream-based export for large datasets
  */
 export async function streamExport(
-  dataGenerator: AsyncGenerator<any[], void, unknown>,
+  dataGenerator: AsyncGenerator<Record<string, unknown>[], void, unknown>,
   writeStream: Writable,
   options: ExportOptions
 ): Promise<{ count: number; duration: number }> {
@@ -672,7 +673,7 @@ export class BatchQueue<T> {
     try {
       await this.processor(batch);
     } catch (error) {
-      console.error('Batch processing error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'processing-optimization', operation: 'batchFlush' });
       // Re-queue on error
       this.queue.unshift(...batch);
     } finally {

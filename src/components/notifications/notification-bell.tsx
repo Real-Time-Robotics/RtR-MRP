@@ -139,6 +139,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
           variant="ghost"
           size="icon"
           className={cn('relative', className)}
+          aria-label="Thông báo"
         >
           {unreadCount > 0 ? (
             <>
@@ -184,6 +185,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     setShowSearch(!showSearch);
                     if (showSearch) setSearchQuery('');
                   }}
+                  aria-label="Tìm kiếm"
                 >
                   <Search className="h-4 w-4" />
                 </Button>
@@ -200,6 +202,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                       variant="ghost"
                       size="icon"
                       className={cn('h-7 w-7', filter !== 'all' && 'bg-muted')}
+                      aria-label="Lọc thông báo"
                     >
                       <Filter className="h-4 w-4" />
                     </Button>
@@ -239,6 +242,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                     size="icon"
                     className="h-7 w-7"
                     onClick={handleMarkAllAsRead}
+                    aria-label="Đánh dấu tất cả đã đọc"
                   >
                     <CheckCheck className="h-4 w-4" />
                   </Button>
@@ -251,6 +255,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
               size="icon"
               className="h-7 w-7"
               onClick={() => setIsOpen(false)}
+              aria-label="Đóng"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -267,6 +272,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-8 text-sm"
+                aria-label="Tìm kiếm thông báo"
                 autoFocus
               />
               {searchQuery && (
@@ -275,6 +281,7 @@ export function NotificationBell({ className }: NotificationBellProps) {
                   size="icon"
                   className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
                   onClick={() => setSearchQuery('')}
+                  aria-label="Xóa tìm kiếm"
                 >
                   <X className="h-3 w-3" />
                 </Button>

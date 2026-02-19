@@ -8,6 +8,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -23,9 +25,13 @@ interface MRPResponse {
 // Get sales orders available for MRP planning
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<MRPResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const fromDate = searchParams.get('fromDate');
     const toDate = searchParams.get('toDate');
@@ -113,4 +119,4 @@ export async function GET(request: NextRequest): Promise<NextResponse<MRPRespons
       { status: 500 }
     );
   }
-}
+});

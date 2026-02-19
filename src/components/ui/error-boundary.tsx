@@ -6,6 +6,7 @@ import { AlertTriangle, RefreshCw, Home, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { clientLogger } from "@/lib/client-logger";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -35,11 +36,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.setState({ errorInfo });
     this.props.onError?.(error, errorInfo);
 
-    // Log to console in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Error caught by ErrorBoundary:", error);
-      console.error("Component stack:", errorInfo.componentStack);
-    }
+    // Log error for observability
+    clientLogger.error("Error caught by ErrorBoundary", error);
+    clientLogger.error("Component stack", errorInfo.componentStack);
   }
 
   handleRetry = (): void => {
@@ -210,7 +209,7 @@ export function useErrorHandler() {
 
   const handleError = React.useCallback((error: Error) => {
     setError(error);
-    console.error("Async error:", error);
+    clientLogger.error("Async error", error);
   }, []);
 
   const clearError = React.useCallback(() => {

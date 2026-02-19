@@ -1,4 +1,5 @@
 // PWA utilities for installation, updates, and service worker management
+import { clientLogger } from '@/lib/client-logger';
 
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -70,7 +71,7 @@ export async function showInstallPrompt(): Promise<boolean> {
     deferredPrompt = null;
     return outcome === "accepted";
   } catch (error) {
-    console.error("Install prompt error:", error);
+    clientLogger.error("Install prompt error", error);
     return false;
   }
 }
@@ -111,7 +112,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     return registration;
   } catch (error) {
-    console.error("Service worker registration failed:", error);
+    clientLogger.error("Service worker registration failed", error);
     return null;
   }
 }
@@ -130,7 +131,7 @@ export async function updateServiceWorker(): Promise<boolean> {
     }
     return false;
   } catch (error) {
-    console.error("Service worker update failed:", error);
+    clientLogger.error("Service worker update failed", error);
     return false;
   }
 }
@@ -197,7 +198,7 @@ export async function sendNotification(
     } as NotificationOptions);
     return true;
   } catch (error) {
-    console.error("Notification error:", error);
+    clientLogger.error("Notification error", error);
     return false;
   }
 }
@@ -235,7 +236,7 @@ export async function getStorageEstimate(): Promise<{
       percentUsed: quota > 0 ? (usage / quota) * 100 : 0,
     };
   } catch (error) {
-    console.error("Storage estimate error:", error);
+    clientLogger.error("Storage estimate error", error);
     return null;
   }
 }
@@ -249,7 +250,7 @@ export async function requestPersistentStorage(): Promise<boolean> {
   try {
     return await navigator.storage.persist();
   } catch (error) {
-    console.error("Persistent storage error:", error);
+    clientLogger.error("Persistent storage error", error);
     return false;
   }
 }
@@ -263,7 +264,7 @@ export async function isPersisted(): Promise<boolean> {
   try {
     return await navigator.storage.persisted();
   } catch (error) {
-    console.error("Persisted check error:", error);
+    clientLogger.error("Persisted check error", error);
     return false;
   }
 }

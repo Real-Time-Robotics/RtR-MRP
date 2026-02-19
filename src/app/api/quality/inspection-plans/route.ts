@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { generateInspectionPlanNumber } from "@/lib/quality/inspection-engine";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for Inspection Characteristic
 const CharacteristicSchema = z.object({
   name: z.string().min(1, "Tên là bắt buộc").max(100),
@@ -36,6 +37,10 @@ const InspectionPlanCreateSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
@@ -79,12 +84,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
 
     const body = await request.json();
 
@@ -169,4 +174,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

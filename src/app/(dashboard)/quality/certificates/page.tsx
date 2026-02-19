@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Certificate {
   id: string;
@@ -51,7 +52,7 @@ export default function CertificatesPage() {
         setCertificates(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
-      console.error("Failed to fetch certificates:", error);
+      clientLogger.error("Failed to fetch certificates:", error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +73,7 @@ export default function CertificatesPage() {
         document.body.removeChild(a);
       }
     } catch (error) {
-      console.error("Failed to download certificate:", error);
+      clientLogger.error("Failed to download certificate:", error);
     }
   };
 

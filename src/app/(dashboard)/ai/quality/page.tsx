@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -113,7 +114,7 @@ export default function AIQualityDashboardPage() {
         setDefectCategories(data.data.topDefectCategories);
       }
     } catch (error) {
-      console.error("Failed to fetch quality data:", error);
+      clientLogger.error("Failed to fetch quality data:", error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +133,7 @@ export default function AIQualityDashboardPage() {
         setBatchAssessment(data.data);
       }
     } catch (error) {
-      console.error("Failed to run batch assessment:", error);
+      clientLogger.error("Failed to run batch assessment:", error);
     } finally {
       setAssessmentLoading(false);
     }

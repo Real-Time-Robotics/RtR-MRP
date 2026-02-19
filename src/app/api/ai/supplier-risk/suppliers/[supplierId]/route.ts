@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import {
   getRiskCalculator,
@@ -14,7 +15,9 @@ import {
   getAISupplierAnalyzer,
   getDependencyAnalyzer,
 } from '@/lib/ai/supplier-risk';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ supplierId: string }>;
 }
@@ -23,12 +26,25 @@ interface RouteParams {
 // GET - Supplier Risk Assessment
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { supplierId } = await params;
+const { supplierId } = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const months = parseInt(searchParams.get('months') || '12');
     const includeScorecard = searchParams.get('includeScorecard') !== 'false';
@@ -51,7 +67,8 @@ export async function GET(
       );
     }
 
-    const response: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: Record<string, any> = {
       success: true,
       data: {
         supplierId: riskAssessment.supplierId,
@@ -184,24 +201,50 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch supplier risk assessment',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Generate AI Insights or Actions
 // =============================================================================
 
-export async function POST(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { supplierId } = await params;
-    const body = await request.json();
+const { supplierId } = await context.params;
+    const bodySchema = z.object({
+      action: z.enum(['ai_insight', 'mitigation_plan', 'report', 'save_assessment']),
+      months: z.number().optional(),
+      reportType: z.enum(['detailed', 'executive', 'quarterly']).optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, months = 12, reportType = 'detailed' } = body;
 
     switch (action) {
@@ -303,9 +346,9 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process supplier risk action',
       },
       { status: 500 }
     );
   }
-}
+});

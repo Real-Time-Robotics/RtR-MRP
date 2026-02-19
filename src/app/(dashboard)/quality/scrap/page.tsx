@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { clientLogger } from '@/lib/client-logger';
 
 interface ScrapInventoryItem {
   id: string;
@@ -97,7 +98,7 @@ export default function ScrapManagementPage() {
       const data = await res.json();
       setInventory(data.inventory || []);
     } catch {
-      console.error("Failed to fetch SCRAP inventory");
+      clientLogger.error("Failed to fetch SCRAP inventory");
     } finally {
       setLoading(false);
     }

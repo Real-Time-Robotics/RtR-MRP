@@ -107,6 +107,7 @@ export function MeasurementInput({
             <button
               onClick={() => removeMeasurement(index)}
               className="ml-1 hover:text-red-600"
+              aria-label="Xóa"
             >
               <X className="h-3 w-3" />
             </button>

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { KPIDefinition, KPIValue, KPICategory } from "@/lib/analytics/types";
+import { clientLogger } from '@/lib/client-logger';
 
 const CATEGORY_LABELS: Record<KPICategory, string> = {
   inventory: "Tồn kho",
@@ -89,7 +90,7 @@ export default function KPIsPage() {
           }
         }
       } catch (error) {
-        console.error("Error fetching KPIs:", error);
+        clientLogger.error("Error fetching KPIs:", error);
       } finally {
         setIsLoading(false);
       }
@@ -121,7 +122,7 @@ export default function KPIsPage() {
         setValues(valueMap);
       }
     } catch (error) {
-      console.error("Error refreshing KPIs:", error);
+      clientLogger.error("Error refreshing KPIs:", error);
     } finally {
       setIsRefreshing(false);
     }

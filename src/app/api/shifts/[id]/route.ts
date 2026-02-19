@@ -1,20 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from '@/lib/logger';
 
-// GET - Get shift by ID with assignments
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+const shiftPutSchema = z.object({
+  code: z.string().optional(),
+  name: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  breakDuration: z.number().min(0).optional(),
+  isActive: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+  color: z.string().optional(),
+  overtimeAfterHours: z.number().positive().optional(),
+  description: z.string().optional(),
+}).passthrough();
 
-    const { id } = await params;
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// GET - Get shift by ID with assignments
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  try {
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -60,24 +71,28 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update shift
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
     const body = await request.json();
+    const parsed = shiftPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
 
     // If setting as default, unset other defaults
-    if (body.isDefault) {
+    if (data.isDefault) {
       await prisma.shift.updateMany({
         where: { isDefault: true, id: { not: id } },
         data: { isDefault: false },
@@ -86,7 +101,7 @@ export async function PUT(
 
     const shift = await prisma.shift.update({
       where: { id },
-      data: body,
+      data,
     });
 
     return NextResponse.json(shift);
@@ -97,20 +112,16 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH - Manage shift assignments
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id: shiftId } = await params;
+  try {
+    const { id: shiftId } = await context.params;
     const body = await request.json();
     const { action, employeeId, date, ...assignmentData } = body;
 
@@ -265,20 +276,16 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Delete shift (soft delete)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     await prisma.shift.update({
       where: { id },
@@ -293,4 +300,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

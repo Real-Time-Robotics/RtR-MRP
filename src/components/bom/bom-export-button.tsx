@@ -75,7 +75,7 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
         'Reference': '',
         'Critical': '',
         'Notes': '',
-      } as any);
+      } as unknown as typeof exportData[number]);
 
       // Create workbook
       const wb = XLSX.utils.book_new();
@@ -190,7 +190,7 @@ export function BOMExportButton({ productSku, productName, bomVersion, lines }: 
 
       // Total
       const totalCost = lines.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitCost || 0), 0);
-      const finalY = (doc as any).lastAutoTable?.finalY || 100;
+      const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || 100;
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');

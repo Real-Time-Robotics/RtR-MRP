@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Package,
   AlertTriangle,
@@ -45,7 +46,11 @@ export function ReorderAlertPanel({
 
   const [selectedParts, setSelectedParts] = useState<Set<string>>(new Set());
   const [creatingPR, setCreatingPR] = useState(false);
-  const [prResult, setPrResult] = useState<any>(null);
+  const [prResult, setPrResult] = useState<{
+    prNumber: string;
+    items?: Array<unknown>;
+    totalValue: number;
+  } | null>(null);
 
   // Toggle part selection
   const toggleSelection = (partId: string) => {
@@ -77,7 +82,7 @@ export function ReorderAlertPanel({
       setPrResult(result);
       setSelectedParts(new Set());
     } catch (err) {
-      console.error('Failed to create PR:', err);
+      clientLogger.error('Failed to create PR', err);
     } finally {
       setCreatingPR(false);
     }
@@ -173,6 +178,7 @@ export function ReorderAlertPanel({
           onClick={refresh}
           className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
           title="Refresh"
+          aria-label="Làm mới"
         >
           <RefreshCw className={cn('h-4 w-4 text-gray-500', loading && 'animate-spin')} />
         </button>
@@ -344,6 +350,7 @@ export function ReorderAlertPanel({
             <button
               onClick={() => setPrResult(null)}
               className="ml-auto text-green-600 hover:text-green-800"
+              aria-label="Đóng"
             >
               <X className="h-4 w-4" />
             </button>

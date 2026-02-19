@@ -10,6 +10,9 @@ import prisma from '../prisma';
 // Mock Prisma
 vi.mock('../prisma', () => ({
   default: {
+    product: {
+      findMany: vi.fn(),
+    },
     bomHeader: {
       findFirst: vi.fn(),
     },
@@ -37,8 +40,11 @@ describe('BOM Engine', () => {
             quantity: 2,
             scrapRate: 0.05,
             unit: 'EA',
+            lineNumber: 1,
             moduleCode: 'FRAME',
             moduleName: 'Frame Assembly',
+            subAssembly: false,
+            phantom: false,
             part: {
               partNumber: 'P001',
               name: 'Component A',
@@ -51,8 +57,11 @@ describe('BOM Engine', () => {
             quantity: 5,
             scrapRate: 0.02,
             unit: 'EA',
+            lineNumber: 2,
             moduleCode: 'ELEC',
             moduleName: 'Electronics',
+            subAssembly: false,
+            phantom: false,
             part: {
               partNumber: 'P002',
               name: 'Component B',
@@ -67,6 +76,7 @@ describe('BOM Engine', () => {
         { partId: 'part-2', _sum: { quantity: 50, reservedQty: 5 } },
       ];
 
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(mockBomHeader);
       (prisma.inventory.groupBy as Mock).mockResolvedValue(mockInventory);
 
@@ -94,12 +104,18 @@ describe('BOM Engine', () => {
       expect(result.summary.shortageCount).toBe(1);
     });
 
-    it('should throw error when no active BOM found', async () => {
+    it('should return empty results when no active BOM found', async () => {
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(null);
+      (prisma.inventory.groupBy as Mock).mockResolvedValue([]);
 
-      await expect(explodeBOM('invalid-product', 10)).rejects.toThrow(
-        'No active BOM found for this product'
-      );
+      const result = await explodeBOM('invalid-product', 10);
+
+      expect(result.results).toHaveLength(0);
+      expect(result.tree).toHaveLength(0);
+      expect(result.modules).toHaveLength(0);
+      expect(result.summary.totalParts).toBe(0);
+      expect(result.summary.canBuild).toBe(10);
     });
 
     it('should handle parts with no inventory', async () => {
@@ -114,8 +130,11 @@ describe('BOM Engine', () => {
             quantity: 5,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 1,
             moduleCode: null,
             moduleName: null,
+            subAssembly: false,
+            phantom: false,
             part: {
               partNumber: 'P003',
               name: 'No Inventory Part',
@@ -125,6 +144,7 @@ describe('BOM Engine', () => {
         ],
       };
 
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(mockBomHeader);
       (prisma.inventory.groupBy as Mock).mockResolvedValue([]);
 
@@ -147,8 +167,11 @@ describe('BOM Engine', () => {
             quantity: 2,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 1,
             moduleCode: null,
             moduleName: null,
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P001', name: 'Part 1', costs: [] },
           },
           {
@@ -157,8 +180,11 @@ describe('BOM Engine', () => {
             quantity: 5,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 2,
             moduleCode: null,
             moduleName: null,
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P002', name: 'Part 2', costs: [] },
           },
         ],
@@ -169,6 +195,7 @@ describe('BOM Engine', () => {
         { partId: 'part-2', _sum: { quantity: 30, reservedQty: 0 } },  // Can make 6 units
       ];
 
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(mockBomHeader);
       (prisma.inventory.groupBy as Mock).mockResolvedValue(mockInventory);
 
@@ -190,8 +217,11 @@ describe('BOM Engine', () => {
             quantity: 1,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 1,
             moduleCode: 'MOD-A',
             moduleName: 'Module A',
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P001', name: 'Part 1', costs: [{ unitCost: 10 }] },
           },
           {
@@ -200,8 +230,11 @@ describe('BOM Engine', () => {
             quantity: 1,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 2,
             moduleCode: 'MOD-A',
             moduleName: 'Module A',
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P002', name: 'Part 2', costs: [{ unitCost: 20 }] },
           },
           {
@@ -210,13 +243,17 @@ describe('BOM Engine', () => {
             quantity: 1,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 3,
             moduleCode: 'MOD-B',
             moduleName: 'Module B',
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P003', name: 'Part 3', costs: [{ unitCost: 15 }] },
           },
         ],
       };
 
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(mockBomHeader);
       (prisma.inventory.groupBy as Mock).mockResolvedValue([]);
 
@@ -245,13 +282,17 @@ describe('BOM Engine', () => {
             quantity: 1,
             scrapRate: 0,
             unit: 'EA',
+            lineNumber: 1,
             moduleCode: null, // No module
             moduleName: null,
+            subAssembly: false,
+            phantom: false,
             part: { partNumber: 'P001', name: 'Part 1', costs: [] },
           },
         ],
       };
 
+      (prisma.product.findMany as Mock).mockResolvedValue([]);
       (prisma.bomHeader.findFirst as Mock).mockResolvedValue(mockBomHeader);
       (prisma.inventory.groupBy as Mock).mockResolvedValue([]);
 

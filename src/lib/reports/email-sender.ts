@@ -1,9 +1,10 @@
 // src/lib/reports/email-sender.ts
 // Report Email Sender - Send scheduled reports via email
-// Note: nodemailer is optional. If not installed, emails will be logged to console.
+// Note: nodemailer is optional. If not installed, emails will be logged instead.
 
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { logger } from '@/lib/logger';
 
 // Types
 interface ReportEmailOptions {
@@ -36,7 +37,7 @@ interface Transporter {
 }
 
 // Nodemailer module (loaded dynamically)
-let nodemailerModule: { createTransport: (config: object) => Transporter } | null = null;
+let nodemailerModule: { createTransport: (config: unknown) => Transporter } | null = null;
 let transporter: Transporter | null = null;
 
 // Try to load nodemailer dynamically (only on server-side)
@@ -45,8 +46,9 @@ async function loadNodemailer(): Promise<boolean> {
   if (nodemailerModule) return true;
 
   try {
-    // Dynamic import to avoid bundling issues
-    nodemailerModule = await eval('import("nodemailer")');
+    // Dynamic import - webpackIgnore prevents bundler from resolving
+    const mod = await import(/* webpackIgnore: true */ 'nodemailer');
+    nodemailerModule = mod.default || mod;
     return true;
   } catch {
     return false;
@@ -66,11 +68,12 @@ async function getTransporter(): Promise<Transporter> {
   const pass = process.env.SMTP_PASS;
 
   if (!hasNodemailer || !user || !pass) {
-    console.warn('[EmailSender] SMTP not configured or nodemailer not installed. Email sending will be simulated.');
+    logger.warn('[EmailSender] SMTP not configured or nodemailer not installed. Email sending will be simulated.', { context: 'email-sender' });
     // Return a mock transporter for development
     return {
       sendMail: async (options: MailOptions) => {
-        console.log('[MOCK EMAIL]', {
+        logger.info('[MOCK EMAIL]', {
+          context: 'email-sender',
           to: options.to,
           subject: options.subject,
           attachments: options.attachments?.map((a) => a.filename),
@@ -204,7 +207,7 @@ export async function sendReportEmail(options: ReportEmailOptions): Promise<{
       messageId: result.messageId,
     };
   } catch (error) {
-    console.error('Failed to send report email:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-sender', operation: 'sendReportEmail' });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -249,7 +252,7 @@ export async function sendTestEmail(to: string): Promise<{
       messageId: result.messageId,
     };
   } catch (error) {
-    console.error('Failed to send test email:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-sender', operation: 'sendTestEmail' });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

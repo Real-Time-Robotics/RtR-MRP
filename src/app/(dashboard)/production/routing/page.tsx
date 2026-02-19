@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Routing {
   id: string;
@@ -54,7 +55,7 @@ export default function RoutingPage() {
         setRoutings(data);
       }
     } catch (error) {
-      console.error("Failed to fetch routings:", error);
+      clientLogger.error("Failed to fetch routings:", error);
     } finally {
       setLoading(false);
     }

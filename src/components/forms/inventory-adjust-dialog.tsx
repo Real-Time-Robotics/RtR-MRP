@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Dialog,
   DialogContent,
@@ -158,7 +159,7 @@ export function InventoryAdjustDialog({
         setParts(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch parts:', error);
+      clientLogger.error('Failed to fetch parts', error);
     }
   };
 
@@ -170,7 +171,7 @@ export function InventoryAdjustDialog({
         setWarehouses(result.data || result || []);
       }
     } catch (error) {
-      console.error('Failed to fetch warehouses:', error);
+      clientLogger.error('Failed to fetch warehouses', error);
     }
   };
 
@@ -242,7 +243,7 @@ export function InventoryAdjustDialog({
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to adjust inventory:', error);
+      clientLogger.error('Failed to adjust inventory', error);
       toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
@@ -286,7 +287,7 @@ export function InventoryAdjustDialog({
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to transfer inventory:', error);
+      clientLogger.error('Failed to transfer inventory', error);
       toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);

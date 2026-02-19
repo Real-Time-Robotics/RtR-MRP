@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for order item
 const OrderItemSchema = z.object({
   productId: z.string().min(1, "Product ID là bắt buộc"),
@@ -22,17 +24,13 @@ const OrderUpdateSchema = z.object({
   status: z.enum(["draft", "pending", "confirmed", "in_production", "partially_shipped", "shipped", "delivered", "cancelled"]).optional(),
 });
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         const order = await prisma.salesOrder.findUnique({
             where: { id },
@@ -68,20 +66,16 @@ export async function GET(
             { status: 500 }
         );
     }
-}
+});
 
 // PUT - Update sales order
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         // Check if order exists
         const existing = await prisma.salesOrder.findUnique({
@@ -126,7 +120,7 @@ export async function PUT(
         }
 
         // Build update data
-        const updateData: any = { ...headerData };
+        const updateData: Prisma.SalesOrderUpdateInput = { ...headerData };
         if (headerData.requiredDate) {
             updateData.requiredDate = new Date(headerData.requiredDate);
         }
@@ -201,7 +195,7 @@ export async function PUT(
         if (validationResult.data.status && validationResult.data.status !== existing.status) {
             auditStatusChange(request, session.user, "SalesOrder", id, existing.status, validationResult.data.status);
         } else {
-            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as any, headerData as any);
+            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
         }
 
         return NextResponse.json(order);
@@ -212,20 +206,16 @@ export async function PUT(
             { status: 500 }
         );
     }
-}
+});
 
 // DELETE - Cancel/Delete sales order
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         const existing = await prisma.salesOrder.findUnique({
             where: { id },
@@ -265,4 +255,4 @@ export async function DELETE(
             { status: 500 }
         );
     }
-}
+});

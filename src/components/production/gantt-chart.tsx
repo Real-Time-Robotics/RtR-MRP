@@ -218,14 +218,14 @@ export function GanttChart({
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => navigate('prev')}>
+          <Button variant="outline" size="icon" onClick={() => navigate('prev')} aria-label="Trước">
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
             <Calendar className="w-4 h-4 mr-2" />
             Hôm nay
           </Button>
-          <Button variant="outline" size="icon" onClick={() => navigate('next')}>
+          <Button variant="outline" size="icon" onClick={() => navigate('next')} aria-label="Sau">
             <ChevronRight className="w-4 h-4" />
           </Button>
           <span className="text-sm text-muted-foreground ml-2">

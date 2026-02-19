@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import type html2canvas from 'html2canvas'
+import { clientLogger } from '@/lib/client-logger'
 
 type Html2Canvas = typeof html2canvas;
 let _html2canvas: Html2Canvas | null = null;
@@ -449,7 +450,7 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Copy failed'
       setError(message)
-      console.error('Clipboard copy error:', err)
+      clientLogger.error('Clipboard copy error', err)
       return false
     }
   }, [result])

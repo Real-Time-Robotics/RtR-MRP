@@ -1,12 +1,21 @@
 import prisma from '../prisma';
 import { MrpJobData } from '../queue/mrp.queue';
+import { logger } from '@/lib/logger';
 
 interface NettingResult {
     partId: string;
     grossReq: number;
     netReq: number;
     plannedOrderRelease: Date;
-    suggestions: any[]; // Typed appropriately in real code
+    suggestions: Array<{ type: string; partId: string; quantity: number; dueDate: Date; message: string }>;
+}
+
+/** Shape of a Part row returned by our specific select query (with planning + inventory) */
+interface MrpPartRow {
+    id: string;
+    partNumber: string;
+    planning: { leadTimeDays: number; safetyStock: number; orderMultiple: number; minStockLevel: number } | null;
+    inventory: Array<{ quantity: number; reservedQty: number; warehouseId: string }>;
 }
 
 export class MrpEngine {
@@ -24,15 +33,13 @@ export class MrpEngine {
         // For 10k parts, this is manageable. Optimization: Select only needed fields.
 
         // Fetch parts with planning data
-        const parts = await prisma.part.findMany({
+        const parts: MrpPartRow[] = await (prisma.part.findMany as Function)({
             select: {
                 id: true,
                 partNumber: true,
-                // @ts-ignore
                 planning: {
                     select: { leadTimeDays: true, safetyStock: true, orderMultiple: true, minStockLevel: true }
                 },
-                // @ts-ignore
                 inventory: {
                     select: { quantity: true, reservedQty: true, warehouseId: true }
                 }
@@ -40,7 +47,7 @@ export class MrpEngine {
         });
 
         // Create helper map for quick part lookup
-        const partMap = new Map(parts.map(p => [p.id, p]));
+        const partMap = new Map<string, MrpPartRow>(parts.map(p => [p.id, p]));
 
         // Fetch all BOMs to build the graph
         const boms = await prisma.bomHeader.findMany({
@@ -87,7 +94,6 @@ export class MrpEngine {
                     },
                 });
                 skuToPartId.set(product.sku, newPart.id);
-                // @ts-ignore
                 partMap.set(newPart.id, { id: newPart.id, partNumber: newPart.partNumber, planning: null, inventory: [] });
             }
         }
@@ -136,7 +142,7 @@ export class MrpEngine {
                 }
             }
         }
-        if (loops >= 100) console.warn("Possible BOM Cycle detected!");
+        if (loops >= 100) logger.warn("Possible BOM Cycle detected!", { context: 'mrp-core' });
 
         // 4. Organize Parts by Level
         const partsByLevel = new Map<number, string[]>();
@@ -175,7 +181,17 @@ export class MrpEngine {
             }
         }
 
-        const suggestionsToCreate: any[] = [];
+        interface MrpSuggestionInput {
+            mrpRunId: string;
+            partId: string;
+            actionType: string;
+            status: string;
+            priority: string;
+            suggestedQty: number;
+            suggestedDate: Date;
+            reason: string;
+        }
+        const suggestionsToCreate: MrpSuggestionInput[] = [];
         const mrpRunDate = new Date();
 
         // --- MAIN CALCULATION LOOP ---
@@ -194,12 +210,9 @@ export class MrpEngine {
 
                 // Calculate Inventory
                 // Sum all warehouses for now
-                // @ts-ignore
-                const totalStock = part.inventory.reduce((sum, inv) => sum + inv.quantity - inv.reservedQty, 0);
+                const totalStock = part.inventory.reduce((sum: number, inv: { quantity: number; reservedQty: number }) => sum + inv.quantity - inv.reservedQty, 0);
 
-                // @ts-ignore
                 const safetyStock = part.planning?.safetyStock || 0;
-                // @ts-ignore
                 const leadTime = part.planning?.leadTimeDays || 0;
 
                 const netRequired = Math.max(0, (totalGross + safetyStock) - totalStock);

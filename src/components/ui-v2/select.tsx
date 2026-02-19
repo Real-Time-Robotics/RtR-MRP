@@ -355,6 +355,7 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={searchPlaceholder}
+                      aria-label={searchPlaceholder}
                       className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       onClick={(e) => e.stopPropagation()}
                     />

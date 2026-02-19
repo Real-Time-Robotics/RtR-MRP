@@ -4,10 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { workflowEngine } from '@/lib/workflow';
 import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 interface BulkApprovalItem {
   instanceId: string;
   decision: 'approve' | 'reject';
@@ -22,15 +24,30 @@ interface BulkApprovalResult {
 }
 
 // POST /api/workflows/approvals/bulk - Submit bulk approval decisions
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
-    const { approvals, approverId } = body as {
+  try {
+    const bodySchema = z.object({
+      approvals: z.array(z.object({
+        instanceId: z.string(),
+        decision: z.enum(['approve', 'reject']),
+        comments: z.string().optional(),
+      })),
+      approverId: z.string(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { approvals, approverId } = parseResult.data as {
       approvals: BulkApprovalItem[];
       approverId: string;
     };
@@ -115,7 +132,7 @@ export async function POST(request: NextRequest) {
         results.push({
           instanceId: approval.instanceId,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: 'Failed to process approval',
         });
       }
     }
@@ -136,4 +153,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

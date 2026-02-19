@@ -5,13 +5,16 @@ import {
   getBackwardTraceability,
   getLotSummary,
 } from "@/lib/quality/traceability-engine";
+import { withAuth } from '@/lib/api/with-auth';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ lotNumber: string }> }
-) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { lotNumber } = await params;
+    const { lotNumber } = await context.params;
     const { searchParams } = new URL(request.url);
     const direction = searchParams.get("direction") || "forward";
 
@@ -39,4 +42,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

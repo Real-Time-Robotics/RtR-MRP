@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Columns,
   Trash2,
@@ -121,7 +122,7 @@ export function SavedMappings({ onSelectMapping, targetType }: SavedMappingsProp
 
       onSelectMapping?.(mapping);
     } catch (err) {
-      console.error('Failed to update mapping usage:', err);
+      clientLogger.error('Failed to update mapping usage', err);
       onSelectMapping?.(mapping);
     }
   };
@@ -212,6 +213,7 @@ export function SavedMappings({ onSelectMapping, targetType }: SavedMappingsProp
                     size="icon"
                     className="text-muted-foreground hover:text-red-600"
                     disabled={deletingId === mapping.id}
+                    aria-label="Xóa"
                   >
                     {deletingId === mapping.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />

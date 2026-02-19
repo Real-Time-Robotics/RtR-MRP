@@ -29,16 +29,79 @@ import {
 } from '@/components/ui/tooltip';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
-import { DeletePartDialog, Part } from '@/components/forms/part-form';
-import { PartFormDialog } from '@/components/parts/part-form-dialog';
+import { Part } from '@/components/forms/part-form';
+import dynamic from 'next/dynamic';
+
+const PartFormDialog = dynamic(
+  () => import('@/components/parts/part-form-dialog').then(m => ({ default: m.PartFormDialog })),
+  { ssr: false, loading: () => null }
+);
+const DeletePartDialog = dynamic(
+  () => import('@/components/forms/part-form').then(m => ({ default: m.DeletePartDialog })),
+  { ssr: false, loading: () => null }
+);
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ImportWizard } from '@/components/excel/import-wizard';
 import { useDataExport } from '@/hooks/use-data-export';
+
+// Lazy-load ImportWizard (~858 lines, imports xlsx library) - only needed when import dialog opens
+const ImportWizard = dynamic(
+  () => import('@/components/excel/import-wizard').then(mod => mod.ImportWizard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+/** Raw part data from API with nested relations */
+interface PartApiResponse extends Partial<Part> {
+  id: string;
+  partNumber: string;
+  name: string;
+  category: string;
+  unit: string;
+  costs?: { unitCost?: number };
+  planning?: {
+    makeOrBuy?: string;
+    leadTimeDays?: number;
+    moq?: number;
+    orderMultiple?: number;
+    minStockLevel?: number;
+    reorderPoint?: number;
+    safetyStock?: number;
+    maxStock?: number | null;
+  };
+  specs?: {
+    weightKg?: number | null;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    heightMm?: number | null;
+    material?: string;
+    color?: string;
+    manufacturer?: string;
+    manufacturerPn?: string;
+    drawingNumber?: string;
+  };
+  compliance?: {
+    countryOfOrigin?: string;
+    ndaaCompliant?: boolean;
+    itarControlled?: boolean;
+    rohsCompliant?: boolean;
+    reachCompliant?: boolean;
+  };
+  partSuppliers?: Array<{
+    isPreferred?: boolean;
+    supplier?: { name?: string };
+  }>;
+}
 
 // =============================================================================
 // CONSTANTS
@@ -193,10 +256,18 @@ export function PartsTable() {
   });
 
   // Transform: flatten nested relations (planning, costs, specs, compliance) for display
-  const transformParts = useCallback((raw: any): Part[] => {
-    const partsArray = Array.isArray(raw.data) ? raw.data : (raw.data || []);
-    return partsArray.map((p: any) => ({
-      ...p,
+  const transformParts = useCallback((raw: { data?: PartApiResponse[] | { data?: PartApiResponse[] } }): Part[] => {
+    const rawData = raw.data;
+    const partsArray = Array.isArray(rawData) ? rawData : ((rawData as { data?: PartApiResponse[] })?.data || []);
+    return partsArray.map((p: PartApiResponse): Part => ({
+      id: p.id,
+      partNumber: p.partNumber,
+      name: p.name,
+      description: p.description ?? null,
+      category: p.category,
+      unit: p.unit,
+      revision: p.revision ?? 'A',
+      revisionDate: p.revisionDate ?? null,
       unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
       isCritical: p.isCritical ?? false,
       makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
@@ -346,12 +417,12 @@ export function PartsTable() {
     }
 
     // Flatten nested relations (planning, costs, specs, compliance, suppliers) for export
-    const flattenedParts = parts.map((p: any) => {
+    const flattenedParts = parts.map((p: Part & Partial<PartApiResponse>) => {
       // Get primary and secondary suppliers
-      const primarySupplier = p.partSuppliers?.find((ps: any) => ps.isPreferred)?.supplier;
+      const primarySupplier = p.partSuppliers?.find((ps) => ps.isPreferred)?.supplier;
       const secondarySuppliers = p.partSuppliers
-        ?.filter((ps: any) => !ps.isPreferred)
-        ?.map((ps: any) => ps.supplier?.name)
+        ?.filter((ps) => !ps.isPreferred)
+        ?.map((ps) => ps.supplier?.name)
         ?.filter(Boolean)
         ?.join(', ') || '';
 
@@ -526,7 +597,7 @@ export function PartsTable() {
       header: t('parts.dimensions'),
       width: '140px',
       hidden: true,
-      render: (_, row: any) => formatDimensions(row.lengthMm, row.widthMm, row.heightMm),
+      render: (_, row) => formatDimensions(row.lengthMm ?? null, row.widthMm ?? null, row.heightMm ?? null),
     },
     {
       key: 'material',

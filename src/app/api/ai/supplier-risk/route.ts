@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import {
   getRiskCalculator,
@@ -12,14 +13,32 @@ import {
   getDependencyAnalyzer,
   getSupplierPerformanceScorer,
 } from '@/lib/ai/supplier-risk';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // GET - Supply Chain Risk Dashboard
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const months = parseInt(searchParams.get('months') || '12');
     const includeAlerts = searchParams.get('includeAlerts') !== 'false';
     const includeDependencies = searchParams.get('includeDependencies') !== 'false';
@@ -92,20 +111,49 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch supply chain risk data',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Run Risk Analysis
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const body = await request.json();
+const bodySchema = z.object({
+      action: z.enum(['batch_assess', 'scenarios', 'supply_chain']),
+      supplierIds: z.array(z.string()).optional(),
+      months: z.number().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, supplierIds, months = 12 } = body;
 
     const riskCalculator = getRiskCalculator();
@@ -186,9 +234,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to run risk analysis',
       },
       { status: 500 }
     );
   }
-}
+});

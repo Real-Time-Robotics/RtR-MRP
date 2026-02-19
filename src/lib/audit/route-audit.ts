@@ -3,6 +3,7 @@
 
 import { NextRequest } from "next/server";
 import { createAuditMiddleware, type AuditContext } from "@/lib/compliance/audit-trail";
+import { logger } from '@/lib/logger';
 
 /**
  * Extract audit context from session and request headers
@@ -65,7 +66,7 @@ export function auditCreate(
 ): void {
   const ctx = getAuditContext(request, user);
   const audit = createAuditMiddleware(ctx);
-  audit.logCreate(entityType, entityId, data).catch(console.error);
+  audit.logCreate(entityType, entityId, data).catch((err: unknown) => logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'route-audit' }));
 }
 
 /**
@@ -85,7 +86,7 @@ export function auditUpdate(
 
   const ctx = getAuditContext(request, user);
   const audit = createAuditMiddleware(ctx);
-  audit.logUpdate(entityType, entityId, changes).catch(console.error);
+  audit.logUpdate(entityType, entityId, changes).catch((err: unknown) => logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'route-audit' }));
 }
 
 /**
@@ -100,7 +101,7 @@ export function auditDelete(
 ): void {
   const ctx = getAuditContext(request, user);
   const audit = createAuditMiddleware(ctx);
-  audit.logDelete(entityType, entityId, previousData).catch(console.error);
+  audit.logDelete(entityType, entityId, previousData).catch((err: unknown) => logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'route-audit' }));
 }
 
 /**
@@ -118,5 +119,5 @@ export function auditStatusChange(
   const audit = createAuditMiddleware(ctx);
   audit.logUpdate(entityType, entityId, [
     { field: "status", oldValue: oldStatus, newValue: newStatus },
-  ]).catch(console.error);
+  ]).catch((err: unknown) => logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'route-audit' }));
 }

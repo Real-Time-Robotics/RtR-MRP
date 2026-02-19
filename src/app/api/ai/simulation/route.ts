@@ -4,8 +4,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import prisma from '@/lib/prisma';
 import {
   getScenarioBuilder,
@@ -18,24 +19,57 @@ import {
   Scenario,
 } from '@/lib/ai/simulation';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const simulationBodySchema = z.object({
+  scenarioId: z.string().optional(),
+  scenarioConfig: z.object({
+    name: z.string(),
+    type: z.string(),
+    config: z.any(),
+    description: z.string().optional(),
+    horizonDays: z.number().optional(),
+  }).optional(),
+  runMonteCarlo: z.boolean().optional(),
+  monteCarloConfig: z.any().optional(),
+  generateAIInsight: z.boolean().optional(),
+});
 // In-memory cache for simulation results (in production, use Redis)
 const simulationCache = new Map<string, any>();
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = simulationBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       scenarioId,
       scenarioConfig,
       runMonteCarlo = false,
       monteCarloConfig,
       generateAIInsight = true,
-    } = body;
+    } = parseResult.data;
 
     const builder = getScenarioBuilder();
     const engine = getSimulationEngine();
@@ -137,16 +171,27 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     const includeTemplates = searchParams.get('templates') === 'true';
 
@@ -188,4 +233,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

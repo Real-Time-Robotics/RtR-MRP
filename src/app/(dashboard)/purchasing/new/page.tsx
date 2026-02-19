@@ -24,8 +24,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
 import { format } from "date-fns";
+import { z } from "zod";
+import { clientLogger } from '@/lib/client-logger';
+
+const poFormSchema = z.object({
+  poNumber: z.string().min(1, "Số PO là bắt buộc"),
+  supplierId: z.string().min(1, "Vui lòng chọn nhà cung cấp"),
+  orderDate: z.string().min(1, "Ngày đặt là bắt buộc"),
+  expectedDate: z.string().min(1, "Ngày dự kiến nhận là bắt buộc"),
+  status: z.string().min(1),
+  currency: z.string().min(1),
+});
 
 interface Supplier {
   id: string;
@@ -73,6 +85,7 @@ export default function NewPurchaseOrderPage() {
     notes: "",
   });
   const [lines, setLines] = useState<POLine[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchSuppliers();
@@ -87,7 +100,7 @@ export default function NewPurchaseOrderPage() {
         setSuppliers(result.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch suppliers:", error);
+      clientLogger.error("Failed to fetch suppliers:", error);
     }
   };
 
@@ -99,7 +112,7 @@ export default function NewPurchaseOrderPage() {
         setParts(result.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -134,10 +147,26 @@ export default function NewPurchaseOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.supplierId) {
-      alert("Vui lòng chọn nhà cung cấp");
+    const result = poFormSchema.safeParse({
+      poNumber: formData.poNumber,
+      supplierId: formData.supplierId,
+      orderDate: formData.orderDate,
+      expectedDate: formData.expectedDate,
+      status: formData.status,
+      currency: formData.currency,
+    });
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (!errors[key]) {
+          errors[key] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setLoading(true);
 
@@ -158,11 +187,11 @@ export default function NewPurchaseOrderPage() {
         router.push(`/purchasing/${order.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || error.message || "Không thể tạo PO");
+        toast.error(error.error || error.message || "Không thể tạo PO");
       }
     } catch (error) {
-      console.error("Failed to create PO:", error);
-      alert("Không thể tạo PO");
+      clientLogger.error("Failed to create PO:", error);
+      toast.error("Không thể tạo PO");
     } finally {
       setLoading(false);
     }
@@ -196,6 +225,9 @@ export default function NewPurchaseOrderPage() {
                     placeholder="PO-001"
                     required
                   />
+                  {fieldErrors.poNumber && (
+                    <p className="text-sm text-red-500">{fieldErrors.poNumber}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -217,6 +249,9 @@ export default function NewPurchaseOrderPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {fieldErrors.supplierId && (
+                    <p className="text-sm text-red-500">{fieldErrors.supplierId}</p>
+                  )}
                 </div>
               </div>
 
@@ -232,6 +267,9 @@ export default function NewPurchaseOrderPage() {
                     }
                     required
                   />
+                  {fieldErrors.orderDate && (
+                    <p className="text-sm text-red-500">{fieldErrors.orderDate}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -245,6 +283,9 @@ export default function NewPurchaseOrderPage() {
                     }
                     required
                   />
+                  {fieldErrors.expectedDate && (
+                    <p className="text-sm text-red-500">{fieldErrors.expectedDate}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -374,6 +415,7 @@ export default function NewPurchaseOrderPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeLine(index)}
+                            aria-label="Xóa dòng"
                           >
                             <Trash2 className="h-4 w-4 text-danger-500" />
                           </Button>

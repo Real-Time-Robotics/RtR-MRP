@@ -750,7 +750,7 @@ export class SupplierPerformanceScorer {
     currentScore: number
   ): Promise<BenchmarkComparison> {
     // Get all suppliers in same category
-    const whereClause: any = { status: 'active' };
+    const whereClause: Record<string, unknown> = { status: 'active' };
     if (category) {
       whereClause.category = category;
     }
@@ -867,7 +867,7 @@ export class SupplierPerformanceScorer {
     category?: string,
     limit: number = 20
   ): Promise<SupplierRanking[]> {
-    const whereClause: any = { status: 'active' };
+    const whereClause: Record<string, unknown> = { status: 'active' };
     if (category) {
       whereClause.category = category;
     }

@@ -54,13 +54,32 @@ import {
   Info,
   Calendar,
 } from 'lucide-react';
-import {
-  ApprovalQueue,
-  BulkApprovalModal,
-  POSuggestion,
-  ConfidenceIndicator,
-} from '@/components/ai/auto-po';
+import type { POSuggestion } from '@/components/ai/auto-po';
+import dynamic from 'next/dynamic';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load heavy auto-PO AI components (~1100 lines total)
+const ApprovalQueue = dynamic(
+  () => import('@/components/ai/auto-po/approval-queue').then(mod => mod.ApprovalQueue),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-64 rounded-lg" />,
+  }
+);
+
+const BulkApprovalModal = dynamic(
+  () => import('@/components/ai/auto-po/bulk-approval-modal').then(mod => mod.BulkApprovalModal),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
+
+const ConfidenceIndicator = dynamic(
+  () => import('@/components/ai/auto-po/confidence-indicator').then(mod => mod.ConfidenceIndicator),
+  { ssr: false, loading: () => <div className="animate-pulse bg-muted h-4 w-12 rounded" /> }
+);
 
 // Types
 interface QueueStats {
@@ -161,7 +180,7 @@ export default function AutoPOPage() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch queue data:', error);
+      clientLogger.error('Failed to fetch queue data:', error);
       toast({
         title: 'Lỗi',
         description: 'Không thể tải dữ liệu hàng đợi',
@@ -184,7 +203,7 @@ export default function AutoPOPage() {
         setHistory(data.items || []);
       }
     } catch (error) {
-      console.error('Failed to fetch history:', error);
+      clientLogger.error('Failed to fetch history:', error);
     }
   }, [historyFilter, historyPage]);
 

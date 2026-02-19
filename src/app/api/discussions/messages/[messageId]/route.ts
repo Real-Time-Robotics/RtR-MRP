@@ -5,32 +5,38 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { broadcastMessageUpdate, broadcastMessageDelete } from '@/lib/socket/emit';
+
+const messagePatchSchema = z.object({
+  content: z.string().min(1, 'Nội dung tin nhắn không được để trống'),
+  reason: z.string().optional(),
+});
 import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 interface RouteContext {
   params: Promise<{ messageId: string }>;
 }
 
-export async function PATCH(request: NextRequest, context: RouteContext) {
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { messageId } = await context.params;
+const { messageId } = await context.params;
     const body = await request.json();
-    const { content, reason } = body;
-
-    if (!content?.trim()) {
+    const parsed = messagePatchSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Content is required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { content, reason } = parsed.data;
 
     // Get current message
     const existingMessage = await prisma.message.findUnique({
@@ -124,16 +130,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { messageId } = await context.params;
+const { messageId } = await context.params;
 
     // Get message
     const message = await prisma.message.findUnique({
@@ -173,4 +178,4 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

@@ -2,7 +2,7 @@
 // Backup Schedule API - Manage backup schedule settings
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getBackupSchedule,
   updateBackupSchedule,
@@ -10,6 +10,7 @@ import {
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema
 const updateScheduleSchema = z.object({
   enabled: z.boolean().optional(),
@@ -19,14 +20,13 @@ const updateScheduleSchema = z.object({
 });
 
 // GET /api/backup/schedule - Get backup schedule settings
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    // Check admin permission
+  try {
+// Check admin permission
     if (session.user.role !== 'admin' && session.user.role !== 'manager') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -44,17 +44,16 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/backup/schedule - Update backup schedule settings
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    // Check admin permission
+  try {
+// Check admin permission
     if (session.user.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -83,4 +82,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -16,6 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { QueryFilter } from "@/lib/analytics/types";
 
+type FilterOperator = QueryFilter['operator'];
+
 export interface FilterField {
   key: string;
   label: string;
@@ -81,7 +83,7 @@ export function FilterBuilder({
       ...filters,
       {
         field: firstField.key,
-        operator: "eq" as any,
+        operator: "eq" satisfies FilterOperator,
         value: "",
       },
     ]);
@@ -304,7 +306,7 @@ export function FilterBuilder({
                 const newOperators = getOperators(v);
                 updateFilter(index, {
                   field: v,
-                  operator: newOperators[0].value as any,
+                  operator: newOperators[0].value as FilterOperator,
                   value: newField?.type === "boolean" ? false : "",
                 });
               }}
@@ -324,7 +326,7 @@ export function FilterBuilder({
             {/* Operator selector */}
             <Select
               value={filter.operator}
-              onValueChange={(v) => updateFilter(index, { operator: v as any })}
+              onValueChange={(v) => updateFilter(index, { operator: v as FilterOperator })}
             >
               <SelectTrigger className="w-[130px]">
                 <SelectValue />
@@ -347,6 +349,7 @@ export function FilterBuilder({
               size="icon"
               className="h-8 w-8"
               onClick={() => removeFilter(index)}
+              aria-label="Xóa bộ lọc"
             >
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>

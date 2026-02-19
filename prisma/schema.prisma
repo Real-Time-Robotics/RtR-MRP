@@ -17,12 +17,12 @@ enum ManufacturingStrategy {
 enum PickingStrategy {
   FIFO // First In First Out (by createdAt)
   FEFO // First Expiry First Out (by expiryDate)
-  ANY  // No preference (current behavior)
+  ANY // No preference (current behavior)
 }
 
 enum WorkOrderType {
   DISCRETE // One product at a time
-  BATCH    // Batch processing
+  BATCH // Batch processing
 }
 
 // ============ ENUMS (Parts Enhancement v2.0) ============
@@ -92,7 +92,7 @@ model Supplier {
   id            String   @id @default(cuid())
   code          String   @unique
   name          String
-  taxId         String?  // Mã số thuế
+  taxId         String? // Mã số thuế
   country       String
   ndaaCompliant Boolean  @default(true)
   contactName   String?
@@ -117,6 +117,8 @@ model Supplier {
   // Financial relations
   purchaseInvoices PurchaseInvoice[]
 
+  @@index([status])
+  @@index([rating])
   @@map("suppliers")
 }
 
@@ -152,16 +154,16 @@ model Part {
   partType    String?
 
   // === Procurement & Sourcing ===
-  makeOrBuy       MakeOrBuy       @default(BUY)
+  makeOrBuy             MakeOrBuy             @default(BUY)
   procurementType       ProcurementType       @default(STOCK)
   manufacturingStrategy ManufacturingStrategy @default(MTS)
   pickingStrategy       PickingStrategy       @default(ANY)
-  abcClass              String?               // A, B, or C (ABC classification)
-  buyerCode       String?
-  moq             Int             @default(1)
-  orderMultiple   Int             @default(1)
-  standardPack    Int             @default(1)
-  leadTimeDays    Int             @default(14)
+  abcClass              String? // A, B, or C (ABC classification)
+  buyerCode             String?
+  moq                   Int                   @default(1)
+  orderMultiple         Int                   @default(1)
+  standardPack          Int                   @default(1)
+  leadTimeDays          Int                   @default(14)
 
   // === Compliance & Origin (CRITICAL for NDAA) ===
   countryOfOrigin String?
@@ -417,7 +419,7 @@ model PartSupplier {
   qualificationDate   DateTime?
   qualificationExpiry DateTime?
   status              String    @default("active")
-  receivingTolerance  Float?    // Allowed over/under delivery % (e.g. 5.0 = +/-5%)
+  receivingTolerance  Float? // Allowed over/under delivery % (e.g. 5.0 = +/-5%)
   notes               String?
   updatedAt           DateTime  @updatedAt
 
@@ -580,22 +582,24 @@ model Product {
   defaultWorkCenterId String?
   defaultWorkCenter   WorkCenter? @relation("ProductDefaultWorkCenter", fields: [defaultWorkCenterId], references: [id])
 
-  bomHeaders      BomHeader[]
-  salesOrderLines SalesOrderLine[]
-  workOrders      WorkOrder[]
-  forecasts       DemandForecast[]
-  inspectionPlans InspectionPlan[]
-  inspections     Inspection[]
-  ncrs            NCR[]
-  lotTransactions LotTransaction[]
-  certificates    CertificateOfConformance[]
-  routings        Routing[]
+  bomHeaders         BomHeader[]
+  salesOrderLines    SalesOrderLine[]
+  workOrders         WorkOrder[]
+  forecasts          DemandForecast[]
+  inspectionPlans    InspectionPlan[]
+  inspections        Inspection[]
+  ncrs               NCR[]
+  lotTransactions    LotTransaction[]
+  certificates       CertificateOfConformance[]
+  routings           Routing[]
   productionReceipts ProductionReceipt[]
   shipmentLines      ShipmentLine[]
 
   // Financial relations
   salesInvoiceLines SalesInvoiceLine[]
 
+  @@index([status])
+  @@index([defaultWorkCenterId])
   @@map("products")
 }
 
@@ -613,6 +617,9 @@ model BomHeader {
   bomLines BomLine[]
 
   @@unique([productId, version])
+  @@index([productId])
+  @@index([status])
+  @@index([effectiveDate])
   @@map("bom_headers")
 }
 
@@ -684,7 +691,7 @@ model Warehouse {
   code      String   @unique
   name      String
   location  String?
-  type      String?  // RECEIVING, QUARANTINE, MAIN, WIP, FINISHED_GOODS, SHIPPING, HOLD, SCRAP
+  type      String? // RECEIVING, QUARANTINE, MAIN, WIP, FINISHED_GOODS, SHIPPING, HOLD, SCRAP
   status    String   @default("active")
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -749,6 +756,8 @@ model Customer {
   // Financial relations
   salesInvoices SalesInvoice[]
 
+  @@index([status])
+  @@index([type])
   @@map("customers")
 }
 
@@ -804,28 +813,31 @@ model SalesOrderLine {
   product Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([orderId, lineNumber])
+  @@index([orderId])
+  @@index([productId])
+  @@index([status])
   @@map("sales_order_lines")
 }
 
 // ============ SHIPMENTS (Xuất kho & Giao hàng) ============
 model Shipment {
-  id              String    @id @default(cuid())
-  shipmentNumber  String    @unique
-  salesOrderId    String
-  customerId      String
-  status          String    @default("PREPARING") // PREPARING | SHIPPED | DELIVERED
-  carrier         String?
-  trackingNumber  String?
-  shippedAt       DateTime?
-  deliveredAt     DateTime?
-  shippedBy       String?
-  deliveredBy     String?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  shipmentNumber String    @unique
+  salesOrderId   String
+  customerId     String
+  status         String    @default("PREPARING") // PREPARING | SHIPPED | DELIVERED
+  carrier        String?
+  trackingNumber String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  shippedBy      String?
+  deliveredBy    String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  salesOrder SalesOrder   @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  customer   Customer     @relation(fields: [customerId], references: [id])
+  salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  customer   Customer       @relation(fields: [customerId], references: [id])
   lines      ShipmentLine[]
 
   @@index([salesOrderId])
@@ -835,17 +847,19 @@ model Shipment {
 }
 
 model ShipmentLine {
-  id          String @id @default(cuid())
-  shipmentId  String
-  lineNumber  Int
-  productId   String
-  quantity    Int
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  shipmentId String
+  lineNumber Int
+  productId  String
+  quantity   Int
+  createdAt  DateTime @default(now())
 
   shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   product  Product  @relation(fields: [productId], references: [id])
 
   @@unique([shipmentId, lineNumber])
+  @@index([shipmentId])
+  @@index([productId])
   @@map("shipment_lines")
 }
 
@@ -874,6 +888,7 @@ model PurchaseOrder {
   @@index([status])
   @@index([expectedDate])
   @@index([orderDate])
+  @@index([supplierId, orderDate])
   @@map("purchase_orders")
 }
 
@@ -893,6 +908,9 @@ model PurchaseOrderLine {
   part Part          @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   @@unique([poId, lineNumber])
+  @@index([poId])
+  @@index([partId])
+  @@index([status])
   @@map("purchase_order_lines")
 }
 
@@ -967,11 +985,29 @@ model User {
   importMappings ImportMapping[] @relation("ImportMappingUser")
   savedViews     SavedView[]     @relation("SavedViewUser")
 
+  // Password Reset
+  passwordResetTokens PasswordResetToken[]
+
   // Extended notification settings (JSON for flexibility)
   notificationSettings Json?
 
   @@index([tenantId])
   @@map("users")
+}
+
+// ============ PASSWORD RESET TOKENS ============
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 // ============ MRP ============
@@ -992,6 +1028,9 @@ model MrpRun {
 
   suggestions MrpSuggestion[]
 
+  @@index([status])
+  @@index([runDate])
+  @@index([status, runDate])
   @@map("mrp_runs")
 }
 
@@ -1030,29 +1069,29 @@ model MrpSuggestion {
 
 // ============ PRODUCTION ============
 model WorkOrder {
-  id             String    @id @default(cuid())
-  woNumber       String    @unique
-  productId      String
-  salesOrderId   String?
-  salesOrderLine Int?
-  quantity       Int
-  priority       String    @default("normal")
+  id              String        @id @default(cuid())
+  woNumber        String        @unique
+  productId       String
+  salesOrderId    String?
+  salesOrderLine  Int?
+  quantity        Int
+  priority        String        @default("normal")
   status          String        @default("draft")
   woType          WorkOrderType @default(DISCRETE)
   batchSize       Int?
   outputLotNumber String?
   plannedStart    DateTime?
   plannedEnd      DateTime?
-  actualStart    DateTime?
-  actualEnd      DateTime?
-  assignedTo     String?
-  workCenter     String?
-  workCenterId   String?
-  notes          String?
-  completedQty   Int       @default(0)
-  scrapQty       Int       @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  assignedTo      String?
+  workCenter      String?
+  workCenterId    String?
+  notes           String?
+  completedQty    Int           @default(0)
+  scrapQty        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   salesOrder    SalesOrder?          @relation(fields: [salesOrderId], references: [id])
@@ -1078,29 +1117,29 @@ model WorkOrder {
 }
 
 model ProductionReceipt {
-  id              String    @id @default(cuid())
-  receiptNumber   String    @unique
-  workOrderId     String    @unique
-  productId       String
-  partId          String?
-  quantity        Int
-  lotNumber       String
-  warehouseId     String
-  status          String    @default("PENDING") // PENDING | CONFIRMED | REJECTED
-  requestedBy     String
-  requestedAt     DateTime  @default(now())
-  confirmedBy     String?
-  confirmedAt     DateTime?
-  rejectedBy      String?
-  rejectedAt      DateTime?
-  rejectedReason  String?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  receiptNumber  String    @unique
+  workOrderId    String    @unique
+  productId      String
+  partId         String?
+  quantity       Int
+  lotNumber      String
+  warehouseId    String
+  status         String    @default("PENDING") // PENDING | CONFIRMED | REJECTED
+  requestedBy    String
+  requestedAt    DateTime  @default(now())
+  confirmedBy    String?
+  confirmedAt    DateTime?
+  rejectedBy     String?
+  rejectedAt     DateTime?
+  rejectedReason String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  workOrder       WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  product         Product   @relation(fields: [productId], references: [id])
-  warehouse       Warehouse @relation(fields: [warehouseId], references: [id])
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
   @@index([status])
   @@index([warehouseId, status])
@@ -1125,6 +1164,9 @@ model MaterialAllocation {
   part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   @@unique([workOrderId, partId])
+  @@index([workOrderId])
+  @@index([partId])
+  @@index([status])
   @@map("material_allocations")
 }
 
@@ -1168,6 +1210,8 @@ model LeadTimePrediction {
   part     Part?    @relation(fields: [partId], references: [id])
 
   @@unique([supplierId, partId])
+  @@index([supplierId])
+  @@index([partId])
   @@map("lead_time_predictions")
 }
 
@@ -1197,6 +1241,8 @@ model SupplierRiskScore {
 
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
+  @@index([riskLevel])
+  @@index([overallScore])
   @@map("supplier_risk_scores")
 }
 
@@ -1357,15 +1403,15 @@ model SavedReport {
   userId         String
   name           String
   description    String?
-  type           String    // inventory, orders, purchasing, supplier, production, quality, financial, custom
-  category       String?   // Category for grouping reports
+  type           String // inventory, orders, purchasing, supplier, production, quality, financial, custom
+  category       String? // Category for grouping reports
   filters        Json
   columns        Json?
-  visualizations Json?     // Chart/visualization configurations
+  visualizations Json? // Chart/visualization configurations
   isPublic       Boolean   @default(false)
   isFavorite     Boolean   @default(false)
-  schedule       String?   // Deprecated: use ReportSchedule instead
-  recipients     Json?     // Deprecated: use ReportSchedule instead
+  schedule       String? // Deprecated: use ReportSchedule instead
+  recipients     Json? // Deprecated: use ReportSchedule instead
   lastRunAt      DateTime?
   viewCount      Int       @default(0)
   createdAt      DateTime  @default(now())
@@ -1732,6 +1778,8 @@ model InspectionResult {
   characteristic InspectionCharacteristic @relation(fields: [characteristicId], references: [id])
 
   @@unique([inspectionId, characteristicId])
+  @@index([inspectionId])
+  @@index([result])
   @@map("inspection_results")
 }
 
@@ -1995,7 +2043,7 @@ model ScrapDisposal {
   quantity          Int
   unitCost          Float
   totalValue        Float
-  disposalMethod    String   // PHYSICAL_DESTRUCTION, RECYCLING, HAZARDOUS_WASTE, OTHER
+  disposalMethod    String // PHYSICAL_DESTRUCTION, RECYCLING, HAZARDOUS_WASTE, OTHER
   disposalReference String?
   notes             String?
   disposedBy        String
@@ -2059,6 +2107,9 @@ model DefectCode {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  @@index([category])
+  @@index([severity])
+  @@index([isActive])
   @@map("defect_codes")
 }
 
@@ -2660,6 +2711,7 @@ model PasswordPolicy {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([isDefault])
   @@map("password_policies")
 }
 
@@ -2837,6 +2889,8 @@ model CostType {
   partCosts      PartCostComponent[]
   workOrderCosts WorkOrderCost[]
 
+  @@index([category])
+  @@index([isActive])
   @@map("cost_types")
 }
 
@@ -3342,6 +3396,7 @@ model Currency {
 
   exchangeRates ExchangeRate[]
 
+  @@index([isActive])
   @@map("currencies")
 }
 
@@ -3513,6 +3568,8 @@ model LabelTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([labelType])
+  @@index([isActive])
   @@map("label_templates")
 }
 
@@ -4419,6 +4476,7 @@ model Shift {
 
   assignments ShiftAssignment[]
 
+  @@index([isActive])
   @@map("shifts")
 }
 
@@ -5404,7 +5462,7 @@ model AnalyticsDashboard {
   userId       String
   name         String
   description  String?
-  layout       Json      // Grid layout config
+  layout       Json // Grid layout config
   isPublic     Boolean   @default(false)
   isDefault    Boolean   @default(false)
   viewCount    Int       @default(0)
@@ -5424,19 +5482,19 @@ model AnalyticsDashboard {
 model DashboardWidget {
   id              String   @id @default(cuid())
   dashboardId     String
-  widgetType      String   // kpi, chart-line, chart-bar, chart-pie, chart-area, table, gauge
+  widgetType      String // kpi, chart-line, chart-bar, chart-pie, chart-area, table, gauge
   title           String
   titleVi         String?
-  dataSource      String   // inventory, sales, production, quality, financial, supplier
-  metric          String?  // Specific metric to display
-  queryConfig     Json     // filters, aggregations, groupBy
-  displayConfig   Json     // colors, formatters, thresholds
+  dataSource      String // inventory, sales, production, quality, financial, supplier
+  metric          String? // Specific metric to display
+  queryConfig     Json // filters, aggregations, groupBy
+  displayConfig   Json // colors, formatters, thresholds
   gridX           Int      @default(0)
   gridY           Int      @default(0)
   gridW           Int      @default(4)
   gridH           Int      @default(3)
-  refreshInterval Int?     // Auto-refresh in seconds
-  drillDownConfig Json?    // Configuration for drill-down behavior
+  refreshInterval Int? // Auto-refresh in seconds
+  drillDownConfig Json? // Configuration for drill-down behavior
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -5454,16 +5512,16 @@ model KPIDefinition {
   nameVi             String
   description        String?
   descriptionVi      String?
-  category           String   // inventory, sales, production, quality, financial, supplier
-  formula            String   // Formula or calculation method
-  dataSource         String   // Table or view to query
-  aggregation        String   // SUM, AVG, COUNT, MIN, MAX, CUSTOM
-  unit               String?  // %, VND, pcs, days, etc.
+  category           String // inventory, sales, production, quality, financial, supplier
+  formula            String // Formula or calculation method
+  dataSource         String // Table or view to query
+  aggregation        String // SUM, AVG, COUNT, MIN, MAX, CUSTOM
+  unit               String? // %, VND, pcs, days, etc.
   format             String   @default("number") // number, currency, percent, decimal
   precision          Int      @default(2)
-  warningThreshold   Float?   // Threshold for warning state
-  criticalThreshold  Float?   // Threshold for critical state
-  targetValue        Float?   // Target/goal value
+  warningThreshold   Float? // Threshold for warning state
+  criticalThreshold  Float? // Threshold for critical state
+  targetValue        Float? // Target/goal value
   thresholdDirection String   @default("higher_is_better") // higher_is_better, lower_is_better
   trendPeriod        String   @default("month") // day, week, month, quarter, year
   isActive           Boolean  @default(true)
@@ -5482,19 +5540,19 @@ model ReportSchedule {
   id            String    @id @default(cuid())
   reportId      String
   name          String?
-  frequency     String    // daily, weekly, biweekly, monthly, quarterly
-  dayOfWeek     Int?      // 0-6 for weekly reports
-  dayOfMonth    Int?      // 1-31 for monthly reports
-  time          String    // HH:mm format
+  frequency     String // daily, weekly, biweekly, monthly, quarterly
+  dayOfWeek     Int? // 0-6 for weekly reports
+  dayOfMonth    Int? // 1-31 for monthly reports
+  time          String // HH:mm format
   timezone      String    @default("Asia/Ho_Chi_Minh")
-  recipients    Json      // Array of {email, name, type: 'to'|'cc'|'bcc'}
+  recipients    Json // Array of {email, name, type: 'to'|'cc'|'bcc'}
   outputFormat  String    @default("pdf") // pdf, xlsx, csv
-  parameters    Json?     // Report parameters/filters
+  parameters    Json? // Report parameters/filters
   emailSubject  String?
   emailBody     String?
   isActive      Boolean   @default(true)
   lastRunAt     DateTime?
-  lastRunStatus String?   // success, failed, partial
+  lastRunStatus String? // success, failed, partial
   nextRunAt     DateTime?
   runCount      Int       @default(0)
   createdBy     String
@@ -5512,22 +5570,22 @@ model ReportSchedule {
 
 // ============ REPORT INSTANCES ============
 model ReportInstance {
-  id          String    @id @default(cuid())
-  scheduleId  String?
-  reportId    String
-  generatedAt DateTime  @default(now())
-  generatedBy String
-  parameters  Json      // Parameters used for generation
-  format      String    // pdf, xlsx, csv
-  fileUrl     String?   // URL to download the file
-  fileName    String?
-  fileSize    Int?      // Size in bytes
-  status      String    @default("pending") // pending, generating, completed, failed
-  error       String?   // Error message if failed
-  expiresAt   DateTime? // When the file will be deleted
-  downloadCount Int     @default(0)
+  id             String    @id @default(cuid())
+  scheduleId     String?
+  reportId       String
+  generatedAt    DateTime  @default(now())
+  generatedBy    String
+  parameters     Json // Parameters used for generation
+  format         String // pdf, xlsx, csv
+  fileUrl        String? // URL to download the file
+  fileName       String?
+  fileSize       Int? // Size in bytes
+  status         String    @default("pending") // pending, generating, completed, failed
+  error          String? // Error message if failed
+  expiresAt      DateTime? // When the file will be deleted
+  downloadCount  Int       @default(0)
   lastDownloadAt DateTime?
-  recipients  Json?     // Actual recipients the report was sent to
+  recipients     Json? // Actual recipients the report was sent to
   deliveryStatus String? // pending, sent, partial, failed
 
   schedule ReportSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
@@ -5546,10 +5604,10 @@ model DashboardTemplate {
   name        String
   nameVi      String?
   description String?
-  category    String   // executive, operations, quality, finance
-  thumbnail   String?  // Preview image URL
-  layout      Json     // Default layout configuration
-  widgets     Json     // Default widget configurations
+  category    String // executive, operations, quality, finance
+  thumbnail   String? // Preview image URL
+  layout      Json // Default layout configuration
+  widgets     Json // Default widget configurations
   isActive    Boolean  @default(true)
   isDefault   Boolean  @default(false)
   usageCount  Int      @default(0)
@@ -5570,29 +5628,29 @@ model DashboardTemplate {
 
 // Import Session - Track import sessions
 model ImportSession {
-  id            String    @id @default(cuid())
-  fileName      String
-  fileSize      Int
-  fileType      String    // xlsx, csv, xls
-  detectedType  String    // PARTS, BOM, SUPPLIERS, INVENTORY, PURCHASE_ORDERS, UNKNOWN
-  confidence    Float     // 0.0 - 1.0
-  status        String    // ANALYZING, MAPPED, VALIDATING, IMPORTING, COMPLETED, FAILED, ROLLED_BACK
-  totalRows     Int       @default(0)
-  successRows   Int       @default(0)
-  failedRows    Int       @default(0)
-  skippedRows   Int       @default(0)
-  columnMapping Json      // { excelCol: systemField, ... }
-  validationErrors Json?  // Array of { row, col, message }
-  importedBy    String    // userId
-  startedAt     DateTime  @default(now())
-  completedAt   DateTime?
-  rollbackAt    DateTime?
+  id               String    @id @default(cuid())
+  fileName         String
+  fileSize         Int
+  fileType         String // xlsx, csv, xls
+  detectedType     String // PARTS, BOM, SUPPLIERS, INVENTORY, PURCHASE_ORDERS, UNKNOWN
+  confidence       Float // 0.0 - 1.0
+  status           String // ANALYZING, MAPPED, VALIDATING, IMPORTING, COMPLETED, FAILED, ROLLED_BACK
+  totalRows        Int       @default(0)
+  successRows      Int       @default(0)
+  failedRows       Int       @default(0)
+  skippedRows      Int       @default(0)
+  columnMapping    Json // { excelCol: systemField, ... }
+  validationErrors Json? // Array of { row, col, message }
+  importedBy       String // userId
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+  rollbackAt       DateTime?
 
-  logs          ImportLog[]
-  user          User      @relation("ImportSessionUser", fields: [importedBy], references: [id])
+  logs ImportLog[]
+  user User        @relation("ImportSessionUser", fields: [importedBy], references: [id])
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([importedBy])
   @@index([status])
@@ -5603,16 +5661,16 @@ model ImportSession {
 
 // Import Log - Detailed import log entries
 model ImportLog {
-  id          String        @id @default(cuid())
-  sessionId   String
-  session     ImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  rowNumber   Int
-  status      String        // SUCCESS, FAILED, SKIPPED, DUPLICATE, MERGED
-  entityType  String        // Part, Supplier, BOM, etc.
-  entityId    String?       // Created/updated record ID
-  data        Json          // Original row data
-  errors      Json?         // Error details if failed
-  createdAt   DateTime      @default(now())
+  id         String        @id @default(cuid())
+  sessionId  String
+  session    ImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  rowNumber  Int
+  status     String // SUCCESS, FAILED, SKIPPED, DUPLICATE, MERGED
+  entityType String // Part, Supplier, BOM, etc.
+  entityId   String? // Created/updated record ID
+  data       Json // Original row data
+  errors     Json? // Error details if failed
+  createdAt  DateTime      @default(now())
 
   @@index([sessionId])
   @@index([status])
@@ -5622,18 +5680,18 @@ model ImportLog {
 
 // Import Mapping - Saved column mappings for reuse
 model ImportMapping {
-  id           String    @id @default(cuid())
-  name         String    // User-given name: "NCC ABC format"
-  targetType   String    // PARTS, BOM, SUPPLIERS, etc.
-  mapping      Json      // Saved column mapping
-  usageCount   Int       @default(0)
-  lastUsedAt   DateTime?
-  createdBy    String
+  id         String    @id @default(cuid())
+  name       String // User-given name: "NCC ABC format"
+  targetType String // PARTS, BOM, SUPPLIERS, etc.
+  mapping    Json // Saved column mapping
+  usageCount Int       @default(0)
+  lastUsedAt DateTime?
+  createdBy  String
 
-  user         User      @relation("ImportMappingUser", fields: [createdBy], references: [id])
+  user User @relation("ImportMappingUser", fields: [createdBy], references: [id])
 
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([targetType])
   @@index([createdBy])
@@ -5645,18 +5703,18 @@ model ImportMapping {
 
 // Backup - Track database backups
 model Backup {
-  id          String    @id @default(cuid())
-  name        String    // "Auto backup 2026-02-04 07:00"
-  type        String    // AUTO, MANUAL, PRE_UPDATE
-  status      String    // IN_PROGRESS, COMPLETED, FAILED
-  filePath    String?   // Path to backup file
-  fileSize    Int?      // Bytes
-  tables      Int?      // Number of tables backed up
-  records     Int?      // Total records
-  duration    Int?      // Seconds taken
-  error       String?
-  createdBy   String    // userId or "SYSTEM"
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  name      String // "Auto backup 2026-02-04 07:00"
+  type      String // AUTO, MANUAL, PRE_UPDATE
+  status    String // IN_PROGRESS, COMPLETED, FAILED
+  filePath  String? // Path to backup file
+  fileSize  Int? // Bytes
+  tables    Int? // Number of tables backed up
+  records   Int? // Total records
+  duration  Int? // Seconds taken
+  error     String?
+  createdBy String // userId or "SYSTEM"
+  createdAt DateTime @default(now())
 
   @@index([type])
   @@index([status])
@@ -5666,14 +5724,15 @@ model Backup {
 
 // Backup Schedule - Auto-backup configuration
 model BackupSchedule {
-  id          String    @id @default(cuid())
-  enabled     Boolean   @default(true)
-  frequency   String    // DAILY, WEEKLY
-  timeOfDay   String    // "02:00" (run at 2 AM)
-  retention   Int       @default(30) // Keep last N backups
-  updatedBy   String
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  enabled   Boolean  @default(true)
+  frequency String // DAILY, WEEKLY
+  timeOfDay String // "02:00" (run at 2 AM)
+  retention Int      @default(30) // Keep last N backups
+  updatedBy String
+  updatedAt DateTime @updatedAt
 
+  @@index([enabled])
   @@map("backup_schedules")
 }
 
@@ -5681,18 +5740,18 @@ model BackupSchedule {
 
 // Saved View - User-saved filter configurations
 model SavedView {
-  id        String   @id @default(cuid())
-  name      String   // "PO chờ duyệt tháng này"
-  entity    String   // parts, purchase_orders, work_orders, etc.
-  filters   Json     // { status: 'pending', dateRange: [...] }
-  columns   Json?    // Which columns visible + order
+  id        String  @id @default(cuid())
+  name      String // "PO chờ duyệt tháng này"
+  entity    String // parts, purchase_orders, work_orders, etc.
+  filters   Json // { status: 'pending', dateRange: [...] }
+  columns   Json? // Which columns visible + order
   sortBy    String?
-  sortOrder String?  // ASC, DESC
-  isDefault Boolean  @default(false)
-  isShared  Boolean  @default(false) // Visible to all users
+  sortOrder String? // ASC, DESC
+  isDefault Boolean @default(false)
+  isShared  Boolean @default(false) // Visible to all users
   createdBy String
 
-  user      User     @relation("SavedViewUser", fields: [createdBy], references: [id])
+  user User @relation("SavedViewUser", fields: [createdBy], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5707,18 +5766,18 @@ model SavedView {
 
 // Report History - Track generated reports
 model ReportHistory {
-  id           String    @id @default(cuid())
-  scheduleId   String?
-  templateId   String
-  generatedBy  String    // userId or "SYSTEM"
-  format       String    // PDF, EXCEL, BOTH
-  fileUrl      String?   // Stored file path
-  fileSize     Int?
-  recipients   Json?     // Email recipients
-  sentAt       DateTime?
-  status       String    // GENERATED, SENT, FAILED
-  error        String?
-  createdAt    DateTime  @default(now())
+  id          String    @id @default(cuid())
+  scheduleId  String?
+  templateId  String
+  generatedBy String // userId or "SYSTEM"
+  format      String // PDF, EXCEL, BOTH
+  fileUrl     String? // Stored file path
+  fileSize    Int?
+  recipients  Json? // Email recipients
+  sentAt      DateTime?
+  status      String // GENERATED, SENT, FAILED
+  error       String?
+  createdAt   DateTime  @default(now())
 
   @@index([templateId])
   @@index([status])

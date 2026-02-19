@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { clientLogger } from '@/lib/client-logger';
 
 // Database schema
 interface MobileDB extends DBSchema {
@@ -269,7 +270,7 @@ export async function queueOperation(
   
   // Try to sync immediately if online
   if (navigator.onLine) {
-    syncPendingOperations().catch(console.error);
+    syncPendingOperations().catch((err: unknown) => clientLogger.error('Failed to sync pending operations', err));
   }
   
   return id;
@@ -463,7 +464,7 @@ export async function downloadMasterData(): Promise<{ parts: number; locations: 
       locations: locationsMetadata?.recordCount || 0,
     };
   } catch (error) {
-    console.error('Failed to download master data:', error);
+    clientLogger.error('Failed to download master data', error);
     throw error;
   }
 }

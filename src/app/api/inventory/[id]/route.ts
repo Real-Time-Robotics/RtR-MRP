@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { auditUpdate } from "@/lib/audit/route-audit";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 const updateSchema = z.object({
     quantity: z.number().optional(),
     reservedQty: z.number().optional(),
@@ -14,17 +16,13 @@ const updateSchema = z.object({
 });
 
 // GET - Fetch single inventory record with details
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+const { id } = await context.params;
 
         const inventory = await prisma.inventory.findUnique({
             where: { id },
@@ -97,7 +95,7 @@ export async function GET(
             { status: 500 }
         );
     }
-}
+});
 
 // Map locationCode → warehouse type
 const locationToWarehouseType: Record<string, string> = {
@@ -108,17 +106,13 @@ const locationToWarehouseType: Record<string, string> = {
     SCRAP: "SCRAP",
 };
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+const { id } = await context.params;
         const body = await request.json();
         const validatedData = updateSchema.parse(body);
 
@@ -248,7 +242,7 @@ export async function PATCH(
         }
 
         // Non-transfer update (lotNumber, etc.)
-        const updateData: any = {};
+        const updateData: Prisma.InventoryUpdateInput = {};
         if (validatedData.lotNumber !== undefined) updateData.lotNumber = validatedData.lotNumber;
         if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
 
@@ -262,7 +256,7 @@ export async function PATCH(
         });
 
         // Audit trail: log non-transfer update
-        auditUpdate(request, session.user, "Inventory", id, existing as unknown as any, updateData);
+        auditUpdate(request, session.user, "Inventory", id, existing as unknown as Record<string, unknown>, updateData as Record<string, unknown>);
 
         return NextResponse.json(inventory);
     } catch (error) {
@@ -275,4 +269,4 @@ export async function PATCH(
             { status: 500 }
         );
     }
-}
+});

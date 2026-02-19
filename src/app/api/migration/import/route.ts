@@ -5,15 +5,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { DataTransformer } from '@/lib/migration-engine';
+import { DataTransformer, ColumnMapping } from '@/lib/migration-engine';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
 
 const dataTransformer = new DataTransformer();
 
 interface ImportRequest {
   targetTable: string;
-  data: any[];
-  mappings: any[];
+  data: Record<string, unknown>[];
+  mappings: ColumnMapping[];
   options?: {
     skipDuplicates?: boolean;
     updateExisting?: boolean;
@@ -21,9 +24,44 @@ interface ImportRequest {
   };
 }
 
-export async function POST(request: NextRequest) {
+interface ImportError {
+  row: number;
+  field?: string;
+  message?: string;
+  error?: string;
+  data?: Record<string, unknown>;
+}
+
+export const POST = withAuth(async (request: NextRequest, context, session) => {
   try {
-    const body: ImportRequest = await request.json();
+    // Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
+    }
+
+    const bodySchema = z.object({
+      targetTable: z.string(),
+      data: z.array(z.record(z.string(), z.unknown())),
+      mappings: z.array(z.record(z.string(), z.unknown())),
+      options: z.object({
+        skipDuplicates: z.boolean().optional(),
+        updateExisting: z.boolean().optional(),
+        validateOnly: z.boolean().optional(),
+      }).optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { targetTable, data, mappings, options = {} } = body;
 
     if (!targetTable || !data || data.length === 0) {
@@ -37,7 +75,7 @@ export async function POST(request: NextRequest) {
       success: 0,
       failed: 0,
       skipped: 0,
-      errors: [] as any[],
+      errors: [] as ImportError[],
       created: [] as string[],
       updated: [] as string[]
     };
@@ -61,7 +99,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Transform row data
-        const transformedRow = dataTransformer.transformRow(row, mappings, targetTable);
+        const transformedRow = dataTransformer.transformRow(row, mappings as unknown as ColumnMapping[], targetTable);
 
         // Import based on target table
         switch (targetTable) {
@@ -114,16 +152,20 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // IMPORT FUNCTIONS
 // =============================================================================
 
+type ImportOptions = { skipDuplicates?: boolean; updateExisting?: boolean; validateOnly?: boolean };
+type ImportResults = { success: number; failed: number; skipped: number; errors: ImportError[]; created: string[]; updated: string[] };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function importPart(
-  data: any,
-  options: any,
-  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
+  data: Record<string, any>,
+  options: ImportOptions,
+  results: ImportResults
 ) {
   const partNumber = data.partNumber || data.part_number;
 
@@ -290,9 +332,10 @@ async function importPart(
 }
 
 async function importSupplier(
-  data: any,
-  options: any,
-  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: ImportOptions,
+  results: ImportResults
 ) {
   const code = data.supplierCode || data.code;
 
@@ -354,9 +397,10 @@ async function importSupplier(
 }
 
 async function importCustomer(
-  data: any,
-  options: any,
-  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: ImportOptions,
+  results: ImportResults
 ) {
   const code = data.customerCode || data.code;
 
@@ -411,9 +455,10 @@ async function importCustomer(
 }
 
 async function importBOMLine(
-  data: any,
-  options: any,
-  results: { success: number; failed: number; skipped: number; errors: any[]; created: string[]; updated: string[] }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: Record<string, any>,
+  options: ImportOptions,
+  results: ImportResults
 ) {
   const productSku = data.productSku || data.product_sku;
   const partNumber = data.partNumber || data.part_number;
@@ -530,9 +575,10 @@ async function importBOMLine(
 // VALIDATION
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function validateData(
   targetTable: string,
-  data: any[]
+  data: Record<string, any>[]
 ): Promise<Record<string, unknown>[]> {
   const errors = [];
 

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node --project tsconfig.server.json server.ts",
     "dev:next": "next dev",
-    "build": "npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && npx tsx scripts/ensure-warehouses.ts && next build && npx tsc -p tsconfig.server.json",
+    "build": "npx prisma generate && npx prisma migrate deploy && npx tsx scripts/ensure-warehouses.ts && next build && npx tsc -p tsconfig.server.json",
     "start": "NODE_ENV=production node dist/server.js",
     "start:next": "next start",
     "lint": "next lint",
@@ -89,7 +89,6 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
-    "iconoir-react": "^7.11.0",
     "idb": "^8.0.3",
     "ioredis": "^5.8.2",
     "jsbarcode": "^3.12.1",

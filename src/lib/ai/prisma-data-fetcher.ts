@@ -1,9 +1,10 @@
 // =============================================================================
 // PRISMA DATA FETCHER
-// Real database queries for AI Chat - replaces mockDataFetcher
+// Real database queries for AI Chat
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { DataFetcher } from './query-executor';
 
 // =============================================================================
@@ -69,7 +70,7 @@ export const prismaDataFetcher: DataFetcher = {
         totalValue,
       };
     } catch (error) {
-      console.error('[AI] getInventorySummary error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getInventorySummary' });
       return {
         totalItems: 0,
         okCount: 0,
@@ -116,7 +117,7 @@ export const prismaDataFetcher: DataFetcher = {
       const statusOrder: Record<string, number> = { OUT: 0, CRITICAL: 1, LOW: 2, OK: 3 };
       return alerts.sort((a, b) => (statusOrder[a.status] || 3) - (statusOrder[b.status] || 3));
     } catch (error) {
-      console.error('[AI] getInventoryAlerts error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getInventoryAlerts' });
       return [];
     }
   },
@@ -185,7 +186,7 @@ export const prismaDataFetcher: DataFetcher = {
         };
       });
     } catch (error) {
-      console.error('[AI] getInventoryByParts error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getInventoryByParts' });
       return [];
     }
   },
@@ -227,7 +228,7 @@ export const prismaDataFetcher: DataFetcher = {
         growthPercent: 0,
       };
     } catch (error) {
-      console.error('[AI] getOrdersSummary error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getOrdersSummary' });
       return {
         totalOrders: 0,
         pendingCount: 0,
@@ -273,7 +274,7 @@ export const prismaDataFetcher: DataFetcher = {
         })),
       }));
     } catch (error) {
-      console.error('[AI] getOrdersByNumbers error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getOrdersByNumbers' });
       return [];
     }
   },
@@ -307,7 +308,7 @@ export const prismaDataFetcher: DataFetcher = {
         status: o.status,
       }));
     } catch (error) {
-      console.error('[AI] getPendingOrders error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getPendingOrders' });
       return [];
     }
   },
@@ -333,7 +334,7 @@ export const prismaDataFetcher: DataFetcher = {
         requiredDate: o.requiredDate?.toISOString().split('T')[0],
       }));
     } catch (error) {
-      console.error('[AI] getRecentOrders error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getRecentOrders' });
       return [];
     }
   },
@@ -371,7 +372,7 @@ export const prismaDataFetcher: DataFetcher = {
         completedWeek: completedToday * 5,
       };
     } catch (error) {
-      console.error('[AI] getProductionSummary error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getProductionSummary' });
       return {
         efficiency: 0,
         runningCount: 0,
@@ -411,7 +412,7 @@ export const prismaDataFetcher: DataFetcher = {
         scheduledEnd: wo.plannedEnd?.toISOString().split('T')[0],
       }));
     } catch (error) {
-      console.error('[AI] getWorkOrders error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getWorkOrders' });
       return [];
     }
   },
@@ -460,7 +461,7 @@ export const prismaDataFetcher: DataFetcher = {
         suggestions: purchaseSuggestions,
       };
     } catch (error) {
-      console.error('[AI] getMRPResults error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getMRPResults' });
       return { requirements: [], shortages: [], suggestions: [] };
     }
   },
@@ -512,7 +513,7 @@ export const prismaDataFetcher: DataFetcher = {
         };
       });
     } catch (error) {
-      console.error('[AI] getPurchaseSuggestions error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getPurchaseSuggestions' });
       return [];
     }
   },
@@ -546,7 +547,7 @@ export const prismaDataFetcher: DataFetcher = {
         failedToday: Math.ceil(inspections * 0.05),
       };
     } catch (error) {
-      console.error('[AI] getQualitySummary error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getQualitySummary' });
       return {
         passRate: 0,
         openNCRs: 0,
@@ -583,7 +584,7 @@ export const prismaDataFetcher: DataFetcher = {
         createdAt: ncr.createdAt.toISOString().split('T')[0],
       }));
     } catch (error) {
-      console.error('[AI] getOpenNCRs error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getOpenNCRs' });
       return [];
     }
   },
@@ -617,7 +618,7 @@ export const prismaDataFetcher: DataFetcher = {
         quality: await this.getQualitySummary(),
       };
     } catch (error) {
-      console.error('[AI] getAnalytics error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getAnalytics' });
       return {
         revenue: { thisMonth: 0, lastMonth: 0, growth: 0 },
         production: { efficiency: 0, lastMonthEfficiency: 0 },
@@ -663,7 +664,7 @@ export const prismaDataFetcher: DataFetcher = {
         ndaaCompliant: s.ndaaCompliant,
       }));
     } catch (error) {
-      console.error('[AI] getSupplierInfo error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'prisma-data-fetcher', operation: 'getSupplierInfo' });
       return [];
     }
   },

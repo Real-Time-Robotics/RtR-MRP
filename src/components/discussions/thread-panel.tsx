@@ -228,7 +228,7 @@ export function ThreadPanel({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 {/* Larger touch target on mobile */}
-                <Button variant="ghost" size="icon" className="h-9 w-9 md:h-7 md:w-7 touch-manipulation">
+                <Button variant="ghost" size="icon" className="h-9 w-9 md:h-7 md:w-7 touch-manipulation" aria-label="Cài đặt">
                   <Settings className="h-5 w-5 md:h-4 md:w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -265,12 +265,13 @@ export function ThreadPanel({
             size="icon"
             className="h-9 w-9 md:h-7 md:w-7 touch-manipulation"
             onClick={() => setIsMinimized(true)}
+            aria-label="Thu nhỏ"
           >
             <ChevronDown className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
 
           {onClose && (
-            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-7 md:w-7 touch-manipulation" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="h-9 w-9 md:h-7 md:w-7 touch-manipulation" onClick={onClose} aria-label="Đóng">
               <X className="h-5 w-5 md:h-4 md:w-4" />
             </Button>
           )}

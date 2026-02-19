@@ -5,7 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
 
 // =============================================================================
 // MOCK DATA
@@ -149,14 +151,31 @@ function generateMockScheduleResult(algorithm: string, workOrderCount: number): 
 // POST: Generate schedule
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user?.id);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
     }
 
-    const body = await request.json();
+    const bodySchema = z.object({
+      workOrderIds: z.array(z.string()).optional(),
+      algorithm: z.string().optional(),
+      includeAIAnalysis: z.boolean().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const {
       workOrderIds,
       algorithm = 'balanced_load',
@@ -224,7 +243,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 function getAlgorithmName(algorithm: string): string {
   const names: Record<string, string> = {
@@ -242,14 +261,9 @@ function getAlgorithmName(algorithm: string): string {
 // GET: Get schedule status
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const workOrderId = searchParams.get('workOrderId');
 
     // Generate mock work orders
@@ -309,4 +323,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

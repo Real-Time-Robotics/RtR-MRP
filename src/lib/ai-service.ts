@@ -4,6 +4,7 @@
 // =============================================================================
 
 import Anthropic from '@anthropic-ai/sdk';
+import { logger } from '@/lib/logger';
 
 // Types
 export interface AIContext {
@@ -12,8 +13,8 @@ export interface AIContext {
   userId: string;
   userName: string;
   userRole: string;
-  selectedItems?: any[];
-  filters?: Record<string, any>;
+  selectedItems?: Record<string, unknown>[];
+  filters?: Record<string, unknown>;
   recentActions?: string[];
   language: 'en' | 'vi';
 }
@@ -38,7 +39,7 @@ export interface AIAction {
   description: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   requiresApproval: boolean;
-  payload?: any;
+  payload?: Record<string, unknown>;
   endpoint?: string;
 }
 
@@ -493,7 +494,7 @@ Please provide a helpful, accurate, and safe response.`;
       return parsedResponse;
 
     } catch (error) {
-      console.error('AI Service Error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-service' });
       return {
         message: context.language === 'vi'
           ? 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.'

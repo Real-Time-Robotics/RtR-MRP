@@ -1,20 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 
-// GET - Get employee by ID with skills
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+const employeePutSchema = z.object({
+  employeeCode: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  department: z.string().optional(),
+  position: z.string().optional(),
+  status: z.string().optional(),
+  hireDate: z.string().optional(),
+  terminationDate: z.string().optional(),
+  hourlyRate: z.number().min(0).optional(),
+  overtimeRate: z.number().min(0).optional(),
+  maxHoursPerWeek: z.number().int().positive().optional(),
+}).passthrough();
 
-    const { id } = await params;
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// GET - Get employee by ID with skills
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  try {
+const { id } = await context.params;
 
     const employee = await prisma.employee.findUnique({
       where: { id },
@@ -54,28 +68,32 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update employee
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
     const body = await request.json();
+    const parsed = employeePutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
 
     const employee = await prisma.employee.update({
       where: { id },
       data: {
-        ...body,
-        hireDate: body.hireDate ? new Date(body.hireDate) : undefined,
-        terminationDate: body.terminationDate ? new Date(body.terminationDate) : undefined,
+        ...data,
+        hireDate: data.hireDate ? new Date(data.hireDate) : undefined,
+        terminationDate: data.terminationDate ? new Date(data.terminationDate) : undefined,
       },
     });
 
@@ -87,20 +105,16 @@ export async function PUT(
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH - Manage employee skills
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
     const body = await request.json();
     const { action, skillId, ...skillData } = body;
 
@@ -168,20 +182,16 @@ export async function PATCH(
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Delete employee
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
 
     // Soft delete by setting status to terminated
     await prisma.employee.update({
@@ -200,4 +210,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

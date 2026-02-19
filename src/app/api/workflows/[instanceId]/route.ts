@@ -8,12 +8,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { workflowEngine } from '@/lib/workflow';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ instanceId: string }>;
 }
 
 // GET /api/workflows/[instanceId] - Get instance details
 export async function GET(request: NextRequest, { params }: RouteParams) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { instanceId } = await params;
 
@@ -38,6 +43,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/workflows/[instanceId] - Cancel workflow
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { instanceId } = await params;
     const body = await request.json();

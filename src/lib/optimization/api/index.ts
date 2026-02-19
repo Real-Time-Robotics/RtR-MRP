@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // RATE LIMITING
@@ -200,7 +201,7 @@ export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
-  errors?: any[];
+  errors?: z.ZodIssue[];
   meta?: {
     page?: number;
     pageSize?: number;
@@ -311,7 +312,7 @@ export const cacheHeaders = {
 /**
  * Generate ETag from data
  */
-export function generateETag(data: any): string {
+export function generateETag(data: unknown): string {
   const content = JSON.stringify(data);
   // Simple hash without crypto for edge runtime compatibility
   let hash = 0;
@@ -358,7 +359,7 @@ export function conditionalResponse<T>(
 /**
  * Parse and sanitize request body
  */
-export async function parseBody<T = any>(req: NextRequest): Promise<T | null> {
+export async function parseBody<T = unknown>(req: NextRequest): Promise<T | null> {
   try {
     const text = await req.text();
     if (!text) return null;
@@ -415,8 +416,8 @@ export function getSort(
 export interface ApiHandlerOptions {
   rateLimit?: keyof typeof rateLimiters | RateLimitConfig;
   cache?: string;
-  validateBody?: z.ZodSchema<any>;
-  validateQuery?: z.ZodSchema<any>;
+  validateBody?: z.ZodSchema<unknown>;
+  validateQuery?: z.ZodSchema<unknown>;
 }
 
 /**
@@ -425,7 +426,7 @@ export interface ApiHandlerOptions {
 export function withOptimizations(
   handler: (
     req: NextRequest,
-    context: { body?: any; query?: any }
+    context: { body?: unknown; query?: unknown }
   ) => Promise<NextResponse>,
   options: ApiHandlerOptions = {}
 ): (req: NextRequest) => Promise<NextResponse> {
@@ -449,7 +450,7 @@ export function withOptimizations(
       }
       
       // Validate body
-      let body: any;
+      let body: unknown;
       if (options.validateBody && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
         const validation = await validateBody(req, options.validateBody);
         if (!validation.success) {
@@ -459,7 +460,7 @@ export function withOptimizations(
       }
       
       // Validate query
-      let query: any;
+      let query: unknown;
       if (options.validateQuery) {
         const validation = validateQuery(req, options.validateQuery);
         if (!validation.success) {
@@ -483,7 +484,7 @@ export function withOptimizations(
       return response;
       
     } catch (error) {
-      console.error('API Handler Error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'api-optimization', operation: 'apiHandler' });
       return errorResponse(
         error instanceof Error ? error : 'Internal server error',
         500

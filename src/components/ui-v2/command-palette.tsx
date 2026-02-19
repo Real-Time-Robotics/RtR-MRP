@@ -340,11 +340,13 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
+            aria-label={placeholder}
             className="flex-1 bg-transparent text-base text-slate-900 placeholder:text-slate-400 focus:outline-none"
           />
           <button
             onClick={onClose}
             className="p-1 text-slate-400 hover:text-slate-600"
+            aria-label="Đóng"
           >
             <X className="h-5 w-5" />
           </button>

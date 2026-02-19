@@ -25,8 +25,10 @@ export const mrpWorker = new Worker<MrpJobData>(
 );
 */
 
+import { logger } from '@/lib/logger';
+
 // Placeholder exports for compatibility
 export const mrpWorker = null;
 
-console.log('[MRP-Worker] Worker disabled (Redis not available)');
-console.log('[MRP-Worker] MRP calculations run synchronously via /api/mrp');
+logger.info('[MRP-Worker] Worker disabled (Redis not available)');
+logger.info('[MRP-Worker] MRP calculations run synchronously via /api/mrp');

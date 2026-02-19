@@ -60,7 +60,7 @@ export function MentionAutocomplete({
   return (
     <>
       {/* Backdrop to close on outside click */}
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-40" role="presentation" onClick={onClose} />
 
       {/* Dropdown */}
       <div

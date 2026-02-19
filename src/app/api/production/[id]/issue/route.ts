@@ -1,15 +1,25 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { issueMaterials } from "@/lib/mrp-engine";
 import { logger } from "@/lib/logger";
 import prisma from "@/lib/prisma";
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const issueBodySchema = z.object({
+  allocationIds: z.array(z.string()).optional(),
+});
+
 // POST - Issue allocated materials for work order (actual warehouse withdrawal)
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Validate WO exists and is in a valid status
     const workOrder = await prisma.workOrder.findUnique({
@@ -48,8 +58,11 @@ export async function POST(
     // Parse optional allocationIds from body
     let allocationIds: string[] | undefined;
     try {
-      const body = await request.json();
-      allocationIds = body.allocationIds;
+      const rawBody = await request.json();
+      const parseResult = issueBodySchema.safeParse(rawBody);
+      if (parseResult.success) {
+        allocationIds = parseResult.data.allocationIds;
+      }
     } catch {
       // No body or invalid JSON — issue all
     }
@@ -64,4 +77,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
+});

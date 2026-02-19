@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { createHash } from "crypto";
+import { logger } from '@/lib/logger';
 
 // Signature meanings for 21 CFR Part 11 compliance
 export const SIGNATURE_MEANINGS = {
@@ -202,7 +203,7 @@ export async function createElectronicSignature(
       signatureHash: signature.signatureHash,
     };
   } catch (error) {
-    console.error("Electronic signature error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'electronic-signature' });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Signature failed",

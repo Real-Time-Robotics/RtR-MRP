@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService, widgetService } from '@/lib/analytics';
 import type { UserRole } from '@/lib/roles';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // DASHBOARD API - GET, UPDATE, DELETE WITH ROLE-BASED ACCESS
 // =============================================================================
@@ -28,18 +29,17 @@ interface RouteContext {
 }
 
 // GET /api/analytics/dashboards/[id] - Get dashboard with widgets and data
-export async function GET(request: NextRequest, context: RouteContext) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const userRole = (session.user as any).role as UserRole || 'user';
+const userId = session.user.id;
+    const userRole = session.user.role as UserRole || 'user';
     const permissions = dashboardService.getUserPermissions(userRole);
 
     const dashboard = await dashboardService.getDashboard(id);
@@ -93,21 +93,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/analytics/dashboards/[id] - Update dashboard
-export async function PUT(request: NextRequest, context: RouteContext) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const userRole = (session.user as any).role as UserRole || 'user';
+const userId = session.user.id;
+    const userRole = session.user.role as UserRole || 'user';
     const permissions = dashboardService.getUserPermissions(userRole);
 
     // Check existence
@@ -152,7 +151,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const dashboard = await dashboardService.updateDashboard(id, parsed.data as any);
+    const dashboard = await dashboardService.updateDashboard(id, parsed.data as unknown as import('@/lib/analytics/types').DashboardUpdateInput);
 
     return NextResponse.json({
       success: true,
@@ -167,21 +166,20 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/analytics/dashboards/[id] - Delete dashboard
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const userRole = (session.user as any).role as UserRole || 'user';
+const userId = session.user.id;
+    const userRole = session.user.role as UserRole || 'user';
     const permissions = dashboardService.getUserPermissions(userRole);
 
     // Check existence
@@ -223,4 +221,4 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

@@ -344,7 +344,7 @@ export default function ReportsPage() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" aria-label="Menu">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -421,6 +421,7 @@ export default function ReportsPage() {
                         onClick={() => {
                           // Toggle schedule
                         }}
+                        aria-label={schedule.isActive ? "Tạm dừng" : "Chạy"}
                       >
                         {schedule.isActive ? (
                           <Pause className="h-4 w-4" />
@@ -478,6 +479,7 @@ export default function ReportsPage() {
                           variant="ghost"
                           size="icon"
                           disabled={instance.status !== "completed"}
+                          aria-label="Tải xuống"
                         >
                           <Download className="h-4 w-4" />
                         </Button>

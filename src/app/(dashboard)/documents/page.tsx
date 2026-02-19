@@ -39,7 +39,7 @@ interface ProcessedDocument {
   createdEntities: string[];
 }
 
-const documentTypeInfo: Record<DocumentType, { label: string; icon: any; color: string }> = {
+const documentTypeInfo: Record<DocumentType, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   supplier_quote: { label: 'Báo giá NCC', icon: Building2, color: 'blue' },
   customer_po: { label: 'Đơn hàng KH', icon: ShoppingCart, color: 'green' },
   invoice: { label: 'Hóa đơn', icon: Receipt, color: 'purple' },
@@ -58,7 +58,24 @@ export default function DocumentsPage() {
     setRecentDocuments([]);
   }, []);
 
-  const handleProcessComplete = (result: any) => {
+  const handleProcessComplete = (result: {
+    success: boolean;
+    documentType: DocumentType;
+    confidence: number;
+    extractedData: Record<string, unknown>;
+    processingTime: number;
+    warnings?: string[];
+    error?: string;
+    createdEntities?: {
+      supplier?: { name: string };
+      customer?: { name: string };
+      salesOrder?: { orderNumber: string; lineCount: number };
+      quote?: { quoteNumber: string; itemCount: number };
+      invoice?: { invoiceNumber: string };
+      certificate?: { certificateNumber: string };
+      pendingReview?: { reason: string };
+    };
+  }) => {
     if (result.success) {
       const newDoc: ProcessedDocument = {
         id: Date.now().toString(),
@@ -239,6 +256,7 @@ export default function DocumentsPage() {
                   <input
                     type="text"
                     placeholder="Tìm kiếm..."
+                    aria-label="Tìm kiếm"
                     className="h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500 rounded"
                   />
                 </div>

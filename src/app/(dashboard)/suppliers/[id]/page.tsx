@@ -68,8 +68,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
             }
             const data = await res.json();
             setSupplier(data.data || data);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setLoading(false);
         }

@@ -13,6 +13,7 @@ import {
   calculateSupplierRiskScore,
   generateMockSupplierMetrics,
 } from "@/lib/ai/supplier-scorer";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Supplier {
   id: string;
@@ -60,7 +61,7 @@ export default function SupplierRiskPage() {
       setSuppliers(supplierData);
       calculateRiskScores(supplierData);
     } catch (error) {
-      console.error("Failed to fetch suppliers:", error);
+      clientLogger.error("Failed to fetch suppliers:", error);
     } finally {
       setLoading(false);
     }

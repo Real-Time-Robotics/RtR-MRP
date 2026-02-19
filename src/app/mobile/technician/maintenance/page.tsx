@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MAINTENANCE LIST PAGE
@@ -89,7 +90,7 @@ export default function MaintenanceListPage() {
         }
       } catch (err) {
         setError('Network error - please try again');
-        console.error('Maintenance fetch error:', err);
+        clientLogger.error('Maintenance fetch error', err);
       } finally {
         setLoading(false);
       }
@@ -169,6 +170,7 @@ export default function MaintenanceListPage() {
             <input
               type="text"
               placeholder="Tìm theo mã thiết bị, tên..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"

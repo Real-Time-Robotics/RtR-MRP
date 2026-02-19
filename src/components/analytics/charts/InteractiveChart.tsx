@@ -17,6 +17,7 @@ import {
   Brush,
   ReferenceArea,
 } from "recharts";
+import type { CategoricalChartFunc } from "recharts/types/chart/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartToolbar } from "./ChartToolbar";
 import { cn } from "@/lib/utils";
@@ -38,10 +39,13 @@ export interface ChartSeries {
   type?: "line" | "bar" | "area";
 }
 
+/** A single data point in the chart, with string keys for axis/series values */
+export type ChartDataPoint = Record<string, string | number | null | undefined>;
+
 export interface InteractiveChartProps {
   title: string;
   titleVi?: string;
-  data: any[];
+  data: ChartDataPoint[];
   series: ChartSeries[];
   xAxisKey?: string;
   chartType?: "line" | "bar" | "area" | "mixed";
@@ -75,14 +79,14 @@ export function InteractiveChart({
   onFullscreen,
   className,
 }: InteractiveChartProps) {
-  const chartRef = useRef<any>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Zoom state
   const [zoomLeft, setZoomLeft] = useState<string | null>(null);
   const [zoomRight, setZoomRight] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
-  const [zoomedData, setZoomedData] = useState<any[] | null>(null);
+  const [zoomedData, setZoomedData] = useState<ChartDataPoint[] | null>(null);
 
   const displayTitle = titleVi || title;
   const displayData = zoomedData || data;
@@ -106,14 +110,18 @@ export function InteractiveChart({
   );
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: Array<{ color?: string; name?: string; value?: number }>;
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg">
           <p className="text-sm font-medium text-foreground mb-1">{label}</p>
-          {payload.map((item: any, index: number) => (
+          {payload.map((item, index: number) => (
             <p key={index} className="text-sm" style={{ color: item.color }}>
-              {item.name}: {formatValue(item.value)}
+              {item.name}: {formatValue(item.value ?? 0)}
             </p>
           ))}
         </div>
@@ -123,19 +131,19 @@ export function InteractiveChart({
   };
 
   // Handle zoom selection
-  const handleMouseDown = useCallback(
-    (e: any) => {
+  const handleMouseDown = useCallback<CategoricalChartFunc>(
+    (e) => {
       if (!showZoom || !e?.activeLabel) return;
-      setZoomLeft(e.activeLabel);
+      setZoomLeft(String(e.activeLabel));
       setIsSelecting(true);
     },
     [showZoom]
   );
 
-  const handleMouseMove = useCallback(
-    (e: any) => {
+  const handleMouseMove = useCallback<CategoricalChartFunc>(
+    (e) => {
       if (!isSelecting || !e?.activeLabel) return;
-      setZoomRight(e.activeLabel);
+      setZoomRight(String(e.activeLabel));
     },
     [isSelecting]
   );

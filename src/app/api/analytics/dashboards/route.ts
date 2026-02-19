@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService } from '@/lib/analytics';
 import type { UserRole } from '@/lib/roles';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // DASHBOARDS API - LIST & CREATE WITH ROLE-BASED ACCESS
 // =============================================================================
@@ -25,17 +26,16 @@ const createDashboardSchema = z.object({
 });
 
 // GET /api/analytics/dashboards - List user's dashboards
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const userRole = (session.user as any).role as UserRole || 'user';
+const userId = session.user.id;
+    const userRole = session.user.role as UserRole || 'user';
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -98,20 +98,19 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/analytics/dashboards - Create new dashboard
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
-    const userRole = (session.user as any).role as UserRole || 'user';
+const userId = session.user.id;
+    const userRole = session.user.role as UserRole || 'user';
 
     // Check if user can create dashboards
     const canCreate = await dashboardService.canUserCreateDashboard(userId, userRole);
@@ -175,4 +174,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

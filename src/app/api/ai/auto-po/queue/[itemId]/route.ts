@@ -5,20 +5,29 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { itemId: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { itemId } = params;
+  try {
+const { itemId } = await context.params;
 
     if (!itemId) {
       return NextResponse.json(
@@ -47,7 +56,7 @@ export async function GET(
       partCategory: suggestion.partCategory || 'N/A',
       supplierId: suggestion.supplierId,
       supplierName: suggestion.supplierName,
-      supplierScore: (suggestion as any).supplierScore || 4.0,
+      supplierScore: (suggestion as unknown as Record<string, unknown>).supplierScore as number || 4.0,
       quantity: suggestion.quantity,
       unitPrice: suggestion.unitPrice,
       totalAmount: suggestion.totalAmount,
@@ -56,11 +65,11 @@ export async function GET(
       aiNotes: suggestion.aiEnhancement?.enhancedExplanation || 'Analyzed based on historical data and current inventory levels.',
       expectedDeliveryDate: suggestion.expectedDeliveryDate,
       urgency: queueItem.priority,
-      risks: suggestion.risks?.map((r: any) => r.description) || [],
+      risks: suggestion.risks?.map((r: { description: string }) => r.description) || [],
       createdAt: queueItem.addedAt.toISOString(),
       status: queueItem.status,
       // Key factors for AI reasoning
-      keyFactors: suggestion.aiEnhancement?.decisionFactors?.map((f: any) => ({
+      keyFactors: suggestion.aiEnhancement?.decisionFactors?.map((f: { impact: string; factor: string; explanation: string; weight: number }) => ({
         type: f.impact === 'positive' ? 'positive' : f.impact === 'negative' ? 'negative' : 'neutral',
         label: f.factor,
         description: f.explanation,
@@ -104,13 +113,13 @@ export async function GET(
         },
       ],
       // Alternative suppliers
-      alternativeSuppliers: (suggestion as any).alternativeSuppliers || [
+      alternativeSuppliers: (suggestion as unknown as Record<string, unknown>).alternativeSuppliers as Array<Record<string, unknown>> || [
         {
           supplierId: suggestion.supplierId,
           supplierName: suggestion.supplierName,
           unitPrice: suggestion.unitPrice,
           leadTimeDays: 7,
-          score: (suggestion as any).supplierScore || 4.2,
+          score: (suggestion as unknown as Record<string, unknown>).supplierScore as number || 4.2,
           isRecommended: true,
           isCurrentSupplier: true,
           pros: ['Giá cạnh tranh', 'Giao hàng đúng hẹn'],
@@ -120,7 +129,7 @@ export async function GET(
       // Risk analysis
       riskAnalysis: {
         level: (suggestion.confidenceScore || 0.75) >= 0.8 ? 'low' : (suggestion.confidenceScore || 0.75) >= 0.6 ? 'medium' : 'high',
-        factors: suggestion.risks?.map((r: any) => ({
+        factors: suggestion.risks?.map((r: { type?: string; severity?: string; description: string; mitigation?: string }) => ({
           name: r.type || 'Risk',
           severity: r.severity || 'medium',
           description: r.description,
@@ -159,4 +168,4 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});

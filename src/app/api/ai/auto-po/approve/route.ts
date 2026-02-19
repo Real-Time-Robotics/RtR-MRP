@@ -4,26 +4,56 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+const approvePostSchema = z.object({
+  queueItemId: z.string().min(1, 'queueItemId là bắt buộc'),
+  notes: z.string().optional(),
+  modifications: z.object({
+    quantity: z.number().positive().optional(),
+    supplierId: z.string().optional(),
+    supplierName: z.string().optional(),
+    unitPrice: z.number().min(0).optional(),
+    expectedDeliveryDate: z.string().optional(),
+  }).optional(),
+});
+
+const bulkApproveSchema = z.object({
+  queueItemIds: z.array(z.string()).min(1, 'queueItemIds array is required'),
+  notes: z.string().optional(),
+});
+
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemId, notes, modifications } = body;
-
-    if (!queueItemId) {
+  try {
+const body = await request.json();
+    const parsed = approvePostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'queueItemId is required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { queueItemId, notes, modifications } = parsed.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -56,7 +86,7 @@ export async function POST(request: NextRequest) {
         unitPrice: modifications.unitPrice || finalSuggestion.unitPrice,
         totalAmount: (modifications.quantity || finalSuggestion.quantity) *
                      (modifications.unitPrice || finalSuggestion.unitPrice),
-        expectedDeliveryDate: modifications.expectedDeliveryDate || finalSuggestion.expectedDeliveryDate,
+        expectedDeliveryDate: modifications.expectedDeliveryDate ? new Date(modifications.expectedDeliveryDate) : finalSuggestion.expectedDeliveryDate,
       };
     }
 
@@ -84,24 +114,35 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemIds, notes } = body;
-
-    if (!queueItemIds || !Array.isArray(queueItemIds) || queueItemIds.length === 0) {
+  try {
+const rawBody = await request.json();
+    const parseResult = bulkApproveSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'queueItemIds array is required' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { queueItemIds, notes } = parseResult.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -153,4 +194,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

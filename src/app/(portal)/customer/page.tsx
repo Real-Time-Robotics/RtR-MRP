@@ -7,11 +7,12 @@ import {
   Clock, CheckCircle, Package, ChevronRight, RefreshCw,
   Star, Calendar, DollarSign, Award, TrendingUp, Eye
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
-  CustomerDashboard, 
-  SalesOrder 
+import {
+  CustomerPortalEngine,
+  CustomerDashboard,
+  SalesOrder
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // CUSTOMER DASHBOARD
@@ -31,7 +32,7 @@ export default function CustomerDashboardPage() {
         setDashboard(result.data);
       }
     } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
+      clientLogger.error('Failed to fetch dashboard', error);
     } finally {
       setIsLoading(false);
     }

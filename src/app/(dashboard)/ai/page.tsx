@@ -20,10 +20,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
-import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnomalyAlerts } from "@/components/ml/anomaly-alerts";
 import { OptimizationSuggestions } from "@/components/ml/optimization-suggestions";
+import { clientLogger } from '@/lib/client-logger';
+
+interface Recommendation {
+  id: string;
+  type: "REORDER" | "SUPPLIER_CHANGE" | "SAFETY_STOCK" | "EXPEDITE" | "CONSOLIDATE";
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  category: "inventory" | "purchasing" | "production" | "supplier";
+  title: string;
+  description: string;
+  impact?: string;
+  savingsEstimate?: number;
+  confidence: number;
+  partId?: string;
+  supplierId?: string;
+  productId?: string;
+  status: string;
+}
 
 interface ModelStatus {
   modelId: string;
@@ -42,7 +58,8 @@ interface MLServiceStatus {
 export default function AiDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState<ReturnType<typeof generateMockRecommendations>>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [mlServiceStatus, setMlServiceStatus] = useState<MLServiceStatus | null>(null);
   const [models, setModels] = useState<ModelStatus[]>([]);
@@ -60,10 +77,22 @@ export default function AiDashboardPage() {
 
   const loadData = async () => {
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRecommendations(generateMockRecommendations());
-    setLastUpdated(new Date().toLocaleTimeString());
-    setLoading(false);
+    setError(null);
+    try {
+      const response = await fetch("/api/ai/recommendations");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recommendations (${response.status})`);
+      }
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      clientLogger.error("Failed to load recommendations:", err);
+      setError(err instanceof Error ? err.message : "Failed to load recommendations");
+      setRecommendations([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const checkMLService = async () => {
@@ -316,7 +345,16 @@ export default function AiDashboardPage() {
                   <TrendingUp className="h-5 w-5 text-primary-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">87%</p>
+                  <p className="text-2xl font-bold">
+                    {recommendations.length > 0
+                      ? Math.round(
+                          (recommendations.reduce((sum, r) => sum + r.confidence, 0) /
+                            recommendations.length) *
+                            100
+                        )
+                      : 0}
+                    %
+                  </p>
                   <p className="text-sm text-muted-foreground">Avg Confidence</p>
                 </div>
               </div>
@@ -343,6 +381,14 @@ export default function AiDashboardPage() {
               {loading ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center py-8 text-muted-foreground">
+                  <AlertTriangle className="h-8 w-8 mb-2 text-destructive" />
+                  <p className="text-sm">{error}</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={loadData}>
+                    Retry
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">

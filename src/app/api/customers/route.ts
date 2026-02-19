@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
@@ -19,6 +19,7 @@ import {
   AuthUser,
 } from "@/lib/api/with-permission";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 const SEARCH_FIELDS = ["name", "code", "contactName", "contactEmail"];
 
 // =============================================================================
@@ -43,15 +44,14 @@ const createCustomerSchema = z.object({
 // GET - List customers
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
-
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
@@ -82,13 +82,14 @@ export async function GET(request: NextRequest) {
     ]);
 
     return paginatedSuccess(
-      buildPaginatedResponse(customers, totalCount, params, startTime)
+      buildPaginatedResponse(customers, totalCount, params, startTime),
+      { cacheControl: 'private, max-age=60, stale-while-revalidate=120' },
     );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/customers' });
     return paginatedError("Lỗi tải danh sách khách hàng", 500);
   }
-}
+});
 
 // =============================================================================
 // POST - Create customer
@@ -101,7 +102,8 @@ async function postHandler(
   let body;
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/customers', detail: 'Invalid JSON body' });
     return errorResponse('Dữ liệu JSON không hợp lệ', 400);
   }
 

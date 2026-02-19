@@ -21,6 +21,7 @@ import { QualityDashboardCards } from "@/components/quality/quality-dashboard-ca
 import { PassFailBadge } from "@/components/quality/pass-fail-badge";
 import { InspectionTypeBadge } from "@/components/quality/inspection-type-badge";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { clientLogger } from '@/lib/client-logger';
 
 interface QualityStats {
   pendingReceiving: number;
@@ -73,7 +74,7 @@ export default function QualityDashboardPage() {
         setPendingInspections(inspectionsData.slice(0, 10));
       }
     } catch (error) {
-      console.error("Failed to fetch quality data:", error);
+      clientLogger.error("Failed to fetch quality data:", error);
     } finally {
       setLoading(false);
     }

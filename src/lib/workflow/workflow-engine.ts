@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   WorkflowEntityType,
   WorkflowStatus,
@@ -154,7 +155,7 @@ export class WorkflowEngine {
 
       return { success: true, instanceId: instance.id, status: 'PENDING' };
     } catch (error) {
-      console.error('[WorkflowEngine] Start error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'start' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -293,7 +294,7 @@ export class WorkflowEngine {
         return { success: true, instanceId, status: 'APPROVED' };
       }
     } catch (error) {
-      console.error('[WorkflowEngine] Approve error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'approve' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -377,7 +378,7 @@ export class WorkflowEngine {
 
       return { success: true, instanceId, status: 'REJECTED' };
     } catch (error) {
-      console.error('[WorkflowEngine] Reject error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'reject' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -475,7 +476,7 @@ export class WorkflowEngine {
 
       return { success: true, instanceId, status: 'ESCALATED' };
     } catch (error) {
-      console.error('[WorkflowEngine] Escalate error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'escalate' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -522,7 +523,7 @@ export class WorkflowEngine {
 
       return { success: true, instanceId, status: 'CANCELLED' };
     } catch (error) {
-      console.error('[WorkflowEngine] Cancel error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'cancel' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -597,7 +598,7 @@ export class WorkflowEngine {
 
       return { success: true, instanceId: approval.instanceId };
     } catch (error) {
-      console.error('[WorkflowEngine] Delegate error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'delegate' });
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -736,7 +737,7 @@ export class WorkflowEngine {
         },
       });
     } catch (error) {
-      console.error('[WorkflowEngine] Notification error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'workflow-engine', operation: 'notification' });
     }
   }
 }

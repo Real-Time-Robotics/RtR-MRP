@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Equipment {
   id: string;
@@ -43,88 +44,6 @@ interface Equipment {
   hoursRunning: number;
   efficiency: number;
 }
-
-// Mock data - sẽ được thay bằng API thực
-const mockEquipment: Equipment[] = [
-  {
-    id: "1",
-    code: "CNC-001",
-    name: "CNC Machine #1",
-    type: "CNC",
-    status: "running",
-    workCenterId: "wc1",
-    workCenterName: "CNC Station",
-    lastMaintenance: "2026-01-10",
-    nextMaintenance: "2026-02-10",
-    hoursRunning: 1250,
-    efficiency: 94,
-  },
-  {
-    id: "2",
-    code: "CNC-002",
-    name: "CNC Machine #2",
-    type: "CNC",
-    status: "idle",
-    workCenterId: "wc1",
-    workCenterName: "CNC Station",
-    lastMaintenance: "2026-01-05",
-    nextMaintenance: "2026-02-05",
-    hoursRunning: 980,
-    efficiency: 91,
-  },
-  {
-    id: "3",
-    code: "WELD-001",
-    name: "Welding Robot A",
-    type: "WELDING",
-    status: "running",
-    workCenterId: "wc2",
-    workCenterName: "Welding Bay",
-    lastMaintenance: "2026-01-08",
-    nextMaintenance: "2026-02-08",
-    hoursRunning: 2100,
-    efficiency: 88,
-  },
-  {
-    id: "4",
-    code: "DRILL-001",
-    name: "Drill Press #1",
-    type: "DRILL",
-    status: "maintenance",
-    workCenterId: "wc3",
-    workCenterName: "Machining Area",
-    lastMaintenance: "2026-01-14",
-    nextMaintenance: "2026-02-14",
-    hoursRunning: 3500,
-    efficiency: 0,
-  },
-  {
-    id: "5",
-    code: "PACK-001",
-    name: "Packaging Line A",
-    type: "PACKAGING",
-    status: "running",
-    workCenterId: "wc4",
-    workCenterName: "Packaging",
-    lastMaintenance: "2026-01-12",
-    nextMaintenance: "2026-02-12",
-    hoursRunning: 1800,
-    efficiency: 96,
-  },
-  {
-    id: "6",
-    code: "ASSY-001",
-    name: "Assembly Station 1",
-    type: "ASSEMBLY",
-    status: "offline",
-    workCenterId: "wc5",
-    workCenterName: "Final Assembly",
-    lastMaintenance: "2025-12-20",
-    nextMaintenance: "2026-01-20",
-    hoursRunning: 0,
-    efficiency: 0,
-  },
-];
 
 const statusConfig = {
   running: { label: "Running", color: "bg-green-500", icon: Zap, textColor: "text-green-700" },
@@ -150,11 +69,45 @@ export default function EquipmentPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setEquipment(mockEquipment);
-      setLoading(false);
-    }, 500);
+    async function fetchEquipment() {
+      try {
+        const res = await fetch('/api/equipment?pageSize=100');
+        if (!res.ok) throw new Error('Không thể tải danh sách thiết bị');
+        const json = await res.json();
+        const items: Equipment[] = (json.data || []).map((e: { id: string; code: string; name: string; type?: string; status?: string; workCenterId?: string; workCenter?: { id?: string; name?: string }; totalDowntimeHours?: number; currentOee?: number; targetOee?: number }) => {
+          // Map API status to UI status
+          const statusMap: Record<string, Equipment['status']> = {
+            operational: 'running',
+            running: 'running',
+            active: 'running',
+            idle: 'idle',
+            standby: 'idle',
+            down: 'offline',
+            breakdown: 'offline',
+            failed: 'offline',
+            maintenance: 'maintenance',
+            under_maintenance: 'maintenance',
+          };
+          return {
+            id: e.id,
+            code: e.code,
+            name: e.name,
+            type: (e.type || 'General').toUpperCase(),
+            status: statusMap[e.status?.toLowerCase() || ''] || 'idle',
+            workCenterId: e.workCenterId || e.workCenter?.id,
+            workCenterName: e.workCenter?.name,
+            hoursRunning: Math.round(e.totalDowntimeHours || 0),
+            efficiency: Math.round(e.currentOee || e.targetOee || 0),
+          };
+        });
+        setEquipment(items);
+      } catch (err) {
+        toast.error('Lỗi tải danh sách thiết bị');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchEquipment();
   }, []);
 
   const filteredEquipment = equipment.filter((eq) => {

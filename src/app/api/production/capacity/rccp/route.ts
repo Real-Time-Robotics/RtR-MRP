@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { calculateRCCP } from "@/lib/production/capacity-engine";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const startDateStr = searchParams.get("startDate");
@@ -26,4 +32,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

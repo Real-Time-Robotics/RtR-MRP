@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // DEMO RESET API
@@ -9,20 +10,16 @@ import { logger } from '@/lib/logger';
 // Only accessible by demo admin users
 // =============================================================================
 
-export async function POST() {
+export const POST = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Check authentication
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is demo admin
+// Check if user is demo admin
     const userEmail = session.user.email || '';
-    const userRole = (session.user as { role?: string }).role;
+    const userRole = session.user.role;
 
     const isDemo = userEmail.includes('@demo.rtr-mrp.com');
     const isAdmin = userRole === 'admin';
@@ -75,25 +72,21 @@ export async function POST() {
       {
         success: false,
         message: 'Failed to reset demo data',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'An unexpected error occurred',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // GET endpoint to check demo status
-export async function GET() {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+export const GET = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
 
-    const userEmail = session.user.email || '';
+  try {
+const userEmail = session.user.email || '';
     const isDemo = userEmail.includes('@demo.rtr-mrp.com');
 
     if (!isDemo) {
@@ -132,4 +125,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import { clientLogger } from "@/lib/client-logger";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -160,7 +161,7 @@ export default function PartQualityDetailPage({
         setData(result.data);
       }
     } catch (error) {
-      console.error("Failed to fetch part quality:", error);
+      clientLogger.error("Failed to fetch part quality data", error);
     } finally {
       setLoading(false);
       setAiLoading(false);

@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
@@ -13,7 +14,9 @@ import {
   SafetyStockResult,
 } from '@/lib/ai/forecast';
 import { getTetPhase, getUpcomingHolidays } from '@/lib/ai/forecast';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -33,7 +36,7 @@ interface MRPIntegrationRequest {
 
 interface IntegrationResponse {
   success: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: string;
   latency?: number;
 }
@@ -42,18 +45,35 @@ interface IntegrationResponse {
 // GET - Get Recommendations & Status
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<IntegrationResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'summary';
     const partId = searchParams.get('partId');
     const serviceLevel = parseFloat(searchParams.get('serviceLevel') || '0.95');
 
     const optimizer = getSafetyStockOptimizer({ serviceLevel });
 
-    let result: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: Record<string, any>;
 
     switch (action) {
       case 'recommendation': {
@@ -204,23 +224,59 @@ export async function GET(request: NextRequest): Promise<NextResponse<Integratio
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch MRP integration data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Apply Recommendations or Bulk Operations
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<IntegrationResponse>> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const body: MRPIntegrationRequest = await request.json();
+const bodySchema = z.object({
+      action: z.enum(['recommendations', 'apply', 'summary', 'bulk-optimize']),
+      partId: z.string().optional(),
+      partIds: z.array(z.string()).optional(),
+      options: z.object({
+        serviceLevel: z.number().optional(),
+        includeHolidayBuffer: z.boolean().optional(),
+        updateSafetyStock: z.boolean().optional(),
+        updateReorderPoint: z.boolean().optional(),
+        maxParts: z.number().optional(),
+      }).optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const {
       action,
       partId,
@@ -233,7 +289,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<Integrati
       includeHolidayBuffer: options.includeHolidayBuffer ?? true,
     });
 
-    let result: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: Record<string, any>;
 
     switch (action) {
       case 'recommendations': {
@@ -375,10 +432,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<Integrati
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process MRP integration action',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { createShipment, confirmShipment } from "@/lib/mrp-engine";
 import prisma from "@/lib/prisma";
 
-// GET /api/orders/[id]/ship — Preview inventory by lot for shipping (partial-aware)
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
-    const { id } = params;
+const shipBodySchema = z.object({
+  carrier: z.string().optional(),
+  trackingNumber: z.string().optional(),
+  lotAllocations: z.any().optional(),
+  linesToShip: z.array(z.any()).optional(),
+});
+
+// GET /api/orders/[id]/ship — Preview inventory by lot for shipping (partial-aware)
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  try {
+    const { id } = await context.params;
 
     const salesOrder = await prisma.salesOrder.findUnique({
       where: { id },
@@ -129,25 +135,29 @@ export async function GET(
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders/[id]/ship' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Lỗi khi kiểm tra tồn kho" },
+      { error: "Failed to check inventory for shipping" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/orders/[id]/ship — Create partial shipment + confirm
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = params;
-    const body = await request.json().catch(() => ({}));
+  try {
+    const { id } = await context.params;
+    const rawBody = await request.json().catch(() => ({}));
+    const parseResult = shipBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { carrier, trackingNumber, lotAllocations, linesToShip } = body;
     const userId = session.user.id || session.user.email || "system";
 
@@ -169,8 +179,8 @@ export async function POST(
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/orders/[id]/ship' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Lỗi khi xuất kho" },
+      { error: "Failed to process shipment" },
       { status: 400 }
     );
   }
-}
+});

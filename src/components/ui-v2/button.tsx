@@ -240,9 +240,9 @@ const ButtonGroup: React.FC<ButtonGroupProps> = ({
           const isFirst = index === 0;
           const isLast = index === React.Children.count(children) - 1;
           
-          return React.cloneElement(child as React.ReactElement<any>, {
+          return React.cloneElement(child as React.ReactElement<{ className?: string }>, {
             className: cn(
-              (child as React.ReactElement<any>).props.className,
+              (child as React.ReactElement<{ className?: string }>).props.className,
               orientation === 'horizontal' && !isFirst && '-ml-px',
               orientation === 'vertical' && !isFirst && '-mt-px',
               orientation === 'horizontal' && {

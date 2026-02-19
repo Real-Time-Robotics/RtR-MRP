@@ -7,15 +7,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dataService } from '@/lib/data/data-service';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // =============================================================================
 // GET /api/dashboard/stats
 // Get dashboard statistics
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const stats = await dataService.getDashboardStats();
-    
+
     return NextResponse.json({
       success: true,
       data: stats,
@@ -28,4 +34,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+});

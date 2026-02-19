@@ -2,7 +2,8 @@
 // AI-Enhanced Excel Import API
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   aiDetectEntityType,
   aiSuggestMappings,
@@ -22,6 +23,7 @@ import { autoDetectMappings, ColumnMapping } from "@/lib/excel/mapper";
 import { detectEntityType } from "@/lib/excel/parser";
 import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -56,15 +58,39 @@ interface AIAnalysisRequest {
 // POST - AI-Enhanced Analysis
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     // Authentication check
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const bodySchema = z.object({
+      headers: z.array(z.string()).optional(),
+      sampleData: z.array(z.record(z.string(), z.unknown())).optional(),
+      entityType: z.string().optional(),
+      unmappedColumns: z.array(z.string()).optional(),
+      sourceColumns: z.array(z.string()).optional(),
+      fullData: z.array(z.record(z.string(), z.unknown())).optional(),
+      mappings: z.array(z.record(z.string(), z.unknown())).optional(),
+      identifierColumn: z.string().optional(),
+      options: z.object({
+        useAI: z.boolean().optional(),
+        checkDuplicates: z.boolean().optional(),
+        validateData: z.boolean().optional(),
+        confidenceThreshold: z.number().optional(),
+      }).default({}),
+    });
 
-    const body: AIAnalysisRequest = await request.json();
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body: AIAnalysisRequest = parseResult.data as AIAnalysisRequest;
     const {
       headers,
       sampleData,
@@ -243,25 +269,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "AI analysis failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: "An unexpected error occurred during AI analysis",
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET - Get AI Analysis Capabilities
 // =============================================================================
 
-export async function GET() {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    return NextResponse.json({
+  try {
+return NextResponse.json({
       capabilities: {
         entityDetection: {
           description: "AI-powered entity type detection from Excel headers",
@@ -304,4 +329,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

@@ -1,7 +1,8 @@
 // src/app/api/finance/invoices/purchase/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import {
   createPurchaseInvoice,
@@ -10,13 +11,49 @@ import {
 } from "@/lib/finance";
 import { logger } from "@/lib/logger";
 
+const purchaseInvoiceLineSchema = z.object({
+  partId: z.string().optional(),
+  description: z.string().optional().default(''),
+  quantity: z.number().positive(),
+  unitPrice: z.number().min(0),
+  taxRate: z.number().optional(),
+  discountPercent: z.number().optional(),
+  lineTotal: z.number().optional(),
+});
+
+const purchaseInvoicePostSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('payment'),
+    invoiceId: z.string().min(1, 'invoiceId là bắt buộc'),
+    paymentDate: z.string().min(1, 'Ngày thanh toán là bắt buộc'),
+    amount: z.number().positive('Số tiền phải lớn hơn 0'),
+    paymentMethod: z.string().min(1, 'Phương thức thanh toán là bắt buộc'),
+    referenceNumber: z.string().optional(),
+    notes: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal(undefined).optional(),
+    supplierId: z.string().min(1, 'supplierId là bắt buộc'),
+    purchaseOrderId: z.string().optional(),
+    vendorInvoiceNo: z.string().optional(),
+    invoiceDate: z.string().min(1, 'Ngày hóa đơn là bắt buộc'),
+    dueDate: z.string().min(1, 'Ngày đến hạn là bắt buộc'),
+    lines: z.array(purchaseInvoiceLineSchema).min(1, 'Cần ít nhất một dòng hóa đơn'),
+    notes: z.string().optional(),
+    shippingAmount: z.number().min(0).optional(),
+    paymentTerms: z.string().optional(),
+  }),
+]);
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET - Get purchase invoices
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
@@ -36,7 +73,7 @@ export async function GET(request: NextRequest) {
           days90Plus: aging.overdue90,
           total: aging.total,
         },
-        details: [], // TODO: Add supplier-level breakdown
+        details: [], // Supplier-level breakdown is available via the invoices list filtered by supplierId
       });
     }
 
@@ -92,29 +129,31 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Create purchase invoice or record payment
-export async function POST(request: NextRequest) {
+export const POST = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
-    const { action } = body;
+    const parsed = purchaseInvoicePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const validData = parsed.data;
+    const { action } = validData;
 
     // Record payment
     if (action === "payment") {
-      const { invoiceId, paymentDate, amount, paymentMethod, referenceNumber, notes } = body;
-
-      if (!invoiceId || !paymentDate || !amount || !paymentMethod) {
-        return NextResponse.json(
-          { error: "Missing required payment fields" },
-          { status: 400 }
-        );
-      }
+      const { invoiceId, paymentDate, amount, paymentMethod, referenceNumber, notes } = validData;
 
       const result = await recordPurchasePayment(
         {
@@ -145,14 +184,7 @@ export async function POST(request: NextRequest) {
       notes,
       shippingAmount,
       paymentTerms,
-    } = body;
-
-    if (!supplierId || !invoiceDate || !dueDate || !lines?.length) {
-      return NextResponse.json(
-        { error: "Missing required invoice fields" },
-        { status: 400 }
-      );
-    }
+    } = validData as Extract<typeof validData, { supplierId: string }>;
 
     const result = await createPurchaseInvoice(
       {
@@ -180,15 +212,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update invoice status
-export async function PUT(request: NextRequest) {
+export const PUT = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
     const { invoiceId, status, approvedBy } = body;
@@ -219,4 +252,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

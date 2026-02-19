@@ -4,8 +4,11 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // Types
 interface InventoryAdjustment {
   partId: string;
@@ -53,10 +56,36 @@ const mockInventory: Record<string, { partId: string; locationId: string; qty: n
  * POST /api/mobile/inventory
  * Handle inventory operations
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
-    const { action, ...data } = body;
+const bodySchema = z.object({
+      action: z.string(),
+      partId: z.string().optional(),
+      partNumber: z.string().optional(),
+      locationId: z.string().optional(),
+      adjustmentType: z.enum(['add', 'remove']).optional(),
+      quantity: z.number().optional(),
+      reason: z.string().optional(),
+      notes: z.string().optional(),
+      userId: z.string().optional(),
+      fromLocationId: z.string().optional(),
+      toLocationId: z.string().optional(),
+      items: z.array(z.any()).optional(),
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { action, ...data } = parseResult.data;
     
     switch (action) {
       case 'adjust':
@@ -78,7 +107,7 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Handle inventory adjustment
@@ -219,8 +248,11 @@ async function handleCycleCount(data: { items: CycleCountItem[] }) {
  * GET /api/mobile/inventory
  * Get inventory data
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+const { searchParams } = new URL(req.url);
   const partId = searchParams.get('partId');
   const locationId = searchParams.get('locationId');
   const search = searchParams.get('search');
@@ -255,4 +287,4 @@ export async function GET(req: NextRequest) {
     data: results,
     total: results.length,
   });
-}
+});

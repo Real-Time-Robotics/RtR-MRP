@@ -1,15 +1,16 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from '@/lib/logger';
 
-export async function POST() {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     await prisma.notification.updateMany({
       where: { userId: session.user.id, isRead: false },
       data: { isRead: true, readAt: new Date() },
@@ -23,4 +24,4 @@ export async function POST() {
       { status: 500 }
     );
   }
-}
+});

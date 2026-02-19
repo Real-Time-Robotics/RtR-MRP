@@ -228,7 +228,7 @@ export interface ReportSection {
 export interface ReportChart {
   type: 'bar' | 'line' | 'pie' | 'gantt';
   title: string;
-  data: any;
+  data: Record<string, unknown>[];
 }
 
 export interface ReportTable {
@@ -458,7 +458,7 @@ export class AISchedulerAnalyzer {
 
   private generateExplanationSummary(
     algorithm: string,
-    metrics: any,
+    metrics: ScheduleMetrics | OptimizationMetrics | null,
     woCount: number,
     keyDecisions: KeyDecision[],
     tradeoffs: Tradeoff[]
@@ -466,7 +466,15 @@ export class AISchedulerAnalyzer {
     let summary = `Lịch trình được tạo bằng thuật toán ${this.getAlgorithmName(algorithm)} cho ${woCount} lệnh sản xuất. `;
 
     if (metrics) {
-      summary += `Dự kiến ${metrics.projectedOnTimeDelivery?.toFixed(0) || 0}% đơn hàng giao đúng hạn với hiệu suất sử dụng ${metrics.projectedCapacityUtilization?.toFixed(0) || 0}%. `;
+      const onTime = 'projectedOnTimeDelivery' in metrics
+        ? (metrics as ScheduleMetrics).projectedOnTimeDelivery
+        : 0;
+      const utilization = 'projectedCapacityUtilization' in metrics
+        ? (metrics as ScheduleMetrics).projectedCapacityUtilization
+        : 'utilizationScore' in metrics
+          ? (metrics as OptimizationMetrics).utilizationScore
+          : 0;
+      summary += `Dự kiến ${onTime?.toFixed(0) || 0}% đơn hàng giao đúng hạn với hiệu suất sử dụng ${utilization?.toFixed(0) || 0}%. `;
     }
 
     if (keyDecisions.length > 0) {
@@ -757,8 +765,8 @@ export class AISchedulerAnalyzer {
       description: 'Gom nhóm sản phẩm tương tự để giảm thời gian setup',
       expectedBenefit: {
         metric: 'Thời gian setup',
-        currentValue: (metrics as any)?.currentSetupTime || 0,
-        projectedValue: ((metrics as any)?.currentSetupTime || 0) * 0.7,
+        currentValue: metrics && 'currentSetupTime' in metrics ? (metrics as ScheduleMetrics).currentSetupTime : 0,
+        projectedValue: (metrics && 'currentSetupTime' in metrics ? (metrics as ScheduleMetrics).currentSetupTime : 0) * 0.7,
         improvement: 30,
         unit: '%',
       },
@@ -859,7 +867,7 @@ export class AISchedulerAnalyzer {
             (wo.plannedEnd || new Date()).getTime() + delay * 60 * 60 * 1000
           ),
           delayHours: delay,
-          priority: wo.priority as any,
+          priority: String(wo.priority),
         });
       }
     }
@@ -995,13 +1003,21 @@ export class AISchedulerAnalyzer {
     const differences: ComparisonDifference[] = [];
 
     if (metricsA && metricsB) {
-      const mA = metricsA as any;
-      const mB = metricsB as any;
+      const getOnTime = (m: ScheduleMetrics | OptimizationMetrics): number =>
+        'projectedOnTimeDelivery' in m ? (m as ScheduleMetrics).projectedOnTimeDelivery
+        : 'onTimeCount' in m ? (m as OptimizationMetrics).onTimeCount : 0;
+      const getUtilization = (m: ScheduleMetrics | OptimizationMetrics): number =>
+        'projectedCapacityUtilization' in m ? (m as ScheduleMetrics).projectedCapacityUtilization
+        : 'utilizationScore' in m ? (m as OptimizationMetrics).utilizationScore : 0;
+      const getMakespan = (m: ScheduleMetrics | OptimizationMetrics): number => m.makespan || 0;
+      const getConflictCount = (m: ScheduleMetrics | OptimizationMetrics): number =>
+        'conflictCount' in m ? (m as ScheduleMetrics).conflictCount : 0;
+
       differences.push(
-        this.compareDimension('Giao hàng đúng hạn', mA.projectedOnTimeDelivery || mA.onTimeCount || 0, mB.projectedOnTimeDelivery || mB.onTimeCount || 0, '%'),
-        this.compareDimension('Hiệu suất sử dụng', mA.projectedCapacityUtilization || mA.utilizationScore || 0, mB.projectedCapacityUtilization || mB.utilizationScore || 0, '%'),
-        this.compareDimension('Makespan', mA.makespan || 0, mB.makespan || 0, 'ngày', true),
-        this.compareDimension('Xung đột', mA.conflictCount || 0, mB.conflictCount || 0, '', true)
+        this.compareDimension('Giao hàng đúng hạn', getOnTime(metricsA), getOnTime(metricsB), '%'),
+        this.compareDimension('Hiệu suất sử dụng', getUtilization(metricsA), getUtilization(metricsB), '%'),
+        this.compareDimension('Makespan', getMakespan(metricsA), getMakespan(metricsB), 'ngày', true),
+        this.compareDimension('Xung đột', getConflictCount(metricsA), getConflictCount(metricsB), '', true)
       );
     }
 
@@ -1014,26 +1030,43 @@ export class AISchedulerAnalyzer {
     // Determine best schedule based on recommendation
     const bestScheduleId = recommendation.preferredSchedule === 'A' ? idA : idB;
 
+    // Convert metrics to ScheduleMetrics for the comparison item
+    const toScheduleMetrics = (m: ScheduleMetrics | OptimizationMetrics | null): ScheduleMetrics => {
+      if (!m) {
+        return { currentOnTimeDelivery: 0, projectedOnTimeDelivery: 0, currentCapacityUtilization: 0, projectedCapacityUtilization: 0, currentSetupTime: 0, projectedSetupTime: 0, makespan: 0, conflictCount: 0, unscheduledCount: 0 };
+      }
+      if ('projectedOnTimeDelivery' in m) return m as ScheduleMetrics;
+      const opt = m as OptimizationMetrics;
+      return {
+        currentOnTimeDelivery: 0,
+        projectedOnTimeDelivery: opt.onTimeCount / Math.max(1, opt.onTimeCount + opt.lateCount) * 100,
+        currentCapacityUtilization: 0,
+        projectedCapacityUtilization: opt.utilizationScore,
+        currentSetupTime: opt.totalSetupTime,
+        projectedSetupTime: opt.totalSetupTime,
+        makespan: opt.makespan,
+        conflictCount: 0,
+        unscheduledCount: 0,
+      };
+    };
+
     return {
       scheduleA: {
         id: idA,
         name: 'Lịch trình A',
         algorithm: scheduleA.algorithm,
-        metrics: metricsA as any,
+        metrics: toScheduleMetrics(metricsA),
         createdAt: new Date(),
       },
       scheduleB: {
         id: idB,
         name: 'Lịch trình B',
         algorithm: scheduleBResolved.algorithm,
-        metrics: metricsB as any,
+        metrics: toScheduleMetrics(metricsB),
         createdAt: new Date(),
       },
       differences,
-      recommendation: {
-        ...recommendation,
-        bestScheduleId,
-      } as any,
+      recommendation,
     };
   }
 
@@ -1112,11 +1145,10 @@ export class AISchedulerAnalyzer {
     const suggestions = result.suggestions || [];
     const conflicts = result.conflicts || [];
 
-    // Get safe metrics values (cast to any for flexible property access)
-    const m = metrics as any;
-    const onTimeDelivery = m?.projectedOnTimeDelivery ?? m?.currentOnTimeDelivery ?? m?.onTimeDeliveryRate ?? 0;
-    const capacityUtilization = m?.projectedCapacityUtilization ?? m?.currentCapacityUtilization ?? m?.utilizationScore ?? 0;
-    const horizonDays = (result as any).horizonDays || (result as any).horizon?.days || 30;
+    // Get safe metrics values using proper type narrowing
+    const onTimeDelivery = metrics.projectedOnTimeDelivery ?? metrics.currentOnTimeDelivery ?? 0;
+    const capacityUtilization = metrics.projectedCapacityUtilization ?? metrics.currentCapacityUtilization ?? 0;
+    const horizonDays = result.horizon?.days || 30;
 
     // Calculate health score based on metrics
     const healthScore = Math.round(
@@ -1155,25 +1187,19 @@ export class AISchedulerAnalyzer {
         'Theo dõi tiến độ thường xuyên',
       ],
       appendix: {
-        workOrderList: safeWorkOrders.map(wo => {
-          const w = wo as any;
-          return {
-            woNumber: w.workOrderNumber || w.woNumber || '',
-            productName: w.productName || '',
-            quantity: w.quantity || 0,
-            startDate: w.plannedStart || w.plannedStartDate || null,
-            endDate: w.plannedEndDate || w.plannedEnd || null,
-            status: w.status || 'pending',
-          };
-        }),
-        conflictDetails: conflicts.map(c => {
-          const conf = c as any;
-          return {
-            type: conf.type || 'unknown',
-            description: conf.description || '',
-            resolution: conf.suggestedResolution || 'Cần xem xét',
-          };
-        }),
+        workOrderList: safeWorkOrders.map(wo => ({
+            woNumber: wo.woNumber || '',
+            productName: wo.productName || '',
+            quantity: wo.quantity || 0,
+            startDate: wo.plannedStart || null,
+            endDate: wo.plannedEnd || null,
+            status: wo.status || 'pending',
+        })),
+        conflictDetails: conflicts.map(c => ({
+            type: c.type || 'unknown',
+            description: c.description || '',
+            resolution: c.suggestedResolution || 'Cần xem xét',
+        })),
         capacityDetails: safeCapacities
           .filter(c => c && c.dailyCapacity && c.dailyCapacity.length > 0)
           .map(c => {

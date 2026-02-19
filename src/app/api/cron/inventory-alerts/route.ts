@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getInventoryAlertService } from '@/lib/alerts/inventory-alert-service';
 import { logger } from '@/lib/logger';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 
 // Verify cron secret for security
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -25,6 +26,24 @@ export async function GET(request: NextRequest) {
           { status: 401 }
         );
       }
+    }
+
+    // Rate limiting (heavy endpoint - alert generation is resource-intensive)
+    const rateLimitCheck = await checkHeavyEndpointLimit(request);
+    if (!rateLimitCheck.success) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Please try again later.' }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimitCheck.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitCheck.limit),
+            'X-RateLimit-Remaining': String(rateLimitCheck.remaining),
+            'X-RateLimit-Reset': String(rateLimitCheck.reset),
+          },
+        }
+      );
     }
 
     const alertService = getInventoryAlertService();
@@ -68,7 +87,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process inventory alerts',
         timestamp: new Date().toISOString(),
         duration: Date.now() - startTime,
       },

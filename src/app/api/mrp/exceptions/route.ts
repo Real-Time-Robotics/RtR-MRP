@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   detectExceptions,
   getExceptionSummary,
@@ -10,10 +11,27 @@ import {
 } from "@/lib/mrp";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const exceptionBodySchema = z.object({
+  action: z.enum(["detect", "resolve", "acknowledge", "ignore", "clear"]),
+  exceptionId: z.string().optional(),
+  userId: z.string().optional(),
+  resolution: z.string().optional(),
+  reason: z.string().optional(),
+  mrpRunId: z.string().optional(),
+  daysOld: z.number().optional(),
+});
+
 // GET /api/mrp/exceptions - Get exceptions
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const summary = searchParams.get("summary") === "true";
     const status = searchParams.get("status") || undefined;
     const severity = searchParams.get("severity") || undefined;
@@ -44,12 +62,24 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/exceptions - Detect exceptions or take action
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+const rawBody = await request.json();
+    const parseResult = exceptionBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, exceptionId, userId, resolution, reason, mrpRunId } = body;
 
     if (action === "detect") {
@@ -111,4 +141,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

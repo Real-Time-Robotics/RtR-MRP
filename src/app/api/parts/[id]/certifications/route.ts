@@ -1,21 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const certificationBodySchema = z.object({
+  certificationType: z.enum(["ROHS", "REACH", "CE", "UL", "ISO", "AS9100", "ITAR", "NDAA", "COC", "COA", "OTHER"]),
+  certificateNumber: z.string().optional(),
+  issuingBody: z.string().optional(),
+  issueDate: z.string().optional(),
+  expiryDate: z.string().optional(),
+  documentUrl: z.string().optional(),
+  verified: z.boolean().optional(),
+  notes: z.string().optional(),
+});
 
 // GET - List certifications for a part
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     const certifications = await prisma.partCertification.findMany({
       where: { partId: id },
@@ -30,18 +39,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Add certification to part
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
-    const data = await request.json();
+  try {
+    const { id } = await context.params;
+    const rawBody = await request.json();
+    const parseResult = certificationBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const data = parseResult.data;
 
     const certification = await prisma.partCertification.create({
       data: {
@@ -68,4 +84,4 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { CAPAStatusBadge } from "@/components/quality/capa-status-badge";
 import { PriorityBadge } from "@/components/quality/priority-badge";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface CAPA {
   id: string;
@@ -54,7 +55,7 @@ export default function CAPAListPage() {
         setCAPAs(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
-      console.error("Failed to fetch CAPAs:", error);
+      clientLogger.error("Failed to fetch CAPAs:", error);
     } finally {
       setLoading(false);
     }

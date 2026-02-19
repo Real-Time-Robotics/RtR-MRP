@@ -4,25 +4,52 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { getAISchedulerAnalyzer } from '@/lib/ai/autonomous/ai-scheduler-analyzer';
 import { ScheduleResult } from '@/lib/ai/autonomous/scheduling-engine';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const analyzeBodySchema = z.object({
+  scheduleResult: z.any().optional(),
+  analysisType: z.enum(['explain', 'bottlenecks', 'improvements', 'compare', 'disruption', 'report', 'full']).optional(),
+  scheduleResults: z.array(z.any()).optional(),
+  disruption: z.any().optional(),
+});
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = analyzeBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       scheduleResult,
       analysisType = 'full',
       scheduleResults, // For comparison
       disruption, // For disruption handling
-    } = body;
+    } = parseResult.data;
 
     const analyzer = getAISchedulerAnalyzer();
 
@@ -212,16 +239,27 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    // Return available analysis types and descriptions
+  try {
+// Return available analysis types and descriptions
     const analysisTypes = [
       {
         id: 'explain',
@@ -322,7 +360,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 function calculateScheduleHealth(schedule: ScheduleResult): string {
   const utilizationScore = schedule.metrics.currentCapacityUtilization;

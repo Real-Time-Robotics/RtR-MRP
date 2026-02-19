@@ -3,6 +3,7 @@
 
 import { getAIProvider } from "@/lib/ai/provider";
 import { ColumnMapping, entityFieldDefinitions } from "./mapper";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -194,7 +195,7 @@ export async function aiDetectDataIssues(
     try {
       aiSuggestions = await getAISuggestions(issues, data.slice(0, 10), entityType);
     } catch (error) {
-      console.error("AI suggestion generation failed:", error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-validator', operation: 'getAISuggestions' });
       // Continue without AI suggestions
     }
   }
@@ -474,7 +475,7 @@ Respond ONLY in valid JSON array format (no markdown):
 
     return JSON.parse(content);
   } catch (error) {
-    console.error("AI suggestions failed:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-validator', operation: 'aiSuggestions' });
     return [];
   }
 }

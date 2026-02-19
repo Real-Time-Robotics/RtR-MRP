@@ -2,12 +2,14 @@
 // API endpoint to import stress test data from Excel file
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '@/lib/logger';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 
 const EXCEL_FILE = path.join(process.cwd(), 'data', 'RTR_MRP_StressTest_2024.xls');
 
@@ -33,14 +35,9 @@ function parseNumber(value: unknown, defaultValue: number = 0): number {
 }
 
 // GET - Check status and get info about stress test file
-export async function GET() {
+export const GET = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const fileExists = fs.existsSync(EXCEL_FILE);
+const fileExists = fs.existsSync(EXCEL_FILE);
     let fileInfo = null;
 
     if (fileExists) {
@@ -112,17 +109,33 @@ export async function GET() {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Failed to get status' }, { status: 500 });
   }
-}
+});
 
 // POST - Import stress test data
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user.id);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
     }
 
-    const { entities = ['all'] } = await request.json();
+    const bodySchema = z.object({
+      entities: z.array(z.string()).default(['all']),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { entities } = parseResult.data;
 
     if (!fs.existsSync(EXCEL_FILE)) {
       return NextResponse.json(
@@ -139,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     // Import Suppliers
     if (shouldImport('suppliers') && workbook.Sheets['Suppliers']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Suppliers']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Suppliers']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -177,7 +190,7 @@ export async function POST(request: NextRequest) {
 
     // Import Parts
     if (shouldImport('parts') && workbook.Sheets['Parts']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Parts']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Parts']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -242,7 +255,7 @@ export async function POST(request: NextRequest) {
 
     // Import Customers
     if (shouldImport('customers') && workbook.Sheets['Customers']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Customers']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Customers']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -278,7 +291,7 @@ export async function POST(request: NextRequest) {
 
     // Import Sales Orders
     if (shouldImport('salesOrders') && workbook.Sheets['Sales Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Sales Orders']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Sales Orders']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       const customers = await prisma.customer.findMany({ select: { id: true, code: true }, orderBy: { createdAt: 'asc' } });
@@ -337,7 +350,7 @@ export async function POST(request: NextRequest) {
 
     // Import Purchase Orders
     if (shouldImport('purchaseOrders') && workbook.Sheets['Purchase Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Purchase Orders']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Purchase Orders']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       const suppliers = await prisma.supplier.findMany({ select: { id: true, code: true }, orderBy: { createdAt: 'asc' } });
@@ -393,7 +406,7 @@ export async function POST(request: NextRequest) {
 
     // Import Work Orders
     if (shouldImport('workOrders') && workbook.Sheets['Work Orders']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Work Orders']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['Work Orders']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       // Get parts for mapping (Work Orders in this file reference Parts, not Products)
@@ -481,7 +494,7 @@ export async function POST(request: NextRequest) {
 
     // Import NCRs
     if (shouldImport('ncrs') && workbook.Sheets['NCRs']) {
-      const data = XLSX.utils.sheet_to_json(workbook.Sheets['NCRs']) as any[];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets['NCRs']) as Record<string, unknown>[];
       let processed = 0, errors = 0;
 
       for (const row of data) {
@@ -534,4 +547,4 @@ export async function POST(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });
   }
-}
+});

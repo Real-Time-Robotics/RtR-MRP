@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { executeImport } from "@/lib/import/import-executor";
 import { ColumnMapping } from "@/lib/import/ai-analyzer";
 import * as XLSX from "xlsx";
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const formData = await request.formData();
+  try {
+const formData = await request.formData();
     const file = formData.get("file") as File;
     const sessionId = formData.get("sessionId") as string;
     const mappingJson = formData.get("mapping") as string;
@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Import failed",
+        error: "Failed to execute import",
       },
       { status: 500 }
     );
   }
-}
+});

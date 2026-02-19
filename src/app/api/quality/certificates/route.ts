@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { generateCertificateNumber } from "@/lib/quality/coc-generator";
 import { parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for Certificate creation
 const CertificateCreateSchema = z.object({
   salesOrderId: z.string().min(1, "Đơn hàng là bắt buộc"),
@@ -20,6 +21,10 @@ const CertificateCreateSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -60,12 +65,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
 
     const body = await request.json();
 
@@ -118,7 +123,7 @@ export async function POST(request: NextRequest) {
         inspectionId: data.inspectionId || null,
         specifications: data.specifications || null,
         testResults: data.testResults || null,
-        preparedBy: session.user.name || session.user.email || "System",
+        preparedBy: session.user?.name || session.user?.email || "System",
         preparedAt: new Date(),
         status: "draft",
       },
@@ -132,4 +137,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

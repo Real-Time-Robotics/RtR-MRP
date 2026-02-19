@@ -19,7 +19,9 @@ import {
   Loader2,
   Info,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Template {
   type: string;
@@ -56,7 +58,7 @@ export default function TemplatesPage() {
         setTemplates(data.templates || []);
       }
     } catch (error) {
-      console.error("Error fetching templates:", error);
+      clientLogger.error("Error fetching templates:", error);
     } finally {
       setLoading(false);
     }
@@ -97,8 +99,8 @@ export default function TemplatesPage() {
         )
       );
     } catch (error) {
-      console.error("Download error:", error);
-      alert("Download failed. Please try again.");
+      clientLogger.error("Download error:", error);
+      toast.error("Download failed. Please try again.");
     } finally {
       setDownloading(null);
     }

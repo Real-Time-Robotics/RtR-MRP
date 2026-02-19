@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import {
   SupplierPerformanceScorer,
   getSupplierPerformanceScorer,
@@ -14,6 +15,45 @@ import {
   getDependencyAnalyzer,
   DependencyAnalysis,
 } from './dependency-analyzer';
+
+// =============================================================================
+// PRISMA RESULT TYPES
+// =============================================================================
+
+/** Supplier with partSuppliers (with nested part+partSuppliers), purchase orders, and risk score */
+type SupplierWithDependencies = Prisma.SupplierGetPayload<{
+  include: {
+    partSuppliers: {
+      include: {
+        part: {
+          include: { partSuppliers: true };
+        };
+      };
+    };
+    purchaseOrders: true;
+    riskScore: true;
+  };
+}>;
+
+/** PartSupplier with nested part that has partSuppliers */
+type PartSupplierWithPartAndSuppliers = SupplierWithDependencies['partSuppliers'][number];
+
+/** A purchase order from the supplier context */
+type SupplierPurchaseOrder = SupplierWithDependencies['purchaseOrders'][number];
+
+/** Supplier with partSuppliers and purchase orders but no riskScore (for scenario analysis) */
+type SupplierWithoutRiskScore = Prisma.SupplierGetPayload<{
+  include: {
+    partSuppliers: {
+      include: {
+        part: {
+          include: { partSuppliers: true };
+        };
+      };
+    };
+    purchaseOrders: true;
+  };
+}>;
 
 // =============================================================================
 // TYPES
@@ -447,7 +487,7 @@ export class RiskCalculator {
     if (topSupplier) {
       const affectedParts = topSupplier.partSuppliers.length;
       const singleSourceParts = topSupplier.partSuppliers.filter(
-        (ps: { part: { partSuppliers: any[] } }) => ps.part.partSuppliers.length === 1
+        (ps: PartSupplierWithPartAndSuppliers) => ps.part.partSuppliers.length === 1
       ).length;
 
       scenarios.push({
@@ -669,13 +709,13 @@ export class RiskCalculator {
     };
   }
 
-  private calculateDependencyRisk(supplier: any): RiskFactorBreakdown['dependency'] {
+  private calculateDependencyRisk(supplier: SupplierWithDependencies): RiskFactorBreakdown['dependency'] {
     const factors: RiskFactor[] = [];
     let totalScore = 0;
 
     // Single source parts
     const singleSourceParts = supplier.partSuppliers.filter(
-      (ps: any) => ps.part.partSuppliers.length === 1
+      (ps: PartSupplierWithPartAndSuppliers) => ps.part.partSuppliers.length === 1
     );
     if (singleSourceParts.length > 0) {
       const singleSourceScore = Math.min(100, singleSourceParts.length * 15);
@@ -689,7 +729,7 @@ export class RiskCalculator {
     }
 
     // Critical parts dependency
-    const criticalParts = supplier.partSuppliers.filter((ps: any) => ps.part.isCritical);
+    const criticalParts = supplier.partSuppliers.filter((ps: PartSupplierWithPartAndSuppliers) => ps.part.isCritical);
     if (criticalParts.length > 0) {
       const criticalScore = Math.min(100, criticalParts.length * 20);
       factors.push({
@@ -721,7 +761,7 @@ export class RiskCalculator {
     };
   }
 
-  private calculateExternalRisk(supplier: any): RiskFactorBreakdown['external'] {
+  private calculateExternalRisk(supplier: SupplierWithDependencies): RiskFactorBreakdown['external'] {
     const factors: RiskFactor[] = [];
     let totalScore = 0;
 
@@ -767,7 +807,7 @@ export class RiskCalculator {
     };
   }
 
-  private calculateFinancialRisk(supplier: any, months: number): RiskFactorBreakdown['financial'] {
+  private calculateFinancialRisk(supplier: SupplierWithDependencies, months: number): RiskFactorBreakdown['financial'] {
     const factors: RiskFactor[] = [];
     let totalScore = 30; // Base financial risk
 
@@ -808,7 +848,7 @@ export class RiskCalculator {
     return 'low';
   }
 
-  private calculateRiskTrend(previousRiskScore: any, currentScore: number): RiskTrend {
+  private calculateRiskTrend(previousRiskScore: SupplierWithDependencies['riskScore'], currentScore: number): RiskTrend {
     const previousScore = previousRiskScore ? 100 - previousRiskScore.overallScore : null;
     const changePercent = previousScore
       ? ((currentScore - previousScore) / previousScore) * 100
@@ -858,10 +898,10 @@ export class RiskCalculator {
     return history;
   }
 
-  private calculateMitigationStatus(supplier: any): MitigationStatus {
+  private calculateMitigationStatus(supplier: SupplierWithDependencies): MitigationStatus {
     // Check for alternate suppliers
     const hasAlternateSupplier = supplier.partSuppliers.every(
-      (ps: any) => ps.part.partSuppliers.length > 1
+      (ps: PartSupplierWithPartAndSuppliers) => ps.part.partSuppliers.length > 1
     );
 
     // Check for long-term contracts (simplified check)
@@ -1065,7 +1105,7 @@ export class RiskCalculator {
     return trend;
   }
 
-  private calculateAverageExternalRisk(suppliers: any[]): number {
+  private calculateAverageExternalRisk(suppliers: SupplierWithDependencies[]): number {
     if (suppliers.length === 0) return 0;
 
     const totalRisk = suppliers.reduce((sum, s) => {
@@ -1075,16 +1115,16 @@ export class RiskCalculator {
     return totalRisk / suppliers.length;
   }
 
-  private findTopSupplier(suppliers: any[]): any | null {
+  private findTopSupplier(suppliers: SupplierWithoutRiskScore[]): SupplierWithoutRiskScore | null {
     if (suppliers.length === 0) return null;
 
     return suppliers.reduce((top, current) => {
       const topSpend = top.purchaseOrders.reduce(
-        (sum: number, po: any) => sum + (po.totalAmount || 0),
+        (sum: number, po: SupplierPurchaseOrder) => sum + (po.totalAmount || 0),
         0
       );
       const currentSpend = current.purchaseOrders.reduce(
-        (sum: number, po: any) => sum + (po.totalAmount || 0),
+        (sum: number, po: SupplierPurchaseOrder) => sum + (po.totalAmount || 0),
         0
       );
       return currentSpend > topSpend ? current : top;
@@ -1092,11 +1132,11 @@ export class RiskCalculator {
   }
 
   private estimateFinancialImpact(
-    supplier: any,
-    allSuppliers: any[]
+    supplier: SupplierWithoutRiskScore,
+    allSuppliers: SupplierWithoutRiskScore[]
   ): RiskScenario['financialImpact'] {
     const supplierSpend = supplier.purchaseOrders.reduce(
-      (sum: number, po: any) => sum + (po.totalAmount || 0),
+      (sum: number, po: SupplierPurchaseOrder) => sum + (po.totalAmount || 0),
       0
     );
 

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError, ZodSchema } from 'zod';
 import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -14,7 +15,7 @@ import { auth } from '@/lib/auth';
 export interface ApiContext {
   params: Record<string, string>;
   searchParams: URLSearchParams;
-  session: any;
+  session: { user: { id: string; email: string; name?: string | null; role: string } } | null;
   tenantId: string;
   userId: string;
 }
@@ -185,8 +186,8 @@ export function withValidation<TBody = unknown, TQuery = unknown>(
         params: context.params || {},
         searchParams,
         session,
-        tenantId: (session?.user as any)?.tenantId || 'default',
-        userId: (session?.user as any)?.id || 'anonymous',
+        tenantId: (session?.user as Record<string, unknown> | undefined)?.tenantId as string || 'default',
+        userId: session?.user?.id || 'anonymous',
       };
 
       // Call handler
@@ -199,7 +200,7 @@ export function withValidation<TBody = unknown, TQuery = unknown>(
 
       return successResponse(result);
     } catch (error) {
-      console.error('[API Error]', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'api-validation' });
       
       if (error instanceof ZodError) {
         return validationError(error);
@@ -257,7 +258,7 @@ export async function validateBody<T>(
  * Get authenticated session or return error
  */
 export async function requireAuth(): Promise<
-  { success: true; session: any } | { success: false; response: NextResponse }
+  { success: true; session: { user: { id: string; email: string; name?: string | null; role: string } } } | { success: false; response: NextResponse }
 > {
   const session = await auth();
   if (!session?.user) {

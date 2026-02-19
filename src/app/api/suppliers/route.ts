@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
@@ -19,6 +19,7 @@ import {
   AuthUser,
 } from "@/lib/api/with-permission";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 const SEARCH_FIELDS = ["name", "code", "contactEmail", "contactName"];
 
 // =============================================================================
@@ -46,14 +47,14 @@ const createSupplierSchema = z.object({
 // GET - List suppliers
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
 
     // Parse pagination params
     const params = parsePaginationParams(request);
@@ -81,13 +82,14 @@ export async function GET(request: NextRequest) {
     ]);
 
     return paginatedSuccess(
-      buildPaginatedResponse(suppliers, totalCount, params, startTime)
+      buildPaginatedResponse(suppliers, totalCount, params, startTime),
+      { cacheControl: 'private, max-age=60, stale-while-revalidate=120' },
     );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/suppliers' });
     return paginatedError("Lỗi tải danh sách nhà cung cấp", 500);
   }
-}
+});
 
 // =============================================================================
 // POST - Create supplier

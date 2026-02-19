@@ -41,11 +41,31 @@ interface ExtractedLineItem {
   confidence: number;
 }
 
+interface ExtractedCustomerPO {
+  poNumber?: string;
+  customerName?: string;
+  customerCode?: string;
+  deliveryDate?: string;
+  total?: number;
+  currency?: string;
+  items?: ExtractedLineItem[];
+}
+
+interface ExtractedSupplierQuote {
+  quoteNumber?: string;
+  supplierName?: string;
+  supplierCode?: string;
+  validUntil?: string;
+  total?: number;
+  currency?: string;
+  items?: ExtractedLineItem[];
+}
+
 interface ExtractedData {
   emailType: string;
   confidence: number;
-  customerPO?: any;
-  supplierQuote?: any;
+  customerPO?: ExtractedCustomerPO;
+  supplierQuote?: ExtractedSupplierQuote;
   fieldConfidence: Record<string, number>;
   warnings: string[];
 }
@@ -53,7 +73,7 @@ interface ExtractedData {
 interface DraftOrder {
   type: string;
   status: string;
-  data: any;
+  data: Record<string, unknown>;
   confidence: number;
   requiresReview: boolean;
   reviewNotes: string[];
@@ -67,7 +87,16 @@ export default function EmailImportPage() {
   const [draftOrder, setDraftOrder] = useState<DraftOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [createdOrder, setCreatedOrder] = useState<{
+    id: string;
+    type: string;
+    orderNumber?: string;
+    poNumber?: string;
+    customer?: string;
+    supplier?: string;
+    itemCount?: number;
+    totalAmount?: number;
+  } | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showRawData, setShowRawData] = useState(false);
 
@@ -276,6 +305,7 @@ export default function EmailImportPage() {
                 <textarea
                   value={emailContent}
                   onChange={(e) => setEmailContent(e.target.value)}
+                  aria-label="Nội dung Email"
                   placeholder={`Paste nội dung email ở đây...
 
 Ví dụ:
@@ -621,7 +651,7 @@ function DataField({
   code,
   confidence,
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | undefined;
   code?: string;

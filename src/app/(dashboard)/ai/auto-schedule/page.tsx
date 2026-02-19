@@ -74,18 +74,48 @@ import { format, addDays, startOfWeek } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-// Import auto-schedule components
-import {
-  GanttChart,
+// Import auto-schedule types
+import type {
   GanttWorkOrder,
   GanttWorkCenter,
-  CapacityOverview,
-  ConflictList,
   ConflictAlertData,
-  SuggestionList,
   ScheduleSuggestionData,
   ViewMode,
 } from '@/components/ai/auto-schedule';
+import dynamic from 'next/dynamic';
+
+// Lazy-load heavy auto-schedule visualization components (~1700 lines total)
+const GanttChart = dynamic(
+  () => import('@/components/ai/auto-schedule/gantt-chart').then(mod => mod.GanttChart),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
+
+const CapacityOverview = dynamic(
+  () => import('@/components/ai/auto-schedule/capacity-bar').then(mod => mod.CapacityOverview),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
+
+const ConflictList = dynamic(
+  () => import('@/components/ai/auto-schedule/conflict-alert').then(mod => mod.ConflictList),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
+
+const SuggestionList = dynamic(
+  () => import('@/components/ai/auto-schedule/schedule-suggestion').then(mod => mod.SuggestionList),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
 
 // =============================================================================
 // TYPES
@@ -847,7 +877,7 @@ export default function AutoSchedulePage() {
               <Label>Thuật toán</Label>
               <Select
                 value={config.algorithm}
-                onValueChange={(value: any) => setConfig(prev => ({ ...prev, algorithm: value }))}
+                onValueChange={(value: string) => setConfig(prev => ({ ...prev, algorithm: value as ScheduleConfig['algorithm'] }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -866,7 +896,7 @@ export default function AutoSchedulePage() {
               <Label>Mục tiêu tối ưu</Label>
               <Select
                 value={config.optimizationGoal}
-                onValueChange={(value: any) => setConfig(prev => ({ ...prev, optimizationGoal: value }))}
+                onValueChange={(value: string) => setConfig(prev => ({ ...prev, optimizationGoal: value as ScheduleConfig['optimizationGoal'] }))}
               >
                 <SelectTrigger>
                   <SelectValue />

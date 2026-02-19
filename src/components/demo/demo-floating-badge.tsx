@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Popover,
   PopoverContent,
@@ -16,6 +17,7 @@ import {
   roleColors,
   rolePermissions,
 } from '@/lib/auth/auth-types';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   Play,
@@ -139,7 +141,7 @@ export function DemoFloatingBadge({
       });
       router.push(`/login?${params.toString()}`);
     } catch (error) {
-      console.error('Failed to switch role:', error);
+      clientLogger.error('Failed to switch role', error);
       setSwitching(false);
     }
   };
@@ -156,16 +158,16 @@ export function DemoFloatingBadge({
       });
 
       if (response.ok) {
-        alert('Dữ liệu demo đã được reset thành công!');
+        toast.success('Dữ liệu demo đã được reset thành công!');
         router.refresh();
         onReset?.();
       } else {
         const data = await response.json();
-        alert(`Lỗi: ${data.message || 'Không thể reset dữ liệu demo'}`);
+        toast.error(`Lỗi: ${data.message || 'Không thể reset dữ liệu demo'}`);
       }
     } catch (error) {
-      console.error('Failed to reset demo data:', error);
-      alert('Đã xảy ra lỗi khi reset dữ liệu demo');
+      clientLogger.error('Failed to reset demo data', error);
+      toast.error('Đã xảy ra lỗi khi reset dữ liệu demo');
     } finally {
       setResetting(false);
     }
@@ -192,6 +194,7 @@ export function DemoFloatingBadge({
             'bg-amber-500 text-white border-2 border-amber-400'
           )}
           title="Mở Demo Panel"
+          aria-label="Mở Demo Panel"
         >
           <Sparkles className="h-4 w-4" />
         </button>
@@ -257,6 +260,7 @@ export function DemoFloatingBadge({
                 }}
                 className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                 title="Thu nhỏ"
+                aria-label="Thu nhỏ Demo Panel"
               >
                 <XCircle className="h-4 w-4" />
               </button>

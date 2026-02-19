@@ -1,132 +1,42 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { Package, AlertTriangle, Settings, RefreshCw, Plus, Minus } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Package, AlertTriangle, Settings, RefreshCw } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 import { Button } from '@/components/ui/button';
 import { SmartGrid } from '@/components/ui-v2/smart-grid';
 import { EditableCell } from '@/components/ui-v2/editable-cell';
 import { Column } from '@/components/ui-v2/data-table';
-import { StockStatusBadge } from '@/components/inventory/stock-status-badge';
 import { PermissionButton } from '@/components/ui/permission-button';
 import { usePaginatedData } from '@/hooks/use-paginated-data';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
-import { StockStatus } from '@/types';
 import Link from 'next/link';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   ChangeImpactDialog,
   useChangeImpact,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
 
-// =============================================================================
-// TYPES
-// =============================================================================
+// Import extracted components and types
+import {
+  InventoryItem,
+  InventoryTableProps,
+  AdjustData,
+  DEFAULT_ADJUST_DATA,
+  INVENTORY_FIELD_LABELS,
+  formatCurrency,
+} from './inventory-types';
+import { StatsCards } from './inventory-stats-cards';
+import { InventoryAdjustDialog } from './inventory-adjust-dialog';
 
-export interface InventoryItem {
-  id: string; // Inventory ID (or Part ID if distinct)
-  partId: string;
-  partNumber: string;
-  name: string;
-  category: string;
-  unit: string;
-  unitCost: number;
-  isCritical: boolean;
-  minStockLevel: number;
-  reorderPoint: number;
-  safetyStock: number;
-  quantity: number;
-  reserved: number;
-  available: number;
-  status: StockStatus;
-  warehouseId?: string;
-  warehouseName?: string;
-  lotNumber?: string;
-  expiryDate?: string;
-  locationCode?: string;
-}
-
-interface InventoryTableProps {
-  initialData?: InventoryItem[];
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-// =============================================================================
-// STATS CARDS
-// =============================================================================
-
-function StatsCards({ summary }: { summary: { total: number; critical: number; reorder: number; ok: number } }) {
-  const { t } = useLanguage();
-  return (
-    // COMPACT: gap-4 → gap-2, mb-6 → mb-3
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 shrink-0">
-      <Card className="border-gray-200 dark:border-mrp-border">
-        {/* COMPACT: pt-4 → p-3 */}
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{summary.total}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.totalSKU')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-red-600">{summary.critical}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.criticalOutOfStock')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-amber-600">{summary.reorder}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.reorderNeeded')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-green-600">{summary.ok}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('inv.inStock')}</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+// Re-export InventoryItem for backward compatibility
+export type { InventoryItem } from './inventory-types';
 
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
-
-// Field labels for change impact
-const INVENTORY_FIELD_LABELS: Record<string, { label: string; valueType: FieldChange['valueType'] }> = {
-  quantity: { label: 'Quantity', valueType: 'number' },
-  safetyStock: { label: 'Safety Stock', valueType: 'number' },
-  minStockLevel: { label: 'Min Stock Level', valueType: 'number' },
-  reorderPoint: { label: 'Reorder Point', valueType: 'number' },
-};
 
 export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   const { t } = useLanguage();
@@ -147,7 +57,25 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
   // Transform raw API data (handle both flat and nested response shapes)
   const inventory = useMemo(() => {
-    return rawInventory.map((item: any) => ({
+    type RawInventoryItem = InventoryItem & {
+      part?: {
+        id?: string;
+        partNumber?: string;
+        name?: string;
+        category?: string;
+        unit?: string;
+        unitCost?: number;
+        isCritical?: boolean;
+        planning?: {
+          minStockLevel?: number;
+          reorderPoint?: number;
+          safetyStock?: number;
+        };
+      };
+      reservedQty?: number;
+      warehouse?: { name?: string };
+    };
+    return rawInventory.map((item: RawInventoryItem) => ({
       id: item.id,
       partId: item.partId || item.part?.id,
       partNumber: item.partNumber || item.part?.partNumber,
@@ -176,8 +104,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
   // Fetch summary from the raw API response
   useEffect(() => {
-    // The API returns summary counts alongside data
-    // We need to extract these from a fresh fetch
     const fetchSummary = async () => {
       try {
         const res = await fetch('/api/inventory?page=1&pageSize=1');
@@ -185,7 +111,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         if (result.summary) {
           setSummary(result.summary);
         } else if (result.pagination) {
-          // Fallback: compute from pagination totalItems
           setSummary(prev => ({ ...prev, total: result.pagination.totalItems }));
         }
       } catch {
@@ -193,25 +118,18 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       }
     };
     fetchSummary();
-  }, [rawInventory]); // Re-fetch summary when data changes
+  }, [rawInventory]);
 
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
-  const [adjustData, setAdjustData] = useState({
-    inventoryId: '',   // inventory record id (unique per part+warehouse+lot)
-    partId: '',
-    warehouseId: '',
-    adjustmentType: 'ADD',
-    quantity: '',
-    reason: '',
-  });
+  const [adjustData, setAdjustData] = useState<AdjustData>(DEFAULT_ADJUST_DATA);
   const [adjusting, setAdjusting] = useState(false);
 
   // Change Impact state
   const pendingUpdateRef = useRef<{
     rowId: string;
     field: string;
-    value: any;
-    oldValue: any;
+    value: string | number;
+    oldValue: string | number | boolean | undefined;
     item: InventoryItem;
   } | null>(null);
 
@@ -229,7 +147,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
   const changeImpact = useChangeImpact({
     onSuccess: () => {
-      // Execute the pending update after confirmation
       if (pendingUpdateRef.current) {
         const { rowId, field, value, item } = pendingUpdateRef.current;
         executeUpdate(rowId, field, value, item);
@@ -237,7 +154,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       }
     },
     onError: () => {
-      // Still allow update if impact check fails
       if (pendingUpdateRef.current) {
         const { rowId, field, value, item } = pendingUpdateRef.current;
         executeUpdate(rowId, field, value, item);
@@ -271,7 +187,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       if (res.ok) {
         toast.success(t('inv.adjustSuccess'));
         setAdjustDialogOpen(false);
-        setAdjustData({ inventoryId: '', partId: '', warehouseId: '', adjustmentType: 'ADD', quantity: '', reason: '' });
+        setAdjustData(DEFAULT_ADJUST_DATA);
         setLocalUpdates({});
         refresh();
       } else {
@@ -279,7 +195,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         toast.error(error.error || t('inv.adjustFailed'));
       }
     } catch (error) {
-      console.error('Adjustment failed:', error);
+      clientLogger.error('Adjustment failed', error);
       toast.error(t('inv.adjustFailed'));
     } finally {
       setAdjusting(false);
@@ -287,39 +203,37 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   };
 
   // Execute the actual update (called after impact confirmation)
-  const executeUpdate = async (rowId: string, field: string, value: any, item: InventoryItem) => {
-    const oldValue = (item as any)[field];
+  const executeUpdate = async (rowId: string, field: string, value: string | number, item: InventoryItem) => {
+    const oldValue = item[field as keyof InventoryItem];
 
     // Optimistic Update via local overlay
     setLocalUpdates(prev => ({ ...prev, [rowId]: { ...prev[rowId], [field]: value } }));
 
     try {
       if (field === 'quantity') {
-        // Update Inventory Record
         await fetch(`/api/inventory/${rowId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quantity: Number(value) }),
         });
-        toast.success(t('inv.updateQtySuccess', { value }));
+        toast.success(t('inv.updateQtySuccess', { value: String(value) }));
       } else if (['minStockLevel', 'reorderPoint', 'safetyStock'].includes(field)) {
-        // Update Part Planning
         await fetch(`/api/parts/${item.partId}/planning`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ [field]: Number(value) }),
         });
-        toast.success(t('inv.updatePlanSuccess', { value }));
+        toast.success(t('inv.updatePlanSuccess', { value: String(value) }));
       }
     } catch (error) {
-      console.error('Update failed', error);
+      clientLogger.error('Update failed', error);
       toast.error(t('inv.updateFailed'));
       // Revert optimistic update
       setLocalUpdates(prev => {
         const copy = { ...prev };
         if (copy[rowId]) {
           const updated = { ...copy[rowId] };
-          delete (updated as any)[field];
+          delete updated[field as keyof InventoryItem];
           if (Object.keys(updated).length === 0) delete copy[rowId];
           else copy[rowId] = updated;
         }
@@ -329,22 +243,19 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   };
 
   // Update Handler - with Change Impact check
-  const handleUpdate = async (rowId: string, field: string, value: any) => {
-    // Find item
+  const handleUpdate = async (rowId: string, field: string, value: string | number) => {
     const item = displayInventory.find(i => i.id === rowId);
     if (!item) return;
 
-    const oldValue = (item as any)[field];
+    const oldValue = item[field as keyof InventoryItem];
 
     // Skip if value unchanged
     if (oldValue === value || Number(oldValue) === Number(value)) {
       return;
     }
 
-    // Create change object for impact check
     const fieldConfig = INVENTORY_FIELD_LABELS[field];
     if (!fieldConfig) {
-      // Unknown field, just execute directly
       executeUpdate(rowId, field, value, item);
       return;
     }
@@ -357,16 +268,12 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       valueType: fieldConfig.valueType,
     }];
 
-    // Store pending update
     pendingUpdateRef.current = { rowId, field, value, oldValue, item };
-
-    // Check impact
     await changeImpact.checkImpact('inventory', rowId, changes);
   };
 
-  // Column definitions - SONG ÁNH 1:1 với InventoryItem interface
+  // Column definitions
   const columns: Column<InventoryItem>[] = useMemo(() => [
-    // ===== PART INFO SECTION =====
     {
       key: 'partNumber',
       header: t('inv.partNumber'),
@@ -416,8 +323,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       width: '70px',
       hidden: true,
     },
-
-    // ===== QUANTITY SECTION =====
     {
       key: 'quantity',
       header: t('inv.quantity'),
@@ -450,8 +355,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       type: 'number',
       render: (value) => <span className="text-green-600 font-medium">{value}</span>,
     },
-
-    // ===== PLANNING SECTION =====
     {
       key: 'safetyStock',
       header: 'Safety Stock',
@@ -500,8 +403,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         />
       )
     },
-
-    // ===== STATUS & COST SECTION =====
     {
       key: 'status',
       header: t('column.status'),
@@ -531,8 +432,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       sortable: true,
       render: (val) => formatCurrency(val)
     },
-
-    // ===== WAREHOUSE SECTION =====
     {
       key: 'warehouseName',
       header: t('inv.warehouse'),
@@ -609,148 +508,15 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       />
 
       {/* Adjust Inventory Dialog */}
-      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('inv.adjustTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('inv.adjustDesc')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>{t('inv.selectPart')}</Label>
-              <Select
-                value={adjustData.inventoryId}
-                onValueChange={(value) => {
-                  const item = displayInventory.find(i => i.id === value);
-                  if (item) {
-                    setAdjustData({
-                      ...adjustData,
-                      inventoryId: value,
-                      partId: item.partId,
-                      warehouseId: item.warehouseId || '',
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('inv.selectPartPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {displayInventory.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.partNumber} - {item.name} [{item.warehouseName || 'N/A'}] (SL: {item.quantity})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('inv.adjustType')}</Label>
-                <Select
-                  value={adjustData.adjustmentType}
-                  onValueChange={(value) =>
-                    setAdjustData({ ...adjustData, adjustmentType: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ADD">
-                      <span className="flex items-center gap-2">
-                        <Plus className="h-4 w-4 text-green-600" />
-                        {t('inv.addStock')}
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="SUBTRACT">
-                      <span className="flex items-center gap-2">
-                        <Minus className="h-4 w-4 text-red-600" />
-                        {t('inv.subtractStock')}
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="adjustQty">{t('inv.quantityLabel')}</Label>
-                <Input
-                  id="adjustQty"
-                  type="number"
-                  min="1"
-                  value={adjustData.quantity}
-                  onChange={(e) =>
-                    setAdjustData({ ...adjustData, quantity: e.target.value })
-                  }
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            {/* Preview of quantity after adjustment */}
-            {adjustData.inventoryId && adjustData.quantity && (
-              <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border">
-                {(() => {
-                  const selectedItem = displayInventory.find(item => item.id === adjustData.inventoryId);
-                  if (!selectedItem) return null;
-                  const currentQty = selectedItem.quantity;
-                  const adjustQty = parseInt(adjustData.quantity) || 0;
-                  const newQty = adjustData.adjustmentType === 'ADD'
-                    ? currentQty + adjustQty
-                    : currentQty - adjustQty;
-                  const isNegative = newQty < 0;
-
-                  return (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">{t('inv.adjustResult')}</span>
-                      <div className="flex items-center gap-2 font-medium">
-                        <span>{currentQty}</span>
-                        <span className="text-slate-400">→</span>
-                        <span className={isNegative ? 'text-red-600' : adjustData.adjustmentType === 'ADD' ? 'text-green-600' : 'text-orange-600'}>
-                          {newQty}
-                        </span>
-                        {isNegative && (
-                          <span className="text-xs text-red-500">{t('inv.insufficientStock')}</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="reason">{t('inv.adjustReason')}</Label>
-              <Textarea
-                id="reason"
-                value={adjustData.reason}
-                onChange={(e) =>
-                  setAdjustData({ ...adjustData, reason: e.target.value })
-                }
-                placeholder={t('inv.adjustReasonPlaceholder')}
-                rows={3}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setAdjustDialogOpen(false)}
-                disabled={adjusting}
-              >
-                {t('common.cancel')}
-              </Button>
-              <Button onClick={submitAdjustment} disabled={adjusting}>
-                {adjusting ? t('common.processing') : t('common.confirm')}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <InventoryAdjustDialog
+        open={adjustDialogOpen}
+        onOpenChange={setAdjustDialogOpen}
+        adjustData={adjustData}
+        onAdjustDataChange={setAdjustData}
+        adjusting={adjusting}
+        onSubmit={submitAdjustment}
+        displayInventory={displayInventory}
+      />
     </div>
   );
 }

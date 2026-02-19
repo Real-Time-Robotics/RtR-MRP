@@ -21,6 +21,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // RAG KNOWLEDGE MANAGEMENT PAGE
@@ -95,7 +96,7 @@ export default function KnowledgePage() {
         setStats(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      clientLogger.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
     }
@@ -148,7 +149,7 @@ export default function KnowledgePage() {
         setSearchResults(data.results);
       }
     } catch (error) {
-      console.error('Search failed:', error);
+      clientLogger.error('Search failed:', error);
     } finally {
       setSearching(false);
     }
@@ -362,6 +363,7 @@ export default function KnowledgePage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Nhập từ khóa để tìm kiếm..."
+                aria-label="Tìm kiếm"
                 className="flex-1 h-8 px-3 bg-gray-100 dark:bg-gray-700 border-0 text-[11px] rounded focus:ring-2 focus:ring-blue-500"
               />
               <button

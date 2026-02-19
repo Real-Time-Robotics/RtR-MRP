@@ -9,6 +9,7 @@ import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -39,6 +40,10 @@ const updateProfileSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     const session = await auth();
 
     if (!session?.user) {
@@ -71,7 +76,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Đã xảy ra lỗi', code: 'AUTH_ERROR' },
       { status: 500 }
     );
   }
@@ -129,7 +134,7 @@ export async function GET() {
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Đã xảy ra lỗi', code: 'AUTH_ERROR' },
       { status: 500 }
     );
   }
@@ -259,11 +264,13 @@ async function handleEnableMFA(user: { id?: string; email?: string | null }) {
     );
   }
 
-  // For demo, we'll return a placeholder secret
-  // In production, use speakeasy to generate a real secret
+  // Generate a random secret for each user
+  // In production, use speakeasy to generate a cryptographically secure secret
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const randomBase32 = Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   const secret = {
-    base32: 'JBSWY3DPEHPK3PXP', // Demo secret
-    otpauth_url: `otpauth://totp/RTR%20MRP:${user.email}?secret=JBSWY3DPEHPK3PXP&issuer=RTR%20MRP`,
+    base32: randomBase32,
+    otpauth_url: `otpauth://totp/RTR%20MRP:${user.email}?secret=${randomBase32}&issuer=RTR%20MRP`,
   };
 
   // Store pending MFA (not enabled yet until verified)

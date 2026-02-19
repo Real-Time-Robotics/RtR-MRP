@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { updateWorkOrderStatus } from "@/lib/mrp-engine";
 import { withAuth, type AuthUser } from "@/lib/auth/middleware";
@@ -6,6 +7,7 @@ import { handleError, NotFoundError, paginatedResponse, successResponse } from "
 import { logger } from "@/lib/logger";
 import { WorkOrderUpdateSchema, validateRequest } from "@/lib/validation/schemas";
 import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // GET - Get work order details (requires authentication + permission)
 export const GET = withAuth(
@@ -13,6 +15,10 @@ export const GET = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     try {
       const { id } = await params;
 
@@ -37,7 +43,7 @@ export const GET = withAuth(
       }
 
       // Backward-compat: if no ProductionReceipt but has legacy LotTransaction PRODUCED
-      let responseData: any = { ...workOrder };
+      let responseData: Record<string, unknown> = { ...workOrder };
       if (!workOrder.productionReceipt) {
         const legacyTx = await prisma.lotTransaction.findFirst({
           where: { transactionType: "PRODUCED", workOrderId: id },
@@ -73,6 +79,10 @@ export const PATCH = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rlResult = await checkWriteEndpointLimit(request);
+    if (rlResult) return rlResult;
+
     try {
       const { id } = await params;
       const body = await request.json();
@@ -92,7 +102,7 @@ export const PATCH = withAuth(
       if (status) {
         workOrder = await updateWorkOrderStatus(id, status, completedQty, scrapQty);
       } else {
-        const data: any = { ...updateData };
+        const data: Prisma.WorkOrderUpdateInput = { ...updateData };
         if (completedQty !== undefined) data.completedQty = completedQty;
         if (scrapQty !== undefined) data.scrapQty = scrapQty;
         if (plannedStart !== undefined) data.plannedStart = plannedStart ? new Date(plannedStart) : null;
@@ -114,7 +124,7 @@ export const PATCH = withAuth(
       if (status) {
         auditStatusChange(request, user, "WorkOrder", id, "previous", status);
       } else {
-        auditUpdate(request, user, "WorkOrder", id, {} as any, updateData as any);
+        auditUpdate(request, user, "WorkOrder", id, {} as Record<string, unknown>, updateData as Record<string, unknown>);
       }
 
       return successResponse(workOrder);
@@ -131,6 +141,10 @@ export const DELETE = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rlResult2 = await checkWriteEndpointLimit(request);
+    if (rlResult2) return rlResult2;
+
     try {
       const { id } = await params;
 

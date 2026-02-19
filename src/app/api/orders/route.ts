@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
@@ -13,6 +13,7 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for order items
 const OrderItemSchema = z.object({
   productId: z.string().min(1, "Product ID là bắt buộc"),
@@ -33,15 +34,14 @@ const OrderCreateSchema = z.object({
 const ALLOWED_FILTERS = ["status", "customerId"];
 const SEARCH_FIELDS = ["orderNumber"];
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Parse pagination params
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -95,15 +95,14 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders' });
     return paginatedError("Failed to fetch orders", 500);
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
 
     // Validate request body
@@ -201,4 +200,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

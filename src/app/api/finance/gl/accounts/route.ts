@@ -1,18 +1,40 @@
 // src/app/api/finance/gl/accounts/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from "zod";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import { getAccountBalance, getTrialBalance } from "@/lib/finance";
 import { logger } from "@/lib/logger";
+import { AccountType } from "@prisma/client";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
 
+const glAccountPostSchema = z.object({
+  accountNumber: z.string().min(1, 'Số tài khoản là bắt buộc'),
+  name: z.string().min(1, 'Tên tài khoản là bắt buộc'),
+  description: z.string().optional(),
+  accountType: z.string().min(1, 'Loại tài khoản là bắt buộc'),
+  accountCategory: z.string().min(1, 'Danh mục tài khoản là bắt buộc'),
+  parentId: z.string().optional(),
+  normalBalance: z.enum(['DEBIT', 'CREDIT']).optional().default('DEBIT'),
+  currencyCode: z.string().optional().default('USD'),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET - Get GL accounts
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
@@ -62,31 +84,47 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { isActive: true };
     if (accountType) where.accountType = accountType;
 
-    // Get list of accounts
-    const accounts = await prisma.gLAccount.findMany({
-      where,
-      orderBy: { accountNumber: "asc" },
-    });
+    const params = parsePaginationParams(request);
+    const startTime = Date.now();
 
-    return NextResponse.json({ accounts });
+    // Get total count and paginated data in parallel
+    const [totalCount, accounts] = await Promise.all([
+      prisma.gLAccount.count({ where }),
+      prisma.gLAccount.findMany({
+        where,
+        ...buildOffsetPaginationQuery(params),
+        orderBy: params.sortBy
+          ? { [params.sortBy]: params.sortOrder }
+          : { accountNumber: "asc" },
+      }),
+    ]);
+
+    return paginatedSuccess(
+      buildPaginatedResponse(accounts, totalCount, params, startTime)
+    );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/gl/accounts' });
-    return NextResponse.json(
-      { error: "Failed to get accounts" },
-      { status: 500 }
-    );
+    return paginatedError("Failed to get accounts", 500);
   }
-}
+});
 
 // POST - Create GL account
-export async function POST(request: NextRequest) {
+export const POST = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
+    const parsed = glAccountPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
     const {
       accountNumber,
       name,
@@ -96,14 +134,7 @@ export async function POST(request: NextRequest) {
       parentId,
       normalBalance,
       currencyCode,
-    } = body;
-
-    if (!accountNumber || !name || !accountType || !accountCategory) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Check for duplicate account number
     const existing = await prisma.gLAccount.findUnique({
@@ -122,7 +153,7 @@ export async function POST(request: NextRequest) {
         accountNumber,
         name,
         description,
-        accountType,
+        accountType: accountType as AccountType,
         accountCategory,
         parentId,
         normalBalance: normalBalance || "DEBIT",
@@ -141,15 +172,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update GL account
-export async function PUT(request: NextRequest) {
+export const PUT = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
     const { accountId, ...updateData } = body;
@@ -192,15 +224,16 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Deactivate GL account
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("id");
@@ -259,4 +292,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

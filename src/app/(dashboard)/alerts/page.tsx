@@ -33,6 +33,7 @@ import {
   ALERT_TYPE_CONFIG,
   formatAlertTime,
 } from '@/lib/alerts/alert-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // ALERTS DASHBOARD PAGE
@@ -84,7 +85,7 @@ export default function AlertsPage() {
         setAlerts(alertsData.data.alerts);
       }
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      clientLogger.error('Failed to fetch alerts:', error);
     } finally {
       setLoading(false);
     }
@@ -118,7 +119,7 @@ export default function AlertsPage() {
       setSelectedAlerts([]);
       await fetchAlerts();
     } catch (error) {
-      console.error('Failed to perform bulk action:', error);
+      clientLogger.error('Failed to perform bulk action:', error);
     } finally {
       setActionLoading(false);
     }
@@ -134,7 +135,7 @@ export default function AlertsPage() {
       });
       await fetchAlerts();
     } catch (error) {
-      console.error('Failed to acknowledge all:', error);
+      clientLogger.error('Failed to acknowledge all:', error);
     } finally {
       setActionLoading(false);
     }
@@ -150,7 +151,7 @@ export default function AlertsPage() {
       });
       await fetchAlerts();
     } catch (error) {
-      console.error('Failed to perform action:', error);
+      clientLogger.error('Failed to perform action:', error);
     }
   };
 
@@ -304,6 +305,7 @@ export default function AlertsPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm cảnh báo..."
+                aria-label="Tìm kiếm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500"
@@ -332,6 +334,7 @@ export default function AlertsPage() {
             <select
               value={filterSeverity}
               onChange={(e) => setFilterSeverity(e.target.value as AlertSeverity | 'all')}
+              aria-label="Bộ lọc mức độ"
               className="h-9 px-2.5 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500"
             >
               {severityFilters.map((filter) => (
@@ -415,6 +418,7 @@ export default function AlertsPage() {
                   type="checkbox"
                   checked={selectedAlerts.length === filteredAlerts.length && filteredAlerts.length > 0}
                   onChange={toggleSelectAll}
+                  aria-label="Chọn tất cả"
                   className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-[11px] text-gray-500">Chọn tất cả</span>
@@ -441,6 +445,7 @@ export default function AlertsPage() {
                         type="checkbox"
                         checked={selectedAlerts.includes(alert.id)}
                         onChange={() => toggleSelection(alert.id)}
+                        aria-label={`Chọn cảnh báo ${alert.id}`}
                         className="mt-0.5 w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
 

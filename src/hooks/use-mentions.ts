@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useDebounce } from './use-debounce';
+import { clientLogger } from '@/lib/client-logger';
 
 interface MentionUser {
   id: string;
@@ -60,7 +61,7 @@ export function useMentions() {
           setState((prev) => ({ ...prev, users: [], isLoading: false }));
         }
       } catch (error) {
-        console.error('User search failed:', error);
+        clientLogger.error('User search failed', error);
         setState((prev) => ({ ...prev, users: [], isLoading: false }));
       }
     };

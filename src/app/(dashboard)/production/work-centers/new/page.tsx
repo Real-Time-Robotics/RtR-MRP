@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 const TYPE_OPTIONS = [
   { value: "MACHINE", label: "Máy móc (Machine)" },
@@ -69,12 +71,12 @@ export default function NewWorkCenterPage() {
     e.preventDefault();
 
     if (!formData.code.trim()) {
-      alert("Vui lòng nhập mã work center");
+      toast.error("Vui lòng nhập mã work center");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Vui lòng nhập tên work center");
+      toast.error("Vui lòng nhập tên work center");
       return;
     }
 
@@ -103,11 +105,11 @@ export default function NewWorkCenterPage() {
         router.push(`/production/work-centers/${workCenter.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Không thể tạo work center");
+        toast.error(error.error || "Không thể tạo work center");
       }
     } catch (error) {
-      console.error("Failed to create work center:", error);
-      alert("Không thể tạo work center");
+      clientLogger.error("Failed to create work center:", error);
+      toast.error("Không thể tạo work center");
     } finally {
       setLoading(false);
     }

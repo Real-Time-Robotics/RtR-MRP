@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -63,7 +65,7 @@ export default function NewInProcessInspectionPage() {
         setWorkOrders(data.workOrders || data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      clientLogger.error("Failed to fetch data:", error);
     }
   };
 
@@ -91,11 +93,11 @@ export default function NewInProcessInspectionPage() {
         router.push(`/quality/in-process/${inspection.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create inspection");
+        toast.error(error.error || "Failed to create inspection");
       }
     } catch (error) {
-      console.error("Failed to create inspection:", error);
-      alert("Failed to create inspection");
+      clientLogger.error("Failed to create inspection:", error);
+      toast.error("Failed to create inspection");
     } finally {
       setLoading(false);
     }

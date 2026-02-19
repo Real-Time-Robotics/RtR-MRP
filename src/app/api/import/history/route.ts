@@ -2,19 +2,19 @@
 // Import History API - Get import history and session details
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { getImportHistory, getImportSession, getImportLogs } from '@/lib/import';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET /api/import/history - Get import history
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId');
     const logsOnly = searchParams.get('logsOnly') === 'true';
 
@@ -64,4 +64,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

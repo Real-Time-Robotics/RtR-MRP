@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2, Loader2, Search, AlertTriangle, Pencil } from "lucide-react";
+import { clientLogger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,7 +86,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         setLines(data);
       }
     } catch (error) {
-      console.error("Failed to fetch BOM lines:", error);
+      clientLogger.error("Failed to fetch BOM lines", error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         setParts(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to search parts:", error);
+      clientLogger.error("Failed to search parts", error);
     } finally {
       setPartsLoading(false);
       setSearchDone(true);
@@ -194,7 +195,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         toast.error(error.error || "Lỗi thêm BOM line");
       }
     } catch (error) {
-      console.error("Failed to add BOM line:", error);
+      clientLogger.error("Failed to add BOM line", error);
       toast.error("Lỗi thêm BOM line");
     } finally {
       setSubmitting(false);
@@ -235,7 +236,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         toast.error(error.error || "Lỗi cập nhật BOM line");
       }
     } catch (error) {
-      console.error("Failed to update BOM line:", error);
+      clientLogger.error("Failed to update BOM line", error);
       toast.error("Lỗi cập nhật BOM line");
     } finally {
       setSubmitting(false);
@@ -268,7 +269,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         toast.error(error.error || "Lỗi xóa line");
       }
     } catch (error) {
-      console.error("Failed to delete BOM line:", error);
+      clientLogger.error("Failed to delete BOM line", error);
       toast.error("Lỗi xóa line");
     } finally {
       setDeletingId(null);
@@ -370,6 +371,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
                         className="h-7 w-7 text-muted-foreground hover:text-primary"
                         onClick={() => openEditDialog(line)}
                         title="Sửa"
+                        aria-label="Sửa"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -380,6 +382,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
                         onClick={() => handleDeleteLine(line.id)}
                         disabled={deletingId === line.id}
                         title="Xóa"
+                        aria-label="Xóa"
                       >
                         {deletingId === line.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />

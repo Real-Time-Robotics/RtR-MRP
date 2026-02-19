@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
+import { clientLogger } from '@/lib/client-logger';
+import {
   User,
   Bell,
   Vibrate,
@@ -91,7 +92,7 @@ export default function MobileSettingsPage() {
         navigator.vibrate(100);
       }
     } catch (error) {
-      console.error('Sync failed:', error);
+      clientLogger.error('Settings sync failed', error);
     } finally {
       setIsSyncing(false);
     }
@@ -119,7 +120,7 @@ export default function MobileSettingsPage() {
         lastSync: null,
       }));
     } catch (error) {
-      console.error('Clear cache failed:', error);
+      clientLogger.error('Failed to clear cache', error);
     } finally {
       setIsClearing(false);
     }

@@ -89,7 +89,7 @@ export default function CycleCountPage() {
                     <td className="py-1.5 px-2 text-center text-gray-500">{item.daysSinceLastCount !== null ? `${item.daysSinceLastCount}d trước` : "Chưa đếm"}</td>
                     <td className="py-1.5 px-2 text-center">
                       {!completed.has(item.inventoryId) && (
-                        <input type="number" className="w-full h-6 px-1.5 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal text-center" placeholder="Qty" value={countInputs[item.inventoryId] || ""} onChange={(e) => setCountInputs((prev) => ({ ...prev, [item.inventoryId]: e.target.value }))} />
+                        <input type="number" className="w-full h-6 px-1.5 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal text-center" placeholder="Qty" aria-label="Số lượng kiểm đếm" value={countInputs[item.inventoryId] || ""} onChange={(e) => setCountInputs((prev) => ({ ...prev, [item.inventoryId]: e.target.value }))} />
                       )}
                     </td>
                     <td className="py-1.5 px-2 text-center">

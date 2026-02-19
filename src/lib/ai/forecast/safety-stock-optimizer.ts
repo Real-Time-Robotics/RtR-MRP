@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { getForecastEngine } from './forecast-engine';
 import { getDataExtractorService } from './data-extractor';
 import {
@@ -339,7 +340,7 @@ export class SafetyStockOptimizerService {
         generatedAt: new Date(),
       };
     } catch (error) {
-      console.error(`[SafetyStock] Error for part ${partId}:`, error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'safety-stock-optimizer', partId });
       return null;
     }
   }
@@ -458,7 +459,7 @@ export class SafetyStockOptimizerService {
           updated++;
         }
       } catch (err) {
-        console.error(`[SafetyStock] Failed to update ${result.partId}:`, err);
+        logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'safety-stock-optimizer', partId: result.partId });
         failed++;
       }
     }

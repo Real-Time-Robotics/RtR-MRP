@@ -4,10 +4,12 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getDocumentOCRService, DocumentType, OCRResult } from '@/lib/ai/document-ocr-service';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // TYPES
@@ -24,14 +26,15 @@ interface ProcessDocumentRequest {
 // POST: Process a document
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
     // Check authentication
-    const session = await auth();
-    if (!session?.user) {
+// Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user.id);
+    if (!rateLimit.success) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
       );
     }
 
@@ -69,14 +72,22 @@ export async function POST(request: NextRequest) {
 
     } else {
       // Handle JSON request with base64 image
-      const body: ProcessDocumentRequest = await request.json();
+      const jsonBodySchema = z.object({
+        imageBase64: z.string(),
+        documentType: z.enum(['supplier_quote', 'customer_po', 'invoice', 'certificate']).optional(),
+        fileName: z.string().optional(),
+        autoCreate: z.boolean().optional(),
+      });
 
-      if (!body.imageBase64) {
+      const rawBody = await request.json();
+      const parseResult = jsonBodySchema.safeParse(rawBody);
+      if (!parseResult.success) {
         return NextResponse.json(
-          { error: 'No image data provided' },
+          { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
           { status: 400 }
         );
       }
+      const body = parseResult.data;
 
       imageBase64 = body.imageBase64;
       documentType = body.documentType;
@@ -108,7 +119,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Auto-create entities if requested and successful
-    let createdEntities: any | null = null;
+    let createdEntities: Record<string, unknown> | null = null;
     if (autoCreate && result.success && result.extractedData) {
       createdEntities = await createEntitiesFromDocument(result, userId);
     }
@@ -129,12 +140,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to process document',
-        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET: Get processing status or supported types
@@ -207,12 +217,14 @@ async function createEntitiesFromDocument(
   result: OCRResult,
   userId: string
 ): Promise<Record<string, unknown>> {
-  const created: any = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const created: Record<string, any> = {};
 
   try {
     switch (result.documentType) {
       case 'supplier_quote': {
-        const data = result.extractedData as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = result.extractedData as Record<string, any>;
 
         // Find or create supplier
         let supplier = await prisma.supplier.findFirst({
@@ -267,7 +279,8 @@ async function createEntitiesFromDocument(
       }
 
       case 'customer_po': {
-        const data = result.extractedData as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = result.extractedData as Record<string, any>;
 
         // Find or create customer
         let customer = await prisma.customer.findFirst({
@@ -378,7 +391,8 @@ async function createEntitiesFromDocument(
       }
 
       case 'invoice': {
-        const data = result.extractedData as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = result.extractedData as Record<string, any>;
 
         // Log invoice for review
         await prisma.auditLog.create({
@@ -401,7 +415,8 @@ async function createEntitiesFromDocument(
       }
 
       case 'certificate': {
-        const data = result.extractedData as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = result.extractedData as Record<string, any>;
 
         // Find related part
         const part = await prisma.part.findFirst({
@@ -443,7 +458,6 @@ async function createEntitiesFromDocument(
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/documents/ocr' });
     return {
       error: 'Failed to create some entities',
-      details: error instanceof Error ? error.message : 'Unknown error',
       partial: created,
     };
   }

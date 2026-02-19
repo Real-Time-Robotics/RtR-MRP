@@ -186,8 +186,7 @@ export function generateInvoicePDF(data: InvoiceDocumentData): void {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  y = (doc as any).lastAutoTable?.finalY ?? y + 20;
+  y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 20;
   y += 6;
 
   // Totals

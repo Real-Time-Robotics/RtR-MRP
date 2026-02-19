@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getStockStatus } from "@/lib/bom-engine";
-import { auth } from "@/lib/auth";import { logger } from '@/lib/logger';
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // Note: Removed Redis rate limiting - middleware already handles this
 // Redis not available on Render free tier causes 10s timeout
 
@@ -17,49 +19,54 @@ interface DashboardData {
   took?: number;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    // Rate limiting handled by middleware - no Redis call here
-    // This prevents 10s timeout when Redis is unavailable
-
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get pending orders
-    const pendingOrders = await prisma.salesOrder.findMany({
-      where: {
-        status: { in: ["draft", "confirmed"] },
-      },
-      select: { id: true, totalAmount: true },
-    });
+    // Run all three independent DB queries in parallel
+    const [pendingOrders, inventoryData, activePOs] = await Promise.all([
+      // Get pending orders
+      prisma.salesOrder.findMany({
+        where: {
+          status: { in: ["draft", "confirmed"] },
+        },
+        select: { id: true, totalAmount: true },
+      }),
+      // Get inventory status (optimized query)
+      prisma.inventory.findMany({
+        select: {
+          partId: true,
+          quantity: true,
+          reservedQty: true,
+          part: {
+            select: {
+              planning: {
+                select: {
+                  minStockLevel: true,
+                  reorderPoint: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      // Get active POs
+      prisma.purchaseOrder.findMany({
+        where: {
+          status: { notIn: ["received", "cancelled"] },
+        },
+        select: { id: true, totalAmount: true },
+      }),
+    ]);
 
     const pendingOrdersValue = pendingOrders.reduce(
       (sum, order) => sum + (order.totalAmount || 0),
       0
     );
-
-    // Get inventory status (optimized query)
-    const inventoryData = await prisma.inventory.findMany({
-      select: {
-        partId: true,
-        quantity: true,
-        reservedQty: true,
-        part: {
-          select: {
-            planning: {
-              select: {
-                minStockLevel: true,
-                reorderPoint: true,
-              },
-            },
-          },
-        },
-      },
-    });
 
     const partInventory = new Map<string, { quantity: number; reserved: number; minStockLevel: number; reorderPoint: number }>();
     inventoryData.forEach((inv) => {
@@ -98,14 +105,6 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Get active POs
-    const activePOs = await prisma.purchaseOrder.findMany({
-      where: {
-        status: { notIn: ["received", "cancelled"] },
-      },
-      select: { id: true, totalAmount: true },
-    });
-
     const activePOsValue = activePOs.reduce(
       (sum, po) => sum + (po.totalAmount || 0),
       0
@@ -139,4 +138,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

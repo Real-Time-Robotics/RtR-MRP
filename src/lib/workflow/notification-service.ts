@@ -4,6 +4,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { NotificationChannel } from '@prisma/client';
 import { emailService } from '@/lib/email/email-service';
 
@@ -59,7 +60,7 @@ export class NotificationService {
 
       return { success: true, notificationId: notification.id };
     } catch (error) {
-      console.error('[NotificationService] Send error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'send' });
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to send notification',
@@ -93,7 +94,7 @@ export class NotificationService {
 
       return { success: true, count: result.count };
     } catch (error) {
-      console.error('[NotificationService] Bulk send error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'bulkSend' });
       return { success: false, count: 0 };
     }
   }
@@ -109,7 +110,7 @@ export class NotificationService {
       });
       return true;
     } catch (error) {
-      console.error('[NotificationService] Mark read error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'markRead' });
       return false;
     }
   }
@@ -128,7 +129,7 @@ export class NotificationService {
       });
       return result.count;
     } catch (error) {
-      console.error('[NotificationService] Mark all read error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'markAllRead' });
       return 0;
     }
   }
@@ -263,7 +264,7 @@ export class NotificationService {
         }
       }
     } catch (error) {
-      console.error('[NotificationService] Reminder error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'reminder' });
     }
 
     return { sent, errors };
@@ -298,7 +299,7 @@ export class NotificationService {
       });
 
       if (!user?.email) {
-        console.warn('[NotificationService] No email for user:', payload.recipientId);
+        logger.warn('[NotificationService] No email for user', { context: 'notification-service', recipientId: payload.recipientId });
         return;
       }
 
@@ -398,9 +399,9 @@ This is an automated message from RTR-MRP System.
           break;
       }
 
-      console.log('[NotificationService] Email sent successfully to:', user.email);
+      logger.info('[NotificationService] Email sent successfully', { to: user.email });
     } catch (error) {
-      console.error('[NotificationService] Failed to send email:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'notification-service', operation: 'sendEmail' });
       // Don't throw - email failure shouldn't block notification creation
     }
   }

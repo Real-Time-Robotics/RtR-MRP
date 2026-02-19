@@ -5,13 +5,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { workflowEngine } from '@/lib/workflow';
 import { WorkflowEntityType, WorkflowStatus } from '@prisma/client';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET /api/workflows - List workflows
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'definitions' or 'instances'
@@ -82,12 +89,32 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/workflows - Start a new workflow
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      workflowCode: z.string(),
+      entityType: z.string(),
+      entityId: z.string(),
+      initiatedBy: z.string(),
+      contextData: z.record(z.string(), z.unknown()).optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { workflowCode, entityType, entityId, initiatedBy, contextData } = body;
 
     if (!workflowCode || !entityType || !entityId || !initiatedBy) {
@@ -124,7 +151,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      logger.logError(new Error(result.error || 'Workflow start failed'), { context: 'POST /api/workflows', workflowCode, entityType, entityId });
+      return NextResponse.json({ error: 'Failed to start workflow. Please check the workflow configuration and try again.' }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -139,4 +167,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

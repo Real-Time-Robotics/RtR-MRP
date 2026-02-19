@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Bell,
   AlertTriangle,
@@ -52,7 +53,7 @@ export function AlertBell() {
         setSummary(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      clientLogger.error('Failed to fetch alerts', error);
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ export function AlertBell() {
       });
       await fetchSummary();
     } catch (error) {
-      console.error('Failed to acknowledge alerts:', error);
+      clientLogger.error('Failed to acknowledge alerts', error);
     } finally {
       setAcknowledging(false);
     }
@@ -152,6 +153,7 @@ export function AlertBell() {
                 onClick={() => fetchSummary()}
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                 title="Làm mới"
+                aria-label="Làm mới"
               >
                 <RefreshCw className={cn('w-4 h-4 text-gray-500', loading && 'animate-spin')} />
               </button>
@@ -161,6 +163,7 @@ export function AlertBell() {
                   disabled={acknowledging}
                   className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                   title="Đánh dấu tất cả đã đọc"
+                  aria-label="Đánh dấu tất cả đã đọc"
                 >
                   <CheckCheck className={cn('w-4 h-4', acknowledging ? 'text-gray-300' : 'text-gray-500')} />
                 </button>

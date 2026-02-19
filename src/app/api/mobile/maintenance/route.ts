@@ -4,11 +4,18 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbMaintenanceOrderResult = Record<string, any>;
 
 // Helper: Transform maintenance order from database
-function transformMaintenanceOrder(mo: any) {
+function transformMaintenanceOrder(mo: DbMaintenanceOrderResult) {
   return {
     id: mo.id,
     workOrderNumber: mo.orderNumber,
@@ -74,9 +81,13 @@ function mapStatus(status: string): 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'O
  * GET /api/mobile/maintenance
  * Get maintenance orders for technicians
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const maintenanceId = searchParams.get('maintenanceId');
     const status = searchParams.get('status') || 'pending,in_progress';
     const assignedTo = searchParams.get('assignedTo');
@@ -84,7 +95,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.MaintenanceOrderWhereInput = {};
 
     if (maintenanceId) {
       where.id = maintenanceId;
@@ -174,15 +185,34 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/mobile/maintenance
  * Update maintenance order status
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const bodySchema = z.object({
+      action: z.string(),
+      maintenanceId: z.string(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: z.any().optional() as z.ZodOptional<z.ZodType<Record<string, any>>>,
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, maintenanceId, data } = body;
 
     if (!maintenanceId || !action) {
@@ -321,4 +351,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

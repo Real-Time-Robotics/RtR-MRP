@@ -3,8 +3,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { NextRequest } from 'next/server';
 import { PATCH } from '../mrp/suggestions/[id]/route';
 import { approveSuggestion, rejectSuggestion } from '@/lib/mrp-engine';
+import { auth } from '@/lib/auth';
 
 // Mock MRP engine functions
 vi.mock('@/lib/mrp-engine', () => ({
@@ -12,9 +14,20 @@ vi.mock('@/lib/mrp-engine', () => ({
   rejectSuggestion: vi.fn(),
 }));
 
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn(),
+}));
+
+vi.mock('@/lib/rate-limit', () => ({
+  checkReadEndpointLimit: vi.fn().mockResolvedValue(null),
+  checkWriteEndpointLimit: vi.fn().mockResolvedValue(null),
+  checkHeavyEndpointLimit: vi.fn().mockResolvedValue({ success: true, limit: 100, remaining: 99, retryAfter: 0 }),
+}));
+
 describe('MRP Suggestions API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (auth as Mock).mockResolvedValue({ user: { id: 'user-1' } });
   });
 
   describe('PATCH /api/mrp/suggestions/[id]', () => {
@@ -26,7 +39,7 @@ describe('MRP Suggestions API', () => {
 
       (approveSuggestion as Mock).mockResolvedValue(mockResult);
 
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'approve',
@@ -52,7 +65,7 @@ describe('MRP Suggestions API', () => {
 
       (approveSuggestion as Mock).mockResolvedValue(mockResult);
 
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'approve',
@@ -77,7 +90,7 @@ describe('MRP Suggestions API', () => {
 
       (rejectSuggestion as Mock).mockResolvedValue(mockResult);
 
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'reject',
@@ -94,7 +107,7 @@ describe('MRP Suggestions API', () => {
     });
 
     it('should return 400 for invalid action', async () => {
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'invalid',
@@ -106,13 +119,13 @@ describe('MRP Suggestions API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe('Invalid action');
+      expect(data.error).toBe('Dữ liệu không hợp lệ');
     });
 
     it('should return 500 when engine throws error', async () => {
       (approveSuggestion as Mock).mockRejectedValue(new Error('Database error'));
 
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'approve',
@@ -131,7 +144,7 @@ describe('MRP Suggestions API', () => {
       const mockResult = { success: true };
       (approveSuggestion as Mock).mockResolvedValue(mockResult);
 
-      const request = new Request('http://localhost:3000/api/mrp/suggestions/sug-1', {
+      const request = new NextRequest('http://localhost:3000/api/mrp/suggestions/sug-1', {
         method: 'PATCH',
         body: JSON.stringify({
           action: 'approve',

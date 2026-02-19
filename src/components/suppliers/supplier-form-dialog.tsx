@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { clientLogger } from '@/lib/client-logger';
 import {
     Form,
     FormControl,
@@ -36,6 +37,12 @@ import {
 } from './supplier-form-schema';
 import { Supplier } from '@/components/forms/supplier-form'; // Import type primarily
 import { useDebouncedCallback } from 'use-debounce';
+import type { Resolver } from 'react-hook-form';
+
+/** Extended Supplier interface with optional taxId field from API */
+interface SupplierWithTaxId extends Supplier {
+    taxId?: string | null;
+}
 
 interface SupplierFormDialogProps {
     open: boolean;
@@ -57,7 +64,7 @@ export function SupplierFormDialog({
     const [isCheckingTaxId, setIsCheckingTaxId] = useState(false);
 
     const form = useForm<SupplierFormData>({
-        resolver: zodResolver(supplierSchema) as any,
+        resolver: zodResolver(supplierSchema) as Resolver<SupplierFormData>,
         defaultValues: defaultSupplierValues,
     });
 
@@ -84,7 +91,7 @@ export function SupplierFormDialog({
                 setTaxIdWarning(null);
             }
         } catch (error) {
-            console.error('Error checking tax ID:', error);
+            clientLogger.error('Error checking tax ID', error);
         } finally {
             setIsCheckingTaxId(false);
         }
@@ -98,7 +105,7 @@ export function SupplierFormDialog({
                 form.reset({
                     code: supplier.code,
                     name: supplier.name,
-                    taxId: (supplier as any).taxId || '',
+                    taxId: (supplier as SupplierWithTaxId).taxId || '',
                     country: supplier.country,
                     ndaaCompliant: supplier.ndaaCompliant,
                     contactName: supplier.contactName || '',
@@ -145,11 +152,11 @@ export function SupplierFormDialog({
             if (!response.ok) {
                 if (result.errors) {
                     // Validation errors
-                    Object.entries(result.errors).forEach(([field, messages]) => {
-                        // @ts-ignore
-                        form.setError(field as keyof SupplierFormData, {
+                    const errors = result.errors as Record<string, string[]>;
+                    (Object.keys(errors) as Array<keyof SupplierFormData>).forEach((field) => {
+                        form.setError(field, {
                             type: 'server',
-                            message: (messages as string[]).join(', '),
+                            message: errors[field].join(', '),
                         });
                     });
                     throw new Error("Vui lòng kiểm tra lại thông tin");

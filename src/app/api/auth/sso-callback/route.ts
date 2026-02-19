@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { signIn } from '@/lib/auth';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
 /**
  * SSO Callback Route
  *
@@ -13,6 +15,10 @@ import { signIn } from '@/lib/auth';
  * 5. Redirects to the original page
  */
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   if (process.env.ENABLE_SUPABASE_SSO !== 'true') {
     return NextResponse.redirect(new URL('/login', request.url));
   }
@@ -59,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(new URL(callbackUrl, request.url));
   } catch (error) {
-    console.error('[SSO] Callback error:', error);
+    logger.error('[SSO] Callback error:', { error: String(error) });
     return NextResponse.redirect(new URL('/login?error=sso_failed', request.url));
   }
 }

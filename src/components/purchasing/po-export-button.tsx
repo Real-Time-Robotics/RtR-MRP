@@ -40,16 +40,16 @@ interface POExportButtonProps {
 export function POExportButton({ purchaseOrders, variant = 'outline', size = 'sm' }: POExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const columns: ExportColumn[] = [
+  const columns: ExportColumn<PurchaseOrder>[] = [
     { key: 'poNumber', header: 'PO Number', width: 12 },
-    { key: 'supplier', header: 'Supplier', width: 25, format: (v) => v?.name || '-' },
-    { key: 'supplierCode', header: 'Supplier Code', width: 12, format: (_, row) => row.supplier?.code || '-' },
+    { key: 'supplier', header: 'Supplier', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
+    { key: 'supplierCode', header: 'Supplier Code', width: 12, format: (_, row) => (row as PurchaseOrder).supplier?.code || '-' },
     { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
     { key: 'expectedDate', header: 'Expected Date', width: 12, type: 'date' },
-    { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => row.lines?.length || 0 },
+    { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => String(row.lines?.length || 0) },
     { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
-    { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
-    { key: 'notes', header: 'Notes', width: 30, format: (v) => v || '' },
+    { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
+    { key: 'notes', header: 'Notes', width: 30, format: (v) => (v as string) || '' },
   ];
 
   const handleExportExcel = () => {

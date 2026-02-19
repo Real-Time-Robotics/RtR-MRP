@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { clientLogger } from '@/lib/client-logger';
 
 interface FinanceStats {
   totalAR: number;
@@ -67,7 +68,7 @@ export default function FinanceDashboardPage() {
         grossMargin: 0,
       });
     } catch (error) {
-      console.error("Failed to fetch finance data:", error);
+      clientLogger.error("Failed to fetch finance data:", error);
       setStats({
         totalAR: 0,
         totalAP: 0,

@@ -9,6 +9,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from '@/lib/api/with-permission';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // INVENTORY ISSUE API
@@ -101,6 +102,10 @@ async function postHandler(
   request: NextRequest,
   { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   let body;
   try {
     body = await request.json();
@@ -135,8 +140,8 @@ async function postHandler(
     try {
       const result = await issueMaterials(firstAlloc.workOrderId, data.allocationIds);
       return successResponse(result);
-    } catch (error: any) {
-      return errorResponse(error.message || 'Failed to issue WO materials', 500);
+    } catch (error: unknown) {
+      return errorResponse('Failed to issue work order materials', 500);
     }
   }
 
@@ -154,8 +159,8 @@ async function postHandler(
       workOrderId: data.workOrderId,
     });
     return successResponse(result);
-  } catch (error: any) {
-    return errorResponse(error.message || 'Failed to issue materials', 400);
+  } catch (error: unknown) {
+    return errorResponse('Failed to issue materials', 400);
   }
 }
 

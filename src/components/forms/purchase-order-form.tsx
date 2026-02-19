@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { clientLogger } from '@/lib/client-logger';
 import { z } from 'zod';
 import {
   Dialog,
@@ -188,7 +189,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         setSuppliers(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch suppliers:', error);
+      clientLogger.error('Failed to fetch suppliers', error);
     }
   };
 
@@ -206,7 +207,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         setParts(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch parts:', error);
+      clientLogger.error('Failed to fetch parts', error);
     }
   };
 
@@ -285,7 +286,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
       onSuccess?.(result.data || result);
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to save PO:', error);
+      clientLogger.error('Failed to save PO', error);
       toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
@@ -569,6 +570,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                               variant="ghost"
                               size="icon"
                               onClick={() => remove(index)}
+                              aria-label="Xóa dòng"
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
@@ -651,7 +653,7 @@ export function DeletePurchaseOrderDialog({ open, onOpenChange, order, onSuccess
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to delete PO:', error);
+      clientLogger.error('Failed to delete PO', error);
       toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);

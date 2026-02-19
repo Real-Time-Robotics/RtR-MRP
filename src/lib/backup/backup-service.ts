@@ -2,6 +2,7 @@
 // Backup Service - Database backup and recovery
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -95,7 +96,7 @@ export async function createBackup(options: BackupOptions): Promise<BackupResult
       await execAsync(command);
     } catch (execError) {
       // If command fails, create a JSON backup as fallback
-      console.warn('Database dump failed, using JSON backup fallback');
+      logger.warn('Database dump failed, using JSON backup fallback', { context: 'backup-service' });
       await createJSONBackup(filePath.replace('.sql', '.json'));
     }
 
@@ -132,7 +133,7 @@ export async function createBackup(options: BackupOptions): Promise<BackupResult
       duration,
     };
   } catch (error) {
-    console.error('Backup failed:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'backup-service', operation: 'backup' });
 
     return {
       success: false,
@@ -164,7 +165,7 @@ async function createJSONBackup(filePath: string): Promise<void> {
       const records = await prisma[model].findMany({ take: 10000 });
       data[model] = records;
     } catch (err) {
-      console.warn(`Failed to backup model ${model}:`, err);
+      logger.warn(`Failed to backup model ${model}`, { context: 'backup-service', error: String(err) });
     }
   }
 
@@ -186,7 +187,7 @@ async function getModelCounts(): Promise<Record<string, number>> {
     counts.products = await prisma.product.count();
     counts.notifications = await prisma.notification.count();
   } catch (err) {
-    console.warn('Error counting records:', err);
+    logger.warn('Error counting records', { context: 'backup-service', error: String(err) });
   }
 
   return counts;
@@ -245,7 +246,7 @@ export async function cleanupOldBackups(): Promise<number> {
       await prisma.backup.delete({ where: { id: backup.id } });
       deletedCount++;
     } catch (err) {
-      console.error(`Failed to delete backup ${backup.id}:`, err);
+      logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'backup-service', operation: 'deleteBackup', backupId: backup.id });
     }
   }
 

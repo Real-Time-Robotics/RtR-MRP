@@ -153,7 +153,7 @@ export function PeggingTree({ partNumber, demands, supplies, summary }: PeggingT
                   className="flex items-center gap-3 cursor-pointer"
                   onClick={() => toggleDemand(demand.demandId)}
                 >
-                  <Button variant="ghost" size="sm" className="p-0 h-6 w-6">
+                  <Button variant="ghost" size="sm" className="p-0 h-6 w-6" aria-label={expandedDemands.has(demand.demandId) ? "Thu gọn" : "Mở rộng"}>
                     {expandedDemands.has(demand.demandId) ? (
                       <ChevronDown className="h-4 w-4" />
                     ) : (

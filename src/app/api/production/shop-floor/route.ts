@@ -1,9 +1,16 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getWorkCenterUtilization } from "@/lib/production/capacity-engine";
 
-export async function GET() {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const workCenters = await prisma.workCenter.findMany({
       where: { status: "active" },
@@ -135,4 +142,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

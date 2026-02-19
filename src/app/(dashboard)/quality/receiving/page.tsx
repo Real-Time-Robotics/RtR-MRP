@@ -21,6 +21,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Inspection {
   id: string;
@@ -166,7 +167,7 @@ export default function ReceivingInspectionsPage() {
         );
       }
     } catch (error) {
-      console.error("Failed to fetch inspections:", error);
+      clientLogger.error("Failed to fetch inspections:", error);
     } finally {
       setLoading(false);
     }

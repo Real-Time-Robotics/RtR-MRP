@@ -1,21 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
+const inspectionPutSchema = z.object({
+  status: z.string().optional(),
+  result: z.enum(['PASS', 'FAIL', 'CONDITIONAL']).optional(),
+  quantityInspected: z.number().int().min(0).optional(),
+  quantityAccepted: z.number().int().min(0).optional(),
+  quantityRejected: z.number().int().min(0).optional(),
+  notes: z.string().optional(),
+  lotNumber: z.string().optional(),
+}).passthrough();
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // GET - Get single inspection
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     const inspection = await prisma.inspection.findUnique({
       where: { id },
@@ -40,18 +49,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspections/[id]' });
     return NextResponse.json({ error: "Failed to fetch inspection" }, { status: 500 });
   }
-}
+});
 
 // PUT - Update inspection (status, result, etc.)
-export async function PUT(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
-    const data = await request.json();
+  try {
+    const { id } = await context.params;
+    const body = await request.json();
+    const parsed = inspectionPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
 
     const existing = await prisma.inspection.findUnique({
       where: { id },
@@ -69,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.InspectionUpdateInput = {};
     if (data.status) updateData.status = data.status;
     if (data.result) updateData.result = data.result;
     if (data.quantityInspected !== undefined) updateData.quantityInspected = data.quantityInspected;
@@ -259,4 +275,4 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/quality/inspections/[id]' });
     return NextResponse.json({ error: "Failed to update inspection" }, { status: 500 });
   }
-}
+});

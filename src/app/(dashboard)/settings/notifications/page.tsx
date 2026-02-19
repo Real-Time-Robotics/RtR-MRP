@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 interface NotificationSettings {
   email: {
@@ -98,7 +99,7 @@ export default function NotificationSettingsPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to load settings:', error);
+        clientLogger.error('Failed to load settings:', error);
       } finally {
         setLoading(false);
       }

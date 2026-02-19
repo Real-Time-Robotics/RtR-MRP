@@ -13,12 +13,12 @@ function buildUrl(endpoint: string, params?: Record<string, string>): string {
   return `${endpoint}${qs}`;
 }
 
-export function useApiData<T = any>(
+export function useApiData<T = unknown>(
   endpoint: string | null,
   params?: Record<string, string>,
   options?: {
     debounce?: number;
-    transform?: (raw: any) => T[];
+    transform?: (raw: Record<string, unknown>) => T[];
   }
 ) {
   const debounceMs = options?.debounce ?? 0;

@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const multiSiteBodySchema = z.object({
+  action: z.enum(["createSite", "updateSettings"]),
+  code: z.string().optional(),
+  name: z.string().optional(),
+  address: z.string().optional(),
+  siteType: z.string().optional(),
+  isActive: z.boolean().optional(),
+  siteId: z.string().optional(),
+  demandTimeFence: z.number().optional(),
+  planningTimeFence: z.number().optional(),
+  frozenZone: z.number().optional(),
+  bucketType: z.string().optional(),
+  rescheduleInDays: z.number().optional(),
+  rescheduleOutDays: z.number().optional(),
+  safetyStockMethod: z.string().optional(),
+  safetyStockDays: z.number().optional(),
+});
+
 // GET /api/mrp/multi-site - Get sites and inventory by site
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get("action") || "sites";
     const siteId = searchParams.get("siteId") || undefined;
     const partId = searchParams.get("partId") || undefined;
@@ -61,12 +87,24 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/multi-site - Create site or update settings
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+const rawBody = await request.json();
+    const parseResult = multiSiteBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
 
     if (action === "createSite") {
@@ -147,4 +185,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

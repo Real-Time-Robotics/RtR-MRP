@@ -49,6 +49,7 @@ export function ChartToolbar({
           className="h-7 w-7"
           onClick={onResetZoom}
           title="Đặt lại zoom"
+          aria-label="Đặt lại zoom"
         >
           <RotateCcw className="h-4 w-4" />
         </Button>
@@ -61,6 +62,7 @@ export function ChartToolbar({
           className="h-7 w-7"
           onClick={onFullscreen}
           title={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
+          aria-label={isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
         >
           {isFullscreen ? (
             <Minimize2 className="h-4 w-4" />
@@ -73,7 +75,7 @@ export function ChartToolbar({
       {showExport && (onExportPNG || onExportCSV) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Xuất dữ liệu">
               <Download className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>

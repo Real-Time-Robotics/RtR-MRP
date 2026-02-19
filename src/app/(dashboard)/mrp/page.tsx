@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 interface MrpRun {
   id: string;
@@ -60,7 +61,7 @@ export default function MrpPage() {
   const [forecastStatus, setForecastStatus] = useState<{
     holidayBuffer: number;
     tetPhase: string | null;
-    upcomingHolidays: any[];
+    upcomingHolidays: Array<{ name: string; date: string; daysUntil?: number }>;
   } | null>(null);
   const [loadingForecastStatus, setLoadingForecastStatus] = useState(false);
 
@@ -75,7 +76,7 @@ export default function MrpPage() {
         setForecastStatus(data.data.holidayStatus);
       }
     } catch (error) {
-      console.error("Failed to fetch forecast status:", error);
+      clientLogger.error("Failed to fetch forecast status:", error);
     } finally {
       setLoadingForecastStatus(false);
     }
@@ -118,7 +119,7 @@ export default function MrpPage() {
       const data = await res.json();
       setRuns(data);
     } catch (error) {
-      console.error("Failed to fetch runs:", error);
+      clientLogger.error("Failed to fetch runs:", error);
     } finally {
       if (!silent) setLoading(false);
     }
@@ -152,9 +153,9 @@ export default function MrpPage() {
       // Optimistic update or just fetch
       await fetchRuns(true);
 
-    } catch (error: any) {
-      console.error("Failed to run MRP:", error);
-      setErrorMsg(error.message || "Failed to start MRP calculation");
+    } catch (error: unknown) {
+      clientLogger.error("Failed to run MRP:", error);
+      setErrorMsg(error instanceof Error ? error.message : "Failed to start MRP calculation");
     } finally {
       setRunning(false);
     }

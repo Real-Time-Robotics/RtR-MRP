@@ -17,6 +17,7 @@ import { SimulationBuilder } from "@/components/mrp/simulation-builder";
 import { Loader2, Play, Trash2, Eye, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Simulation {
   id: string;
@@ -61,7 +62,7 @@ export default function SimulationPage() {
         setSimulations(data);
       }
     } catch (error) {
-      console.error("Failed to fetch simulations:", error);
+      clientLogger.error("Failed to fetch simulations:", error);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,7 @@ export default function SimulationPage() {
         setParts(data);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -119,7 +120,7 @@ export default function SimulationPage() {
         throw new Error("Failed to create simulation");
       }
     } catch (error) {
-      console.error("Failed to create simulation:", error);
+      clientLogger.error("Failed to create simulation:", error);
       toast({ title: "Failed to create simulation", variant: "destructive" });
     } finally {
       setIsCreating(false);
@@ -143,7 +144,7 @@ export default function SimulationPage() {
         throw new Error("Failed to run simulation");
       }
     } catch (error) {
-      console.error("Failed to run simulation:", error);
+      clientLogger.error("Failed to run simulation:", error);
       toast({ title: "Failed to run simulation", variant: "destructive" });
     } finally {
       setRunningId(null);
@@ -163,7 +164,7 @@ export default function SimulationPage() {
         throw new Error("Failed to delete simulation");
       }
     } catch (error) {
-      console.error("Failed to delete simulation:", error);
+      clientLogger.error("Failed to delete simulation:", error);
       toast({ title: "Failed to delete simulation", variant: "destructive" });
     }
   };

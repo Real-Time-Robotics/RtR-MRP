@@ -410,7 +410,7 @@ export class DataExtractorService {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       orderDate: { gte: startDate },
       status: { in: ['received', 'completed'] },
     };

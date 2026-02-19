@@ -21,6 +21,7 @@ import {
   predefinedScenarios,
   type ScenarioResult,
 } from "@/lib/ai/scenario-engine";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Supplier {
   id: string;
@@ -47,7 +48,7 @@ export default function ScenariosPage() {
       const supplierData = Array.isArray(response) ? response : (response.data || []);
       setSuppliers(supplierData);
     } catch (error) {
-      console.error("Failed to fetch suppliers:", error);
+      clientLogger.error("Failed to fetch suppliers:", error);
     }
   };
 

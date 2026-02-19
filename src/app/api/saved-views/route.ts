@@ -2,7 +2,7 @@
 // Saved Views API - CRUD for saved filters and views
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getSavedViews,
   getDefaultView,
@@ -11,6 +11,7 @@ import {
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schemas
 const createViewSchema = z.object({
   name: z.string().min(1).max(100),
@@ -30,12 +31,12 @@ const createViewSchema = z.object({
 });
 
 // GET /api/saved-views - Get saved views
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
@@ -69,15 +70,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/saved-views - Create a saved view
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = await request.json();
     const parsed = createViewSchema.safeParse(body);
@@ -102,8 +103,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/saved-views' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create saved view' },
+      { error: 'Failed to create saved view' },
       { status: 500 }
     );
   }
-}
+});

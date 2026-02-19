@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { generateNCRNumber } from "@/lib/quality/ncr-workflow";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for NCR creation
 const NCRCreateSchema = z.object({
@@ -63,12 +64,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
 
@@ -151,4 +151,4 @@ export async function POST(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/ncr' });
     return NextResponse.json({ error: "Lỗi tạo NCR" }, { status: 500 });
   }
-}
+});

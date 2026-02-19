@@ -1,7 +1,7 @@
 // src/app/api/compliance/audit/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import {
   searchAuditTrail,
   verifyAuditTrailIntegrity,
@@ -10,12 +10,13 @@ import {
 } from "@/lib/compliance";
 import { logger } from "@/lib/logger";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
@@ -100,4 +101,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

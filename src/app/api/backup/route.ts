@@ -2,7 +2,7 @@
 // Backup API - Create and list backups
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withRoleAuth } from '@/lib/api/with-auth';
 import {
   createBackup,
   listBackups,
@@ -11,25 +11,20 @@ import {
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema
 const createBackupSchema = z.object({
   type: z.enum(['MANUAL', 'AUTO', 'PRE_UPDATE']).default('MANUAL'),
   name: z.string().optional(),
 });
 
-// GET /api/backup - List backups
-export async function GET(request: NextRequest) {
+// GET /api/backup - List backups (admin or manager)
+export const GET = withRoleAuth(['admin', 'manager'], async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check admin permission
-    if (session.user.role !== 'admin' && session.user.role !== 'manager') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const type = searchParams.get('type') || undefined;
@@ -47,21 +42,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-// POST /api/backup - Create a new backup
-export async function POST(request: NextRequest) {
+// POST /api/backup - Create a new backup (admin only)
+export const POST = withRoleAuth(['admin'], async (request: NextRequest, _context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check admin permission
-    if (session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const body = await request.json();
     const parsed = createBackupSchema.safeParse(body);
 
@@ -98,25 +87,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/backup' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create backup' },
+      { error: 'Failed to create backup' },
       { status: 500 }
     );
   }
-}
+});
 
-// DELETE /api/backup - Cleanup old backups
-export async function DELETE(request: NextRequest) {
+// DELETE /api/backup - Cleanup old backups (admin only)
+export const DELETE = withRoleAuth(['admin'], async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check admin permission
-    if (session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const deletedCount = await cleanupOldBackups();
 
     return NextResponse.json({
@@ -131,4 +114,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

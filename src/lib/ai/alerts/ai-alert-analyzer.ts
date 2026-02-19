@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { getAIProvider, AIProviderService, createSystemMessage, createUserMessage } from '@/lib/ai/provider';
+import { logger } from '@/lib/logger';
 import {
   Alert,
   AlertType,
@@ -69,7 +70,7 @@ Yêu cầu:
       const response = await this.aiProvider.chat({ messages, maxTokens: 500 });
       return response.content;
     } catch (error) {
-      console.error('[AIAlertAnalyzer] Error generating summary:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-alert-analyzer', operation: 'generateSummary' });
 
       // Fallback to rule-based summary
       return this.generateFallbackSummary(critical, high, medium);

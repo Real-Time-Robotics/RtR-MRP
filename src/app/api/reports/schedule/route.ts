@@ -2,7 +2,7 @@
 // Report Schedule API - Manage scheduled report delivery
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import {
   createReportSchedule,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/reports/report-scheduler';
 import { z } from 'zod';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schemas
 const createScheduleSchema = z.object({
   name: z.string().min(1).max(200),
@@ -39,14 +40,13 @@ const updateScheduleSchema = z.object({
 });
 
 // GET /api/reports/schedule - Get user's schedules
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const schedules = await getUserSchedules(session.user.id);
+  try {
+    const schedules = await getUserSchedules(session.user?.id || '');
 
     return NextResponse.json({
       success: true,
@@ -59,16 +59,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/reports/schedule - Create new schedule
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const body = await request.json();
     const parsed = createScheduleSchema.safeParse(body);
 
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     const schedule = await createReportSchedule({
       ...parsed.data,
-      userId: session.user.id,
+      userId: session.user?.id || '',
     });
 
     return NextResponse.json({
@@ -92,20 +91,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/reports/schedule' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create schedule' },
+      { error: 'Failed to create schedule' },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/reports/schedule - Update schedule
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const body = await request.json();
     const parsed = updateScheduleSchema.safeParse(body);
 
@@ -121,7 +119,7 @@ export async function PUT(request: NextRequest) {
     const schedule = await updateReportSchedule(
       scheduleId,
       updateData,
-      session.user.id
+      session.user?.id || ''
     );
 
     return NextResponse.json({
@@ -132,20 +130,19 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/reports/schedule' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update schedule' },
+      { error: 'Failed to update schedule' },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/reports/schedule - Delete schedule
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const { searchParams } = new URL(request.url);
     const scheduleId = searchParams.get('id');
 
@@ -156,7 +153,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await deleteReportSchedule(scheduleId, session.user.id);
+    await deleteReportSchedule(scheduleId, session.user?.id || '');
 
     return NextResponse.json({
       success: true,
@@ -165,8 +162,8 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/reports/schedule' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete schedule' },
+      { error: 'Failed to delete schedule' },
       { status: 500 }
     );
   }
-}
+});

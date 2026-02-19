@@ -4,8 +4,10 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
-import { 
+import {
   SPCEngine, 
   ProcessCharacteristic, 
   Measurement, 
@@ -18,6 +20,7 @@ import {
   Violation
 } from '@/lib/spc';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // MOCK DATA
 // =============================================================================
@@ -374,7 +377,11 @@ function generateMockAlerts(): QualityAlert[] {
 // GET HANDLER
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get('view') || 'dashboard';
@@ -500,19 +507,44 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/quality' });
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Đã xảy ra lỗi', code: 'QUALITY_ERROR' }, { status: 500 });
   }
-}
+});
 
 // =============================================================================
 // POST HANDLER
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.enum(['add_measurement', 'acknowledge_alert', 'resolve_alert', 'dismiss_alert', 'recalculate_limits']),
+      characteristicId: z.string().optional(),
+      values: z.array(z.number()).optional(),
+      operatorId: z.string().optional(),
+      machineId: z.string().optional(),
+      batchId: z.string().optional(),
+      notes: z.string().optional(),
+      alertId: z.string().optional(),
+      acknowledgedBy: z.string().optional(),
+      resolvedBy: z.string().optional(),
+      resolution: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
-    
+
     switch (action) {
       case 'add_measurement': {
         const { characteristicId, values, operatorId, machineId, batchId, notes } = body;
@@ -614,6 +646,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/quality' });
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Đã xảy ra lỗi', code: 'QUALITY_ERROR' }, { status: 500 });
   }
-}
+});

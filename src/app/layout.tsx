@@ -46,8 +46,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RTR MRP System",
-  description: "AI-First Material Requirements Planning for Drone Manufacturing",
+  title: {
+    template: '%s | RTR MRP',
+    default: 'RTR MRP - Hệ thống quản lý sản xuất',
+  },
+  description: 'Hệ thống hoạch định nguồn lực sản xuất RTR MRP - AI-First Material Requirements Planning',
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -57,6 +60,8 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  keywords: ['MRP', 'sản xuất', 'quản lý', 'vật tư', 'tồn kho', 'RTR'],
+  authors: [{ name: 'RTR MRP Team' }],
 };
 
 export const viewport: Viewport = {

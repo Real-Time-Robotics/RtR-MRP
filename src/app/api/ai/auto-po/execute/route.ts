@@ -4,10 +4,22 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 import { prisma } from '@/lib/prisma';
+
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+const executePostSchema = z.object({
+  queueItemId: z.string().min(1, 'queueItemId là bắt buộc'),
+  createAsDraft: z.boolean().optional().default(false),
+});
+
+const bulkExecuteSchema = z.object({
+  queueItemIds: z.array(z.string()).min(1, 'queueItemIds array is required'),
+  createAsDraft: z.boolean().optional(),
+});
 
 interface ExecutionResult {
   queueItemId: string;
@@ -61,22 +73,33 @@ async function createPurchaseOrder(
   return po.id;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemId, createAsDraft = false } = body;
-
-    if (!queueItemId) {
+  try {
+const body = await request.json();
+    const parsed = executePostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'queueItemId is required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { queueItemId, createAsDraft } = parsed.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -136,28 +159,35 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemIds, createAsDraft = false } = body;
-
-    if (
-      !queueItemIds ||
-      !Array.isArray(queueItemIds) ||
-      queueItemIds.length === 0
-    ) {
+  try {
+const rawBody = await request.json();
+    const parseResult = bulkExecuteSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'queueItemIds array is required' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { queueItemIds, createAsDraft = false } = parseResult.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -240,4 +270,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

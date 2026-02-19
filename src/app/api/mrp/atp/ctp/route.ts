@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { calculateATP } from "@/lib/mrp";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const ctpBatchBodySchema = z.object({
+  items: z.array(z.object({
+    partId: z.string(),
+    quantity: z.number(),
+    requiredDate: z.union([z.string(), z.date()]),
+    siteId: z.string().optional(),
+  })),
+});
+
 // GET /api/mrp/atp/ctp - Calculate CTP (Capable to Promise) for a part
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const partId = searchParams.get("partId");
     const quantity = parseFloat(searchParams.get("quantity") || "1");
     const date = searchParams.get("date")
@@ -43,20 +60,24 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/atp/ctp - Batch CTP check
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { items } = body;
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    if (!items || !Array.isArray(items)) {
+  try {
+const rawBody = await request.json();
+    const parseResult = ctpBatchBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "items array is required" },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { items } = parseResult.data;
 
     const results = [];
 
@@ -92,4 +113,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,7 @@ import {
 interface ScenarioWizardProps {
   templateId?: string | null;
   onClose: () => void;
-  onComplete: (scenario: any) => void;
+  onComplete: (scenario: Record<string, unknown>) => void;
 }
 
 type ScenarioType = 'demand' | 'supply' | 'capacity' | 'custom';
@@ -104,7 +105,7 @@ export function ScenarioWizard({ templateId, onClose, onComplete }: ScenarioWiza
       const templatesResponse = await fetch('/api/ai/simulation?templates=true');
       if (templatesResponse.ok) {
         const data = await templatesResponse.json();
-        const template = data.templates?.find((t: any) => t.id === id);
+        const template = data.templates?.find((t: { id: string; name: string; description: string; type: string }) => t.id === id);
         if (template) {
           setState((prev) => ({
             ...prev,
@@ -115,7 +116,7 @@ export function ScenarioWizard({ templateId, onClose, onComplete }: ScenarioWiza
         }
       }
     } catch (err) {
-      console.error('Failed to load template:', err);
+      clientLogger.error('Failed to load template', err);
     } finally {
       setLoading(false);
     }

@@ -50,7 +50,7 @@ export function DateRangePicker({
   const handlePresetChange = (preset: string) => {
     onChange({
       type: "preset",
-      preset: preset as any,
+      preset: preset as DateRangeConfig['preset'],
     });
     setIsOpen(false);
   };

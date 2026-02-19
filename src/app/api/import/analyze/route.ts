@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { analyzeFile } from "@/lib/import/ai-analyzer";
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const formData = await request.formData();
+  try {
+const formData = await request.formData();
     const file = formData.get("file") as File;
     const selectedSheet = formData.get("sheet") as string | null;
 
@@ -47,10 +47,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Analysis failed",
+        error: "Failed to analyze file",
       },
       { status: 500 }
     );
   }
-}
+});

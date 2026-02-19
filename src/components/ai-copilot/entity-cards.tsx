@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Truck, ShoppingCart, DollarSign, Activity } from 'lucide-react';
 
 interface SupplierAnalysisCardProps {
-    supplier: any; // Using any for agility, ideally strictly typed
+    supplier: { id: string; name: string; code: string; status?: string };
 }
 
 export function SupplierAnalysisCard({ supplier }: SupplierAnalysisCardProps) {
@@ -74,7 +74,7 @@ export function SupplierAnalysisCard({ supplier }: SupplierAnalysisCardProps) {
 }
 
 interface CustomerAnalysisCardProps {
-    customer: any;
+    customer: { id: string; name: string; code: string; type?: string; creditLimit?: number };
 }
 
 export function CustomerAnalysisCard({ customer }: CustomerAnalysisCardProps) {

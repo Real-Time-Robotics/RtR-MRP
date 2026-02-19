@@ -1,31 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { executeNcrDisposition, DispositionType } from "@/lib/quality/ncr-disposition-service";
 import { logger } from "@/lib/logger";
+import { z } from "zod";
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const VALID_DISPOSITIONS: DispositionType[] = ["SCRAP", "REWORK", "RETURN_TO_VENDOR", "USE_AS_IS"];
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+const NcrDispositionSchema = z.object({
+  disposition: z.enum(["SCRAP", "REWORK", "RETURN_TO_VENDOR", "USE_AS_IS"]),
+  quantity: z.number().min(1, "Quantity must be greater than 0"),
+  notes: z.string().optional(),
+  returnRmaNumber: z.string().optional(),
+  deviationNumber: z.string().optional(),
+});
+
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
-    const { disposition, quantity, notes, returnRmaNumber, deviationNumber } = body;
 
-    if (!VALID_DISPOSITIONS.includes(disposition)) {
-      return NextResponse.json({ error: "Invalid disposition type" }, { status: 400 });
+    const validation = NcrDispositionSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
     }
 
-    if (!quantity || quantity <= 0) {
-      return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
-    }
+    const { disposition, quantity, notes, returnRmaNumber, deviationNumber } = validation.data;
 
     const result = await executeNcrDisposition(
       { ncrId: id, disposition, quantity, notes, returnRmaNumber, deviationNumber },
@@ -50,6 +57,6 @@ export async function POST(
     logger.logError(error instanceof Error ? error : new Error(String(error)), {
       context: "POST /api/quality/ncr/[id]/execute-disposition",
     });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Đã xảy ra lỗi", code: "QUALITY_NCR_ERROR" }, { status: 500 });
   }
-}
+});

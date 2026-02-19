@@ -3,6 +3,7 @@
 
 import { getAIProvider } from "@/lib/ai/provider";
 import { FieldDefinition, entityFieldDefinitions } from "./mapper";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES & INTERFACES
@@ -122,7 +123,7 @@ Respond ONLY in valid JSON format (no markdown, no explanation):
       alternativeTypes: result.alternativeTypes,
     };
   } catch (error) {
-    console.error("AI entity detection failed:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-mapper', operation: 'detectEntityType' });
 
     // Return fallback response
     return {
@@ -233,7 +234,7 @@ Respond ONLY in valid JSON array format (no markdown):
       alternatives: result.alternatives,
     }));
   } catch (error) {
-    console.error("AI mapping suggestions failed:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-mapper', operation: 'suggestMappings' });
 
     // Return empty suggestions on error
     return unmappedColumns.map((col) => ({

@@ -5,10 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { LinkedEntityType, ENTITY_CONFIG } from '@/types/discussions';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 interface EntitySearchResult {
   id: string;
   type: LinkedEntityType;
@@ -19,14 +20,13 @@ interface EntitySearchResult {
   url: string;
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') as LinkedEntityType;
     const query = searchParams.get('q') || '';
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -243,4 +243,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

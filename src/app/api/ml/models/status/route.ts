@@ -1,13 +1,34 @@
+import { NextRequest } from 'next/server';
 // src/app/api/ml/models/status/route.ts
 
 import { NextResponse } from "next/server";
 import { mlClient } from "@/lib/ml-client";
+import { logger } from '@/lib/logger';
 
-export async function GET() {
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const status = await mlClient.getModelStatus();
+const status = await mlClient.getModelStatus();
     return NextResponse.json(status);
   } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { route: 'ml/models/status' });
     // Return default model status if ML service is unavailable
     return NextResponse.json({
       models: [
@@ -36,7 +57,7 @@ export async function GET() {
       total: 3,
       active: 0,
       mlServiceAvailable: false,
-      error: error instanceof Error ? error.message : "ML Service unavailable",
+      error: "ML Service unavailable",
     });
   }
-}
+});

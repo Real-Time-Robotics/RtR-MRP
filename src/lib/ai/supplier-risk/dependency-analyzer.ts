@@ -4,6 +4,37 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+
+// =============================================================================
+// PRISMA RESULT TYPES
+// =============================================================================
+
+/** Purchase order with supplier and lines (including part) */
+type PurchaseOrderWithDetails = Prisma.PurchaseOrderGetPayload<{
+  include: {
+    supplier: true;
+    lines: { include: { part: true } };
+  };
+}>;
+
+/** Part with active partSuppliers (including supplier) */
+type PartWithSuppliers = Prisma.PartGetPayload<{
+  include: {
+    partSuppliers: { include: { supplier: true } };
+  };
+}>;
+
+/** Supplier metrics aggregated from purchase orders */
+interface SupplierMetrics {
+  supplierId: string;
+  supplierName: string;
+  country: string;
+  rating: number | null;
+  totalSpend: number;
+  totalVolume: number;
+  partIds: Set<string>;
+}
 
 // =============================================================================
 // TYPES
@@ -487,16 +518,8 @@ export class DependencyAnalyzer {
   // PRIVATE METHODS
   // =============================================================================
 
-  private calculateSupplierMetrics(orders: any[]): Map<string, {
-    supplierId: string;
-    supplierName: string;
-    country: string;
-    rating: number | null;
-    totalSpend: number;
-    totalVolume: number;
-    partIds: Set<string>;
-  }> {
-    const metrics = new Map<string, any>();
+  private calculateSupplierMetrics(orders: PurchaseOrderWithDetails[]): Map<string, SupplierMetrics> {
+    const metrics = new Map<string, SupplierMetrics>();
 
     orders.forEach((order) => {
       const supplierId = order.supplierId;
@@ -510,8 +533,8 @@ export class DependencyAnalyzer {
         partIds: new Set<string>(),
       };
 
-      existing.totalSpend += order.totalAmount || 0;
-      order.lines.forEach((line: any) => {
+      existing.totalSpend += order.totalAmount ? Number(order.totalAmount) : 0;
+      order.lines.forEach((line) => {
         existing.totalVolume += line.quantity;
         if (line.partId) {
           existing.partIds.add(line.partId);
@@ -525,8 +548,8 @@ export class DependencyAnalyzer {
   }
 
   private async identifySingleSourceParts(
-    parts: any[],
-    supplierMetrics: Map<string, any>,
+    parts: PartWithSuppliers[],
+    supplierMetrics: Map<string, SupplierMetrics>,
     months: number
   ): Promise<SingleSourcePart[]> {
     const singleSourceParts: SingleSourcePart[] = [];
@@ -601,8 +624,8 @@ export class DependencyAnalyzer {
   }
 
   private analyzeConcentrationRisk(
-    supplierMetrics: Map<string, any>,
-    parts: any[]
+    supplierMetrics: Map<string, SupplierMetrics>,
+    parts: PartWithSuppliers[]
   ): ConcentrationRisk {
     const suppliers = Array.from(supplierMetrics.values());
     const totalSpend = suppliers.reduce((sum, s) => sum + s.totalSpend, 0);
@@ -644,9 +667,9 @@ export class DependencyAnalyzer {
       ...s,
       partCount: s.partIds.size,
     }));
-    const maxPartsSupplier = supplierPartCounts.reduce(
+    const maxPartsSupplier = supplierPartCounts.reduce<(typeof supplierPartCounts)[number] | null>(
       (max, s) => (s.partCount > (max?.partCount || 0) ? s : max),
-      null as any
+      null
     );
 
     // Calculate risk score
@@ -662,7 +685,7 @@ export class DependencyAnalyzer {
     // Top suppliers
     const topSuppliers: TopSupplierDependency[] = bySpend.slice(0, 10).map((s) => {
       const criticalParts = parts.filter(
-        (p) => p.isCritical && p.partSuppliers.some((ps: any) => ps.supplierId === s.supplierId)
+        (p) => p.isCritical && p.partSuppliers.some((ps) => ps.supplierId === s.supplierId)
       );
 
       return {
@@ -711,15 +734,15 @@ export class DependencyAnalyzer {
   }
 
   private analyzeGeographicRisk(
-    supplierMetrics: Map<string, any>,
-    parts: any[]
+    supplierMetrics: Map<string, SupplierMetrics>,
+    parts: PartWithSuppliers[]
   ): GeographicRisk {
     const suppliers = Array.from(supplierMetrics.values());
     const totalSpend = suppliers.reduce((sum, s) => sum + s.totalSpend, 0);
 
     // Group by country
     const countryMap = new Map<string, {
-      suppliers: any[];
+      suppliers: SupplierMetrics[];
       totalSpend: number;
       partIds: Set<string>;
     }>();
@@ -741,7 +764,7 @@ export class DependencyAnalyzer {
       .map(([country, data]) => {
         const criticalParts = parts.filter(
           (p) => p.isCritical && p.partSuppliers.some(
-            (ps: any) => data.suppliers.some((s) => s.supplierId === ps.supplierId)
+            (ps) => data.suppliers.some((s) => s.supplierId === ps.supplierId)
           )
         );
 
@@ -830,7 +853,7 @@ export class DependencyAnalyzer {
   }
 
   private identifyCriticalDependencies(
-    parts: any[],
+    parts: PartWithSuppliers[],
     singleSourceParts: SingleSourcePart[],
     concentrationRisk: ConcentrationRisk,
     geographicRisk: GeographicRisk
@@ -872,7 +895,7 @@ export class DependencyAnalyzer {
       .filter((s) => s.spendPercent > 25 && s.criticalPartCount > 0)
       .forEach((supplier) => {
         const supplierParts = parts.filter(
-          (p) => p.isCritical && p.partSuppliers.some((ps: any) => ps.supplierId === supplier.supplierId)
+          (p) => p.isCritical && p.partSuppliers.some((ps) => ps.supplierId === supplier.supplierId)
         );
 
         supplierParts.forEach((part) => {
@@ -906,11 +929,11 @@ export class DependencyAnalyzer {
   }
 
   private generateSummary(
-    parts: any[],
+    parts: PartWithSuppliers[],
     singleSourceParts: SingleSourcePart[],
     concentrationRisk: ConcentrationRisk,
     geographicRisk: GeographicRisk,
-    supplierMetrics: Map<string, any>
+    supplierMetrics: Map<string, SupplierMetrics>
   ): DependencySummary {
     const totalActiveParts = parts.length;
     const totalActiveSuppliers = supplierMetrics.size;
@@ -1019,7 +1042,7 @@ export class DependencyAnalyzer {
     return 'low';
   }
 
-  private calculateSupplierRiskScore(supplier: any, totalSpend: number): number {
+  private calculateSupplierRiskScore(supplier: SupplierMetrics, totalSpend: number): number {
     let score = 0;
     const spendPercent = totalSpend > 0 ? (supplier.totalSpend / totalSpend) * 100 : 0;
 

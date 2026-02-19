@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateInternalRequest } from '@/lib/api/internal-auth'
+import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
+
   const authError = validateInternalRequest(req)
   if (authError) return authError
 
@@ -53,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ parts: result })
   } catch (error) {
-    console.error('[Internal API] Parts search error:', error)
+    logger.error('[Internal API] Parts search error:', { error: String(error) })
     return NextResponse.json(
       { error: 'Failed to search parts' },
       { status: 500 }

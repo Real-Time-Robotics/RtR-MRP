@@ -4,25 +4,50 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { getQualityAnomalyDetector } from '@/lib/ai/quality/anomaly-detector';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const spcBodySchema = z.object({
+  partId: z.string(),
+  characteristicId: z.string(),
+  months: z.number().optional(),
+});
 // =============================================================================
 // POST - SPC Analysis
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json();
-    const { partId, characteristicId, months = 6 } = body;
-
-    if (!partId || !characteristicId) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { success: false, error: 'partId and characteristicId are required' },
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
+  try {
+const rawBody = await request.json();
+    const parseResult = spcBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { partId, characteristicId, months = 6 } = parseResult.data;
 
     const anomalyDetector = getQualityAnomalyDetector();
     const spcResult = await anomalyDetector.performSPCAnalysis(partId, characteristicId, months);
@@ -62,20 +87,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to perform SPC analysis',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET - Calculate Cpk for provided measurements
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const measurementsParam = searchParams.get('measurements');
     const usl = parseFloat(searchParams.get('usl') || '0');
     const lsl = parseFloat(searchParams.get('lsl') || '0');
@@ -127,9 +168,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to calculate quality metrics',
       },
       { status: 500 }
     );
   }
-}
+});

@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { processNaturalLanguageQuery, getSupportedQueryTypes } from '@/lib/nl-query-engine';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const queryBodySchema = z.object({
+  query: z.string(),
+  language: z.enum(['en', 'vi']).optional(),
+  userId: z.string().optional(),
+});
 // =============================================================================
 // RTR AI COPILOT - NATURAL LANGUAGE QUERY API
 // Processes natural language queries and returns structured data
@@ -40,20 +49,35 @@ async function logQuery(
 }
 
 // POST: Process natural language query
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
   
   try {
-    const body = await request.json();
-    const { query, language = 'en', userId = 'anonymous' } = body;
-    
-    // Validate request
-    if (!query || typeof query !== 'string') {
+const rawBody = await request.json();
+    const parseResult = queryBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Query is required and must be a string' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { query, language = 'en', userId = 'anonymous' } = parseResult.data;
     
     // Check query length
     if (query.length > 500) {
@@ -95,7 +119,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: false,
-        error: 'Internal server error',
+        error: 'Internal server error', code: 'AI_QUERY_ERROR',
         data: [],
         metadata: {
           rowCount: 0,
@@ -109,13 +133,28 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // GET: Get supported query types and examples
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+const { searchParams } = new URL(request.url);
   const language = searchParams.get('language') || 'en';
-  
+
   const queryTypes = getSupportedQueryTypes();
   
   return NextResponse.json({
@@ -142,4 +181,4 @@ export async function GET(request: NextRequest) {
       rateLimit: '30 requests/minute',
     },
   });
-}
+});

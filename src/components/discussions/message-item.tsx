@@ -166,6 +166,7 @@ export function MessageItem({
             <input
               type="text"
               placeholder="Reason for edit (optional)"
+              aria-label="Reason for edit"
               value={editReason}
               onChange={(e) => setEditReason(e.target.value)}
               className="w-full px-3 py-1.5 text-sm rounded-md border bg-background"
@@ -227,7 +228,7 @@ export function MessageItem({
         <div className="flex items-start opacity-0 group-hover:opacity-100 transition-opacity">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Menu">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

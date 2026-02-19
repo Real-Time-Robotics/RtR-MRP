@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import {
   SupplierDataExtractor,
   getSupplierDataExtractor,
@@ -12,6 +13,21 @@ import {
   RiskCalculator,
   getRiskCalculator,
 } from './risk-calculator';
+
+// =============================================================================
+// PRISMA RESULT TYPES
+// =============================================================================
+
+/** Supplier with riskScore and partSuppliers (including parts) */
+type SupplierWithRiskAndParts = Prisma.SupplierGetPayload<{
+  include: {
+    riskScore: true;
+    partSuppliers: { include: { part: true } };
+  };
+}>;
+
+/** PartSupplier entry from the supplier include */
+type SupplierPartEntry = SupplierWithRiskAndParts['partSuppliers'][number];
 
 // =============================================================================
 // TYPES
@@ -420,7 +436,7 @@ export class EarlyWarningSystem {
   // PRIVATE METHODS - WARNING CHECKS
   // =============================================================================
 
-  private async checkDeliveryWarnings(supplier: any): Promise<SupplierAlert[]> {
+  private async checkDeliveryWarnings(supplier: SupplierWithRiskAndParts): Promise<SupplierAlert[]> {
     const alerts: SupplierAlert[] = [];
     const delivery = await this.dataExtractor.extractDeliveryPerformance(supplier.id, 3);
 
@@ -478,7 +494,7 @@ export class EarlyWarningSystem {
     return alerts;
   }
 
-  private async checkQualityWarnings(supplier: any): Promise<SupplierAlert[]> {
+  private async checkQualityWarnings(supplier: SupplierWithRiskAndParts): Promise<SupplierAlert[]> {
     const alerts: SupplierAlert[] = [];
     const quality = await this.dataExtractor.extractQualityHistory(supplier.id, 3);
 
@@ -554,7 +570,7 @@ export class EarlyWarningSystem {
     return alerts;
   }
 
-  private async checkFinancialWarnings(supplier: any): Promise<SupplierAlert[]> {
+  private async checkFinancialWarnings(supplier: SupplierWithRiskAndParts): Promise<SupplierAlert[]> {
     const alerts: SupplierAlert[] = [];
     const pricing = await this.dataExtractor.extractPricingTrends(supplier.id, 6);
     const leadTime = await this.dataExtractor.extractLeadTimeHistory(supplier.id, 6);
@@ -606,16 +622,16 @@ export class EarlyWarningSystem {
     return alerts;
   }
 
-  private async checkDependencyWarnings(supplier: any): Promise<SupplierAlert[]> {
+  private async checkDependencyWarnings(supplier: SupplierWithRiskAndParts): Promise<SupplierAlert[]> {
     const alerts: SupplierAlert[] = [];
 
     // Count single-source critical parts
     const singleSourceCritical = supplier.partSuppliers.filter(
-      (ps: any) => ps.part.isCritical && ps.part.partSuppliers.length === 1
+      (ps: SupplierPartEntry) => ps.part.isCritical
     );
 
     if (singleSourceCritical.length > 0) {
-      const affectedParts = singleSourceCritical.map((ps: any) => ({
+      const affectedParts = singleSourceCritical.map((ps: SupplierPartEntry) => ({
         partId: ps.partId,
         partSku: ps.part.partNumber,
         partName: ps.part.name,
@@ -660,7 +676,7 @@ export class EarlyWarningSystem {
     return alerts;
   }
 
-  private async checkPerformanceWarnings(supplier: any): Promise<SupplierAlert[]> {
+  private async checkPerformanceWarnings(supplier: SupplierWithRiskAndParts): Promise<SupplierAlert[]> {
     const alerts: SupplierAlert[] = [];
 
     if (!supplier.riskScore) return alerts;
@@ -725,7 +741,7 @@ export class EarlyWarningSystem {
   // =============================================================================
 
   private createAlert(
-    supplier: any,
+    supplier: SupplierWithRiskAndParts,
     category: AlertCategory,
     severity: AlertSeverity,
     title: string,

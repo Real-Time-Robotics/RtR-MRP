@@ -155,6 +155,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
         <button
           onClick={onDismiss}
           className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-mrp-text-muted dark:hover:text-mrp-text-primary dark:hover:bg-gunmetal rounded transition-colors"
+          aria-label="Đóng"
         >
           <X className="h-4 w-4" />
         </button>
@@ -355,6 +356,7 @@ const Alert: React.FC<AlertProps> = ({
             'hover:bg-black/5',
             alertIconStyles[type]
           )}
+          aria-label="Đóng"
         >
           <X className="h-4 w-4" />
         </button>

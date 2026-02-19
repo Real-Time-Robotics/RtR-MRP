@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { SuppliersTable } from "@/components/suppliers/suppliers-table";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  title: 'Supplier Management | RTR-MRP',
+  description: 'Manage suppliers, evaluate performance, and track contracts - Quản lý nhà cung cấp, đánh giá hiệu suất và theo dõi hợp đồng',
+};
 
 async function getSuppliers() {
   const suppliers = await prisma.supplier.findMany({

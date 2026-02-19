@@ -19,18 +19,21 @@ export interface TableColumn {
   label: string;
   width?: number;
   align?: "left" | "center" | "right";
-  formatter?: (value: any) => string;
+  formatter?: (value: unknown) => string;
 }
+
+/** A row in the table widget - keys map to column keys, values are cell values */
+export type TableRow = Record<string, unknown>;
 
 export interface TableWidgetProps {
   id: string;
   title: string;
   titleVi?: string;
   columns?: TableColumn[];
-  initialData?: { columns: TableColumn[]; rows: any[] } | null;
+  initialData?: { columns: TableColumn[]; rows: TableRow[] } | null;
   pageSize?: number;
   refreshInterval?: number;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: TableRow) => void;
   className?: string;
 }
 
@@ -45,7 +48,7 @@ export function TableWidget({
   onRowClick,
   className,
 }: TableWidgetProps) {
-  const [data, setData] = useState<{ columns: TableColumn[]; rows: any[] } | null>(
+  const [data, setData] = useState<{ columns: TableColumn[]; rows: TableRow[] } | null>(
     initialData || null
   );
   const [isLoading, setIsLoading] = useState(!initialData);
@@ -107,7 +110,7 @@ export function TableWidget({
     }
   };
 
-  const formatCellValue = (column: TableColumn, value: any) => {
+  const formatCellValue = (column: TableColumn, value: unknown) => {
     if (column.formatter) {
       return column.formatter(value);
     }

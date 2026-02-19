@@ -1,21 +1,18 @@
 import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api/with-auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET single thread
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ threadId: string }> }
-) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { threadId } = await params
+  try {
+    const { threadId } = await context.params
 
     const thread = await prisma.conversationThread.findUnique({
       where: { id: threadId },
@@ -61,7 +58,7 @@ export async function GET(
       { status: 500 }
     )
   }
-}
+});
 
 // PATCH - Update thread status/priority
 const updateThreadSchema = z.object({
@@ -70,17 +67,13 @@ const updateThreadSchema = z.object({
   title: z.string().optional(),
 })
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ threadId: string }> }
-) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { threadId } = await params
+  try {
+    const { threadId } = await context.params
     const body = await request.json()
     const data = updateThreadSchema.parse(body)
 
@@ -123,20 +116,16 @@ export async function PATCH(
       { status: 500 }
     )
   }
-}
+});
 
 // DELETE - Archive thread
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ threadId: string }> }
-) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { threadId } = await params
+  try {
+    const { threadId } = await context.params
 
     // Archive instead of delete
     await prisma.conversationThread.update({
@@ -153,4 +142,4 @@ export async function DELETE(
       { status: 500 }
     )
   }
-}
+});

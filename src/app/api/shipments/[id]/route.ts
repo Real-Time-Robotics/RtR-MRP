@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { confirmDelivery } from "@/lib/mrp-engine";
 
+const shipmentPatchSchema = z.object({
+  action: z.enum(['deliver']),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET /api/shipments/[id] — Get shipment detail
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id } = await context.params;
 
     const shipment = await prisma.shipment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         salesOrder: true,
         customer: true,
@@ -42,25 +46,30 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH /api/shipments/[id] — Update shipment (e.g. confirm delivery)
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { id } = await context.params;
 
     const body = await request.json();
-    const { action } = body;
-    const userId = session.user.id || session.user.email || "system";
+    const parsed = shipmentPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const { action } = parsed.data;
+    const userId = session.user?.id || session.user?.email || "system";
 
     if (action === "deliver") {
-      const result = await confirmDelivery(params.id, userId);
+      const result = await confirmDelivery(id, userId);
       return NextResponse.json({
         success: true,
         shipment: result.shipment,
@@ -75,8 +84,8 @@ export async function PATCH(
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/shipments/[id]' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Lỗi khi cập nhật phiếu xuất kho" },
+      { error: "Failed to update shipment" },
       { status: 400 }
     );
   }
-}
+});

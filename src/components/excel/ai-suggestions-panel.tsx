@@ -322,6 +322,7 @@ export function AISuggestionsPanel({
                                   onClick={() => handleAcceptColumnSuggestion(suggestion)}
                                   className="p-1.5 text-green-600 hover:bg-green-100 rounded"
                                   title="Áp dụng gợi ý"
+                                  aria-label="Áp dụng gợi ý"
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
@@ -329,6 +330,7 @@ export function AISuggestionsPanel({
                                   onClick={() => handleRejectColumnSuggestion(suggestion)}
                                   className="p-1.5 text-red-600 hover:bg-red-100 rounded"
                                   title="Bỏ qua"
+                                  aria-label="Bỏ qua"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
@@ -386,6 +388,7 @@ export function AISuggestionsPanel({
                             onClick={() => handleIgnoreIssue(issue)}
                             className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
                             title="Bỏ qua"
+                            aria-label="Bỏ qua"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -440,6 +443,7 @@ export function AISuggestionsPanel({
                             <select
                               className="text-xs border rounded px-2 py-1"
                               defaultValue={resolution?.suggestedAction || "skip"}
+                              aria-label="Hành động trùng lặp"
                               onChange={(e) =>
                                 onAcceptDuplicateAction?.(dup.importRow, e.target.value)
                               }

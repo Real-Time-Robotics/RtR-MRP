@@ -5,27 +5,51 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { jobQueue, JOB_NAMES } from "@/lib/jobs/job-queue";
 import "@/lib/jobs/handlers"; // Ensure handlers are registered
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const mrpRunBodySchema = z.object({
+  orderIds: z.array(z.string()).min(1),
+  options: z.any().optional(),
+});
 
 // =============================================================================
 // POST /api/mrp/run
 // Submit MRP calculation to background job queue
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const body = await request.json();
-    const { orderIds, options } = body;
-
-    if (!orderIds || orderIds.length === 0) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { success: false, error: "No orders selected for MRP" },
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
+  try {
+const rawBody = await request.json();
+    const parseResult = mrpRunBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { orderIds, options } = parseResult.data;
 
     // Submit to background job queue with high priority
     const bgJob = jobQueue.add(
@@ -49,16 +73,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET /api/mrp/run
 // Get MRP run history
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const runs = await prisma.mrpRun.findMany({
@@ -108,4 +148,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { status: 500 }
     );
   }
-}
+});

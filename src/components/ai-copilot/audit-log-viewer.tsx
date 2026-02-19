@@ -58,7 +58,7 @@ interface AuditLogViewerProps {
 function generateMockAuditLogs(count: number = 50): AuditLogEntry[] {
   const intents = ['low_stock_query', 'sales_summary', 'supplier_query', 'production_status', 'quality_issues'];
   const modules = ['inventory', 'sales', 'procurement', 'production', 'quality'];
-  const actions = ['approved', 'rejected', 'modified', 'ignored', undefined];
+  const actions: (AuditLogEntry['userAction'])[] = ['approved', 'rejected', 'modified', 'ignored', undefined];
   const users = [
     { id: 'user_1', name: 'Nguyễn Văn A', role: 'manager' },
     { id: 'user_2', name: 'Trần Thị B', role: 'user' },
@@ -110,7 +110,7 @@ function generateMockAuditLogs(count: number = 50): AuditLogEntry[] {
         responseLength: Math.floor(Math.random() * 1000) + 200,
         hadWarnings: Math.random() > 0.8,
       },
-      userAction: actions[Math.floor(Math.random() * actions.length)] as any,
+      userAction: actions[Math.floor(Math.random() * actions.length)],
       feedback: Math.random() > 0.7 ? {
         rating: Math.floor(Math.random() * 5) + 1,
         comment: Math.random() > 0.5 ? 'Helpful response' : undefined,
@@ -541,6 +541,7 @@ export default function AuditLogViewer({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={language === 'vi' ? 'Tìm kiếm...' : 'Search...'}
+            aria-label={language === 'vi' ? 'Tìm kiếm' : 'Search'}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -549,6 +550,7 @@ export default function AuditLogViewer({
         <select
           value={filters.module}
           onChange={(e) => setFilters(f => ({ ...f, module: e.target.value }))}
+          aria-label={language === 'vi' ? 'Bộ lọc module' : 'Module filter'}
           className="px-3 py-2 border border-gray-300 rounded-lg"
         >
           <option value="all">{language === 'vi' ? 'Tất cả module' : 'All modules'}</option>
@@ -563,6 +565,7 @@ export default function AuditLogViewer({
         <select
           value={filters.confidence}
           onChange={(e) => setFilters(f => ({ ...f, confidence: e.target.value }))}
+          aria-label={language === 'vi' ? 'Bộ lọc confidence' : 'Confidence filter'}
           className="px-3 py-2 border border-gray-300 rounded-lg"
         >
           <option value="all">{language === 'vi' ? 'Tất cả confidence' : 'All confidence'}</option>
@@ -575,6 +578,7 @@ export default function AuditLogViewer({
         <select
           value={filters.userAction}
           onChange={(e) => setFilters(f => ({ ...f, userAction: e.target.value }))}
+          aria-label={language === 'vi' ? 'Bộ lọc hành động' : 'Action filter'}
           className="px-3 py-2 border border-gray-300 rounded-lg"
         >
           <option value="all">{language === 'vi' ? 'Tất cả actions' : 'All actions'}</option>

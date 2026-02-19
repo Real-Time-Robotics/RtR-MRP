@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { reportService } from '@/lib/analytics';
+import { ReportScheduleCreateInput } from '@/lib/analytics/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 const scheduleSchema = z.object({
   frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly']),
   dayOfWeek: z.number().min(0).max(6).optional(),
@@ -20,12 +23,16 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const schedules = await reportService.getSchedulesForReport(id);
+const schedules = await reportService.getSchedulesForReport(id);
 
     return NextResponse.json({
       success: true,
@@ -40,14 +47,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const body = await request.json();
+const body = await request.json();
     const parsed = scheduleSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -58,7 +69,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const schedule = await reportService.createSchedule(
-      { reportId: id, ...parsed.data } as any,
+      { reportId: id, ...parsed.data } as ReportScheduleCreateInput,
       'demo-user'
     );
 
@@ -75,4 +86,4 @@ export async function POST(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

@@ -4,6 +4,8 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { Prisma } from '@prisma/client';
 import type {
   Dashboard,
   DashboardWidget,
@@ -339,7 +341,7 @@ class DashboardService {
         userId,
         name: data.name,
         description: data.description,
-        layout: layout as any,
+        layout: layout as unknown as Prisma.InputJsonValue,
         isPublic: data.isPublic ?? false,
         isDefault: data.isDefault ?? false,
       },
@@ -398,7 +400,7 @@ class DashboardService {
       data: {
         name: data.name,
         description: data.description,
-        layout: data.layout as any,
+        layout: data.layout as unknown as Prisma.InputJsonValue,
         isPublic: data.isPublic,
         isDefault: data.isDefault,
       },
@@ -447,14 +449,14 @@ class DashboardService {
         titleVi: widget.titleVi,
         dataSource: widget.dataSource,
         metric: widget.metric,
-        queryConfig: widget.queryConfig as any,
-        displayConfig: { ...DEFAULT_WIDGET_DISPLAY, ...widget.displayConfig } as any,
+        queryConfig: widget.queryConfig as unknown as Prisma.InputJsonValue,
+        displayConfig: { ...DEFAULT_WIDGET_DISPLAY, ...widget.displayConfig } as unknown as Prisma.InputJsonValue,
         gridX: widget.gridX,
         gridY: widget.gridY,
         gridW: widget.gridW,
         gridH: widget.gridH,
         refreshInterval: widget.refreshInterval,
-        drillDownConfig: widget.drillDownConfig as any,
+        drillDownConfig: widget.drillDownConfig as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -470,14 +472,14 @@ class DashboardService {
         titleVi: data.titleVi,
         dataSource: data.dataSource,
         metric: data.metric,
-        queryConfig: data.queryConfig as any,
-        displayConfig: data.displayConfig as any,
+        queryConfig: data.queryConfig as unknown as Prisma.InputJsonValue,
+        displayConfig: data.displayConfig as unknown as Prisma.InputJsonValue,
         gridX: data.gridX,
         gridY: data.gridY,
         gridW: data.gridW,
         gridH: data.gridH,
         refreshInterval: data.refreshInterval,
-        drillDownConfig: data.drillDownConfig as any,
+        drillDownConfig: data.drillDownConfig as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -539,7 +541,7 @@ class DashboardService {
     });
 
     // Add widgets from template
-    const templateWidgets = template.widgets as any[];
+    const templateWidgets = template.widgets as unknown as Omit<DashboardWidget, 'id' | 'dashboardId'>[];
     for (const widget of templateWidgets) {
       await this.addWidget(dashboard.id, widget);
     }
@@ -559,8 +561,8 @@ class DashboardService {
           nameVi: template.nameVi,
           description: template.description,
           category: template.category,
-          layout: template.layout as any,
-          widgets: template.widgets as any,
+          layout: template.layout as unknown as Prisma.InputJsonValue,
+          widgets: template.widgets as unknown as Prisma.InputJsonValue,
           isActive: template.isActive,
           isDefault: template.isDefault,
         },
@@ -570,8 +572,8 @@ class DashboardService {
           nameVi: template.nameVi,
           description: template.description,
           category: template.category,
-          layout: template.layout as any,
-          widgets: template.widgets as any,
+          layout: template.layout as unknown as Prisma.InputJsonValue,
+          widgets: template.widgets as unknown as Prisma.InputJsonValue,
           isActive: template.isActive,
           isDefault: template.isDefault,
         },
@@ -621,7 +623,7 @@ class DashboardService {
       await this.updateDashboard(dashboard.id, { isDefault: true });
       return this.getDashboard(dashboard.id);
     } catch (error) {
-      console.error('Failed to auto-provision dashboard:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'dashboard-service', operation: 'autoProvision' });
       return null;
     }
   }
@@ -655,7 +657,7 @@ class DashboardService {
   async getTemplatesForRole(userRole: UserRole, category?: string): Promise<DashboardTemplate[]> {
     const allowedTemplates = getAllowedTemplatesForRole(userRole);
 
-    const where: any = {
+    const where: Prisma.DashboardTemplateWhereInput = {
       isActive: true,
       id: { in: allowedTemplates }
     };
@@ -739,53 +741,53 @@ class DashboardService {
   // Private Helpers
   // ---------------------------------------------------------------------------
 
-  private toDashboard(data: any): Dashboard {
+  private toDashboard(data: Prisma.AnalyticsDashboardGetPayload<{ include: { widgets: true } }>): Dashboard {
     return {
       id: data.id,
       userId: data.userId,
       name: data.name,
-      description: data.description,
-      layout: data.layout as DashboardLayout,
+      description: data.description ?? undefined,
+      layout: data.layout as unknown as DashboardLayout,
       isPublic: data.isPublic,
       isDefault: data.isDefault,
       viewCount: data.viewCount,
-      lastViewedAt: data.lastViewedAt,
-      widgets: (data.widgets || []).map((w: any) => this.toWidget(w)),
+      lastViewedAt: data.lastViewedAt ?? undefined,
+      widgets: (data.widgets || []).map((w) => this.toWidget(w)),
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     };
   }
 
-  private toWidget(data: any): DashboardWidget {
+  private toWidget(data: Prisma.DashboardWidgetGetPayload<Record<string, never>>): DashboardWidget {
     return {
       id: data.id,
       dashboardId: data.dashboardId,
       widgetType: data.widgetType as WidgetType,
       title: data.title,
-      titleVi: data.titleVi,
+      titleVi: data.titleVi ?? undefined,
       dataSource: data.dataSource as DataSource,
-      metric: data.metric,
+      metric: data.metric ?? undefined,
       queryConfig: data.queryConfig as WidgetQueryConfig,
       displayConfig: data.displayConfig as WidgetDisplayConfig,
       gridX: data.gridX,
       gridY: data.gridY,
       gridW: data.gridW,
       gridH: data.gridH,
-      refreshInterval: data.refreshInterval,
-      drillDownConfig: data.drillDownConfig as DrillDownConfig | undefined,
+      refreshInterval: data.refreshInterval ?? undefined,
+      drillDownConfig: data.drillDownConfig as unknown as DrillDownConfig | undefined,
     };
   }
 
-  private toTemplate(data: any): DashboardTemplate {
+  private toTemplate(data: Prisma.DashboardTemplateGetPayload<Record<string, never>>): DashboardTemplate {
     return {
       id: data.id,
       name: data.name,
-      nameVi: data.nameVi,
-      description: data.description,
+      nameVi: data.nameVi ?? undefined,
+      description: data.description ?? undefined,
       category: data.category,
-      thumbnail: data.thumbnail,
-      layout: data.layout as DashboardLayout,
-      widgets: data.widgets as any[],
+      thumbnail: data.thumbnail ?? undefined,
+      layout: data.layout as unknown as DashboardLayout,
+      widgets: data.widgets as unknown as Omit<DashboardWidget, 'id' | 'dashboardId'>[],
       isActive: data.isActive,
       isDefault: data.isDefault,
       usageCount: data.usageCount,

@@ -4,30 +4,51 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger';
-import { auth } from '@/lib/auth';
-import { approvalQueueService, QueueFilter, QueueSortOptions } from '@/lib/ai/autonomous/approval-queue-service';
+import { withAuth } from '@/lib/api/with-auth';
+import { approvalQueueService, QueueFilter, QueueSortOptions, QueueItemStatus, QueuePriority } from '@/lib/ai/autonomous/approval-queue-service';
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+const queuePostSchema = z.object({
+  suggestion: z.record(z.string(), z.unknown()),
+  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  tags: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  expiryDays: z.number().int().positive().optional(),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
 
     // Parse filter parameters
     const filter: QueueFilter = {};
 
     const status = searchParams.get('status');
     if (status) {
-      filter.status = status.split(',') as any[];
+      filter.status = status.split(',') as QueueItemStatus[];
     }
 
     const priority = searchParams.get('priority');
     if (priority) {
-      filter.priority = priority.split(',') as any[];
+      filter.priority = priority.split(',') as QueuePriority[];
     }
 
     const partIds = searchParams.get('partIds');
@@ -97,27 +118,38 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { suggestion, priority, tags, notes, expiryDays } = body;
-
-    if (!suggestion) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { error: 'Suggestion is required' },
-        { status: 400 }
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
       );
     }
 
+  try {
+const body = await request.json();
+    const parsed = queuePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const { suggestion, priority, tags, notes, expiryDays } = parsed.data;
+
     const queueItem = await approvalQueueService.addToQueue(
-      suggestion,
+      suggestion as unknown as import('@/lib/ai/autonomous/ai-po-analyzer').EnhancedPOSuggestion,
       session.user?.id || 'system',
       {
         priority,
@@ -138,17 +170,28 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // Get specific queue item
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const body = await request.json();
     const { id, action, note } = body;
 
     if (!id) {
@@ -200,4 +243,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

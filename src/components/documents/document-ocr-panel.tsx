@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
   FileText,
   Upload,
@@ -37,22 +38,35 @@ interface ExtractedItem {
   unit?: string;
 }
 
+interface CreatedEntities {
+  supplier?: { name: string };
+  customer?: { name: string };
+  salesOrder?: { orderNumber: string; lineCount: number };
+  quote?: { quoteNumber: string; itemCount: number };
+  invoice?: { invoiceNumber: string };
+  certificate?: { certificateNumber: string };
+  pendingReview?: { reason: string };
+}
+
 interface OCRResult {
   success: boolean;
   documentType: DocumentType;
   confidence: number;
-  extractedData: any;
+  extractedData: Record<string, unknown> & {
+    items?: ExtractedItem[];
+    lineItems?: ExtractedItem[];
+  };
   processingTime: number;
   warnings?: string[];
   error?: string;
-  createdEntities?: any;
+  createdEntities?: CreatedEntities;
 }
 
 // =============================================================================
 // DOCUMENT TYPE INFO
 // =============================================================================
 
-const documentTypeInfo: Record<DocumentType, { label: string; icon: any; color: string }> = {
+const documentTypeInfo: Record<DocumentType, { label: string; icon: LucideIcon; color: string }> = {
   supplier_quote: { label: 'Báo giá NCC', icon: Building2, color: 'blue' },
   customer_po: { label: 'Đơn hàng KH', icon: ShoppingCart, color: 'green' },
   invoice: { label: 'Hóa đơn', icon: Receipt, color: 'purple' },
@@ -419,7 +433,7 @@ export function DocumentOCRPanel({ onComplete }: DocumentOCRPanelProps) {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                            {(result.extractedData.items || result.extractedData.lineItems).map(
+                            {(result.extractedData.items ?? result.extractedData.lineItems ?? []).map(
                               (item: ExtractedItem, index: number) => (
                                 <tr key={index}>
                                   <td className="px-3 py-2">
@@ -554,7 +568,7 @@ function formatFieldName(key: string): string {
   return mappings[key] || key.replace(/([A-Z])/g, ' $1').trim();
 }
 
-function formatFieldValue(value: any): string {
+function formatFieldValue(value: unknown): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'number') {
     return new Intl.NumberFormat('vi-VN').format(value);

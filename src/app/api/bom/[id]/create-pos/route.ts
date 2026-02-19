@@ -7,6 +7,7 @@ import {
   errorResponse,
   validationErrorResponse,
 } from "@/lib/api/with-permission";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION
@@ -31,6 +32,10 @@ async function postHandler(
   request: NextRequest,
   { user }: { params?: Record<string, string>; user: unknown }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   let body;
   try {
     body = await request.json();

@@ -9,10 +9,10 @@ export interface DashboardGridProps {
   dashboard: Dashboard;
   widgetData?: Record<string, WidgetData>;
   isEditing?: boolean;
-  onLayoutChange?: (layout: any[]) => void;
+  onLayoutChange?: (layout: Array<{ i: string; x: number; y: number; w: number; h: number }>) => void;
   onWidgetConfigure?: (widget: DashboardWidget) => void;
   onWidgetRemove?: (widgetId: string) => void;
-  onWidgetDrillDown?: (widget: DashboardWidget, item: any) => void;
+  onWidgetDrillDown?: (widget: DashboardWidget, item: { id?: string; entityId?: string } | null) => void;
   className?: string;
 }
 

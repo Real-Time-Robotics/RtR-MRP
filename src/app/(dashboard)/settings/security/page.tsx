@@ -1,7 +1,7 @@
 // src/app/(dashboard)/settings/security/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Shield,
   Key,
@@ -16,6 +16,7 @@ import {
   Laptop,
   Monitor,
   LogOut,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,54 +48,28 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import { toast } from "sonner";
 
-// Mock data
-const mockSessions = [
-  {
-    id: "1",
-    device: "Chrome on macOS",
-    location: "San Francisco, CA",
-    ip: "192.168.1.100",
-    lastActive: "Active now",
-    current: true,
-  },
-  {
-    id: "2",
-    device: "Safari on iPhone",
-    location: "San Francisco, CA",
-    ip: "192.168.1.101",
-    lastActive: "2 hours ago",
-    current: false,
-  },
-  {
-    id: "3",
-    device: "Firefox on Windows",
-    location: "New York, NY",
-    ip: "10.0.0.50",
-    lastActive: "1 day ago",
-    current: false,
-  },
-];
-
-const mockBackupCodes = [
-  "ABCD-1234",
-  "EFGH-5678",
-  "IJKL-9012",
-  "MNOP-3456",
-  "QRST-7890",
-  "UVWX-1234",
-  "YZAB-5678",
-  "CDEF-9012",
-  "GHIJ-3456",
-  "KLMN-7890",
-];
+interface Session {
+  id: string;
+  device: string;
+  location: string;
+  ip: string;
+  lastActive: string;
+  current: boolean;
+  token?: string;
+}
 
 export default function SecuritySettingsPage() {
   const [activeTab, setActiveTab] = useState("mfa");
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [showMfaSetup, setShowMfaSetup] = useState(false);
   const [mfaStep, setMfaStep] = useState(1);
+  const [mfaDeviceId, setMfaDeviceId] = useState("");
+  const [mfaSecret, setMfaSecret] = useState("");
+  const [mfaQrUrl, setMfaQrUrl] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -102,14 +77,105 @@ export default function SecuritySettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  const handleMfaSetup = () => {
-    setShowMfaSetup(true);
-    setMfaStep(1);
+  // Sessions state
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  // Fetch active sessions from API
+  const fetchSessions = useCallback(async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch('/api/compliance/sessions');
+      if (!res.ok) throw new Error('Không thể tải phiên đăng nhập');
+      const data = await res.json();
+      const rawSessions = data.sessions || [];
+      const mapped: Session[] = rawSessions.map((s: { id?: string; sessionToken?: string; device?: string; userAgent?: string; location?: string; ipAddress?: string; ip?: string; lastActive?: string; lastAccessedAt?: string; updatedAt?: string; current?: boolean; isCurrent?: boolean }) => ({
+        id: s.id || s.sessionToken || '',
+        device: s.device || s.userAgent || 'Unknown device',
+        location: s.location || '',
+        ip: s.ipAddress || s.ip || '',
+        lastActive: s.lastActive || (s.lastAccessedAt ? new Date(s.lastAccessedAt).toLocaleString('vi-VN') : s.updatedAt ? new Date(s.updatedAt).toLocaleString('vi-VN') : ''),
+        current: s.current || s.isCurrent || false,
+        token: s.sessionToken,
+      }));
+      setSessions(mapped);
+    } catch (err) {
+      toast.error('Lỗi tải danh sách phiên đăng nhập');
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  const handleRevokeSession = async (sessionToken: string) => {
+    try {
+      const res = await fetch(`/api/compliance/sessions?token=${encodeURIComponent(sessionToken)}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Không thể thu hồi phiên');
+      toast.success('Đã thu hồi phiên đăng nhập');
+      fetchSessions();
+    } catch (err) {
+      toast.error('Lỗi khi thu hồi phiên đăng nhập');
+    }
   };
 
-  const handleVerifyMfa = () => {
-    if (verificationCode.length === 6) {
+  const handleRevokeAllSessions = async () => {
+    try {
+      const res = await fetch('/api/compliance/sessions?all=true', {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Không thể thu hồi tất cả phiên');
+      toast.success('Đã thu hồi tất cả phiên đăng nhập khác');
+      fetchSessions();
+    } catch (err) {
+      toast.error('Lỗi khi thu hồi phiên đăng nhập');
+    }
+  };
+
+  const handleMfaSetup = async () => {
+    setShowMfaSetup(true);
+    setMfaStep(1);
+    try {
+      const res = await fetch('/api/compliance/mfa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'setup' }),
+      });
+      if (!res.ok) throw new Error('Không thể khởi tạo MFA');
+      const data = await res.json();
+      setMfaDeviceId(data.deviceId || '');
+      setMfaSecret(data.secret || '');
+      setMfaQrUrl(data.qrCodeUrl || '');
+      if (data.backupCodes) setBackupCodes(data.backupCodes);
+    } catch (err) {
+      toast.error('Lỗi khởi tạo xác thực 2 yếu tố');
+      setShowMfaSetup(false);
+    }
+  };
+
+  const handleVerifyMfa = async () => {
+    if (verificationCode.length !== 6) return;
+    try {
+      const res = await fetch('/api/compliance/mfa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          code: verificationCode,
+          deviceId: mfaDeviceId,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Mã xác thực không hợp lệ');
+      }
       setMfaStep(3);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Lỗi xác thực MFA');
     }
   };
 
@@ -118,6 +184,7 @@ export default function SecuritySettingsPage() {
     setShowMfaSetup(false);
     setMfaStep(1);
     setVerificationCode("");
+    toast.success('Xác thực 2 yếu tố đã được kích hoạt');
   };
 
   const calculatePasswordStrength = (password: string) => {
@@ -268,7 +335,7 @@ export default function SecuritySettingsPage() {
                             </DialogDescription>
                           </DialogHeader>
                           <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-4 font-mono text-sm">
-                            {mockBackupCodes.map((code, i) => (
+                            {backupCodes.map((code, i) => (
                               <div key={i} className="flex items-center gap-2">
                                 <span>{code}</span>
                               </div>
@@ -278,7 +345,7 @@ export default function SecuritySettingsPage() {
                             <Button
                               variant="outline"
                               onClick={() => {
-                                navigator.clipboard.writeText(mockBackupCodes.join("\n"));
+                                navigator.clipboard.writeText(backupCodes.join("\n"));
                               }}
                             >
                               <Copy className="mr-2 h-4 w-4" />
@@ -323,19 +390,24 @@ export default function SecuritySettingsPage() {
               {mfaStep === 1 && (
                 <div className="space-y-4">
                   <div className="flex justify-center rounded-lg bg-white p-4">
-                    <div className="h-48 w-48 rounded-lg bg-muted flex items-center justify-center">
-                      <span className="text-muted-foreground text-sm">QR Code</span>
-                    </div>
+                    {mfaQrUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={mfaQrUrl} alt="QR Code" className="h-48 w-48 rounded-lg" />
+                    ) : (
+                      <div className="h-48 w-48 rounded-lg bg-muted flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground">
                       Cannot scan? Enter this code manually:
                     </p>
                     <code className="mt-2 block rounded bg-muted px-4 py-2 font-mono text-sm">
-                      JBSWY3DPEHPK3PXP
+                      {mfaSecret || 'Loading...'}
                     </code>
                   </div>
-                  <Button className="w-full" onClick={() => setMfaStep(2)}>
+                  <Button className="w-full" onClick={() => setMfaStep(2)} disabled={!mfaSecret}>
                     Continue
                   </Button>
                 </div>
@@ -376,7 +448,7 @@ export default function SecuritySettingsPage() {
                     </AlertDescription>
                   </Alert>
                   <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-4 font-mono text-sm">
-                    {mockBackupCodes.slice(0, 10).map((code, i) => (
+                    {backupCodes.slice(0, 10).map((code, i) => (
                       <div key={i}>{code}</div>
                     ))}
                   </div>
@@ -384,7 +456,7 @@ export default function SecuritySettingsPage() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => navigator.clipboard.writeText(mockBackupCodes.join("\n"))}
+                      onClick={() => navigator.clipboard.writeText(backupCodes.join("\n"))}
                     >
                       <Copy className="mr-2 h-4 w-4" />
                       Copy
@@ -428,6 +500,7 @@ export default function SecuritySettingsPage() {
                       size="icon"
                       className="absolute right-0 top-0"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -523,61 +596,77 @@ export default function SecuritySettingsPage() {
                     Manage devices where you are currently signed in
                   </CardDescription>
                 </div>
-                <Button variant="outline" className="text-destructive">
+                <Button variant="outline" className="text-destructive" onClick={handleRevokeAllSessions}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out All
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Device</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>IP Address</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockSessions.map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          {session.device.includes("iPhone") ? (
-                            <Smartphone className="h-5 w-5 text-muted-foreground" />
-                          ) : (
-                            <Laptop className="h-5 w-5 text-muted-foreground" />
-                          )}
-                          <div>
-                            <div className="font-medium">{session.device}</div>
-                            {session.current && (
-                              <Badge variant="outline" className="text-xs">
-                                Current session
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{session.location}</TableCell>
-                      <TableCell className="font-mono text-sm">{session.ip}</TableCell>
-                      <TableCell>
-                        <Badge variant={session.current ? "default" : "secondary"}>
-                          {session.lastActive}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {!session.current && (
-                          <Button variant="ghost" size="sm" className="text-destructive">
-                            Revoke
-                          </Button>
-                        )}
-                      </TableCell>
+              {isLoadingSessions ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">Loading sessions...</span>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No active sessions found
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>IP Address</TableHead>
+                      <TableHead>Last Active</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {sessions.map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {session.device.includes("iPhone") || session.device.includes("Mobile") ? (
+                              <Smartphone className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <Laptop className="h-5 w-5 text-muted-foreground" />
+                            )}
+                            <div>
+                              <div className="font-medium">{session.device}</div>
+                              {session.current && (
+                                <Badge variant="outline" className="text-xs">
+                                  Current session
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{session.location}</TableCell>
+                        <TableCell className="font-mono text-sm">{session.ip}</TableCell>
+                        <TableCell>
+                          <Badge variant={session.current ? "default" : "secondary"}>
+                            {session.lastActive}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {!session.current && session.token && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => handleRevokeSession(session.token!)}
+                            >
+                              Revoke
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

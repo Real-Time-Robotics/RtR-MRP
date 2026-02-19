@@ -542,6 +542,7 @@ export default function NotificationsPage() {
                           size="icon"
                           className="h-8 w-8"
                           onClick={(e) => e.stopPropagation()}
+                          aria-label="Menu"
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // NOTIFICATION SETTINGS API
 // =============================================================================
@@ -31,13 +32,12 @@ const notificationSettingsSchema = z.object({
 });
 
 // GET /api/notifications/settings - Get user notification settings
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const userId = session.user.id;
 
     // Get user's notification settings
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse stored settings or use defaults
-    const storedSettings = user.notificationSettings as any | null;
+    const storedSettings = user.notificationSettings as Record<string, boolean | string> | null;
 
     const settings = {
       email: {
@@ -91,16 +91,15 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/notifications/settings - Update user notification settings
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const userId = session.user.id;
     const body = await request.json();
     const parsed = notificationSettingsSchema.safeParse(body);
@@ -156,4 +155,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

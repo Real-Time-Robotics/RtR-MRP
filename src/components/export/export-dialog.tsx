@@ -103,6 +103,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        role="presentation"
         onClick={onClose}
       />
 
@@ -126,6 +127,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Đóng"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -240,6 +242,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 placeholder={t("export.titlePlaceholder")}
+                aria-label={t("export.reportTitle")}
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -378,7 +381,7 @@ export function ExportMenu({ entity, label, className }: ExportMenuProps) {
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-40" role="presentation" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
             {formatOptions.map((option) => (
               <button

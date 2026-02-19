@@ -19,6 +19,7 @@ import {
   AuthUser,
 } from "@/lib/api/with-permission";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // VALIDATION
 // =============================================================================
@@ -46,6 +47,10 @@ const createOrderSchema = z.object({
 // =============================================================================
 
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {

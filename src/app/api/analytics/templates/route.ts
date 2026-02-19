@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService } from '@/lib/analytics';
 import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const templates = await dashboardService.getTemplates();
+const templates = await dashboardService.getTemplates();
 
     return NextResponse.json({
       success: true,
@@ -21,13 +27,17 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    await dashboardService.seedTemplates();
+await dashboardService.seedTemplates();
 
     return NextResponse.json({
       success: true,
@@ -42,4 +52,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -10,6 +10,7 @@ import {
   AuthUser,
 } from '@/lib/api/with-permission';
 import { auditUpdate, auditDelete } from '@/lib/audit/route-audit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // SUPPLIER VALIDATION SCHEMA
@@ -39,6 +40,10 @@ async function getHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
 
   if (!id) {
@@ -95,6 +100,10 @@ async function putHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rlResult = await checkWriteEndpointLimit(request);
+  if (rlResult) return rlResult;
+
   const id = params?.id;
 
   if (!id) {
@@ -149,7 +158,7 @@ async function putHandler(
   });
 
   // Audit trail: log changes
-  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, existing as unknown as any, validation.data as any);
+  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Supplier", id!, existing as unknown as Record<string, unknown>, validation.data as Record<string, unknown>);
 
   return successResponse(supplier);
 }
@@ -162,6 +171,10 @@ async function deleteHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rlResult2 = await checkWriteEndpointLimit(request);
+  if (rlResult2) return rlResult2;
+
   const id = params?.id;
 
   if (!id) {

@@ -31,6 +31,7 @@ import {
     PAYMENT_TERMS,
 } from './customer-form-schema';
 import { Customer } from '@/components/forms/customer-form'; // Import type primarily
+import type { Resolver } from 'react-hook-form';
 
 interface CustomerFormDialogProps {
     open: boolean;
@@ -48,7 +49,7 @@ export function CustomerFormDialog({
     const isEditing = !!customer;
 
     const form = useForm<CustomerFormData>({
-        resolver: zodResolver(customerSchema) as any,
+        resolver: zodResolver(customerSchema) as Resolver<CustomerFormData>,
         defaultValues: defaultCustomerValues,
     });
 
@@ -104,11 +105,11 @@ export function CustomerFormDialog({
             if (!response.ok) {
                 if (result.errors) {
                     // Validation errors
-                    Object.entries(result.errors).forEach(([field, messages]) => {
-                        // @ts-ignore
-                        form.setError(field as keyof CustomerFormData, {
+                    const errors = result.errors as Record<string, string[]>;
+                    (Object.keys(errors) as Array<keyof CustomerFormData>).forEach((field) => {
+                        form.setError(field, {
                             type: 'server',
-                            message: (messages as string[]).join(', '),
+                            message: errors[field].join(', '),
                         });
                     });
                     throw new Error("Vui lòng kiểm tra lại thông tin");

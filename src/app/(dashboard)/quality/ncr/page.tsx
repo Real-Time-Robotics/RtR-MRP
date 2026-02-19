@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { NCRStatusBadge } from "@/components/quality/ncr-status-badge";
 import { PriorityBadge } from "@/components/quality/priority-badge";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface NCR {
   id: string;
@@ -51,7 +52,7 @@ export default function NCRListPage() {
         setNCRs(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
-      console.error("Failed to fetch NCRs:", error);
+      clientLogger.error("Failed to fetch NCRs:", error);
     } finally {
       setLoading(false);
     }

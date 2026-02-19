@@ -12,6 +12,7 @@ import {
   SalesOrder,
   SOStatus
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 import { excelPortalStyles } from '@/components/ui-v2/excel';
 
 // =============================================================================
@@ -59,7 +60,7 @@ export default function CustomerOrdersPage() {
         setOrders(result.data.orders || []);
       }
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
+      clientLogger.error('Failed to fetch orders', error);
     } finally {
       setIsLoading(false);
     }
@@ -93,6 +94,7 @@ export default function CustomerOrdersPage() {
         <button
           onClick={() => fetchOrders()}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
+          aria-label="Làm mới"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -107,6 +109,7 @@ export default function CustomerOrdersPage() {
             <input
               type="text"
               placeholder="Tìm theo mã SO, sản phẩm..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"

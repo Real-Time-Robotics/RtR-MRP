@@ -4,8 +4,25 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+
+const pickingPostSchema = z.object({
+  pickId: z.string().min(1, 'pickId là bắt buộc'),
+  itemId: z.string().min(1, 'itemId là bắt buộc'),
+  qtyPicked: z.number().positive('Số lượng phải lớn hơn 0'),
+  location: z.string().optional(),
+  serialNumbers: z.array(z.string()).optional(),
+  lotNumber: z.string().optional(),
+  userId: z.string().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbPickListResult = Record<string, any>;
 
 // Helper: Map numeric priority to string
 function getPriorityLabel(priority: number): string {
@@ -16,7 +33,7 @@ function getPriorityLabel(priority: number): string {
 }
 
 // Helper: Transform pick list from database
-function transformPickList(pickList: any) {
+function transformPickList(pickList: DbPickListResult) {
   return {
     id: pickList.id,
     pickNumber: pickList.pickListNumber,
@@ -26,7 +43,7 @@ function transformPickList(pickList: any) {
             pickList.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending',
     priority: getPriorityLabel(pickList.priority || 5),
     dueDate: pickList.dueDate?.toISOString().split('T')[0] || null,
-    items: pickList.lines?.map((line: any) => ({
+    items: pickList.lines?.map((line: DbPickListResult) => ({
       id: line.id,
       partNumber: line.part?.partNumber || '',
       description: line.part?.name || '',
@@ -42,14 +59,18 @@ function transformPickList(pickList: any) {
  * GET /api/mobile/picking
  * Get pick lists
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const pickId = searchParams.get('pickId');
     const status = searchParams.get('status') || 'pending,in_progress';
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.PickListWhereInput = {};
 
     if (pickId) {
       where.id = pickId;
@@ -85,18 +106,19 @@ export async function GET(req: NextRequest) {
 
     // Sort by priority
     const priorityOrder = { 'Rush': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
-    results.sort((a: any, b: any) =>
+    results.sort((a: DbPickListResult, b: DbPickListResult) =>
       (priorityOrder[a.priority as keyof typeof priorityOrder] || 99) -
       (priorityOrder[b.priority as keyof typeof priorityOrder] || 99)
     );
 
     // Calculate summary
+    interface PickItem { qtyPicked: number; qtyToPick: number }
     const summary = {
       totalPicks: results.length,
-      rushPicks: results.filter((p: any) => p.priority === 'Rush').length,
-      totalItems: results.reduce((sum: number, pick: any) => sum + (pick.items as unknown[]).length, 0),
-      itemsPending: results.reduce((sum: number, pick: any) =>
-        sum + (pick.items as any[]).filter((i: any) => (i.qtyPicked as number) < (i.qtyToPick as number)).length, 0
+      rushPicks: results.filter((p: DbPickListResult) => p.priority === 'Rush').length,
+      totalItems: results.reduce((sum: number, pick: DbPickListResult) => sum + (pick.items as PickItem[]).length, 0),
+      itemsPending: results.reduce((sum: number, pick: DbPickListResult) =>
+        sum + (pick.items as PickItem[]).filter((i: PickItem) => i.qtyPicked < i.qtyToPick).length, 0
       ),
     };
 
@@ -112,31 +134,27 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/mobile/picking
  * Process pick confirmation
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
-    const { pickId, itemId, qtyPicked, location, serialNumbers, lotNumber, userId } = body;
-
-    // Validate required fields
-    if (!pickId || !itemId || qtyPicked === undefined) {
+const body = await req.json();
+    const parsed = pickingPostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: pickId, itemId, qtyPicked' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
-
-    if (qtyPicked <= 0) {
-      return NextResponse.json(
-        { success: false, error: 'Quantity must be positive' },
-        { status: 400 }
-      );
-    }
+    const { pickId, itemId, qtyPicked, location, serialNumbers, lotNumber, userId } = parsed.data;
 
     // Find the pick list line
     const pickLine = await prisma.pickListLine.findUnique({
@@ -226,15 +244,19 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/mobile/picking
  * Complete pick list
  */
-export async function PATCH(req: NextRequest) {
+export const PATCH = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const body = await req.json();
     const { pickId, action, forceComplete } = body;
 
     if (!pickId || !action) {
@@ -328,4 +350,4 @@ export async function PATCH(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

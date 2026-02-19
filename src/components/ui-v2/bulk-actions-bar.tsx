@@ -6,6 +6,7 @@
 import React from 'react';
 import { X, Trash2, Download, Edit, Archive, Tag, CheckCircle, AlertTriangle, MoreHorizontal, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -63,7 +64,7 @@ export function BulkActionsBar({
     try {
       await action.onClick(selectedIds);
     } catch (error) {
-      console.error(`Bulk action ${action.id} failed:`, error);
+      clientLogger.error(`Bulk action ${action.id} failed`, error);
     } finally {
       setLoadingAction(null);
     }

@@ -2,20 +2,36 @@
 // Generate report as PDF or Excel file download
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { generateReportData } from '@/lib/reports/report-generator';
 import { renderToPDF } from '@/lib/reports/pdf-renderer';
 import { renderToExcel } from '@/lib/reports/excel-renderer';
 import prisma from '@/lib/prisma';
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { logger } from '@/lib/logger';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-  const body = await request.json();
-  const { templateId, format = 'EXCEL', filters } = body;
+  const bodySchema = z.object({
+    templateId: z.string(),
+    format: z.string().default('EXCEL'),
+    filters: z.record(z.string(), z.unknown()).optional(),
+  });
+
+  const rawBody = await request.json();
+  const parseResult = bodySchema.safeParse(rawBody);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+  const body = parseResult.data;
+  const { templateId, format, filters } = body;
 
   if (!templateId) {
     return NextResponse.json({ error: 'Missing templateId' }, { status: 400 });
@@ -48,7 +64,7 @@ export async function POST(request: NextRequest) {
         format,
         fileSize: fileBuffer.length,
         status: 'GENERATED',
-        generatedBy: session.user.id,
+        generatedBy: session.user?.id || 'system',
       },
     });
 
@@ -59,10 +75,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Report generation failed:', error);
+    logger.error('Report generation failed:', { error: String(error) });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Generation failed' },
+      { error: 'Failed to generate report' },
       { status: 500 }
     );
   }
-}
+});

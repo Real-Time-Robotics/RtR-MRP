@@ -32,7 +32,13 @@ function MobileInventoryAdjustContent() {
   
   const [adjustType, setAdjustType] = useState<'add' | 'remove'>('add');
   const [partNumber, setPartNumber] = useState('');
-  const [partInfo, setPartInfo] = useState<any>(null);
+  const [partInfo, setPartInfo] = useState<{
+    id: string;
+    partNumber: string;
+    description: string;
+    onHand: number;
+    locations?: Array<{ code: string; qty: number }>;
+  } | null>(null);
   const [location, setLocation] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [reason, setReason] = useState('');
@@ -70,7 +76,7 @@ function MobileInventoryAdjustContent() {
         const response = await fetch(`/api/mobile/inventory?search=${partNumber}`);
         if (response.ok) {
           const data = await response.json();
-          const found = data.data?.find((p: any) => 
+          const found = data.data?.find((p: { partNumber: string }) =>
             p.partNumber.toLowerCase() === partNumber.toLowerCase()
           );
           if (found) {
@@ -205,6 +211,7 @@ function MobileInventoryAdjustContent() {
             value={partNumber}
             onChange={(e) => setPartNumber(e.target.value.toUpperCase())}
             placeholder="VD: RTR-MOTOR-001"
+            aria-label="Mã vật tư"
             className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 font-mono"
           />
           <button
@@ -245,9 +252,9 @@ function MobileInventoryAdjustContent() {
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Vị trí
         </label>
-        {partInfo?.locations?.length > 0 ? (
+        {partInfo?.locations && partInfo.locations.length > 0 ? (
           <div className="space-y-2">
-            {partInfo.locations.map((loc: any, i: number) => (
+            {partInfo.locations.map((loc: { code: string; qty: number }, i: number) => (
               <button
                 key={i}
                 onClick={() => setLocation(loc.code)}
@@ -275,6 +282,7 @@ function MobileInventoryAdjustContent() {
             value={location}
             onChange={(e) => setLocation(e.target.value.toUpperCase())}
             placeholder="VD: WH-01-R01-C01-S01"
+            aria-label="Vị trí"
             className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 font-mono"
           />
         )}
@@ -296,6 +304,7 @@ function MobileInventoryAdjustContent() {
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+            aria-label="Số lượng"
             className="w-24 h-14 text-center text-2xl font-bold bg-gray-100 dark:bg-gray-700 rounded-xl border-0"
           />
           <button
@@ -339,6 +348,7 @@ function MobileInventoryAdjustContent() {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Thêm ghi chú..."
+          aria-label="Ghi chú"
           rows={2}
           className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 focus:ring-2 focus:ring-blue-500 resize-none"
         />

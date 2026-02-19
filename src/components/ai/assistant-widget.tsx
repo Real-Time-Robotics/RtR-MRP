@@ -27,6 +27,7 @@ import {
   Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // AI ASSISTANT WIDGET
@@ -217,7 +218,7 @@ export function AIAssistantWidget() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error:', error);
+      clientLogger.error('AI assistant error', error);
     } finally {
       setIsLoading(false);
     }
@@ -479,6 +480,7 @@ export function AIAssistantWidget() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Hỏi điều gì đó..."
+              aria-label="Hỏi điều gì đó"
               disabled={isLoading}
               className={cn(
                 'w-full px-4 py-3 pr-12',
@@ -666,6 +668,7 @@ export function AIInsightCard({ type, title, description, action, onDismiss }: A
           <button
             onClick={onDismiss}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            aria-label="Đóng"
           >
             <X className="w-4 h-4" />
           </button>

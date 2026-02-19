@@ -249,7 +249,7 @@ export default function BackupSettingsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/settings">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Quay lại">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>

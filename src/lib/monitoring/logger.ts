@@ -13,7 +13,7 @@ interface LogContext {
   requestId?: string;
   traceId?: string;
   spanId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface LogEntry {
@@ -33,7 +33,7 @@ interface LogEntry {
     code?: string;
   };
   duration?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // =============================================================================
@@ -125,7 +125,7 @@ class Logger {
           name: data.error.name,
           message: data.error.message,
           stack: data.error.stack,
-          code: (data.error as any).code,
+          code: 'code' in data.error ? (data.error as Error & { code?: string }).code : undefined,
         };
         delete data.error;
       }
@@ -327,7 +327,7 @@ class Logger {
     resource: string;
     resourceId?: string;
     userId: string;
-    changes?: Record<string, { old: any; new: any }>;
+    changes?: Record<string, { old: unknown; new: unknown }>;
   }): void {
     this.info(`Audit: ${event.action} ${event.resource}`, {
       audit: event,
@@ -396,7 +396,21 @@ function generateRequestId(): string {
  * Express/Next.js logging middleware
  */
 export function loggingMiddleware() {
-  return (req: any, res: any, next: any) => {
+  return (
+    req: {
+      method: string;
+      url: string;
+      ip?: string;
+      connection?: { remoteAddress?: string };
+      headers: Record<string, string | string[] | undefined>;
+      log?: Logger;
+    },
+    res: {
+      statusCode: number;
+      on: (event: string, cb: () => void) => void;
+    },
+    next: () => void
+  ) => {
     const start = Date.now();
     const requestLogger = createRequestLogger(req);
 
@@ -422,7 +436,7 @@ export function loggingMiddleware() {
         status: res.statusCode,
         duration,
         ip: req.ip || req.connection?.remoteAddress,
-        userAgent: req.headers['user-agent'],
+        userAgent: req.headers['user-agent'] as string | undefined,
       });
     });
 

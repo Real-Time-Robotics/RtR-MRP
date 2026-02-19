@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - S3 FILE STORAGE
 // Tenant-isolated file storage using AWS S3
@@ -325,8 +324,8 @@ export async function getFileInfo(key: string): Promise<FileInfo | null> {
       contentType: response.ContentType,
       metadata: response.Metadata as FileMetadata,
     };
-  } catch (error: any) {
-    if (error.name === 'NotFound') {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'NotFound') {
       return null;
     }
     throw error;

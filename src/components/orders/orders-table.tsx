@@ -166,14 +166,14 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       return;
     }
 
-    const exportColumns: ExportColumn[] = [
+    const exportColumns: ExportColumn<SalesOrder>[] = [
       { key: 'orderNumber', header: 'Order Number', width: 12 },
-      { key: 'customer', header: 'Customer', width: 25, format: (v) => v?.name || '-' },
+      { key: 'customer', header: 'Customer', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
       { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
       { key: 'requiredDate', header: 'Required Date', width: 12, type: 'date' },
-      { key: 'priority', header: 'Priority', width: 10, format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || '-' },
+      { key: 'priority', header: 'Priority', width: 10, format: (v) => { const s = v as string; return s ? s.charAt(0).toUpperCase() + s.slice(1) : '-'; } },
       { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
-      { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
+      { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
     ];
 
     const totalValue = orders.reduce((sum, so) => sum + (so.totalAmount || 0), 0);

@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CostBreakdownChart, CostRollupStatus, VarianceCard } from "@/components/finance";
+import { clientLogger } from '@/lib/client-logger';
 
 interface CostRollup {
   partId: string;
@@ -107,7 +108,7 @@ function CostingContent() {
         setVariances(data.data?.variances || []);
       }
     } catch (error) {
-      console.error("Failed to fetch costing data:", error);
+      clientLogger.error("Failed to fetch costing data:", error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ function CostingContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to run rollup:", error);
+      clientLogger.error("Failed to run rollup:", error);
     } finally {
       setRunningRollup(false);
     }

@@ -3,6 +3,7 @@ import { withAuth, type AuthUser } from "@/lib/auth/middleware";
 import { confirmProductionReceipt } from "@/lib/mrp-engine";
 import { handleError, successResponse } from "@/lib/error-handler";
 import { logger } from "@/lib/logger";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // POST - Confirm a production receipt (warehouse approves)
 export const POST = withAuth(
@@ -10,6 +11,10 @@ export const POST = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     try {
       const { id } = await params;
 

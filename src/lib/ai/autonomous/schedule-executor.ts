@@ -10,6 +10,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { ScheduleResult, ScheduleSuggestion } from './scheduling-engine';
 import { Resolution } from './conflict-detector';
 
@@ -345,8 +346,19 @@ export class ScheduleExecutor {
     const executedAt = new Date();
     const auditId = `audit-conflict-${Date.now()}`;
 
+    interface ResolutionWithDetails extends Resolution {
+      affectedWorkOrderId?: string;
+      affectedWorkOrderNumber?: string;
+      suggestedChanges?: {
+        newStartDate?: Date;
+        newEndDate?: Date;
+        newWorkCenterId?: string;
+        newPriority?: number;
+      };
+    }
+
     const changes: ScheduleChange[] = resolutions.map(resolution => {
-      const r = resolution as any;
+      const r = resolution as ResolutionWithDetails;
       return {
         workOrderId: r.affectedWorkOrderId || resolution.id,
         workOrderNumber: r.affectedWorkOrderNumber || resolution.id,
@@ -716,7 +728,7 @@ export class ScheduleExecutor {
           });
         } catch {
           // Log rollback failure but continue
-          console.error(`Failed to rollback work order ${result.workOrderId}`);
+          logger.error(`Failed to rollback work order ${result.workOrderId}`, { context: 'schedule-executor' });
         }
       }
     }

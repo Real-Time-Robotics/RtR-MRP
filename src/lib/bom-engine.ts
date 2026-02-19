@@ -1,5 +1,6 @@
 import prisma from "./prisma";
 import { BomExplosionResult, BomModule, StockStatus } from "@/types";
+import { logger } from '@/lib/logger';
 
 const MAX_BOM_DEPTH = 10;
 
@@ -41,7 +42,7 @@ export async function explodeBOM(
   ): Promise<BomExplosionResult[]> {
     if (level > MAX_BOM_DEPTH) return [];
     if (visitedProductIds.has(currentProductId)) {
-      console.warn(`Circular BOM reference detected for product ${currentProductId}, skipping`);
+      logger.warn(`Circular BOM reference detected for product ${currentProductId}, skipping`, { context: 'bom-engine' });
       return [];
     }
 

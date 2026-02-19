@@ -539,7 +539,7 @@ export class ImpactAnalyzer {
     });
   }
 
-  private calculateWeeklyImpact(point: any): number {
+  private calculateWeeklyImpact(point: { supply: number; demand: number; stockoutRisk?: number; inventoryCost?: number; utilizationRate?: number; stockouts?: number; capacityUsed?: number; capacityAvailable?: number }): number {
     let impact = 0;
 
     // Positive for meeting demand
@@ -547,11 +547,11 @@ export class ImpactAnalyzer {
     else impact -= 10;
 
     // Negative for stockouts
-    impact -= point.stockouts * 2;
+    impact -= (point.stockouts ?? 0) * 2;
 
     // Negative for overcapacity
-    if (point.capacityUsed > point.capacityAvailable) {
-      impact -= (point.capacityUsed - point.capacityAvailable) / 10;
+    if ((point.capacityUsed ?? 0) > (point.capacityAvailable ?? 0)) {
+      impact -= ((point.capacityUsed ?? 0) - (point.capacityAvailable ?? 0)) / 10;
     }
 
     return impact;

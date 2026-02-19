@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocketContext } from '@/providers/socket-provider';
 import { Message } from '@/types/discussions';
+import { clientLogger } from '@/lib/client-logger';
 
 interface TypingUser {
   userId: string;
@@ -58,7 +59,7 @@ export function useThreadMessages(threadId: string | null): UseThreadMessagesRet
       const data = await response.json();
       setMessages(data.messages || []);
     } catch (err) {
-      console.error('Failed to fetch messages:', err);
+      clientLogger.error('Failed to fetch messages', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch messages');
     } finally {
       setIsLoading(false);
@@ -182,7 +183,7 @@ export function useThreadMessages(threadId: string | null): UseThreadMessagesRet
         // Message will be added via socket event, but return for immediate feedback
         return result.message;
       } catch (err) {
-        console.error('Failed to send message:', err);
+        clientLogger.error('Failed to send message', err);
         throw err;
       }
     },
@@ -204,7 +205,7 @@ export function useThreadMessages(threadId: string | null): UseThreadMessagesRet
         }
         // Message update will come via socket
       } catch (err) {
-        console.error('Failed to update message:', err);
+        clientLogger.error('Failed to update message', err);
         throw err;
       }
     },
@@ -223,7 +224,7 @@ export function useThreadMessages(threadId: string | null): UseThreadMessagesRet
       }
       // Message deletion will come via socket
     } catch (err) {
-      console.error('Failed to delete message:', err);
+      clientLogger.error('Failed to delete message', err);
       throw err;
     }
   }, []);

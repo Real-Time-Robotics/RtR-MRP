@@ -88,6 +88,7 @@ export function InstallPromptBanner({ className, onDismiss }: InstallPromptProps
           <button
             onClick={handleDismiss}
             className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-neutral-300"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
@@ -191,6 +192,7 @@ export function InstallPromptBanner({ className, onDismiss }: InstallPromptProps
       <button
         onClick={handleDismiss}
         className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-neutral-300"
+        aria-label="Đóng"
       >
         <X className="w-5 h-5" />
       </button>

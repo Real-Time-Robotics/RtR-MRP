@@ -149,11 +149,11 @@ export default function EnhancedReportsPage() {
               <>
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-gray-500 mb-1">Từ ngày</label>
-                  <input type="date" className="h-7 px-2 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                  <input type="date" className="h-7 px-2 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal" aria-label="Từ ngày" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-mono uppercase text-gray-500 mb-1">Đến ngày</label>
-                  <input type="date" className="h-7 px-2 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                  <input type="date" className="h-7 px-2 text-[11px] font-mono border border-gray-300 dark:border-mrp-border dark:bg-gunmetal" aria-label="Đến ngày" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                 </div>
               </>
             )}

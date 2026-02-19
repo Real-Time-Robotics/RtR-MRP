@@ -2,9 +2,53 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getCapacitySummary } from "@/lib/production/capacity-engine";
+import { z } from "zod";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+const WorkCenterCreateSchema = z.object({
+  code: z.string().min(1, "Code is required"),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional().nullable(),
+  type: z.string().min(1, "Type is required"),
+  department: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  capacityType: z.string().default("hours"),
+  capacityPerDay: z.number().default(8),
+  capacityPerHour: z.number().optional().nullable(),
+  efficiency: z.number().min(0).max(200).default(100),
+  utilizationTarget: z.number().min(0).max(100).default(85),
+  workingHoursStart: z.string().default("08:00"),
+  workingHoursEnd: z.string().default("17:00"),
+  breakMinutes: z.number().int().min(0).default(60),
+  workingDays: z.array(z.number().int().min(0).max(6)).default([1, 2, 3, 4, 5]),
+  hourlyRate: z.number().optional().nullable(),
+  setupCostPerHour: z.number().optional().nullable(),
+  overheadRate: z.number().optional().nullable(),
+  maxConcurrentJobs: z.number().int().min(1).default(1),
+  requiresOperator: z.boolean().default(true),
+  operatorSkillLevel: z.string().optional().nullable(),
+  status: z.string().default("active"),
+  maintenanceInterval: z.number().optional().nullable(),
+  nextMaintenanceDate: z.string().optional().nullable(),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  const startTime = Date.now();
+
   try {
+    const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
@@ -14,10 +58,16 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status;
     if (type) where.type = type;
 
-    const workCenters = await prisma.workCenter.findMany({
-      where,
-      orderBy: { code: "asc" },
-    });
+    const [totalCount, workCenters] = await Promise.all([
+      prisma.workCenter.count({ where }),
+      prisma.workCenter.findMany({
+        where,
+        ...buildOffsetPaginationQuery(params),
+        orderBy: params.sortBy
+          ? { [params.sortBy]: params.sortOrder }
+          : { code: "asc" },
+      }),
+    ]);
 
     if (includeUtilization) {
       const now = new Date();
@@ -39,49 +89,63 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      return NextResponse.json(wcWithUtilization);
+      return paginatedSuccess(
+        buildPaginatedResponse(wcWithUtilization, totalCount, params, startTime)
+      );
     }
 
-    return NextResponse.json(workCenters);
+    return paginatedSuccess(
+      buildPaginatedResponse(workCenters, totalCount, params, startTime)
+    );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/work-centers' });
-    return NextResponse.json(
-      { error: "Failed to fetch work centers" },
-      { status: 500 }
-    );
+    return paginatedError("Failed to fetch work centers", 500);
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const body = await request.json();
 
+    const validation = WorkCenterCreateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
     const workCenter = await prisma.workCenter.create({
       data: {
-        code: body.code,
-        name: body.name,
-        description: body.description,
-        type: body.type,
-        department: body.department,
-        location: body.location,
-        capacityType: body.capacityType || "hours",
-        capacityPerDay: body.capacityPerDay,
-        capacityPerHour: body.capacityPerHour,
-        efficiency: body.efficiency || 100,
-        utilizationTarget: body.utilizationTarget || 85,
-        workingHoursStart: body.workingHoursStart || "08:00",
-        workingHoursEnd: body.workingHoursEnd || "17:00",
-        breakMinutes: body.breakMinutes || 60,
-        workingDays: body.workingDays || [1, 2, 3, 4, 5],
-        hourlyRate: body.hourlyRate,
-        setupCostPerHour: body.setupCostPerHour,
-        overheadRate: body.overheadRate,
-        maxConcurrentJobs: body.maxConcurrentJobs || 1,
-        requiresOperator: body.requiresOperator ?? true,
-        operatorSkillLevel: body.operatorSkillLevel,
-        status: body.status || "active",
-        maintenanceInterval: body.maintenanceInterval,
-        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
+        code: data.code,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        department: data.department,
+        location: data.location,
+        capacityType: data.capacityType,
+        capacityPerDay: data.capacityPerDay,
+        capacityPerHour: data.capacityPerHour,
+        efficiency: data.efficiency,
+        utilizationTarget: data.utilizationTarget,
+        workingHoursStart: data.workingHoursStart,
+        workingHoursEnd: data.workingHoursEnd,
+        breakMinutes: data.breakMinutes,
+        workingDays: data.workingDays,
+        hourlyRate: data.hourlyRate,
+        setupCostPerHour: data.setupCostPerHour,
+        overheadRate: data.overheadRate,
+        maxConcurrentJobs: data.maxConcurrentJobs,
+        requiresOperator: data.requiresOperator,
+        operatorSkillLevel: data.operatorSkillLevel,
+        status: data.status,
+        maintenanceInterval: data.maintenanceInterval,
+        nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate) : null,
       },
     });
 
@@ -93,4 +157,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -24,6 +24,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 import { SPCEngine, ControlChart, ProcessCharacteristic, ChartType } from '@/lib/spc';
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { clientLogger } from '@/lib/client-logger';
 
 // Loading fallback
 function LoadingFallback() {
@@ -337,7 +338,7 @@ function SPCControlChartsPageContent() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch characteristics:', error);
+      clientLogger.error('Failed to fetch characteristics:', error);
     } finally {
       setLoading(false);
     }
@@ -352,7 +353,7 @@ function SPCControlChartsPageContent() {
         setChart(data.data.chart);
       }
     } catch (error) {
-      console.error('Failed to fetch chart:', error);
+      clientLogger.error('Failed to fetch chart:', error);
     } finally {
       setChartLoading(false);
     }

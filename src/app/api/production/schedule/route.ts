@@ -2,14 +2,14 @@
 // GET Gantt schedule data for production work orders
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { getGanttData } from '@/lib/production/gantt-data';
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get('startDate');
@@ -27,10 +27,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : 'Failed to load schedule',
+        error: 'Failed to load schedule',
       },
       { status: 500 }
     );
   }
-}
+});

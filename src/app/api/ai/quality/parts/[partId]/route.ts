@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { getQualityDataExtractor } from '@/lib/ai/quality/quality-data-extractor';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
@@ -12,6 +13,7 @@ import { getQualityAnomalyDetector } from '@/lib/ai/quality/anomaly-detector';
 import { getQualityPredictionEngine } from '@/lib/ai/quality/quality-prediction-engine';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ partId: string }>;
 }
@@ -20,12 +22,25 @@ interface RouteParams {
 // GET - Comprehensive Part Quality Analysis
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { partId } = await params;
+const { partId } = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const months = parseInt(searchParams.get('months') || '6');
     const includeAI = searchParams.get('includeAI') === 'true';
@@ -63,7 +78,8 @@ export async function GET(
     }
 
     // Build response
-    const response: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: Record<string, any> = {
       success: true,
       data: {
         partId,
@@ -162,9 +178,9 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch part quality analysis',
       },
       { status: 500 }
     );
   }
-}
+});

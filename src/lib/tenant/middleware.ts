@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createTenantPrisma, TenantPrismaClient } from './prisma-tenant';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -70,7 +71,7 @@ export async function getTenantContext(): Promise<TenantContext | null> {
     const tenantId = (session.user as { tenantId?: string }).tenantId;
 
     if (!tenantId) {
-      console.warn('[TENANT] User has no tenantId:', session.user.email);
+      logger.warn('[TENANT] User has no tenantId', { context: 'tenant-middleware', email: session.user.email });
       return null;
     }
 
@@ -95,12 +96,12 @@ export async function getTenantContext(): Promise<TenantContext | null> {
     });
 
     if (!tenant) {
-      console.warn('[TENANT] Tenant not found:', tenantId);
+      logger.warn('[TENANT] Tenant not found', { context: 'tenant-middleware', tenantId });
       return null;
     }
 
     if (tenant.status !== 'ACTIVE') {
-      console.warn('[TENANT] Tenant not active:', tenantId, tenant.status);
+      logger.warn('[TENANT] Tenant not active', { context: 'tenant-middleware', tenantId, status: tenant.status });
       return null;
     }
 
@@ -131,7 +132,7 @@ export async function getTenantContext(): Promise<TenantContext | null> {
       prisma: createTenantPrisma(tenantId),
     };
   } catch (error) {
-    console.error('[TENANT] Error getting tenant context:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'tenant-middleware', operation: 'getTenantContext' });
     return null;
   }
 }
@@ -176,7 +177,7 @@ export async function getTenantByDomain(domain: string): Promise<TenantInfo | nu
       },
     };
   } catch (error) {
-    console.error('[TENANT] Error getting tenant by domain:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'tenant-middleware', operation: 'getTenantByDomain' });
     return null;
   }
 }
@@ -465,7 +466,7 @@ export function withTenant(
       return handler(request, context);
 
     } catch (error) {
-      console.error('[TENANT] Middleware error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'tenant-middleware', operation: 'withTenant' });
       return NextResponse.json(
         { success: false, error: 'Internal server error' },
         { status: 500 }

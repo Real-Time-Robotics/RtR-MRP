@@ -97,6 +97,7 @@ export function QuantityInput({
         onClick={handleDecrement}
         disabled={disabled || value <= min}
         className={cn(sizes.button, "shrink-0")}
+        aria-label="Giảm"
       >
         <Minus className={sizes.icon} />
       </Button>
@@ -120,6 +121,7 @@ export function QuantityInput({
         onClick={handleIncrement}
         disabled={disabled || value >= max}
         className={cn(sizes.button, "shrink-0")}
+        aria-label="Tăng"
       >
         <Plus className={sizes.icon} />
       </Button>

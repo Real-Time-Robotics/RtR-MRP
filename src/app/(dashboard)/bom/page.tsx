@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BOMHeader, BOMTableHeader } from "@/components/bom/bom-content";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { clientLogger } from '@/lib/client-logger';
 
 interface ProductWithBOM {
   id: string;
@@ -39,7 +40,7 @@ export default function BOMPage() {
         const data = await res.json();
         setProducts(data.data || []);
       } catch (error) {
-        console.error("Failed to fetch products:", error);
+        clientLogger.error("Failed to fetch products:", error);
       } finally {
         setLoading(false);
       }

@@ -1,13 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withAuth } from "@/lib/api/with-auth";
 import { generateInventoryValuationReport, generateProductionReport, generateSalesReport, generateInventoryTurnoverReport } from "@/lib/reports/enhanced-reports-service";
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+    const bodySchema = z.object({
+      reportType: z.string(),
+      fromDate: z.string().optional(),
+      toDate: z.string().optional(),
+      warehouseId: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { reportType, fromDate, toDate, warehouseId } = body;
 
     const from = fromDate ? new Date(fromDate) : new Date(new Date().setMonth(new Date().getMonth() - 1));
@@ -28,4 +46,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: "Failed to generate report" }, { status: 500 });
   }
-}
+});

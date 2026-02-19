@@ -2,11 +2,13 @@
 // Submits import processing to background job queue
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { jobQueue, JOB_NAMES } from "@/lib/jobs/job-queue";
 import "@/lib/jobs/handlers"; // Ensure handlers are registered
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 interface ImportOptions {
   updateMode?: "insert" | "update" | "upsert";
@@ -18,14 +20,26 @@ interface ColumnMapping {
 }
 
 // POST - Submit import job to background queue
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { jobId, data } = await request.json();
+  try {
+const bodySchema = z.object({
+      jobId: z.string(),
+      data: z.array(z.record(z.string(), z.unknown())),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { jobId, data } = parseResult.data;
 
     if (!jobId) {
       return NextResponse.json(
@@ -87,4 +101,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

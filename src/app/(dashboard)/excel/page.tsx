@@ -23,6 +23,7 @@ import {
   Database,
   Loader2,
 } from "lucide-react";
+import { clientLogger } from '@/lib/client-logger';
 
 interface RecentJob {
   id: string;
@@ -87,7 +88,7 @@ export default function ExcelHubPage() {
         setStressTestError(data.error || 'Không thể tải thông tin stress test');
       }
     } catch (error) {
-      console.error('Error fetching stress test info:', error);
+      clientLogger.error('Error fetching stress test info:', error);
       setStressTestError('Lỗi kết nối đến server');
     } finally {
       setStressTestFetching(false);
@@ -140,7 +141,7 @@ export default function ExcelHubPage() {
         setExportJobs(data.jobs || []);
       }
     } catch (error) {
-      console.error("Error fetching jobs:", error);
+      clientLogger.error("Error fetching jobs:", error);
     } finally {
       setLoading(false);
     }

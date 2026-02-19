@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Truck, DollarSign, FileText, Calendar, Package } from 'lucide-react';
@@ -76,25 +76,18 @@ function StatsCards({ orders }: { orders: PurchaseOrder[] }) {
 }
 
 // =============================================================================
-// MAIN COMPONENT
+// DEEP LINK HANDLER (uses useSearchParams, must be inside Suspense)
 // =============================================================================
 
-export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTableProps) {
-  const { t } = useLanguage();
-  const [search, setSearch] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+interface DeepLinkHandlerProps {
+  formOpen: boolean;
+  onDeepLink: (data: { supplierId: string; lines: { partId: string; quantity: number; unitPrice: number }[]; notes: string }) => void;
+}
 
-  // Dialog state
-  const [formOpen, setFormOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
-  const [initialFormData, setInitialFormData] = useState<any>(null);
-  const [deletingOrder, setDeletingOrder] = useState<PurchaseOrder | null>(null);
-
+function DeepLinkHandler({ formOpen, onDeepLink }: DeepLinkHandlerProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Check URL params for "Deep Link" actions (e.g., from AI Copilot)
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'create' && !formOpen) {
@@ -110,18 +103,42 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
         unitPrice: unitPrice ? parseFloat(unitPrice) : 0
       }] : [];
 
-      setEditingOrder(null);
-      setInitialFormData({
+      onDeepLink({
         supplierId: supplierId || '',
         lines: initialLines,
         notes: notes || '',
       });
-      setFormOpen(true);
 
       // Clear params to avoid loop / dirty URL
       router.replace('/purchasing');
     }
-  }, [searchParams, formOpen, router]);
+  }, [searchParams, formOpen, router, onDeepLink]);
+
+  return null;
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTableProps) {
+  const { t } = useLanguage();
+  const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Dialog state
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
+  const [initialFormData, setInitialFormData] = useState<Record<string, unknown> | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<PurchaseOrder | null>(null);
+
+  // Deep link callback (from URL params like ?action=create&partId=...)
+  const handleDeepLink = React.useCallback((data: { supplierId: string; lines: { partId: string; quantity: number; unitPrice: number }[]; notes: string }) => {
+    setEditingOrder(null);
+    setInitialFormData(data);
+    setFormOpen(true);
+  }, []);
 
   // Filters
   const [filters, setFilters] = useState<Record<string, string>>({
@@ -194,14 +211,14 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       return;
     }
 
-    const exportColumns: ExportColumn[] = [
+    const exportColumns: ExportColumn<PurchaseOrder>[] = [
       { key: 'poNumber', header: 'PO Number', width: 12 },
-      { key: 'supplier', header: 'Supplier', width: 25, format: (v) => v?.name || '-' },
+      { key: 'supplier', header: 'Supplier', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
       { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
       { key: 'expectedDate', header: 'Expected Date', width: 12, type: 'date' },
-      { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => row.lines?.length || 0 },
+      { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => String(row.lines?.length || 0) },
       { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
-      { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
+      { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
     ];
 
     const totalValue = orders.reduce((sum, po) => sum + (po.totalAmount || 0), 0);
@@ -362,6 +379,11 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
 
   return (
     <div className="space-y-6">
+      {/* Deep link handler for URL params (e.g., from AI Copilot) */}
+      <Suspense fallback={null}>
+        <DeepLinkHandler formOpen={formOpen} onDeepLink={handleDeepLink} />
+      </Suspense>
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">

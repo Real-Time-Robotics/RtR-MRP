@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { clientLogger } from '@/lib/client-logger';
 
 interface DashboardStats {
   salesOrders: { total: number; pending: number };
@@ -38,7 +39,7 @@ export default function DashboardPage() {
           setStats(data);
         }
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        clientLogger.error('Failed to fetch dashboard stats:', error);
       } finally {
         setLoading(false);
       }

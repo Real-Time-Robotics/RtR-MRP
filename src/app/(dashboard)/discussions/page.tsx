@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 import {
@@ -253,7 +253,7 @@ function NewThreadModal({
           <h2 className="font-semibold text-gray-900 dark:text-mrp-text-primary">
             {language === 'vi' ? 'Tạo cuộc thảo luận mới' : 'New Discussion'}
           </h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gunmetal rounded">
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gunmetal rounded" aria-label="Đóng">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
@@ -296,6 +296,7 @@ function NewThreadModal({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={language === 'vi' ? 'Nhập tin nhắn đầu tiên...' : 'Enter first message...'}
+              aria-label={language === 'vi' ? 'Tin nhắn' : 'Message'}
               className="w-full px-3 py-2 border border-gray-300 dark:border-mrp-border rounded-lg bg-white dark:bg-steel-dark text-gray-900 dark:text-mrp-text-primary resize-none h-24"
             />
           </div>
@@ -323,7 +324,7 @@ function NewThreadModal({
 // MAIN PAGE
 // =============================================================================
 
-export default function DiscussionsPage() {
+function DiscussionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [language] = useState<'en' | 'vi'>('vi');
@@ -488,6 +489,7 @@ export default function DiscussionsPage() {
               <button
                 onClick={() => setSelectedThreadId(null)}
                 className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gunmetal rounded"
+                aria-label="Quay lại"
               >
                 <ChevronRight className="w-5 h-5 rotate-180" />
               </button>
@@ -504,7 +506,7 @@ export default function DiscussionsPage() {
             {/* Embedded Thread Panel */}
             <div className="flex-1 overflow-hidden">
               <ThreadPanel
-                contextType={selectedThread.contextType as any}
+                contextType={selectedThread.contextType as ContextType}
                 contextId={selectedThread.contextId}
                 contextTitle={selectedThread.contextTitle || selectedThread.title}
                 currentUserId={currentUserId}
@@ -534,5 +536,19 @@ export default function DiscussionsPage() {
         language={language}
       />
     </div>
+  );
+}
+
+export default function DiscussionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        </div>
+      }
+    >
+      <DiscussionsPageContent />
+    </Suspense>
   );
 }

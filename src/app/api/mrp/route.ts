@@ -1,8 +1,19 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { runMrpCalculation } from "@/lib/mrp-engine";
 import { logger } from "@/lib/logger";
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const mrpBodySchema = z.object({
+  planningHorizonDays: z.number().optional(),
+  includeConfirmed: z.boolean().optional(),
+  includeDraft: z.boolean().optional(),
+  includeSafetyStock: z.boolean().optional(),
+});
 
 // ============================================================================
 // MRP API - FIXED: Now runs synchronously (no Redis/BullMQ queue)
@@ -57,14 +68,13 @@ function checkMrpRateLimit(userId: string): { allowed: boolean; remaining: numbe
 }
 
 // GET - List MRP runs
-export async function GET() {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    // Auto-cleanup stuck runs on every request
+  try {
+// Auto-cleanup stuck runs on every request
     await cleanupStuckRuns();
 
     const runs = await prisma.mrpRun.findMany({
@@ -85,15 +95,13 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Run new MRP calculation (Sync - no Redis queue)
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
   // In-memory rate limit (no Redis)
   const rateLimit = checkMrpRateLimit(session.user.id || 'anonymous');
@@ -105,13 +113,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parseResult = mrpBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       planningHorizonDays = 90,
       includeConfirmed = true,
       includeDraft = false,
       includeSafetyStock = true,
-    } = body;
+    } = parseResult.data;
 
     // Run MRP calculation SYNCHRONOUSLY (no Redis/BullMQ queue)
     // This replaces the old queued approach that caused infinite loading
@@ -144,4 +159,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

@@ -5,11 +5,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { notificationService } from '@/lib/workflow';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+const workflowNotificationPatchSchema = z.object({
+  notificationId: z.string().optional(),
+  userId: z.string().optional(),
+  markAll: z.boolean().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET /api/workflows/notifications - Get user notifications
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -43,13 +56,24 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PATCH /api/workflows/notifications - Mark as read
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const body = await request.json();
-    const { notificationId, userId, markAll } = body;
+    const parsed = workflowNotificationPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const { notificationId, userId, markAll } = parsed.data;
 
     if (!userId && !notificationId) {
       return NextResponse.json(
@@ -79,4 +103,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -4,9 +4,11 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ ncrId: string }>;
 }
@@ -15,12 +17,25 @@ interface RouteParams {
 // GET - NCR Root Cause Analysis
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { ncrId } = await params;
+const { ncrId } = await context.params;
 
     const aiAnalyzer = getAIQualityAnalyzer();
     const analysis = await aiAnalyzer.analyzeRootCause(ncrId);
@@ -62,9 +77,9 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to analyze NCR',
       },
       { status: 500 }
     );
   }
-}
+});

@@ -4,13 +4,19 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbWorkOrderResult = Record<string, any>;
 
 // Helper: Transform work order from database
-function transformWorkOrder(wo: any) {
-  const operations = wo.operations?.map((op: any) => ({
+function transformWorkOrder(wo: DbWorkOrderResult) {
+  const operations = wo.operations?.map((op: DbWorkOrderResult) => ({
     id: op.id,
     sequence: op.operationNumber,
     name: op.name || `Operation ${op.operationNumber}`,
@@ -21,8 +27,8 @@ function transformWorkOrder(wo: any) {
   })) || [];
 
   // Find current operation (first in-progress or first pending)
-  const currentOp = operations.find((op: any) => op.status === 'In Progress') ||
-                    operations.find((op: any) => op.status === 'Pending');
+  const currentOp = operations.find((op: DbWorkOrderResult) => op.status === 'In Progress') ||
+                    operations.find((op: DbWorkOrderResult) => op.status === 'Pending');
 
   return {
     id: wo.id,
@@ -57,9 +63,13 @@ function transformWorkOrder(wo: any) {
  * GET /api/mobile/workorder
  * Get work orders
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const woId = searchParams.get('woId');
     const status = searchParams.get('status') || 'released,in_progress';
     const workCenter = searchParams.get('workCenter');
@@ -111,7 +121,7 @@ export async function GET(req: NextRequest) {
 
     // Sort by priority
     const priorityOrder = { 'Rush': 0, 'High': 1, 'Normal': 2, 'Low': 3 };
-    results.sort((a: any, b: any) => {
+    results.sort((a: DbWorkOrderResult, b: DbWorkOrderResult) => {
       const priorityDiff = (priorityOrder[a.priority as keyof typeof priorityOrder] || 99) -
                            (priorityOrder[b.priority as keyof typeof priorityOrder] || 99);
       if (priorityDiff !== 0) return priorityDiff;
@@ -122,11 +132,11 @@ export async function GET(req: NextRequest) {
     // Calculate summary
     const summary = {
       total: results.length,
-      inProgress: results.filter((wo: any) => wo.status === 'In Progress').length,
-      released: results.filter((wo: any) => wo.status === 'Released').length,
-      rushOrders: results.filter((wo: any) => wo.priority === 'Rush').length,
-      behindSchedule: results.filter((wo: any) => wo.dueDate && new Date(wo.dueDate) < new Date()).length,
-      completed: results.filter((wo: any) => wo.status === 'Completed').length,
+      inProgress: results.filter((wo: DbWorkOrderResult) => wo.status === 'In Progress').length,
+      released: results.filter((wo: DbWorkOrderResult) => wo.status === 'Released').length,
+      rushOrders: results.filter((wo: DbWorkOrderResult) => wo.priority === 'Rush').length,
+      behindSchedule: results.filter((wo: DbWorkOrderResult) => wo.dueDate && new Date(wo.dueDate) < new Date()).length,
+      completed: results.filter((wo: DbWorkOrderResult) => wo.status === 'Completed').length,
     };
 
     return NextResponse.json({
@@ -141,15 +151,35 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/mobile/workorder
  * Work order operations
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const bodySchema = z.object({
+      action: z.string(),
+      woId: z.string(),
+      operationId: z.string().optional(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: z.any().optional() as z.ZodOptional<z.ZodType<Record<string, any>>>,
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, woId, operationId, data } = body;
 
     if (!woId || !action) {
@@ -454,4 +484,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

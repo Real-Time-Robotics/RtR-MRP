@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { clientLogger } from '@/lib/client-logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -126,7 +127,7 @@ export function ScenarioCard({ scenario, onRun, onEdit, onDelete }: ScenarioCard
         router.push(`/ai/simulation/${result.resultId}`);
       }
     } catch (error) {
-      console.error('Failed to run simulation:', error);
+      clientLogger.error('Failed to run simulation', error);
     } finally {
       setIsRunning(false);
     }
@@ -143,7 +144,7 @@ export function ScenarioCard({ scenario, onRun, onEdit, onDelete }: ScenarioCard
         onDelete();
       }
     } catch (error) {
-      console.error('Failed to delete scenario:', error);
+      clientLogger.error('Failed to delete scenario', error);
     } finally {
       setIsDeleting(false);
       setShowDeleteDialog(false);
@@ -165,7 +166,7 @@ export function ScenarioCard({ scenario, onRun, onEdit, onDelete }: ScenarioCard
         onDelete(); // Refresh the list
       }
     } catch (error) {
-      console.error('Failed to duplicate scenario:', error);
+      clientLogger.error('Failed to duplicate scenario', error);
     }
   };
 
@@ -185,7 +186,7 @@ export function ScenarioCard({ scenario, onRun, onEdit, onDelete }: ScenarioCard
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Menu">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

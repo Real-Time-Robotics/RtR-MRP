@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { useSmartGridStore } from '@/components/ui-v2/smart-grid';
 
 interface UseKeyboardNavProps {
-    data: any[];
-    columns: any[];
+    data: Array<{ id?: string; partId?: string; key?: string }>;
+    columns: Array<{ key: string }>;
     onEnterEdit?: (rowId: string, colId: string) => void;
 }
 
@@ -63,7 +63,7 @@ export function useKeyboardNavigation({ data, columns }: UseKeyboardNavProps) {
             const nextCol = columns[nextColIndex];
 
             if (nextRow && nextCol) {
-                const nextRowId = nextRow.id || nextRow.partId || nextRow.key;
+                const nextRowId = nextRow.id || nextRow.partId || nextRow.key || '';
                 setFocusedCell({ rowId: nextRowId, colId: nextCol.key });
             }
         };

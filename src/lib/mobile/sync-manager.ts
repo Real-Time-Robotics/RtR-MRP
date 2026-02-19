@@ -1,4 +1,5 @@
 // Sync manager for offline operations
+import { clientLogger } from '@/lib/client-logger';
 import {
   getPendingOperations,
   updateOperationStatus,
@@ -217,7 +218,7 @@ export async function refreshCache(): Promise<{
       }
     }
   } catch (error) {
-    console.error("Failed to refresh parts cache:", error);
+    clientLogger.error("Failed to refresh parts cache", error);
   }
 
   // Fetch locations
@@ -245,7 +246,7 @@ export async function refreshCache(): Promise<{
       }
     }
   } catch (error) {
-    console.error("Failed to refresh locations cache:", error);
+    clientLogger.error("Failed to refresh locations cache", error);
   }
 
   // Fetch active work orders
@@ -271,7 +272,7 @@ export async function refreshCache(): Promise<{
       }
     }
   } catch (error) {
-    console.error("Failed to refresh work orders cache:", error);
+    clientLogger.error("Failed to refresh work orders cache", error);
   }
 
   return results;
@@ -337,7 +338,7 @@ export async function registerBackgroundSync(): Promise<boolean> {
       await (registration as ServiceWorkerRegistration & { sync: { register: (tag: string) => Promise<void> } }).sync.register("sync-offline-operations");
       return true;
     } catch (error) {
-      console.error("Background sync registration failed:", error);
+      clientLogger.error("Background sync registration failed", error);
       return false;
     }
   }

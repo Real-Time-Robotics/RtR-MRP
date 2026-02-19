@@ -16,6 +16,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { InspectionTypeBadge } from "@/components/quality/inspection-type-badge";
+import { clientLogger } from '@/lib/client-logger';
 
 interface InspectionPlan {
   id: string;
@@ -49,7 +50,7 @@ export default function InspectionPlansPage() {
         setPlans(Array.isArray(result) ? result : (result.data || []));
       }
     } catch (error) {
-      console.error("Failed to fetch inspection plans:", error);
+      clientLogger.error("Failed to fetch inspection plans:", error);
     } finally {
       setLoading(false);
     }

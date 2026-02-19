@@ -4,6 +4,30 @@
 import { prisma } from "@/lib/prisma";
 
 // ============================================================================
+// Configuration Constants
+// ============================================================================
+
+/** Default labor rate (USD/hour) used when no system setting is configured.
+ *  Override via SystemSetting key "finance.default_labor_rate". */
+const FALLBACK_LABOR_RATE = 25;
+
+/** Fetch the configurable labor rate from SystemSetting, falling back to FALLBACK_LABOR_RATE. */
+async function getDefaultLaborRate(): Promise<number> {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: "finance.default_labor_rate" },
+    });
+    if (setting?.value) {
+      const parsed = parseFloat(setting.value);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch {
+    // If SystemSetting table is unavailable, fall back silently
+  }
+  return FALLBACK_LABOR_RATE;
+}
+
+// ============================================================================
 // Interfaces
 // ============================================================================
 
@@ -224,12 +248,13 @@ export async function calculateVariance(workOrderId: string): Promise<CostVarian
     }, 0);
   }
 
-  // Standard labor: product's assemblyHours + testingHours (use a default rate)
+  // Standard labor: product's assemblyHours + testingHours
+  // Labor rate is configurable via SystemSetting key "finance.default_labor_rate"
   const assemblyHours = workOrder.product.assemblyHours || 0;
   const testingHours = workOrder.product.testingHours || 0;
-  const defaultLaborRate = 25; // TODO: make configurable
+  const laborRate = await getDefaultLaborRate();
   const standardLaborCost =
-    (assemblyHours + testingHours) * workOrder.quantity * defaultLaborRate;
+    (assemblyHours + testingHours) * workOrder.quantity * laborRate;
 
   const standardCost = standardMaterialCost + standardLaborCost;
 

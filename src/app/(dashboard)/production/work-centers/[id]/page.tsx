@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Loader2, ArrowLeft, Settings2, Calendar } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { toast } from 'sonner';
+import { clientLogger } from '@/lib/client-logger';
 
 interface WorkCenterDetail {
     id: string;
@@ -38,7 +39,7 @@ export default function WorkCenterDetailPage({ params }: { params: { id: string 
                 const data = await res.json();
                 setWorkCenter(data);
             } catch (error) {
-                console.error("Fetch error:", error);
+                clientLogger.error("Fetch error:", error);
                 toast.error("Could not load Work Center details");
             } finally {
                 setLoading(false);
@@ -68,7 +69,7 @@ export default function WorkCenterDetailPage({ params }: { params: { id: string 
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Quay lại">
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>

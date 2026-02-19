@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/with-permission";
 import { triggerPurchaseOrderWorkflow } from "@/lib/workflow/workflow-triggers";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // VALIDATION
 // =============================================================================
@@ -43,15 +44,14 @@ const createPOSchema = z.object({
 // GET - List purchase orders
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/purchase-orders' });
     return paginatedError("Failed to fetch purchase orders", 500);
   }
-}
+});
 
 // =============================================================================
 // POST - Create purchase order

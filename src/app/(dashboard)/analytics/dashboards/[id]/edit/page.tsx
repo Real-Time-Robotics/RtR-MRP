@@ -2,9 +2,19 @@
 
 import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { DashboardBuilder } from "@/components/analytics/dashboards/DashboardBuilder";
+import dynamic from "next/dynamic";
 import type { Dashboard } from "@/lib/analytics/types";
 import { DEFAULT_LAYOUT } from "@/lib/analytics/dashboard-service";
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load DashboardBuilder (~506 lines, uses charts/widgets internally)
+const DashboardBuilder = dynamic(
+  () => import("@/components/analytics/dashboards/DashboardBuilder").then(mod => mod.DashboardBuilder),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-screen rounded-lg" />,
+  }
+);
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,7 +37,7 @@ export default function DashboardEditPage({ params }: PageProps) {
           setDashboard(data.data);
         }
       } catch (error) {
-        console.error("Error fetching dashboard:", error);
+        clientLogger.error("Error fetching dashboard:", error);
       } finally {
         setIsLoading(false);
       }
@@ -58,7 +68,7 @@ export default function DashboardEditPage({ params }: PageProps) {
       const currentWidgets = currentData.success ? currentData.data.widgets : [];
 
       // Find widgets to add, update, or remove
-      const currentWidgetIds = new Set(currentWidgets.map((w: any) => w.id));
+      const currentWidgetIds = new Set(currentWidgets.map((w: { id: string }) => w.id));
       const updatedWidgetIds = new Set(updatedDashboard.widgets.map((w) => w.id));
 
       // Add new widgets
@@ -115,7 +125,7 @@ export default function DashboardEditPage({ params }: PageProps) {
       // Navigate to view page
       router.push(`/analytics/dashboards/${id}`);
     } catch (error) {
-      console.error("Error saving dashboard:", error);
+      clientLogger.error("Error saving dashboard:", error);
       throw error;
     }
   };

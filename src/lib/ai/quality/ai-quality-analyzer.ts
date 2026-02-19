@@ -4,11 +4,166 @@
 // =============================================================================
 
 import { getAIProvider, createSystemMessage, createUserMessage } from '@/lib/ai/provider';
+import { logger } from '@/lib/logger';
 import { getQualityDataExtractor } from './quality-data-extractor';
 import { getQualityMetricsCalculator } from './quality-metrics-calculator';
 import { getQualityPatternRecognition } from './pattern-recognition';
 import { getQualityAnomalyDetector } from './anomaly-detector';
 import { getQualityPredictionEngine } from './quality-prediction-engine';
+
+// =============================================================================
+// INTERNAL TYPES FOR AI CONTEXT & PARSING
+// =============================================================================
+
+/** Context structure for root cause analysis AI prompt */
+interface RootCauseContext {
+  ncr: {
+    number: string;
+    defectCategory: string | null;
+    defectCode: string | null;
+    source: string;
+    quantityAffected: number;
+    preliminaryCause: string | null;
+    partSku: string | null;
+    supplierName: string | null;
+  };
+  partHistory: {
+    totalNCRs: number;
+    fpy: number;
+    topDefects: { category: string; count: number }[];
+  } | null;
+  supplierHistory: {
+    acceptanceRate: number;
+    totalNCRs: number;
+    avgResolutionDays: number;
+    defectCategories: { category: string; count: number }[];
+  } | null;
+  similarIncidents: {
+    category: string | null;
+    cause: string | null | undefined;
+    disposition: string | null;
+  }[];
+}
+
+/** Context structure for insight report AI prompt */
+interface InsightReportContext {
+  part: { partNumber?: string; sku?: string; name: string };
+  performance: {
+    fpy: number;
+    totalInspections: number;
+    totalNCRs: number;
+    openNCRs: number;
+    topDefects: { category: string; count: number }[];
+  };
+  risk: {
+    score: number;
+    level: string;
+    factors: { name: string; score: number; impact: string }[];
+  };
+  patterns: {
+    recurringIssues: {
+      category: string;
+      occurrences: number;
+      frequency: string | number;
+      isResolved: boolean;
+    }[];
+  };
+  drift: { direction: string; magnitude: number };
+  anomalies: { count: number; riskLevel: string; types: string[] };
+  forecast: { trend: string; nextPeriod: { predictedFPY?: { expected?: number } } | undefined };
+}
+
+/** Context structure for supplier quality AI prompt */
+interface SupplierQualityContext {
+  supplier: { name: string; qualityScore: number; grade: string };
+  metrics: {
+    acceptanceRate: number;
+    totalLots: number;
+    totalNCRs: number;
+    openNCRs: number;
+    avgResolutionDays: number;
+  };
+  defectCategories: { category: string; count: number }[];
+  trend: string;
+  scoreComponents: Record<string, { score: number; weight: number }>;
+}
+
+/** Context structure for defect prediction AI prompt */
+interface DefectPredictionContext {
+  partSku: string;
+  prediction: {
+    probability: number;
+    expectedCount: { min: number; max: number };
+    confidenceLevel: number;
+    riskFactors: string[];
+    historicalRate: number;
+    trend: string;
+  };
+  recurringIssues: { category: string; frequency: string; pattern: string }[];
+  recentAnomalies: { type: string; severity: string; metric: string }[];
+}
+
+/** Parsed root cause analysis result */
+interface ParsedRootCauseResult {
+  primaryCauses: string[];
+  contributingFactors: string[];
+  evidenceBasis: string[];
+  immediateActions: string[];
+  shortTermActions: string[];
+  longTermActions: string[];
+  preventionStrategies: string[];
+  insights: string;
+  confidenceLevel: number;
+}
+
+/** Parsed insight report response */
+interface ParsedInsightReport {
+  executiveSummary: string;
+  recommendations: {
+    priority: 'high' | 'medium' | 'low';
+    category: string;
+    recommendation: string;
+    expectedImpact: string;
+  }[];
+  actionPlan: {
+    action: string;
+    owner: string;
+    timeline: string;
+    expectedOutcome: string;
+  }[];
+}
+
+/** Parsed supplier analysis response */
+interface ParsedSupplierAnalysis {
+  strengths: string[];
+  weaknesses: string[];
+  improvementAreas: {
+    area: string;
+    currentState: string;
+    targetState: string;
+    aiSuggestion: string;
+  }[];
+  comparativeAnalysis: string;
+  recommendation: string;
+}
+
+/** Parsed defect prediction response */
+interface ParsedDefectPrediction {
+  analysis: string;
+  preventions: Record<string, string>;
+  highRiskAreas: string[];
+}
+
+/** Quality summary used for executive summary generation */
+interface QualitySummaryData {
+  partSku: string;
+  firstPassYield: number;
+}
+
+/** Risk score data used for executive summary generation */
+interface RiskScoreData {
+  riskLevel: string;
+}
 
 // =============================================================================
 // TYPES
@@ -526,12 +681,12 @@ export class AIQualityAnalyzer {
       });
       return response.content;
     } catch (error) {
-      console.error('[AIQualityAnalyzer] AI call failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-quality-analyzer' });
       return ''; // Return empty string to handle gracefully
     }
   }
 
-  private buildRootCausePrompt(context: any): string {
+  private buildRootCausePrompt(context: RootCauseContext): string {
     return `Analyze this quality non-conformance and provide root cause analysis:
 
 NCR Details:
@@ -547,16 +702,16 @@ NCR Details:
 Part Quality History:
 ${context.partHistory ? `- Total NCRs: ${context.partHistory.totalNCRs}
 - First Pass Yield: ${context.partHistory.fpy}%
-- Top Defects: ${context.partHistory.topDefects.map((d: any) => d.category).join(', ')}` : 'No history available'}
+- Top Defects: ${context.partHistory.topDefects.map((d: { category: string }) => d.category).join(', ')}` : 'No history available'}
 
 Supplier History:
 ${context.supplierHistory ? `- Acceptance Rate: ${context.supplierHistory.acceptanceRate}%
 - Total NCRs: ${context.supplierHistory.totalNCRs}
 - Avg Resolution: ${context.supplierHistory.avgResolutionDays} days
-- Common Issues: ${context.supplierHistory.defectCategories.map((d: any) => d.category).join(', ')}` : 'No history available'}
+- Common Issues: ${context.supplierHistory.defectCategories.map((d: { category: string }) => d.category).join(', ')}` : 'No history available'}
 
 Similar Past Incidents:
-${context.similarIncidents.length > 0 ? context.similarIncidents.map((i: any) =>
+${context.similarIncidents.length > 0 ? context.similarIncidents.map((i) =>
   `- Category: ${i.category}, Cause: ${i.cause || 'Unknown'}, Resolution: ${i.disposition || 'Pending'}`
 ).join('\n') : 'No similar incidents found'}
 
@@ -574,7 +729,7 @@ Please provide:
 Format your response with clear section headers.`;
   }
 
-  private buildInsightReportPrompt(context: any): string {
+  private buildInsightReportPrompt(context: InsightReportContext): string {
     return `Generate a quality insight report for this part:
 
 Part: ${context.part.partNumber} - ${context.part.name}
@@ -584,15 +739,15 @@ Performance Metrics:
 - Total Inspections: ${context.performance.totalInspections}
 - Total NCRs: ${context.performance.totalNCRs}
 - Open NCRs: ${context.performance.openNCRs}
-- Top Defects: ${context.performance.topDefects.map((d: any) => `${d.category} (${d.count})`).join(', ')}
+- Top Defects: ${context.performance.topDefects.map((d: { category: string; count: number }) => `${d.category} (${d.count})`).join(', ')}
 
 Risk Assessment:
 - Risk Score: ${context.risk.score}/100
 - Risk Level: ${context.risk.level}
-- Key Factors: ${context.risk.factors.map((f: any) => `${f.name}: ${f.score}`).join(', ')}
+- Key Factors: ${context.risk.factors.map((f: { name: string; score: number }) => `${f.name}: ${f.score}`).join(', ')}
 
 Quality Patterns:
-- Recurring Issues: ${context.patterns.recurringIssues.map((i: any) =>
+- Recurring Issues: ${context.patterns.recurringIssues.map((i) =>
     `${i.category} (${i.occurrences}x, ${i.frequency} freq, ${i.isResolved ? 'resolved' : 'open'})`
   ).join('; ')}
 
@@ -625,7 +780,7 @@ Please provide:
 Format your response with clear section headers.`;
   }
 
-  private buildSupplierAnalysisPrompt(context: any): string {
+  private buildSupplierAnalysisPrompt(context: SupplierQualityContext): string {
     return `Analyze this supplier's quality performance:
 
 Supplier: ${context.supplier.name}
@@ -639,7 +794,7 @@ Metrics:
 - Open NCRs: ${context.metrics.openNCRs}
 - Avg Resolution Time: ${context.metrics.avgResolutionDays} days
 
-Defect Categories: ${context.defectCategories.map((d: any) => `${d.category}: ${d.count}`).join(', ')}
+Defect Categories: ${context.defectCategories.map((d: { category: string; count: number }) => `${d.category}: ${d.count}`).join(', ')}
 
 Score Components:
 - Acceptance Rate: ${context.scoreComponents.acceptanceRate.score}/100 (weight: ${context.scoreComponents.acceptanceRate.weight})
@@ -661,7 +816,7 @@ Please provide:
 Format your response with clear section headers.`;
   }
 
-  private buildDefectPredictionPrompt(context: any): string {
+  private buildDefectPredictionPrompt(context: DefectPredictionContext): string {
     return `Predict potential quality defects for this part:
 
 Part: ${context.partSku}
@@ -675,12 +830,12 @@ NCR Prediction:
 - Risk Factors: ${context.prediction.riskFactors.join(', ')}
 
 Recurring Issues (Unresolved):
-${context.recurringIssues.map((i: any) =>
+${context.recurringIssues.map((i) =>
   `- ${i.category}: ${i.frequency} frequency, Pattern: ${i.pattern}`
 ).join('\n') || 'None identified'}
 
 Recent Anomalies:
-${context.recentAnomalies.map((a: any) =>
+${context.recentAnomalies.map((a) =>
   `- ${a.type} (${a.severity}): ${a.metric}`
 ).join('\n') || 'None detected'}
 
@@ -697,8 +852,8 @@ Format your response with clear section headers.`;
   // RESPONSE PARSERS
   // =============================================================================
 
-  private parseRootCauseResponse(response: string): any {
-    const result: any = {
+  private parseRootCauseResponse(response: string): ParsedRootCauseResult {
+    const result: ParsedRootCauseResult = {
       primaryCauses: [],
       contributingFactors: [],
       evidenceBasis: [],
@@ -759,8 +914,8 @@ Format your response with clear section headers.`;
     return result;
   }
 
-  private parseInsightReportResponse(response: string): any {
-    const result: any = {
+  private parseInsightReportResponse(response: string): ParsedInsightReport {
+    const result: ParsedInsightReport = {
       executiveSummary: '',
       recommendations: [],
       actionPlan: [],
@@ -778,8 +933,8 @@ Format your response with clear section headers.`;
     return result;
   }
 
-  private parseSupplierAnalysisResponse(response: string): any {
-    const result: any = {
+  private parseSupplierAnalysisResponse(response: string): ParsedSupplierAnalysis {
+    const result: ParsedSupplierAnalysis = {
       strengths: [],
       weaknesses: [],
       improvementAreas: [],
@@ -819,8 +974,8 @@ Format your response with clear section headers.`;
     return result;
   }
 
-  private parseDefectPredictionResponse(response: string): any {
-    const result: any = {
+  private parseDefectPredictionResponse(response: string): ParsedDefectPrediction {
+    const result: ParsedDefectPrediction = {
       analysis: '',
       preventions: {},
       highRiskAreas: [],
@@ -836,7 +991,7 @@ Format your response with clear section headers.`;
     return result;
   }
 
-  private generateExecutiveSummary(qualitySummary: any, riskScore: any): string {
+  private generateExecutiveSummary(qualitySummary: QualitySummaryData, riskScore: RiskScoreData): string {
     const fpy = qualitySummary.firstPassYield;
     const risk = riskScore.riskLevel;
 

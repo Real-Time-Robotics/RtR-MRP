@@ -49,6 +49,7 @@ import {
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 interface AuditEntry {
   id: string;
@@ -156,7 +157,7 @@ export default function AuditPage() {
       setEntries(data.entries || []);
       setTotal(data.total || 0);
     } catch (error) {
-      console.error('Failed to load audit entries:', error);
+      clientLogger.error('Failed to load audit entries:', error);
     } finally {
       setLoading(false);
     }
@@ -246,7 +247,7 @@ export default function AuditPage() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Export failed:', error);
+      clientLogger.error('Export failed:', error);
     } finally {
       setExporting(false);
     }

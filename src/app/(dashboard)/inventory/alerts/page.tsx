@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle, XCircle, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: 'Cảnh báo tồn kho',
+  description: 'Cảnh báo tồn kho thấp và hết hàng - Theo dõi và xử lý kịp thời',
+};
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,

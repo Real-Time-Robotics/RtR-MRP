@@ -4,17 +4,24 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DbEquipmentResult = Record<string, any>;
 
 // Helper: Transform equipment from database
-function transformEquipment(eq: any) {
+function transformEquipment(eq: DbEquipmentResult) {
   // Calculate next PM date from maintenance schedules or equipment field
   const nextPM = eq.nextMaintenanceDate?.toISOString().split('T')[0] ||
                  eq.maintenanceSchedules?.[0]?.nextDueDate?.toISOString().split('T')[0] || null;
 
   // Get last issue from maintenance orders
-  const lastIssue = eq.maintenanceOrders?.find((mo: any) => mo.type === 'CM' || mo.type === 'EM')?.problemReported;
+  const lastIssue = eq.maintenanceOrders?.find((mo: DbEquipmentResult) => mo.type === 'CM' || mo.type === 'EM')?.problemReported;
 
   return {
     id: eq.id,
@@ -54,16 +61,20 @@ function mapStatus(status: string): 'RUNNING' | 'IDLE' | 'DOWN' | 'MAINTENANCE' 
  * GET /api/mobile/equipment
  * Get equipment list with status
  */
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { searchParams } = new URL(req.url);
+const { searchParams } = new URL(req.url);
     const equipmentId = searchParams.get('equipmentId');
     const status = searchParams.get('status');
     const workCenterId = searchParams.get('workCenterId');
     const search = searchParams.get('search');
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.EquipmentWhereInput = {};
 
     if (equipmentId) {
       where.id = equipmentId;
@@ -142,15 +153,34 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/mobile/equipment
  * Update equipment status or report issue
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const bodySchema = z.object({
+      action: z.string(),
+      equipmentId: z.string(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: z.any().optional() as z.ZodOptional<z.ZodType<Record<string, any>>>,
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, equipmentId, data } = body;
 
     if (!equipmentId || !action) {
@@ -289,4 +319,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

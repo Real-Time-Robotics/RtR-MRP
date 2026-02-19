@@ -21,6 +21,7 @@ import { formatDateMedium } from "@/lib/date";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 import { EntityAuditHistory } from "@/components/audit/entity-audit-history";
+import { clientLogger } from '@/lib/client-logger';
 
 interface WorkOrderData {
   id: string;
@@ -103,7 +104,7 @@ export default function WorkOrderDetailPage() {
       const result = await res.json();
       setData(result.data || result);
     } catch (error) {
-      console.error("Failed to fetch work order:", error);
+      clientLogger.error("Failed to fetch work order:", error);
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ export default function WorkOrderDetailPage() {
       await fetch(`/api/production/${id}/allocate`, { method: "POST" });
       fetchData();
     } catch (error) {
-      console.error("Failed to allocate:", error);
+      clientLogger.error("Failed to allocate:", error);
     } finally {
       setAllocating(false);
     }
@@ -185,13 +186,13 @@ export default function WorkOrderDetailPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || err.message || "Không thể cập nhật trạng thái");
+        toast.error(err.error || err.message || "Không thể cập nhật trạng thái");
         return;
       }
       fetchData();
     } catch (error) {
-      console.error("Failed to update status:", error);
-      alert("Lỗi cập nhật trạng thái");
+      clientLogger.error("Failed to update status:", error);
+      toast.error("Lỗi cập nhật trạng thái");
     }
   };
 
@@ -208,14 +209,14 @@ export default function WorkOrderDetailPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || err.message || "Không thể hoàn thành Work Order");
+        toast.error(err.error || err.message || "Không thể hoàn thành Work Order");
         return;
       }
       setCompleteDialogOpen(false);
       fetchData();
     } catch (error) {
-      console.error("Failed to complete work order:", error);
-      alert("Lỗi hoàn thành Work Order");
+      clientLogger.error("Failed to complete work order:", error);
+      toast.error("Lỗi hoàn thành Work Order");
     }
   };
 
@@ -232,15 +233,15 @@ export default function WorkOrderDetailPage() {
       }
 
       if (!res.ok) {
-        alert(result.error || result.message || "Lỗi nhập kho thành phẩm");
+        toast.error(result.error || result.message || "Lỗi nhập kho thành phẩm");
         return;
       }
 
       // Success — refresh to show new PENDING receipt
       fetchData();
     } catch (error) {
-      console.error("Failed to receive production output:", error);
-      alert("Lỗi nhập kho thành phẩm");
+      clientLogger.error("Failed to receive production output:", error);
+      toast.error("Lỗi nhập kho thành phẩm");
     } finally {
       setReceiving(false);
     }

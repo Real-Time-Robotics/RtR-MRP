@@ -6,7 +6,13 @@ import {
   getOEETrend,
 } from "@/lib/production/oee-calculator";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const workCenterId = searchParams.get("workCenterId");
@@ -46,4 +52,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

@@ -74,8 +74,7 @@ export interface FieldImpactRule {
   targetField: string;
   targetFieldLabel: string;
   valueType: ValueType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  calculateImpact: (oldValue: unknown, newValue: unknown, context: any) => FieldChange | null;
+  calculateImpact: (oldValue: unknown, newValue: unknown, context: Record<string, unknown>) => FieldChange | null;
 }
 
 // Entity relationship definition

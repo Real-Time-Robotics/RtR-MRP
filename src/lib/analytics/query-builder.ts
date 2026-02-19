@@ -13,6 +13,15 @@ import type {
   AggregationType,
 } from './types';
 
+// Structural type for Prisma model delegates used by QueryBuilder.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma delegates have complex, model-specific generic signatures
+type PrismaModelDelegate = {
+  findMany: (args: any) => Promise<Record<string, unknown>[]>;
+  count: (args: any) => Promise<number>;
+  aggregate: (args: any) => Promise<Record<string, unknown>>;
+  groupBy: (args: any) => Promise<Record<string, unknown>[]>;
+};
+
 // =============================================================================
 // QUERY BUILDER CLASS
 // =============================================================================
@@ -83,7 +92,7 @@ export class QueryBuilder {
   // Execution Methods
   // ---------------------------------------------------------------------------
 
-  async execute(): Promise<any[]> {
+  async execute(): Promise<Record<string, unknown>[]> {
     const whereClause = this.buildWhereClause();
     const model = this.getModel();
 
@@ -125,7 +134,7 @@ export class QueryBuilder {
       _min: aggregation === 'MIN' ? { [field]: true } : undefined,
       _max: aggregation === 'MAX' ? { [field]: true } : undefined,
       _count: aggregation === 'COUNT' ? { [field]: true } : undefined,
-    });
+    }) as Record<string, Record<string, number> | undefined>;
 
     switch (aggregation) {
       case 'SUM':
@@ -164,25 +173,26 @@ export class QueryBuilder {
       _count: aggregation === 'COUNT' ? { [field]: true } : undefined,
     });
 
-    return results.map((r: any) => {
+    return results.map((r: Record<string, unknown>) => {
       const dimension = this.options.groupBy!.map(g => r[g]).join(' - ');
       let value: number;
+      const agg = r as Record<string, Record<string, number> | undefined>;
 
       switch (aggregation) {
         case 'SUM':
-          value = r._sum?.[field] || 0;
+          value = agg._sum?.[field] || 0;
           break;
         case 'AVG':
-          value = r._avg?.[field] || 0;
+          value = agg._avg?.[field] || 0;
           break;
         case 'MIN':
-          value = r._min?.[field] || 0;
+          value = agg._min?.[field] || 0;
           break;
         case 'MAX':
-          value = r._max?.[field] || 0;
+          value = agg._max?.[field] || 0;
           break;
         case 'COUNT':
-          value = r._count?.[field] || 0;
+          value = agg._count?.[field] || 0;
           break;
         default:
           value = 0;
@@ -194,7 +204,7 @@ export class QueryBuilder {
         metadata: this.options.groupBy!.reduce((acc, g) => {
           acc[g] = r[g];
           return acc;
-        }, {} as Record<string, any>),
+        }, {} as Record<string, unknown>),
       };
     });
   }
@@ -203,8 +213,8 @@ export class QueryBuilder {
   // Private Helpers
   // ---------------------------------------------------------------------------
 
-  private buildWhereClause(): Record<string, any> {
-    const where: Record<string, any> = {};
+  private buildWhereClause(): Record<string, unknown> {
+    const where: Record<string, unknown> = {};
 
     for (const filter of this.options.where || []) {
       switch (filter.operator) {
@@ -235,9 +245,11 @@ export class QueryBuilder {
         case 'contains':
           where[filter.field] = { contains: filter.value, mode: 'insensitive' };
           break;
-        case 'between':
-          where[filter.field] = { gte: filter.value[0], lte: filter.value[1] };
+        case 'between': {
+          const [rangeStart, rangeEnd] = filter.value as [unknown, unknown];
+          where[filter.field] = { gte: rangeStart, lte: rangeEnd };
           break;
+        }
       }
     }
 
@@ -250,8 +262,9 @@ export class QueryBuilder {
     }));
   }
 
-  private getModel(): any {
-    const tableMap: Record<string, any> = {
+  // Prisma model delegates share a common structural shape for findMany/count/aggregate/groupBy
+  private getModel(): PrismaModelDelegate | undefined {
+    const tableMap: Record<string, PrismaModelDelegate> = {
       // Core tables
       parts: prisma.part,
       suppliers: prisma.supplier,

@@ -15,6 +15,7 @@ import {
 import { PeggingTree } from "@/components/mrp/pegging-tree";
 import { Loader2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -53,7 +54,7 @@ export default function PeggingPage() {
         setParts(data);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     } finally {
       setIsLoadingParts(false);
     }
@@ -78,7 +79,7 @@ export default function PeggingPage() {
         throw new Error("Failed to generate pegging");
       }
     } catch (error) {
-      console.error("Failed to generate pegging:", error);
+      clientLogger.error("Failed to generate pegging:", error);
       toast({ title: "Failed to generate pegging", variant: "destructive" });
     } finally {
       setIsLoading(false);

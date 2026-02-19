@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // SUPPLIER DASHBOARD
@@ -77,7 +78,7 @@ export default function SupplierDashboardPage() {
           setData(json.data);
         }
       } catch (error) {
-        console.error('Error fetching dashboard:', error);
+        clientLogger.error('Error fetching dashboard', error);
       } finally {
         setLoading(false);
       }

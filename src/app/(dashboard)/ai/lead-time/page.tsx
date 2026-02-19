@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { TrendIndicator } from "@/components/ai/trend-indicator";
 import { compareSupplierLeadTimes } from "@/lib/ai/lead-time-predictor";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Supplier {
   id: string;
@@ -46,7 +47,7 @@ export default function LeadTimePage() {
       const leadTimeData = compareSupplierLeadTimes(supplierData);
       setPredictions(leadTimeData);
     } catch (error) {
-      console.error("Failed to fetch suppliers:", error);
+      clientLogger.error("Failed to fetch suppliers:", error);
     } finally {
       setLoading(false);
     }

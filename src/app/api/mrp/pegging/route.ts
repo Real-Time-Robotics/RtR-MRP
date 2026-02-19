@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { generatePegging, savePeggingRecords } from "@/lib/mrp";
 import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const peggingBodySchema = z.object({
+  partId: z.string(),
+  siteId: z.string().optional(),
+  horizon: z.number().optional(),
+  mrpRunId: z.string().optional(),
+});
+
 // GET /api/mrp/pegging - Get pegging records or generate for a part
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const partId = searchParams.get("partId");
     const siteId = searchParams.get("siteId") || undefined;
     const horizon = parseInt(searchParams.get("horizon") || "90");
@@ -36,20 +51,24 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/pegging - Generate and save pegging
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { partId, siteId, horizon = 90, mrpRunId } = body;
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    if (!partId) {
+  try {
+const rawBody = await request.json();
+    const parseResult = peggingBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "partId is required" },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { partId, siteId, horizon = 90, mrpRunId } = parseResult.data;
 
     // Generate pegging
     const result = await generatePegging(partId, siteId, horizon);
@@ -68,4 +87,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

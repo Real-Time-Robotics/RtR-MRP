@@ -38,6 +38,7 @@ import {
   isToday,
 } from "date-fns";
 import { vi } from "date-fns/locale";
+import { clientLogger } from '@/lib/client-logger';
 
 interface GanttTask {
   id: string;
@@ -154,7 +155,7 @@ export default function ProductionSchedulePage() {
         data.stats || { total: 0, inProgress: 0, completed: 0, overdue: 0 }
       );
     } catch (error) {
-      console.error("Failed to fetch schedule:", error);
+      clientLogger.error("Failed to fetch schedule:", error);
     } finally {
       setLoading(false);
     }
@@ -273,7 +274,7 @@ export default function ProductionSchedulePage() {
         );
       }
     } catch (error) {
-      console.error("Reschedule failed:", error);
+      clientLogger.error("Reschedule failed:", error);
     }
 
     setDragging(null);
@@ -313,7 +314,7 @@ export default function ProductionSchedulePage() {
         );
       }
     } catch (error) {
-      console.error("Reschedule failed:", error);
+      clientLogger.error("Reschedule failed:", error);
     }
 
     setRescheduleDialog({
@@ -346,6 +347,7 @@ export default function ProductionSchedulePage() {
               variant="outline"
               size="icon"
               onClick={() => navigate("prev")}
+              aria-label="Trước"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -356,6 +358,7 @@ export default function ProductionSchedulePage() {
               variant="outline"
               size="icon"
               onClick={() => navigate("next")}
+              aria-label="Sau"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -380,7 +383,7 @@ export default function ProductionSchedulePage() {
                 <SelectItem value="month">Tháng</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="icon" onClick={fetchData}>
+            <Button variant="outline" size="icon" onClick={fetchData} aria-label="Làm mới">
               <RefreshCw
                 className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
               />

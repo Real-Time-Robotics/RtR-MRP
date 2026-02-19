@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { 
-  Camera, 
-  CameraOff, 
-  Flashlight, 
+import {
+  Camera,
+  CameraOff,
+  Flashlight,
   FlashlightOff,
   SwitchCamera,
   X,
@@ -12,6 +12,30 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
+
+// =============================================================================
+// BARCODE DETECTOR API TYPES (Experimental Web API)
+// =============================================================================
+
+interface DetectedBarcode {
+  rawValue: string;
+  format: string;
+  boundingBox: DOMRectReadOnly;
+  cornerPoints: { x: number; y: number }[];
+}
+
+interface BarcodeDetectorInstance {
+  detect(source: HTMLCanvasElement | HTMLImageElement | HTMLVideoElement): Promise<DetectedBarcode[]>;
+}
+
+interface BarcodeDetectorConstructor {
+  new (options?: { formats: string[] }): BarcodeDetectorInstance;
+}
+
+interface WindowWithBarcodeDetector extends Window {
+  BarcodeDetector?: BarcodeDetectorConstructor;
+}
 
 // =============================================================================
 // BARCODE SCANNER COMPONENT
@@ -78,7 +102,7 @@ export function BarcodeScanner({
       requestAnimationFrame(scanFrame);
       
     } catch (err) {
-      console.error('Camera error:', err);
+      clientLogger.error('Camera error', err);
       setHasPermission(false);
       setError('Không thể truy cập camera. Vui lòng cấp quyền.');
     }
@@ -136,16 +160,17 @@ export function BarcodeScanner({
 
     // In production, use BarcodeDetector API or @zxing/library
     // This is a placeholder for the actual scanning logic
-    if ('BarcodeDetector' in window) {
-      const barcodeDetector = new (window as any).BarcodeDetector({ formats });
+    const windowWithDetector = window as WindowWithBarcodeDetector;
+    if (windowWithDetector.BarcodeDetector) {
+      const barcodeDetector = new windowWithDetector.BarcodeDetector({ formats });
       barcodeDetector.detect(canvas)
-        .then((barcodes: any[]) => {
+        .then((barcodes: DetectedBarcode[]) => {
           if (barcodes.length > 0) {
             const barcode = barcodes[0].rawValue;
             handleScanResult(barcode);
           }
         })
-        .catch(console.error);
+        .catch(err => clientLogger.error('Barcode detection failed', err));
     }
 
     if (isScanning) {
@@ -169,7 +194,9 @@ export function BarcodeScanner({
       const audio = new Audio('/sounds/beep-success.mp3');
       audio.volume = 0.5;
       audio.play().catch(() => {});
-    } catch {}
+    } catch (err) {
+      clientLogger.error('Audio feedback failed', err);
+    }
     
     onScan(barcode);
     
@@ -257,6 +284,7 @@ export function BarcodeScanner({
           <button
             onClick={onClose}
             className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            aria-label="Đóng"
           >
             <X className="w-6 h-6" />
           </button>
@@ -266,6 +294,7 @@ export function BarcodeScanner({
           <button
             onClick={toggleTorch}
             className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            aria-label={torchOn ? 'Tắt đèn flash' : 'Bật đèn flash'}
           >
             {torchOn ? (
               <FlashlightOff className="w-6 h-6" />
@@ -273,10 +302,11 @@ export function BarcodeScanner({
               <Flashlight className="w-6 h-6" />
             )}
           </button>
-          
+
           <button
             onClick={switchCamera}
             className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            aria-label="Chuyển camera"
           >
             <SwitchCamera className="w-6 h-6" />
           </button>
@@ -321,6 +351,7 @@ export function BarcodeScanner({
               onChange={(e) => setManualCode(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
               placeholder="Nhập mã thủ công..."
+              aria-label="Nhập mã thủ công"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
             />

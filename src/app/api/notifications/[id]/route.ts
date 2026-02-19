@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+const notificationPutSchema = z.object({
+  isArchived: z.boolean().optional(),
+  isRead: z.boolean().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // GET /api/notifications/[id] - Get single notification
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const { id } = await context.params;
 
     const notification = await prisma.notification.findUnique({
@@ -38,19 +41,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/notifications/[id] - Update notification (archive/unarchive)
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const { id } = await context.params;
     const body = await request.json();
-    const { isArchived, isRead } = body;
+    const parsed = notificationPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const { isArchived, isRead } = parsed.data;
 
     const notification = await prisma.notification.findUnique({
       where: { id },
@@ -87,16 +96,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/notifications/[id] - Delete notification
-export async function DELETE(request: NextRequest, context: RouteContext) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     const { id } = await context.params;
 
     const notification = await prisma.notification.findUnique({
@@ -127,4 +135,4 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       { status: 500 }
     );
   }
-}
+});

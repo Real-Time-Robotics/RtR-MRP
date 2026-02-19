@@ -20,6 +20,7 @@ import {
   Alert,
   AlertCounts,
 } from '@/lib/ai/alerts';
+import { clientLogger } from '@/lib/client-logger';
 
 export default function AlertCenterPage() {
   const { toast } = useToast();
@@ -81,7 +82,7 @@ export default function AlertCenterPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      clientLogger.error('Failed to fetch alerts:', error);
       toast({
         title: 'Lỗi',
         description: 'Không thể tải danh sách cảnh báo',
@@ -132,7 +133,7 @@ export default function AlertCenterPage() {
         });
       }
     } catch (error) {
-      console.error('Failed to execute action:', error);
+      clientLogger.error('Failed to execute action:', error);
       toast({
         title: 'Lỗi',
         description: 'Không thể thực hiện hành động',
@@ -161,7 +162,7 @@ export default function AlertCenterPage() {
         fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to dismiss:', error);
+      clientLogger.error('Failed to dismiss:', error);
     }
   };
 
@@ -186,7 +187,7 @@ export default function AlertCenterPage() {
         fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to snooze:', error);
+      clientLogger.error('Failed to snooze:', error);
     }
   };
 

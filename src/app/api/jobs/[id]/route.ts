@@ -2,24 +2,22 @@
 // Single job status + cancel endpoint
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { jobQueue } from "@/lib/jobs/job-queue";
 import { logger } from "@/lib/logger";
 
 import "@/lib/jobs/handlers"; // Ensure handlers are registered
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // GET - Get single job status (used for polling)
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const job = jobQueue.getJob(params.id);
+  try {
+const { id } = await context.params;
+const job = jobQueue.getJob(id);
 
     if (!job) {
       return NextResponse.json(
@@ -50,20 +48,17 @@ export async function GET(
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Cancel a pending job
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const cancelled = jobQueue.cancel(params.id);
+  try {
+const { id } = await context.params;
+const cancelled = jobQueue.cancel(id);
 
     if (!cancelled) {
       return NextResponse.json(
@@ -83,4 +78,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
+});

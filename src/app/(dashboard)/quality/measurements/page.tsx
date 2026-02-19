@@ -20,6 +20,7 @@ import {
   Keyboard
 } from 'lucide-react';
 import { ProcessCharacteristic, SPCEngine, Measurement } from '@/lib/spc';
+import { clientLogger } from '@/lib/client-logger';
 
 export default function MeasurementsPage() {
   const [characteristics, setCharacteristics] = useState<ProcessCharacteristic[]>([]);
@@ -60,7 +61,7 @@ export default function MeasurementsPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch characteristics:', error);
+      clientLogger.error('Failed to fetch characteristics:', error);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function MeasurementsPage() {
         setRecentMeasurements(data.data.measurements);
       }
     } catch (error) {
-      console.error('Failed to fetch measurements:', error);
+      clientLogger.error('Failed to fetch measurements:', error);
     }
   };
 
@@ -325,6 +326,7 @@ export default function MeasurementsPage() {
                         value={value}
                         onChange={(e) => handleValueChange(index, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(index, e)}
+                        aria-label={`Giá trị đo #${index + 1}`}
                         className={`w-full px-3 py-3 text-center font-mono text-lg border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
                           isOutOfSpec
                             ? 'border-danger-500 bg-danger-50 dark:bg-danger-900/20'
@@ -380,6 +382,7 @@ export default function MeasurementsPage() {
                     type="text"
                     value={operatorId}
                     onChange={(e) => setOperatorId(e.target.value)}
+                    aria-label="Operator"
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
                     placeholder="ID / Tên"
                   />
@@ -392,6 +395,7 @@ export default function MeasurementsPage() {
                     type="text"
                     value={machineId}
                     onChange={(e) => setMachineId(e.target.value)}
+                    aria-label="Máy"
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
                     placeholder="Mã máy"
                   />
@@ -404,6 +408,7 @@ export default function MeasurementsPage() {
                     type="text"
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
+                    aria-label="Batch"
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
                     placeholder="Số lô"
                   />
@@ -418,6 +423,7 @@ export default function MeasurementsPage() {
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
+                  aria-label="Ghi chú"
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
                   placeholder="Ghi chú thêm (nếu có)"
                 />

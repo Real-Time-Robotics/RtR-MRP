@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   Scenario,
   ScenarioConfig,
@@ -96,6 +97,20 @@ export interface Bottleneck {
   recommendations: string[];
 }
 
+/** Baseline data loaded from the database for simulation */
+interface BaselineData {
+  inventory: Array<{ partId: string; quantity: number }>;
+  openOrders: Array<Record<string, unknown>>;
+  plannedOrders: Array<Record<string, unknown>>;
+  workOrders: Array<Record<string, unknown>>;
+  capacity: Array<{
+    workCenterId: string;
+    name: string;
+    dailyCapacityHours: number;
+    efficiency: number | null;
+  }>;
+}
+
 interface PartDemand {
   partId: string;
   partNumber: string;
@@ -184,7 +199,7 @@ export class SimulationEngine {
         recommendations,
       };
     } catch (error) {
-      console.error('[Simulation Engine] Error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'simulation-engine' });
       return {
         scenarioId: scenario.id,
         scenarioName: scenario.name,
@@ -317,7 +332,7 @@ export class SimulationEngine {
    */
   private async calculateSimulatedState(
     scenario: Scenario,
-    baselineData: any
+    baselineData: BaselineData
   ): Promise<SimulationState> {
     const baseline = await this.calculateBaselineState(
       scenario.baselineDate,
@@ -410,7 +425,7 @@ export class SimulationEngine {
    */
   private async generateTimeline(
     scenario: Scenario,
-    baselineData: any
+    baselineData: BaselineData
   ): Promise<TimelinePoint[]> {
     const timeline: TimelinePoint[] = [];
     const weeks = Math.ceil(scenario.simulationHorizonDays / 7);
@@ -422,7 +437,7 @@ export class SimulationEngine {
     const baseCapacity = await this.getWeeklyCapacity(weeks);
 
     let runningInventory = baselineData.inventory.reduce(
-      (sum: number, i: any) => sum + i.quantity,
+      (sum: number, i: { partId: string; quantity: number }) => sum + i.quantity,
       0
     );
 
@@ -731,8 +746,8 @@ export class SimulationEngine {
   // =============================================================================
 
   private async calculateTotalCost(
-    purchaseOrders: any[],
-    workOrders: any[],
+    purchaseOrders: Array<{ totalAmount?: number | null }>,
+    workOrders: Array<{ quantity: number }>,
     inventoryQty: number
   ): Promise<number> {
     const poCost = purchaseOrders.reduce(

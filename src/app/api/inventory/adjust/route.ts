@@ -8,6 +8,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from '@/lib/api/with-permission';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // INVENTORY ADJUSTMENT API
@@ -40,6 +41,10 @@ async function adjustHandler(
   request: NextRequest,
   { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   let body;
   try {
     body = await request.json();

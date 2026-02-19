@@ -13,6 +13,7 @@ import {
   updateWorkOrderStatus,
 } from '../mrp-engine';
 import prisma from '../prisma';
+import { allocateByStrategy } from '../inventory/picking-engine';
 
 // Mock Prisma
 vi.mock('../prisma', () => ({
@@ -59,6 +60,32 @@ vi.mock('../mrp/mrp-core', () => {
     },
   };
 });
+
+// Mock picking engine
+vi.mock('../inventory/picking-engine', () => ({
+  allocateByStrategy: vi.fn(),
+  getSortedInventory: vi.fn(),
+}));
+
+// Mock workflow triggers
+vi.mock('../workflow/workflow-triggers', () => ({
+  triggerWorkOrderWorkflow: vi.fn().mockResolvedValue({ triggered: true }),
+}));
+
+// Mock feature flags
+vi.mock('../features/feature-flags', () => ({
+  isFeatureEnabled: vi.fn().mockResolvedValue(false),
+  FEATURE_FLAGS: {
+    USE_WIP_WAREHOUSE: 'use_wip_warehouse',
+    USE_FG_WAREHOUSE: 'use_fg_warehouse',
+    USE_SHIP_WAREHOUSE: 'use_ship_warehouse',
+  },
+}));
+
+// Mock finance cost service
+vi.mock('../finance/wo-cost-service', () => ({
+  recordMaterialCost: vi.fn().mockResolvedValue({}),
+}));
 
 describe('MRP Engine', () => {
   beforeEach(() => {
@@ -388,41 +415,39 @@ describe('MRP Engine', () => {
         { id: 'alloc-2', partId: 'part-2', requiredQty: 10, status: 'pending' },
       ];
 
-      const mockInventory1 = {
-        id: 'inv-1',
-        partId: 'part-1',
-        quantity: 100,
-        reservedQty: 10,
-        warehouseId: 'wh-1',
-        lotNumber: 'LOT-001',
-      };
-
-      const mockInventory2 = {
-        id: 'inv-2',
-        partId: 'part-2',
-        quantity: 50,
-        reservedQty: 45,
-        warehouseId: 'wh-1',
-        lotNumber: 'LOT-002',
-      };
-
       (prisma.materialAllocation.findMany as Mock)
         .mockResolvedValueOnce(mockAllocations)
         .mockResolvedValueOnce([
-          { ...mockAllocations[0], allocatedQty: 20, status: 'allocated' },
-          { ...mockAllocations[1], allocatedQty: 5, status: 'pending' },
+          { ...mockAllocations[0], allocatedQty: 20, requiredQty: 20, status: 'allocated' },
+          { ...mockAllocations[1], allocatedQty: 5, requiredQty: 10, status: 'pending' },
         ]);
 
+      // inventory.findFirst returns warehouse records for each part
       (prisma.inventory.findFirst as Mock)
-        .mockResolvedValueOnce(mockInventory1)
-        .mockResolvedValueOnce(mockInventory2);
+        .mockResolvedValueOnce({ warehouseId: 'wh-1' })
+        .mockResolvedValueOnce({ warehouseId: 'wh-1' });
+
+      // allocateByStrategy returns picking results
+      (allocateByStrategy as Mock)
+        .mockResolvedValueOnce({
+          allocations: [{ inventoryId: 'inv-1', lotNumber: 'LOT-001', quantity: 20 }],
+          totalAllocated: 20,
+          success: true,
+          errors: [],
+        })
+        .mockResolvedValueOnce({
+          allocations: [{ inventoryId: 'inv-2', lotNumber: 'LOT-002', quantity: 5 }],
+          totalAllocated: 5,
+          success: true,
+          errors: [],
+        });
 
       (prisma.inventory.update as Mock).mockResolvedValue({});
       (prisma.materialAllocation.update as Mock).mockResolvedValue({});
 
       const result = await allocateMaterials('wo-1');
 
-      // First part fully allocated (90 available >= 20 needed)
+      // First part fully allocated (20 available >= 20 needed)
       expect(prisma.materialAllocation.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'alloc-1' },
@@ -452,22 +477,21 @@ describe('MRP Engine', () => {
         { id: 'alloc-1', partId: 'part-1', requiredQty: 10, status: 'pending' },
       ];
 
-      const mockInventory = {
-        id: 'inv-1',
-        partId: 'part-1',
-        quantity: 100,
-        reservedQty: 0,
-        warehouseId: 'wh-1',
-        lotNumber: 'LOT-001',
-      };
-
       (prisma.materialAllocation.findMany as Mock)
         .mockResolvedValueOnce(mockAllocations)
         .mockResolvedValueOnce([
-          { ...mockAllocations[0], allocatedQty: 10, status: 'allocated' },
+          { ...mockAllocations[0], allocatedQty: 10, requiredQty: 10, status: 'allocated' },
         ]);
 
-      (prisma.inventory.findFirst as Mock).mockResolvedValue(mockInventory);
+      (prisma.inventory.findFirst as Mock).mockResolvedValue({ warehouseId: 'wh-1' });
+
+      (allocateByStrategy as Mock).mockResolvedValue({
+        allocations: [{ inventoryId: 'inv-1', lotNumber: 'LOT-001', quantity: 10 }],
+        totalAllocated: 10,
+        success: true,
+        errors: [],
+      });
+
       (prisma.inventory.update as Mock).mockResolvedValue({});
       (prisma.materialAllocation.update as Mock).mockResolvedValue({});
 
@@ -485,6 +509,7 @@ describe('MRP Engine', () => {
         .mockResolvedValueOnce(mockAllocations)
         .mockResolvedValueOnce(mockAllocations);
 
+      // No inventory record found for the part
       (prisma.inventory.findFirst as Mock).mockResolvedValue(null);
 
       const result = await allocateMaterials('wo-1');
@@ -496,11 +521,16 @@ describe('MRP Engine', () => {
   });
 
   describe('updateWorkOrderStatus', () => {
-    it('should update status to in_progress with actualStart', async () => {
+    const expectedInclude = {
+      product: true,
+      allocations: { include: { part: true } },
+    };
+
+    it('should update status to IN_PROGRESS with actualStart', async () => {
       const mockWorkOrder = {
         id: 'wo-1',
-        status: 'in_progress',
-        actualStart: expect.any(Date),
+        status: 'IN_PROGRESS',
+        actualStart: new Date(),
       };
 
       (prisma.workOrder.update as Mock).mockResolvedValue(mockWorkOrder);
@@ -510,21 +540,21 @@ describe('MRP Engine', () => {
       expect(prisma.workOrder.update).toHaveBeenCalledWith({
         where: { id: 'wo-1' },
         data: {
-          status: 'in_progress',
+          status: 'IN_PROGRESS',
           actualStart: expect.any(Date),
         },
-        include: expect.any(Object),
+        include: expectedInclude,
       });
 
-      expect(result.status).toBe('in_progress');
+      expect(result.status).toBe('IN_PROGRESS');
     });
 
-    it('should update status to completed with actualEnd and completedQty', async () => {
+    it('should update status to COMPLETED with actualEnd and completedQty', async () => {
       const mockWorkOrder = {
         id: 'wo-1',
-        status: 'completed',
+        status: 'COMPLETED',
         completedQty: 95,
-        actualEnd: expect.any(Date),
+        actualEnd: new Date(),
       };
 
       (prisma.workOrder.update as Mock).mockResolvedValue(mockWorkOrder);
@@ -534,18 +564,18 @@ describe('MRP Engine', () => {
       expect(prisma.workOrder.update).toHaveBeenCalledWith({
         where: { id: 'wo-1' },
         data: {
-          status: 'completed',
+          status: 'COMPLETED',
           actualEnd: expect.any(Date),
           completedQty: 95,
         },
-        include: expect.any(Object),
+        include: expectedInclude,
       });
 
       expect(result.completedQty).toBe(95);
     });
 
     it('should update other statuses without special date handling', async () => {
-      const mockWorkOrder = { id: 'wo-1', status: 'on_hold' };
+      const mockWorkOrder = { id: 'wo-1', status: 'ON_HOLD' };
 
       (prisma.workOrder.update as Mock).mockResolvedValue(mockWorkOrder);
 
@@ -553,8 +583,8 @@ describe('MRP Engine', () => {
 
       expect(prisma.workOrder.update).toHaveBeenCalledWith({
         where: { id: 'wo-1' },
-        data: { status: 'on_hold' },
-        include: expect.any(Object),
+        data: { status: 'ON_HOLD' },
+        include: expectedInclude,
       });
     });
   });

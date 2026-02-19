@@ -1,19 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { compareSimulations } from "@/lib/mrp";
 import { logger } from "@/lib/logger";
 
-// POST /api/mrp/simulation/compare - Compare multiple simulations
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { simulationIds } = body;
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 
-    if (!simulationIds || !Array.isArray(simulationIds) || simulationIds.length < 2) {
+const compareBodySchema = z.object({
+  simulationIds: z.array(z.string()).min(2),
+});
+
+// POST /api/mrp/simulation/compare - Compare multiple simulations
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  try {
+const rawBody = await request.json();
+    const parseResult = compareBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: "At least 2 simulationIds are required" },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { simulationIds } = parseResult.data;
 
     const comparison = await compareSimulations(simulationIds);
 
@@ -28,4 +40,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

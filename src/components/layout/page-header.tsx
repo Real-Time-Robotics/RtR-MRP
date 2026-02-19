@@ -106,6 +106,7 @@ export function PageHeader({
             size="icon"
             onClick={handleBack}
             title="Quay lại trang trước"
+            aria-label="Quay lại trang trước"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>

@@ -237,6 +237,7 @@ export function AnalyticsDashboard() {
           <button
             onClick={handleRefresh}
             className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+            aria-label="Làm mới"
           >
             <RefreshCw className={cn('w-5 h-5', loading && 'animate-spin')} />
           </button>

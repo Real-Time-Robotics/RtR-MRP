@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { SCHEDULED_REPORT_TEMPLATES } from '@/lib/reports/report-templates';
+import { clientLogger } from '@/lib/client-logger';
 
 interface Schedule {
   id: string;
@@ -166,7 +167,7 @@ export default function ScheduledReportsPage() {
         );
       }
     } catch (err) {
-      console.error('Failed to toggle schedule:', err);
+      clientLogger.error('Failed to toggle schedule:', err);
     }
   };
 
@@ -182,7 +183,7 @@ export default function ScheduledReportsPage() {
         setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
       }
     } catch (err) {
-      console.error('Failed to delete schedule:', err);
+      clientLogger.error('Failed to delete schedule:', err);
     }
   };
 
@@ -222,7 +223,7 @@ export default function ScheduledReportsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/reports">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Quay lại">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
@@ -465,6 +466,7 @@ export default function ScheduledReportsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(schedule.id)}
+                      aria-label="Xóa"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

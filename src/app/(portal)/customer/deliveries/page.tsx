@@ -6,10 +6,11 @@ import {
   Truck, Search, Calendar, Package, ChevronRight, RefreshCw,
   MapPin, Clock, CheckCircle, ExternalLink, AlertCircle
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
+import {
+  CustomerPortalEngine,
   CustomerDelivery
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // CUSTOMER DELIVERIES PAGE
@@ -31,7 +32,7 @@ export default function CustomerDeliveriesPage() {
         setDeliveries(result.data.deliveries || []);
       }
     } catch (error) {
-      console.error('Failed to fetch deliveries:', error);
+      clientLogger.error('Failed to fetch deliveries', error);
     } finally {
       setIsLoading(false);
     }
@@ -83,6 +84,7 @@ export default function CustomerDeliveriesPage() {
         <button
           onClick={() => fetchDeliveries()}
           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
+          aria-label="Làm mới"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -96,6 +98,7 @@ export default function CustomerDeliveriesPage() {
             <input
               type="text"
               placeholder="Tìm theo mã giao hàng, SO, tracking..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
@@ -104,6 +107,7 @@ export default function CustomerDeliveriesPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Bộ lọc trạng thái"
             className="px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
           >
             <option value="ALL">Tất cả trạng thái</option>

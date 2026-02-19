@@ -2,234 +2,30 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  ChevronUp,
-  ChevronDown,
-  ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Filter,
-  Download,
-  MoreHorizontal,
-  Check,
-  ArrowUpDown,
-  Loader2,
-  Database,
-} from 'lucide-react';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import {
-  ExcelModeConfig,
   mergeExcelConfig
 } from './excel';
-import {
-  excelColors,
-  getColumnLetter,
-  formatColumnHeader
-} from './excel/excel-theme';
+
+// Import sub-components
+import { ExcelTitleBar, DataTableToolbar, TableHeaderRow } from './data-table/data-table-header';
+import { DataTableBody } from './data-table/data-table-body';
+import { TablePagination, ExcelPagination } from './data-table/data-table-pagination';
+
+// Re-export types and sub-components for backward compatibility
+export type { Column, DataTableProps, ExcelModeConfig } from './data-table/data-table-types';
+import type { Column, DataTableProps } from './data-table/data-table-types';
+export { TablePagination } from './data-table/data-table-pagination';
 
 // =============================================================================
 // DATA TABLE COMPONENT
 // Advanced table with sorting, filtering, pagination, and selection
 // =============================================================================
 
-export interface Column<T> {
-  /** Unique column key */
-  key: string;
-  /** Column header label */
-  header: string;
-  /** Column width (CSS value) */
-  width?: string;
-  /** Minimum width */
-  minWidth?: string;
-  /** Make column sortable */
-  sortable?: boolean;
-  /** Custom cell renderer */
-  render?: (value: any, row: T, index: number) => React.ReactNode;
-  /** Cell alignment */
-  align?: 'left' | 'center' | 'right';
-  /** Make column sticky */
-  sticky?: 'left' | 'right';
-  /** Hide column by default */
-  hidden?: boolean;
-  /** Column data type (for formatting) */
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'date' | 'status' | 'custom';
-  /** Accessor function if key doesn't match data */
-  accessor?: (row: T) => any;
-  /** Footer content */
-  footer?: string | ((rows: T[]) => React.ReactNode);
-  /** Dynamic className applied to the td element (for cell-level coloring) */
-  cellClassName?: (value: any, row: T, index: number) => string;
-}
-
-export interface DataTableProps<T> {
-  /** Table data */
-  data: T[];
-  /** Column definitions */
-  columns: Column<T>[];
-  /** Unique key field in data */
-  keyField?: string;
-  /** Loading state */
-  loading?: boolean;
-  /** Empty state message */
-  emptyMessage?: string;
-  /** Enable row selection */
-  selectable?: boolean;
-  /** Selected row keys */
-  selectedKeys?: Set<string>;
-  /** Selection change callback */
-  onSelectionChange?: (keys: Set<string>) => void;
-  /** Row click handler */
-  onRowClick?: (row: T, index: number) => void;
-  /** Enable pagination */
-  pagination?: boolean;
-  /** Page size */
-  pageSize?: number;
-  /** Page size options */
-  pageSizeOptions?: number[];
-  /** Enable search */
-  searchable?: boolean;
-  /** Search placeholder */
-  searchPlaceholder?: string;
-  /** Columns to search */
-  searchColumns?: string[];
-  /** Enable column visibility toggle */
-  columnToggle?: boolean;
-  /** Striped rows */
-  striped?: boolean;
-  /** Compact mode */
-  compact?: boolean;
-  /** Show borders */
-  bordered?: boolean;
-  /** Sticky header */
-  stickyHeader?: boolean;
-  /** Max height for scrolling */
-  maxHeight?: string;
-  /** Custom class */
-  className?: string;
-  /** Header actions */
-  headerActions?: React.ReactNode;
-  /** Show footer */
-  showFooter?: boolean;
-  /** Excel-like UI mode configuration */
-  excelMode?: ExcelModeConfig;
-  /** Enable row virtualization for large datasets */
-  virtualize?: boolean;
-  /** Row height in pixels when virtualized (default 40) */
-  virtualRowHeight?: number;
-}
-
-// Pagination component
-const TablePagination: React.FC<{
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
-  totalItems: number;
-  pageSizeOptions: number[];
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
-  t: (key: string, params?: Record<string, string>) => string;
-}> = ({
-  currentPage,
-  totalPages,
-  pageSize,
-  totalItems,
-  pageSizeOptions,
-  onPageChange,
-  onPageSizeChange,
-  t,
-}) => {
-    const startItem = (currentPage - 1) * pageSize + 1;
-    const endItem = Math.min(currentPage * pageSize, totalItems);
-
-    return (
-      <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 rounded-b-xl">
-        {/* Info */}
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            {t('dataTable.showingRange', { start: String(startItem), end: String(endItem), total: formatNumber(totalItems) })}
-          </span>
-
-          {/* Page size select */}
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-md focus:ring-2 focus:ring-primary-500 dark:text-slate-200"
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size} {t('dataTable.perPage')}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          {/* Page numbers */}
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let pageNum: number;
-            if (totalPages <= 5) {
-              pageNum = i + 1;
-            } else if (currentPage <= 3) {
-              pageNum = i + 1;
-            } else if (currentPage >= totalPages - 2) {
-              pageNum = totalPages - 4 + i;
-            } else {
-              pageNum = currentPage - 2 + i;
-            }
-
-            return (
-              <button
-                key={pageNum}
-                onClick={() => onPageChange(pageNum)}
-                className={cn(
-                  'w-8 h-8 text-sm font-medium rounded-md transition-colors',
-                  currentPage === pageNum
-                    ? 'bg-primary-600 text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
-                )}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-// Sort indicator
-const SortIndicator: React.FC<{ direction: 'asc' | 'desc' | null }> = ({ direction }) => {
-  if (!direction) {
-    return <ChevronsUpDown className="h-4 w-4 text-slate-400 dark:text-slate-500" />;
-  }
-  return direction === 'asc' ? (
-    <ChevronUp className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-  ) : (
-    <ChevronDown className="h-4 w-4 text-primary-600 dark:text-primary-400" />
-  );
-};
-
 // Main DataTable component
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic table row constraint must accept any value types
 function DataTable<T extends Record<string, any>>({
   data,
   columns,
@@ -347,8 +143,7 @@ function DataTable<T extends Record<string, any>>({
   const handleArrowNav = useCallback((direction: 'up' | 'down') => {
     if (!onSelectionChange || paginatedData.length === 0) return;
 
-    // Find index of first selected item (if any)
-    const currentKey = Array.from(selectedKeys)[0]; // Assuming single selection priority for nav
+    const currentKey = Array.from(selectedKeys)[0];
     let currentIndex = -1;
 
     if (currentKey) {
@@ -366,14 +161,9 @@ function DataTable<T extends Record<string, any>>({
     if (nextRow) {
       const nextKey = String(nextRow[keyField]);
       onSelectionChange(new Set([nextKey]));
-
-      // Optional: Scroll into view logic could go here
     }
   }, [paginatedData, selectedKeys, onSelectionChange, keyField]);
 
-  // Use global shortcuts when this component is mounted
-  // Note: This might conflict if multiple tables are on screen. 
-  // Ideally, we focus the table first, but for now we'll rely on this being the main view.
   useKeyboardShortcuts({
     'ArrowUp': (e) => {
       e.preventDefault();
@@ -451,40 +241,25 @@ function DataTable<T extends Record<string, any>>({
     )}>
       {/* Excel Title Bar */}
       {isExcelMode && excelConfig.sheetName && (
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#217346] dark:bg-slate-800 rounded-t-md shrink-0">
-          <Database className="h-3.5 w-3.5 text-white" />
-          <span className="text-xs font-medium text-white">{excelConfig.sheetName}</span>
-          <span className="ml-auto text-[10px] text-white/70 font-mono">
-            {sortedData.length} {t('dataTable.records')}
-          </span>
-        </div>
+        <ExcelTitleBar
+          sheetName={excelConfig.sheetName}
+          recordCount={sortedData.length}
+          t={t}
+        />
       )}
 
-      {/* Header */}
+      {/* Toolbar */}
       {(searchable || headerActions) && (
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 shrink-0">
-          {/* Search */}
-          {searchable && (
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                placeholder={searchPlaceholder}
-                className="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:text-slate-100 dark:placeholder:text-slate-500"
-              />
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {headerActions}
-          </div>
-        </div>
+        <DataTableToolbar
+          searchable={searchable}
+          searchQuery={searchQuery}
+          searchPlaceholder={searchPlaceholder}
+          onSearchChange={(query) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+          }}
+          headerActions={headerActions}
+        />
       )}
 
       {/* Table */}
@@ -494,307 +269,45 @@ function DataTable<T extends Record<string, any>>({
         style={virtualize ? { maxHeight: maxHeight || 'calc(100vh - 280px)' } : undefined}
       >
         <table className="w-full table-fixed">
-          <thead className={cn(stickyHeader && 'sticky top-0 z-10')}>
-            <tr className={cn(
-              'backdrop-blur-sm',
-              isExcelMode
-                ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 border-b border-[#217346]/30 dark:border-[#70AD47]/30'
-                : 'bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800'
-            )}>
-              {/* Excel Row Number Header */}
-              {isExcelMode && excelConfig.showRowNumbers && (
-                <th className="w-10 min-w-[40px] px-1 py-1.5 text-center text-[10px] font-semibold text-[#217346] dark:text-[#70AD47] uppercase border-r border-[#217346]/20 dark:border-[#70AD47]/20 bg-[#E2EFDA] dark:bg-[#217346]/20">
-                  #
-                </th>
-              )}
+          <TableHeaderRow
+            activeColumns={activeColumns}
+            isExcelMode={isExcelMode}
+            excelConfig={excelConfig}
+            selectable={selectable}
+            allSelected={allSelected}
+            someSelected={someSelected}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            stickyHeader={stickyHeader}
+            onSort={handleSort}
+            onSelectAll={handleSelectAll}
+          />
 
-              {/* Selection checkbox */}
-              {selectable && (
-                <th className={cn(
-                  'w-12 px-4',
-                  isExcelMode ? 'py-1.5' : 'py-3'
-                )}>
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected && !allSelected;
-                    }}
-                    onChange={handleSelectAll}
-                    className="h-4 w-4"
-                  />
-                </th>
-              )}
-
-              {/* Column headers */}
-              {activeColumns.map((column, colIndex) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    'text-left text-xs font-semibold uppercase tracking-wider',
-                    isExcelMode
-                      ? cn(
-                          'px-2 py-1.5 text-[10px] text-[#217346] dark:text-[#70AD47]',
-                          'border-r border-[#217346]/20 dark:border-[#70AD47]/20 last:border-r-0',
-                          column.sortable && 'cursor-pointer select-none hover:bg-[#d5e8cc] dark:hover:bg-[#217346]/30'
-                        )
-                      : cn(
-                          'px-4 py-3 text-slate-600 dark:text-slate-400',
-                          'border-b border-slate-200 dark:border-slate-800',
-                          column.sortable && 'cursor-pointer select-none hover:bg-slate-100 dark:hover:bg-slate-800'
-                        ),
-                  )}
-                  style={{
-                    width: column.width,
-                    minWidth: column.minWidth,
-                  }}
-                  onClick={() => column.sortable && handleSort(column.key)}
-                >
-                  <div className="flex items-center gap-1">
-                    <span>
-                      {isExcelMode && excelConfig.columnHeaderStyle !== 'field-names'
-                        ? formatColumnHeader(colIndex, column.header, excelConfig.columnHeaderStyle)
-                        : column.header}
-                    </span>
-                    {column.sortable && (
-                      <SortIndicator
-                        direction={sortColumn === column.key ? sortDirection : null}
-                      />
-                    )}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td
-                  colSpan={activeColumns.length + (selectable ? 1 : 0) + (isExcelMode && excelConfig.showRowNumbers ? 1 : 0)}
-                  className="px-4 py-12 text-center"
-                >
-                  <div className="flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>{t('dataTable.loading')}</span>
-                  </div>
-                </td>
-              </tr>
-            ) : (virtualize ? virtualData : paginatedData).length === 0 ? (
-              <tr>
-                <td
-                  colSpan={activeColumns.length + (selectable ? 1 : 0) + (isExcelMode && excelConfig.showRowNumbers ? 1 : 0)}
-                  className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
-                >
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : virtualize ? (
-              <>
-                {rowVirtualizer.getVirtualItems()[0]?.start > 0 && (
-                  <tr><td style={{ height: rowVirtualizer.getVirtualItems()[0].start }} /></tr>
-                )}
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const row = virtualData[virtualRow.index];
-                  const rowIndex = virtualRow.index;
-                  const rowKey = String(row[keyField]);
-                  const isSelected = selectedKeys.has(rowKey);
-                  const actualRowNumber = rowIndex + 1;
-
-                  return (
-                    <tr
-                      key={rowKey}
-                      data-index={virtualRow.index}
-                      ref={rowVirtualizer.measureElement}
-                      className={cn(
-                        'transition-colors',
-                        isExcelMode
-                          ? cn(
-                              'border-b border-slate-200 dark:border-slate-800',
-                              'hover:bg-[#E2EFDA]/30 dark:hover:bg-[#217346]/10',
-                              isSelected && 'bg-[#E2EFDA]/50 dark:bg-[#217346]/15'
-                            )
-                          : cn(
-                              'border-b border-slate-100 dark:border-slate-800 last:border-0',
-                              striped && rowIndex % 2 === 1 && 'bg-slate-50/50 dark:bg-slate-900/30',
-                              isSelected && 'bg-primary-50 dark:bg-primary-900/20',
-                              'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                            ),
-                        onRowClick && 'cursor-pointer'
-                      )}
-                      onClick={() => onRowClick?.(row, rowIndex)}
-                    >
-                      {isExcelMode && excelConfig.showRowNumbers && (
-                        <td className={cn(
-                          'w-10 min-w-[40px] px-1 text-center text-[10px] font-mono',
-                          'border-r border-slate-200 dark:border-slate-800',
-                          'bg-slate-50 dark:bg-slate-900',
-                          isExcelMode && excelConfig.compactMode ? 'py-1' : 'py-1.5',
-                          isSelected
-                            ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 text-[#217346] dark:text-[#70AD47] font-semibold'
-                            : 'text-slate-400 dark:text-slate-500'
-                        )}>
-                          {actualRowNumber}
-                        </td>
-                      )}
-                      {selectable && (
-                        <td className={cn('w-12 px-4', isExcelMode ? 'py-1.5' : 'py-3')} onClick={(e) => e.stopPropagation()}>
-                          <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row)} className="h-4 w-4" />
-                        </td>
-                      )}
-                      {activeColumns.map((column) => {
-                        const value = getCellValue(row, column);
-                        const content = column.render ? column.render(value, row, rowIndex) : value;
-                        return (
-                          <td
-                            key={column.key}
-                            className={cn(
-                              'text-slate-700 dark:text-slate-300',
-                              isExcelMode
-                                ? cn('px-2 text-[11px] font-mono', excelConfig.compactMode ? 'py-1' : 'py-1.5', 'border-r border-b border-slate-200 dark:border-slate-800 last:border-r-0')
-                                : cn('px-4 text-sm', compact ? 'py-2' : 'py-3', bordered && 'border-b border-slate-100 dark:border-slate-800'),
-                              (column.type === 'number' || column.type === 'currency') && 'font-mono tabular-nums',
-                              column.cellClassName?.(value, row, rowIndex)
-                            )}
-                          >
-                            {content}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-                {(() => {
-                  const items = rowVirtualizer.getVirtualItems();
-                  const lastItem = items[items.length - 1];
-                  const paddingBottom = lastItem ? rowVirtualizer.getTotalSize() - lastItem.end : 0;
-                  return paddingBottom > 0 ? <tr><td style={{ height: paddingBottom }} /></tr> : null;
-                })()}
-              </>
-            ) : (
-              paginatedData.map((row, rowIndex) => {
-                const rowKey = String(row[keyField]);
-                const isSelected = selectedKeys.has(rowKey);
-                const actualRowNumber = (currentPage - 1) * pageSize + rowIndex + 1;
-
-                return (
-                  <tr
-                    key={rowKey}
-                    className={cn(
-                      'transition-colors',
-                      isExcelMode
-                        ? cn(
-                            'border-b border-slate-200 dark:border-slate-800',
-                            'hover:bg-[#E2EFDA]/30 dark:hover:bg-[#217346]/10',
-                            isSelected && 'bg-[#E2EFDA]/50 dark:bg-[#217346]/15'
-                          )
-                        : cn(
-                            'border-b border-slate-100 dark:border-slate-800 last:border-0',
-                            striped && rowIndex % 2 === 1 && 'bg-slate-50/50 dark:bg-slate-900/30',
-                            isSelected && 'bg-primary-50 dark:bg-primary-900/20',
-                            'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                          ),
-                      onRowClick && 'cursor-pointer'
-                    )}
-                    onClick={() => onRowClick?.(row, rowIndex)}
-                  >
-                    {/* Excel Row Number Cell */}
-                    {isExcelMode && excelConfig.showRowNumbers && (
-                      <td className={cn(
-                        'w-10 min-w-[40px] px-1 text-center text-[10px] font-mono',
-                        'border-r border-slate-200 dark:border-slate-800',
-                        'bg-slate-50 dark:bg-slate-900',
-                        isExcelMode && excelConfig.compactMode ? 'py-1' : 'py-1.5',
-                        isSelected
-                          ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 text-[#217346] dark:text-[#70AD47] font-semibold'
-                          : 'text-slate-400 dark:text-slate-500'
-                      )}>
-                        {actualRowNumber}
-                      </td>
-                    )}
-
-                    {/* Selection checkbox */}
-                    {selectable && (
-                      <td className={cn(
-                        'w-12 px-4',
-                        isExcelMode ? 'py-1.5' : 'py-3'
-                      )} onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectRow(row)}
-                          className="h-4 w-4"
-                        />
-                      </td>
-                    )}
-
-                    {/* Data cells */}
-                    {activeColumns.map((column) => {
-                      const value = getCellValue(row, column);
-                      const content = column.render
-                        ? column.render(value, row, rowIndex)
-                        : value;
-
-                      return (
-                        <td
-                          key={column.key}
-                          className={cn(
-                            'text-slate-700 dark:text-slate-300',
-                            isExcelMode
-                              ? cn(
-                                  'px-2 text-[11px] font-mono',
-                                  excelConfig.compactMode ? 'py-1' : 'py-1.5',
-                                  'border-r border-b border-slate-200 dark:border-slate-800 last:border-r-0'
-                                )
-                              : cn(
-                                  'px-4 text-sm',
-                                  compact ? 'py-2' : 'py-3',
-                                  bordered && 'border-b border-slate-100 dark:border-slate-800'
-                                ),
-                            column.type === 'number' && 'font-mono tabular-nums',
-                            column.type === 'currency' && 'font-mono tabular-nums',
-                            column.cellClassName?.(value, row, rowIndex)
-                          )}
-                        >
-                          {content}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-
-          {/* Footer */}
-          {showFooter && (
-            <tfoot>
-              <tr className={cn(
-                'border-t',
-                isExcelMode
-                  ? 'bg-[#E2EFDA] dark:bg-[#217346]/20 border-[#217346]/30 dark:border-[#70AD47]/30'
-                  : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-              )}>
-                {isExcelMode && excelConfig.showRowNumbers && <td className="px-1 py-2" />}
-                {selectable && <td className="px-4 py-3" />}
-                {activeColumns.map((column) => (
-                  <td
-                    key={column.key}
-                    className={cn(
-                      'font-medium text-slate-700 dark:text-slate-300',
-                      isExcelMode
-                        ? 'px-2 py-1.5 text-[10px] text-[#217346] dark:text-[#70AD47]'
-                        : 'px-4 py-3 text-sm'
-                    )}
-                  >
-                    {typeof column.footer === 'function'
-                      ? column.footer(sortedData)
-                      : column.footer}
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
-          )}
+          <DataTableBody
+            loading={loading}
+            activeColumns={activeColumns}
+            isExcelMode={isExcelMode}
+            excelConfig={excelConfig}
+            selectable={selectable}
+            selectedKeys={selectedKeys}
+            keyField={keyField}
+            striped={striped}
+            compact={compact}
+            bordered={bordered}
+            emptyMessage={emptyMessage}
+            paginatedData={paginatedData}
+            virtualData={virtualData}
+            virtualize={virtualize}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            showFooter={showFooter}
+            sortedData={sortedData}
+            onRowClick={onRowClick}
+            onSelectRow={handleSelectRow}
+            getCellValue={getCellValue}
+            rowVirtualizer={rowVirtualizer}
+            t={t}
+          />
         </table>
       </div>
 
@@ -802,7 +315,7 @@ function DataTable<T extends Record<string, any>>({
       {isExcelMode && excelConfig.showFooter && (
         <div className="flex items-center justify-between px-2 py-1 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
           <span className="text-[10px] text-slate-400 font-mono">
-            {selectedKeys.size > 0 ? `${selectedKeys.size} ${t('dataTable.selected')} • ` : ''}{virtualize ? virtualData.length : sortedData.length} {t('dataTable.rows')}
+            {selectedKeys.size > 0 ? `${selectedKeys.size} ${t('dataTable.selected')} \u2022 ` : ''}{virtualize ? virtualData.length : sortedData.length} {t('dataTable.rows')}
           </span>
           <span className="text-[10px] text-[#217346] dark:text-[#70AD47] font-medium">
             {excelConfig.sheetName}
@@ -829,31 +342,12 @@ function DataTable<T extends Record<string, any>>({
 
       {/* Excel-style Pagination */}
       {pagination && !virtualize && totalPages > 1 && isExcelMode && (
-        <div className="flex items-center justify-center gap-2 px-2 py-1.5 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-          <button
-            onClick={() => setCurrentPage(currentPage - 1)}
-            disabled={currentPage <= 1}
-            className={cn(
-              'p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700',
-              currentPage <= 1 && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <ChevronLeft className="h-3 w-3 text-slate-500" />
-          </button>
-          <span className="text-[10px] text-slate-500 font-mono">
-            {t('dataTable.page', { current: String(currentPage), total: String(totalPages) })}
-          </span>
-          <button
-            onClick={() => setCurrentPage(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-            className={cn(
-              'p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700',
-              currentPage >= totalPages && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <ChevronRight className="h-3 w-3 text-slate-500" />
-          </button>
-        </div>
+        <ExcelPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          t={t}
+        />
       )}
     </div>
   );
@@ -865,6 +359,5 @@ DataTable.displayName = 'DataTable';
 // EXPORTS
 // =============================================================================
 
-export { DataTable, TablePagination };
-export type { ExcelModeConfig };
+export { DataTable };
 export default DataTable;

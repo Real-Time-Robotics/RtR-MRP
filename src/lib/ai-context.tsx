@@ -15,8 +15,8 @@ export interface AIContext {
   userId: string;
   userName: string;
   userRole: string;
-  selectedItems: any[];
-  filters: Record<string, any>;
+  selectedItems: Record<string, unknown>[];
+  filters: Record<string, unknown>;
   recentActions: string[];
   language: 'en' | 'vi';
 }
@@ -50,8 +50,8 @@ interface AIContextValue extends AIState {
   
   // Context management
   updateContext: (updates: Partial<AIContext>) => void;
-  setSelectedItems: (items: any[]) => void;
-  setFilters: (filters: Record<string, any>) => void;
+  setSelectedItems: (items: Record<string, unknown>[]) => void;
+  setFilters: (filters: Record<string, unknown>) => void;
   addRecentAction: (action: string) => void;
   
   // Notifications
@@ -206,7 +206,7 @@ export function AIProvider({ children, user, language = 'vi' }: AIProviderProps)
     }));
   }, []);
   
-  const setSelectedItems = useCallback((items: any[]) => {
+  const setSelectedItems = useCallback((items: Record<string, unknown>[]) => {
     setState(prev => ({
       ...prev,
       context: {
@@ -216,7 +216,7 @@ export function AIProvider({ children, user, language = 'vi' }: AIProviderProps)
     }));
   }, []);
   
-  const setFilters = useCallback((filters: Record<string, any>) => {
+  const setFilters = useCallback((filters: Record<string, unknown>) => {
     setState(prev => ({
       ...prev,
       context: {

@@ -3,9 +3,16 @@
 // Premium Vietnamese UI with modern minimalist aesthetics
 // =============================================================================
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import fs from 'fs';
 import path from 'path';
+import { logger } from '@/lib/logger';
+
+export const metadata: Metadata = {
+  title: 'Tài liệu',
+  description: 'Tài liệu hướng dẫn sử dụng hệ thống RTR MRP',
+};
 import {
   ChevronLeft,
   BookOpen,
@@ -46,7 +53,8 @@ async function getDocsContent() {
     const filePath = path.join(docsPath, doc.file);
     try {
       contents[doc.id] = fs.readFileSync(filePath, 'utf-8');
-    } catch {
+    } catch (error) {
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'docs-page', file: doc.file });
       contents[doc.id] = `# ${doc.title}\n\nTài liệu đang được cập nhật...`;
     }
   }
@@ -92,6 +100,7 @@ function DocsHeader() {
               <input
                 type="text"
                 placeholder="Tìm kiếm tài liệu..."
+                aria-label="Tìm kiếm tài liệu"
                 className="w-full pl-10 pr-4 py-2 text-[14px] bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 focus:bg-white transition-all"
               />
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200">

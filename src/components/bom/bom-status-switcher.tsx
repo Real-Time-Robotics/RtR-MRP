@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Archive, FileEdit, Loader2 } from "lucide-react";
+import { clientLogger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/language-context";
 
 interface BomStatusSwitcherProps {
@@ -73,11 +75,11 @@ export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitc
         router.refresh();
       } else {
         const error = await res.json();
-        alert(error.error || t("bomStatus.updateError"));
+        toast.error(error.error || t("bomStatus.updateError"));
       }
     } catch (error) {
-      console.error("Failed to update BOM status:", error);
-      alert(t("bomStatus.updateFailed"));
+      clientLogger.error("Failed to update BOM status", error);
+      toast.error(t("bomStatus.updateFailed"));
     } finally {
       setLoading(false);
     }

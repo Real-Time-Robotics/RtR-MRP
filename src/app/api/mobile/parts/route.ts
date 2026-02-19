@@ -1,17 +1,17 @@
 // Mobile API - Parts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
     const partNumber = searchParams.get("sku") || searchParams.get("partNumber");
     const id = searchParams.get("id");
@@ -101,4 +101,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

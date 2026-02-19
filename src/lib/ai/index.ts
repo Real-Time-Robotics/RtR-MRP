@@ -38,7 +38,6 @@ export {
 export {
   QueryExecutor,
   getQueryExecutor,
-  mockDataFetcher,
   type QueryResult,
   type DataFetcher,
 } from './query-executor';

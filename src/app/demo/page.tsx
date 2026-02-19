@@ -16,6 +16,7 @@ import {
   Globe,
   LogIn,
 } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // DEMO CREDENTIALS
@@ -167,18 +168,18 @@ export default function DemoPage() {
       });
 
       if (result?.error) {
-        console.error('[DEMO] Login error:', result.error);
+        clientLogger.error('Demo login error', result.error);
         setError(`Login failed: ${result.error}`);
       } else if (result?.ok) {
         router.push('/home');
         router.refresh();
       } else {
-        console.error('[DEMO] Unexpected result:', result);
+        clientLogger.error('Demo login unexpected result', result);
         setError('Login failed. Unexpected response.');
       }
-    } catch (err: any) {
-      console.error('[DEMO] Exception:', err);
-      setError(err.message || 'An error occurred');
+    } catch (err: unknown) {
+      clientLogger.error('Demo login exception', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(null);
     }
@@ -241,6 +242,7 @@ export default function DemoPage() {
                   ? 'hover:bg-gray-800 text-gray-400'
                   : 'hover:bg-gray-100 text-gray-600'
               }`}
+              aria-label="Chuyển ngôn ngữ"
             >
               <Globe className="w-4 h-4" />
             </button>
@@ -251,6 +253,7 @@ export default function DemoPage() {
                   ? 'hover:bg-gray-800 text-gray-400'
                   : 'hover:bg-gray-100 text-gray-600'
               }`}
+              aria-label={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>

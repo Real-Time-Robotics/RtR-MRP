@@ -18,8 +18,25 @@ import {
   GitCompare,
   Loader2,
 } from 'lucide-react';
-import { ScenarioWizard } from '@/components/ai/simulation/scenario-wizard';
-import { ScenarioCard } from '@/components/ai/simulation/scenario-card';
+import dynamic from 'next/dynamic';
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load heavy simulation components
+const ScenarioWizard = dynamic(
+  () => import('@/components/ai/simulation/scenario-wizard').then(mod => mod.ScenarioWizard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
+
+const ScenarioCard = dynamic(
+  () => import('@/components/ai/simulation/scenario-card').then(mod => mod.ScenarioCard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
 
 interface ScenarioTemplate {
   id: string;
@@ -72,7 +89,7 @@ export default function SimulationPage() {
         setCategories(data.templateCategories || []);
       }
     } catch (error) {
-      console.error('Failed to fetch simulation data:', error);
+      clientLogger.error('Failed to fetch simulation data:', error);
     } finally {
       setLoading(false);
     }
@@ -83,7 +100,7 @@ export default function SimulationPage() {
     setShowWizard(true);
   };
 
-  const handleWizardComplete = async (scenario: any) => {
+  const handleWizardComplete = async (scenario: Record<string, unknown>) => {
     setShowWizard(false);
     setWizardTemplate(null);
     await fetchData();

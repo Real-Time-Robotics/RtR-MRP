@@ -43,18 +43,18 @@ interface WOExportButtonProps {
 export function WOExportButton({ workOrders, variant = 'outline', size = 'sm' }: WOExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const columns: ExportColumn[] = [
+  const columns: ExportColumn<WorkOrder>[] = [
     { key: 'woNumber', header: 'WO Number', width: 12 },
-    { key: 'product', header: 'Product', width: 25, format: (v) => v?.name || '-' },
-    { key: 'productSku', header: 'SKU', width: 15, format: (_, row) => row.product?.sku || '-' },
+    { key: 'product', header: 'Product', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
+    { key: 'productSku', header: 'SKU', width: 15, format: (_, row) => (row as WorkOrder).product?.sku || '-' },
     { key: 'quantity', header: 'Qty', width: 8, type: 'number', align: 'right' },
     { key: 'completedQty', header: 'Completed', width: 10, type: 'number', align: 'right' },
-    { key: 'priority', header: 'Priority', width: 10, format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || '-' },
+    { key: 'priority', header: 'Priority', width: 10, format: (v) => { const s = v as string; return s ? s.charAt(0).toUpperCase() + s.slice(1) : '-'; } },
     { key: 'plannedStart', header: 'Start Date', width: 12, type: 'date' },
     { key: 'plannedEnd', header: 'Due Date', width: 12, type: 'date' },
-    { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
-    { key: 'salesOrder', header: 'Sales Order', width: 12, format: (v) => v?.orderNumber || '-' },
-    { key: 'customer', header: 'Customer', width: 20, format: (_, row) => row.salesOrder?.customer?.name || '-' },
+    { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
+    { key: 'salesOrder', header: 'Sales Order', width: 12, format: (v) => (v as { orderNumber?: string })?.orderNumber || '-' },
+    { key: 'customer', header: 'Customer', width: 20, format: (_, row) => (row as WorkOrder).salesOrder?.customer?.name || '-' },
   ];
 
   const handleExportExcel = () => {

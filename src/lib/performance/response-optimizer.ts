@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - API RESPONSE OPTIMIZATION
 // Response compression, ETags, and caching headers
@@ -29,6 +28,7 @@ export interface CacheControl {
   noCache?: boolean;
   noStore?: boolean;
   mustRevalidate?: boolean;
+  immutable?: boolean;
 }
 
 // =============================================================================
@@ -104,7 +104,7 @@ export function buildCacheControl(options: CacheControl): string {
   if (options.noCache) parts.push('no-cache');
   if (options.noStore) parts.push('no-store');
   if (options.mustRevalidate) parts.push('must-revalidate');
-  if ((options as any).immutable) parts.push('immutable');
+  if (options.immutable) parts.push('immutable');
   
   if (options.maxAge !== undefined) {
     parts.push(`max-age=${options.maxAge}`);
@@ -129,7 +129,7 @@ export function buildCacheControl(options: CacheControl): string {
 /**
  * Generate ETag from data
  */
-export function generateETag(data: any): string {
+export function generateETag(data: unknown): string {
   const content = typeof data === 'string' ? data : JSON.stringify(data);
   const hash = createHash('md5').update(content).digest('hex');
   return `"${hash}"`;
@@ -138,7 +138,7 @@ export function generateETag(data: any): string {
 /**
  * Generate weak ETag
  */
-export function generateWeakETag(data: any): string {
+export function generateWeakETag(data: unknown): string {
   return `W/${generateETag(data)}`;
 }
 
@@ -340,32 +340,32 @@ export function responseWithLastModified<T>(
 /**
  * Omit null/undefined values from response
  */
-export function omitEmpty<T extends Record<string, any>>(obj: T): Partial<T> {
+export function omitEmpty<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const result: Partial<T> = {};
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (value !== null && value !== undefined) {
-      result[key as keyof T] = value;
+      (result as Record<string, unknown>)[key] = value;
     }
   }
-  
+
   return result;
 }
 
 /**
  * Flatten nested objects for smaller response
  */
-export function flattenResponse<T extends Record<string, any>>(
+export function flattenResponse<T extends Record<string, unknown>>(
   obj: T,
   prefix: string = ''
-): Record<string, any> {
-  const result: Record<string, any> = {};
-  
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
   for (const [key, value] of Object.entries(obj)) {
     const newKey = prefix ? `${prefix}.${key}` : key;
     
     if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-      Object.assign(result, flattenResponse(value, newKey));
+      Object.assign(result, flattenResponse(value as Record<string, unknown>, newKey));
     } else {
       result[newKey] = value;
     }
@@ -377,30 +377,30 @@ export function flattenResponse<T extends Record<string, any>>(
 /**
  * Pick specific fields from object
  */
-export function pickFields<T extends Record<string, any>>(
+export function pickFields<T extends Record<string, unknown>>(
   obj: T,
   fields: string[]
 ): Partial<T> {
   const result: Partial<T> = {};
-  
+
   for (const field of fields) {
     if (field in obj) {
-      result[field as keyof T] = obj[field];
+      (result as Record<string, unknown>)[field] = obj[field];
     }
   }
-  
+
   return result;
 }
 
 /**
  * Transform response for minimal payload
  */
-export function minimalResponse<T extends { id: string; [key: string]: any }>(
+export function minimalResponse<T extends { id: string }>(
   items: T[],
   fields: (keyof T)[]
-): Pick<T, 'id' | (typeof fields)[number]>[] {
+): Partial<T>[] {
   return items.map(item => {
-    const result: any = { id: item.id };
+    const result: Partial<T> = { id: item.id } as Partial<T>;
     for (const field of fields) {
       if (field in item) {
         result[field] = item[field];
@@ -417,17 +417,17 @@ export function minimalResponse<T extends { id: string; [key: string]: any }>(
 /**
  * Batch multiple responses into single response
  */
-export async function batchResponses<T extends Record<string, () => Promise<any>>>(
+export async function batchResponses<T extends Record<string, () => Promise<unknown>>>(
   requests: T
 ): Promise<{ [K in keyof T]: Awaited<ReturnType<T[K]>> }> {
   const entries = Object.entries(requests);
-  const results = await Promise.all(entries.map(([_, fn]) => fn()));
-  
-  const response: any = {};
+  const results = await Promise.all(entries.map(([, fn]) => fn()));
+
+  const response = {} as { [K in keyof T]: Awaited<ReturnType<T[K]>> };
   entries.forEach(([key], index) => {
-    response[key] = results[index];
+    (response as Record<string, unknown>)[key] = results[index];
   });
-  
+
   return response;
 }
 

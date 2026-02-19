@@ -21,7 +21,7 @@ export interface AIAction {
   description: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   requiresApproval: boolean;
-  payload?: any;
+  payload?: Record<string, unknown>;
   endpoint?: string;
 }
 
@@ -35,7 +35,7 @@ export interface ValidationResult {
 export interface ExecutionResult {
   success: boolean;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   rollbackId?: string;
 }
 
@@ -52,7 +52,7 @@ const RISK_CONFIG: Record<string, {
   color: string;
   bgColor: string;
   borderColor: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   approvalRequired: string[];
   confirmationRequired: boolean;
   cooldownMs: number;
@@ -132,18 +132,18 @@ const validateAction = (action: AIAction): ValidationResult => {
       break;
       
     case 'export':
-      if (action.payload?.format && !['xlsx', 'pdf', 'csv'].includes(action.payload.format)) {
+      if (action.payload?.format && !['xlsx', 'pdf', 'csv'].includes(String(action.payload.format))) {
         warnings.push('Unsupported export format');
       }
       info.push('Data will be exported based on current filters');
       break;
-      
+
     case 'navigate':
       // Navigation is always safe
       break;
-      
+
     case 'notify':
-      if (!action.payload?.recipients || action.payload.recipients.length === 0) {
+      if (!action.payload?.recipients || !Array.isArray(action.payload.recipients) || action.payload.recipients.length === 0) {
         warnings.push('No recipients specified');
       }
       break;

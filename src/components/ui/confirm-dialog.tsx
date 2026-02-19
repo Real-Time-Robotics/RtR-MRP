@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, createContext, useContext } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 import {
   AlertTriangle,
   Trash2,
@@ -98,7 +99,7 @@ export function ConfirmDialog({
       await onConfirm();
       onClose();
     } catch (error) {
-      console.error('Confirm error:', error);
+      clientLogger.error('Confirm error', error);
     } finally {
       setIsConfirming(false);
     }
@@ -113,6 +114,7 @@ export function ConfirmDialog({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in duration-200"
+        role="presentation"
         onClick={!loading ? onClose : undefined}
       />
 
@@ -141,6 +143,7 @@ export function ConfirmDialog({
               onClick={onClose}
               disabled={loading}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              aria-label="Đóng"
             >
               <X className="w-5 h-5" />
             </button>
@@ -263,7 +266,7 @@ export function UnsavedChangesDialog({
     <>
       {/* Backdrop */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" role="presentation" onClick={onClose} />
       )}
 
       {/* Dialog */}

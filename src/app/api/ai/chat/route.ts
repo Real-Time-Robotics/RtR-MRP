@@ -5,6 +5,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { logger } from '@/lib/logger';
 import { getAIProvider, AIMessage } from '@/lib/ai/provider';
 import { detectIntent, buildPrompt, RESPONSE_TEMPLATES } from '@/lib/ai/prompts';
@@ -12,6 +14,22 @@ import { getQueryExecutor } from '@/lib/ai/query-executor';
 import { generateStructuredResponse, StructuredResponse, AIAction } from '@/lib/ai/response-generator';
 import { getRAGKnowledgeService } from '@/lib/ai/rag-knowledge-service';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const chatBodySchema = z.object({
+  message: z.string().optional(),
+  query: z.string().optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string(),
+  })).optional(),
+  history: z.array(z.object({
+    role: z.string(),
+    content: z.string(),
+  })).optional(),
+  context: z.string().optional(),
+  preferredProvider: z.enum(['openai', 'anthropic']).optional(),
+});
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -68,11 +86,27 @@ function checkRateLimit(ip: string): boolean {
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<ChatResponse>> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    // Rate limiting
+// Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
@@ -85,8 +119,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     }
 
     // Parse request
-    const body: ChatRequest = await request.json();
-    const { message, query, conversationHistory, history, context, preferredProvider } = body;
+    const rawBody = await request.json();
+    const parseResult = chatBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { message, query, conversationHistory, history, context, preferredProvider } = parseResult.data;
 
     // Support both new format (message) and legacy format (query)
     const userMessage = message || query;
@@ -207,26 +248,40 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChatRespo
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/chat' });
 
     // Check if it's a provider error
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
     // Return friendly error with fallback response
     return NextResponse.json({
       success: false,
       response: RESPONSE_TEMPLATES.error,
       message: RESPONSE_TEMPLATES.error, // Legacy support
-      error: errorMessage,
+      error: 'Failed to process chat request',
       latency: Date.now() - startTime,
     });
   }
-}
+});
 
 // =============================================================================
 // GET - Health Check
 // =============================================================================
 
-export async function GET(): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const aiProvider = getAIProvider();
+const aiProvider = getAIProvider();
     const health = await aiProvider.healthCheck();
     const stats = aiProvider.getStats();
 
@@ -242,9 +297,9 @@ export async function GET(): Promise<NextResponse> {
       {
         success: false,
         status: 'unhealthy',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch AI health status',
       },
       { status: 500 }
     );
   }
-}
+});

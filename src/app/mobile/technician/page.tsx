@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   User,
   Clock,
@@ -88,8 +89,8 @@ export default function TechnicianDashboard() {
           const workOrders = workOrdersData.data;
 
           // Calculate stats from work orders
-          const inProgress = workOrders.find((wo: any) => wo.status === 'In Progress' && wo.currentOperation);
-          const pending = workOrders.filter((wo: any) => wo.status === 'Released' || (wo.status === 'In Progress' && !wo.currentOperation));
+          const inProgress = workOrders.find((wo: Record<string, unknown>) => wo.status === 'In Progress' && wo.currentOperation);
+          const pending = workOrders.filter((wo: Record<string, unknown>) => wo.status === 'Released' || (wo.status === 'In Progress' && !wo.currentOperation));
 
           setStats({
             pendingTasks: pending.length,
@@ -114,15 +115,15 @@ export default function TechnicianDashboard() {
           }
 
           // Set pending tasks
-          const tasks: MaintenanceTask[] = pending.slice(0, 5).map((wo: any) => ({
-            id: wo.id,
-            equipmentCode: wo.woNumber,
-            equipmentName: wo.partDescription,
-            type: wo.priority === 'Rush' ? 'Emergency' : 'PM',
-            priority: wo.priority === 'Rush' ? 'URGENT' : wo.priority === 'High' ? 'HIGH' : 'NORMAL',
+          const tasks: MaintenanceTask[] = pending.slice(0, 5).map((wo: Record<string, unknown>) => ({
+            id: wo.id as string,
+            equipmentCode: wo.woNumber as string,
+            equipmentName: wo.partDescription as string,
+            type: (wo.priority === 'Rush' ? 'Emergency' : 'PM') as MaintenanceTask['type'],
+            priority: (wo.priority === 'Rush' ? 'URGENT' : wo.priority === 'High' ? 'HIGH' : 'NORMAL') as MaintenanceTask['priority'],
             description: `${wo.partNumber} - SL: ${wo.qty}`,
-            dueTime: new Date(wo.dueDate).toLocaleDateString('vi-VN'),
-            estimatedMinutes: Math.round((wo.operations?.reduce((sum: number, op: any) => sum + op.plannedHours, 0) || 0) * 60),
+            dueTime: new Date(wo.dueDate as string).toLocaleDateString('vi-VN'),
+            estimatedMinutes: Math.round(((wo.operations as Array<{ plannedHours: number }> | undefined)?.reduce((sum: number, op: { plannedHours: number }) => sum + op.plannedHours, 0) || 0) * 60),
           }));
 
           setPendingTasks(tasks);
@@ -135,7 +136,7 @@ export default function TechnicianDashboard() {
       }
 
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      clientLogger.error('Failed to fetch technician dashboard data', err);
       setError('Không thể tải dữ liệu. Vui lòng thử lại.');
     } finally {
       setLoading(false);

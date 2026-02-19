@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - PERFORMANCE MONITORING API
 // /api/v2/performance/route.ts
@@ -12,13 +11,20 @@ import {
 } from '@/lib/performance/profiler';
 import { getCacheStats } from '@/lib/performance/cache';
 import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // GET /api/v2/performance
 // Get performance metrics and report
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type') || 'summary';
   
@@ -106,19 +112,34 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/performance' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { success: false, error: 'Failed to fetch performance data' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST /api/v2/performance
 // Clear performance data
 // =============================================================================
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+  const bodySchema = z.object({
+    action: z.enum(['clear-profiler', 'gc']),
+  });
+  const rawBody = await request.json();
+  const parseResult = bodySchema.safeParse(rawBody);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+      { status: 400 }
+    );
+  }
+  const body = parseResult.data;
   const { action } = body;
   
   try {
@@ -154,8 +175,8 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/performance' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
+      { success: false, error: 'Failed to process performance action' },
       { status: 500 }
     );
   }
-}
+});

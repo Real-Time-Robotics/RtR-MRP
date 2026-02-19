@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -146,7 +147,7 @@ export function useReorderAlerts(options: UseReorderAlertsOptions = {}) {
         await fetchSummary();
       }
     } catch (err) {
-      console.error('Failed to dismiss alerts:', err);
+      clientLogger.error('Failed to dismiss alerts', err);
     }
   }, [fetchSummary]);
 

@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { kpiService } from '@/lib/analytics';
+import { KPICategory } from '@/lib/analytics/types';
 import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') || undefined;
 
-    const definitions = await kpiService.getKPIDefinitions(category as any);
+    const definitions = await kpiService.getKPIDefinitions(category as KPICategory | undefined);
 
     return NextResponse.json({
       success: true,
@@ -24,13 +31,17 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    await kpiService.seedSystemKPIs();
+await kpiService.seedSystemKPIs();
 
     return NextResponse.json({
       success: true,
@@ -45,4 +56,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

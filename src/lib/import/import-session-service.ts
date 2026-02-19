@@ -2,6 +2,7 @@
 // Import Session Service - Track and manage import sessions
 
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { detectEntityType, autoMapHeaders } from './vietnamese-headers';
 
 // Types
@@ -272,8 +273,31 @@ export async function rollbackImportSession(sessionId: string) {
     },
   });
 
-  // TODO: Implement actual rollback logic based on entity type
-  // This would delete/restore the imported records
+  // Delete imported records grouped by entity type
+  for (const log of logs) {
+    if (!log.entityId) continue;
+    try {
+      switch (log.entityType) {
+        case 'Part':
+          await prisma.part.delete({ where: { id: log.entityId } });
+          break;
+        case 'Supplier':
+          await prisma.supplier.delete({ where: { id: log.entityId } });
+          break;
+        case 'Customer':
+          await prisma.customer.delete({ where: { id: log.entityId } });
+          break;
+        case 'Product':
+          await prisma.product.delete({ where: { id: log.entityId } });
+          break;
+        default:
+          logger.warn(`Rollback not supported for entity type: ${log.entityType}`, { context: 'import-session-service' });
+      }
+    } catch (deleteError) {
+      // Record may have been manually deleted or has dependent records; log and continue
+      logger.warn(`Failed to rollback ${log.entityType} ${log.entityId}`, { context: 'import-session-service', error: String(deleteError) });
+    }
+  }
 
   return prisma.importSession.update({
     where: { id: sessionId },

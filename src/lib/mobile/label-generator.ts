@@ -1,5 +1,6 @@
 // Label generation utilities for printing
 import { generateQRCodeDataURL, generateBarcodeDataURL } from "./qr-generator";
+import { clientLogger } from '@/lib/client-logger';
 
 export interface LabelSize {
   width: number; // in mm
@@ -307,7 +308,7 @@ export async function generateLabelCanvas(
           const barcodeImg = await loadImage(barcodeUrl);
           ctx.drawImage(barcodeImg, x, y);
         } catch (error) {
-          console.error("Failed to generate barcode:", error);
+          clientLogger.error("Failed to generate barcode", error);
         }
         break;
 
@@ -321,7 +322,7 @@ export async function generateLabelCanvas(
           const qrImg = await loadImage(qrUrl);
           ctx.drawImage(qrImg, x, y, qrSize, qrSize);
         } catch (error) {
-          console.error("Failed to generate QR code:", error);
+          clientLogger.error("Failed to generate QR code", error);
         }
         break;
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Card,
   CardContent,
@@ -122,7 +123,9 @@ const getRiskColor = (level: string) => {
   }
 };
 
-const getRiskBadgeVariant = (level: string) => {
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+const getRiskBadgeVariant = (level: string): BadgeVariant => {
   switch (level.toLowerCase()) {
     case 'low':
       return 'default';
@@ -263,7 +266,7 @@ export default function SupplierRiskDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{data.riskProfile.overallRiskScore}</div>
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant={getRiskBadgeVariant(data.riskProfile.overallRiskLevel) as any}>
+              <Badge variant={getRiskBadgeVariant(data.riskProfile.overallRiskLevel)}>
                 {data.riskProfile.overallRiskLevel.toUpperCase()}
               </Badge>
               <span className="text-xs text-muted-foreground">risk level</span>
@@ -392,10 +395,10 @@ export default function SupplierRiskDashboard() {
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Dependency Risk Levels</h4>
               <div className="flex gap-2">
-                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.concentrationRiskLevel || 'medium') as any}>
+                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.concentrationRiskLevel || 'medium')}>
                   Concentration: {data.dependencySummary?.concentrationRiskLevel || 'N/A'}
                 </Badge>
-                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.geographicRiskLevel || 'medium') as any}>
+                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.geographicRiskLevel || 'medium')}>
                   Geographic: {data.dependencySummary?.geographicRiskLevel || 'N/A'}
                 </Badge>
               </div>
@@ -507,7 +510,7 @@ export default function SupplierRiskDashboard() {
                             {supplier.supplierName}
                           </Link>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={getRiskBadgeVariant(supplier.riskLevel) as any}>
+                            <Badge variant={getRiskBadgeVariant(supplier.riskLevel)}>
                               {supplier.riskLevel.toUpperCase()}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
@@ -569,7 +572,7 @@ export default function SupplierRiskDashboard() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium">{risk.title}</h4>
-                            <Badge variant={getRiskBadgeVariant(risk.riskLevel) as any}>
+                            <Badge variant={getRiskBadgeVariant(risk.riskLevel)}>
                               {risk.riskLevel.toUpperCase()}
                             </Badge>
                           </div>
@@ -622,7 +625,7 @@ export default function SupplierRiskDashboard() {
                             {supplier.supplierName}
                           </Link>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={getRiskBadgeVariant(supplier.highestSeverity) as any}>
+                            <Badge variant={getRiskBadgeVariant(supplier.highestSeverity)}>
                               {supplier.highestSeverity}
                             </Badge>
                           </div>
@@ -691,7 +694,7 @@ export default function SupplierRiskDashboard() {
                   });
                   fetchData();
                 } catch (e) {
-                  console.error('Scan failed:', e);
+                  clientLogger.error('Supplier risk scan failed', e);
                 }
               }}
             >

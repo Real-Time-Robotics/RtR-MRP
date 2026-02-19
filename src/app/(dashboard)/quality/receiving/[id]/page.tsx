@@ -17,7 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Inspection {
   id: string;
@@ -101,7 +103,7 @@ export default function ReceivingInspectionDetailPage() {
         setQuantityRejected(String(data.quantityRejected || 0));
       }
     } catch (error) {
-      console.error("Failed to fetch inspection:", error);
+      clientLogger.error("Failed to fetch inspection:", error);
     } finally {
       setLoading(false);
     }
@@ -120,10 +122,10 @@ export default function ReceivingInspectionDetailPage() {
         setInspection(data);
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to update");
+        toast.error(error.error || "Failed to update");
       }
     } catch (error) {
-      console.error("Failed to update:", error);
+      clientLogger.error("Failed to update:", error);
     } finally {
       setUpdating(false);
     }
@@ -131,7 +133,7 @@ export default function ReceivingInspectionDetailPage() {
 
   const handleStartInspection = () => {
     if (!lotNumber.trim()) {
-      alert("Vui lòng nhập số Lot/Batch trước khi bắt đầu kiểm tra");
+      toast.error("Vui lòng nhập số Lot/Batch trước khi bắt đầu kiểm tra");
       return;
     }
     updateInspection({ status: "in_progress", lotNumber: lotNumber.trim() });
@@ -145,29 +147,29 @@ export default function ReceivingInspectionDetailPage() {
 
     // Validation
     if (inspected <= 0) {
-      alert("Số lượng kiểm tra phải lớn hơn 0");
+      toast.error("Số lượng kiểm tra phải lớn hơn 0");
       return;
     }
     if (inspected > received) {
-      alert(`Số lượng kiểm tra (${inspected}) không thể lớn hơn số lượng nhận (${received})`);
+      toast.error(`Số lượng kiểm tra (${inspected}) không thể lớn hơn số lượng nhận (${received})`);
       return;
     }
     if (accepted + rejected !== inspected) {
-      alert(
+      toast.error(
         `Số lượng chấp nhận (${accepted}) + từ chối (${rejected}) phải bằng số lượng kiểm tra (${inspected})`
       );
       return;
     }
     if (result === "PASS" && rejected > 0) {
-      alert("Kết quả ĐẠT không thể có số lượng từ chối > 0");
+      toast.error("Kết quả ĐẠT không thể có số lượng từ chối > 0");
       return;
     }
     if (result === "FAIL" && accepted > 0) {
-      alert("Kết quả KHÔNG ĐẠT không thể có số lượng chấp nhận > 0");
+      toast.error("Kết quả KHÔNG ĐẠT không thể có số lượng chấp nhận > 0");
       return;
     }
     if (result === "CONDITIONAL" && (accepted <= 0 || rejected <= 0)) {
-      alert(
+      toast.error(
         "Chấp nhận có điều kiện phải có cả số lượng chấp nhận và từ chối > 0"
       );
       return;
@@ -240,6 +242,7 @@ export default function ReceivingInspectionDetailPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.push("/quality/receiving")}
+            aria-label="Quay lại"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>

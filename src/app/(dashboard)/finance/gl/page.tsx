@@ -31,7 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface GLAccount {
   id: string;
@@ -100,6 +102,9 @@ function GeneralLedgerContent() {
   const [loading, setLoading] = useState(true);
   const [newJournalOpen, setNewJournalOpen] = useState(showNew);
   const [submitting, setSubmitting] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<GLAccount | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -152,7 +157,7 @@ function GeneralLedgerContent() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch GL data:", error);
+      clientLogger.error("Failed to fetch GL data:", error);
     } finally {
       setLoading(false);
     }
@@ -183,10 +188,10 @@ function GeneralLedgerContent() {
         await fetchData();
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create journal entry");
+        toast.error(error.error || "Failed to create journal entry");
       }
     } catch (error) {
-      console.error("Failed to create journal:", error);
+      clientLogger.error("Failed to create journal:", error);
     } finally {
       setSubmitting(false);
     }
@@ -204,12 +209,41 @@ function GeneralLedgerContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to post journal:", error);
+      clientLogger.error("Failed to post journal:", error);
     }
   };
 
-  const handleEditAccount = (_account: GLAccount) => {
-    // TODO: Implement account edit dialog
+  const handleEditAccount = (account: GLAccount) => {
+    setEditingAccount(account);
+    setEditForm({ name: account.name, description: account.description || "" });
+  };
+
+  const handleSaveAccount = async () => {
+    if (!editingAccount) return;
+    setEditSubmitting(true);
+    try {
+      const res = await fetch("/api/finance/gl/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: editingAccount.id,
+          name: editForm.name,
+          description: editForm.description,
+        }),
+      });
+
+      if (res.ok) {
+        setEditingAccount(null);
+        await fetchData();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || "Failed to update account");
+      }
+    } catch (error) {
+      clientLogger.error("Failed to update account:", error);
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const handleDeleteAccount = async (id: string) => {
@@ -224,7 +258,7 @@ function GeneralLedgerContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to delete account:", error);
+      clientLogger.error("Failed to delete account:", error);
     }
   };
 
@@ -431,6 +465,63 @@ function GeneralLedgerContent() {
             onCancel={() => setNewJournalOpen(false)}
             isSubmitting={submitting}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Account Dialog */}
+      <Dialog
+        open={!!editingAccount}
+        onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Account</DialogTitle>
+          </DialogHeader>
+          {editingAccount && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Account Number</p>
+                <p className="font-mono">{editingAccount.accountNumber}</p>
+              </div>
+              <div>
+                <label htmlFor="edit-name" className="text-sm font-medium">
+                  Name
+                </label>
+                <input
+                  id="edit-name"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-desc" className="text-sm font-medium">
+                  Description
+                </label>
+                <input
+                  id="edit-desc"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setEditingAccount(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAccount} disabled={editSubmitting || !editForm.name.trim()}>
+                  {editSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

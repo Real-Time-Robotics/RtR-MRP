@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TrialBalance } from "@/components/finance";
+import { clientLogger } from '@/lib/client-logger';
 
 type ReportType = "trial-balance" | "income-statement" | "balance-sheet" | "cost-analysis" | "margin-analysis";
 
@@ -73,7 +74,7 @@ function FinanceReportsContent() {
         setReportData(data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch report:", error);
+      clientLogger.error("Failed to fetch report:", error);
     } finally {
       setLoading(false);
     }

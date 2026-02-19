@@ -4,7 +4,78 @@
 // =============================================================================
 
 import { prisma } from '../prisma';
-import { getDocumentOCRService } from './document-ocr-service';
+import { logger } from '@/lib/logger';
+import { getDocumentOCRService, type OCRResult } from './document-ocr-service';
+
+// =============================================================================
+// INTERNAL TYPES
+// =============================================================================
+
+/** Sales order draft data */
+interface SalesOrderDraftData {
+  orderNumber: string;
+  customerCode?: string;
+  customerName: string;
+  customerPO: string;
+  orderDate: string;
+  requiredDate?: string;
+  shippingAddress?: string;
+  paymentTerms?: string;
+  items: ExtractedLineItem[];
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  currency?: string;
+  notes?: string;
+}
+
+/** Purchase order draft data */
+interface PurchaseOrderDraftData {
+  poNumber: string;
+  supplierCode?: string;
+  supplierName: string;
+  quoteReference: string;
+  orderDate: string;
+  expectedDate?: string;
+  leadTimeDays?: number;
+  paymentTerms?: string;
+  items: ExtractedLineItem[];
+  subtotal?: number;
+  tax?: number;
+  total?: number;
+  currency?: string;
+  notes?: string;
+}
+
+/** Raw OCR extracted item from document */
+interface OCRExtractedItem {
+  partNumber?: string;
+  description?: string;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
+}
+
+/** Raw AI-parsed order data */
+interface ParsedOrderJSON {
+  type?: string;
+  poNumber?: string;
+  customerName?: string;
+  contactEmail?: string;
+  deliveryDate?: string;
+  shippingAddress?: string;
+  paymentTerms?: string;
+  items?: OCRExtractedItem[];
+  totalAmount?: number;
+  currency?: string;
+  notes?: string;
+  quoteNumber?: string;
+  supplierName?: string;
+  validUntil?: string;
+  leadTimeDays?: number;
+  moq?: number;
+}
 
 // =============================================================================
 // TYPES
@@ -91,10 +162,10 @@ export interface ExtractedLineItem {
   confidence: number;
 }
 
-export interface DraftOrder {
-  type: 'sales_order' | 'purchase_order';
+export type DraftOrder = SalesOrderDraft | PurchaseOrderDraft;
+
+interface DraftOrderBase {
   status: 'draft';
-  data: any;
   extractedFrom: {
     emailSubject: string;
     emailFrom: string;
@@ -103,6 +174,16 @@ export interface DraftOrder {
   confidence: number;
   requiresReview: boolean;
   reviewNotes: string[];
+}
+
+export interface SalesOrderDraft extends DraftOrderBase {
+  type: 'sales_order';
+  data: SalesOrderDraftData;
+}
+
+export interface PurchaseOrderDraft extends DraftOrderBase {
+  type: 'purchase_order';
+  data: PurchaseOrderDraftData;
 }
 
 // =============================================================================
@@ -156,7 +237,7 @@ class EmailParserService {
     // Calculate overall confidence
     extractedData.confidence = this.calculateOverallConfidence(extractedData);
 
-    console.log(`[EmailParser] Processed in ${Date.now() - startTime}ms, type: ${extractedData.emailType}, confidence: ${extractedData.confidence}`);
+    logger.info(`[EmailParser] Processed in ${Date.now() - startTime}ms, type: ${extractedData.emailType}, confidence: ${extractedData.confidence}`);
 
     return extractedData;
   }
@@ -274,7 +355,7 @@ class EmailParserService {
             results.push(this.convertOCRToExtracted(ocrResult, attachment.filename));
           }
         } catch (error) {
-          console.warn(`[EmailParser] OCR failed for ${attachment.filename}:`, error);
+          logger.warn(`[EmailParser] OCR failed for ${attachment.filename}`, { context: 'email-parser-service', error: String(error) });
         }
       }
     }
@@ -301,7 +382,7 @@ class EmailParserService {
     return compatible.some(type => contentType.toLowerCase().includes(type));
   }
 
-  private convertOCRToExtracted(ocrResult: any, filename: string): ExtractedOrderData {
+  private convertOCRToExtracted(ocrResult: OCRResult, filename: string): ExtractedOrderData {
     const data = ocrResult.extractedData;
     const type = ocrResult.documentType as EmailType;
 
@@ -312,17 +393,18 @@ class EmailParserService {
       warnings: ocrResult.warnings || [],
     };
 
-    if (type === 'customer_po' && data) {
+    if (type === 'customer_po' && data && 'poNumber' in data) {
+      const lineItems = 'lineItems' in data ? data.lineItems : [];
       result.customerPO = {
         poNumber: data.poNumber || '',
         customerName: data.customerName || '',
         customerCode: data.customerCode,
-        contactName: data.contactName,
-        contactEmail: data.contactEmail,
-        deliveryDate: data.deliveryDate,
-        shippingAddress: data.shippingAddress,
+        contactName: data.customerContact,
+        contactEmail: data.customerEmail,
+        deliveryDate: data.requiredDate,
+        shippingAddress: data.shipToAddress,
         paymentTerms: data.paymentTerms,
-        items: (data.items || []).map((item: any, idx: number) => ({
+        items: (lineItems || []).map((item, idx: number) => ({
           lineNumber: idx + 1,
           partNumber: item.partNumber,
           description: item.description || '',
@@ -333,22 +415,23 @@ class EmailParserService {
           confidence: 0.8,
         })),
         subtotal: data.subtotal,
-        tax: data.taxAmount,
-        total: data.totalAmount,
+        tax: data.tax,
+        total: data.total,
         currency: data.currency || 'VND',
         notes: data.notes,
       };
-    } else if (type === 'supplier_quote' && data) {
+    } else if (type === 'supplier_quote' && data && 'quoteNumber' in data) {
+      const lineItems = 'lineItems' in data ? data.lineItems : [];
       result.supplierQuote = {
         quoteNumber: data.quoteNumber || '',
         supplierName: data.supplierName || '',
         supplierCode: data.supplierCode,
-        contactName: data.contactName,
-        contactEmail: data.contactEmail,
+        contactName: data.supplierContact,
+        contactEmail: data.supplierEmail,
         validUntil: data.validUntil,
         leadTimeDays: data.leadTimeDays,
         paymentTerms: data.paymentTerms,
-        items: (data.items || []).map((item: any, idx: number) => ({
+        items: (lineItems || []).map((item, idx: number) => ({
           lineNumber: idx + 1,
           partNumber: item.partNumber,
           description: item.description || '',
@@ -359,10 +442,9 @@ class EmailParserService {
           confidence: 0.8,
         })),
         subtotal: data.subtotal,
-        tax: data.taxAmount,
-        total: data.totalAmount,
+        tax: data.tax,
+        total: data.total,
         currency: data.currency || 'VND',
-        moq: data.moq,
         notes: data.notes,
       };
     }
@@ -379,7 +461,7 @@ class EmailParserService {
     emailType: EmailType
   ): Promise<ExtractedOrderData> {
     if (!this.aiApiKey) {
-      console.warn('[EmailParser] No AI API key, using pattern matching only');
+      logger.warn('[EmailParser] No AI API key, using pattern matching only', { context: 'email-parser-service' });
       return this.extractWithPatterns(email, emailType);
     }
 
@@ -388,7 +470,7 @@ class EmailParserService {
       const response = await this.callGeminiAPI(prompt);
       return this.parseAIResponse(response, emailType);
     } catch (error) {
-      console.error('[EmailParser] AI extraction failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-parser-service', operation: 'aiExtraction' });
       return this.extractWithPatterns(email, emailType);
     }
   }
@@ -471,7 +553,7 @@ For Supplier Quote:
 
   private async callGeminiAPI(prompt: string): Promise<string> {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this.aiModel}:generateContent?key=${this.aiApiKey}`,
+      `${process.env.GOOGLE_AI_API_BASE_URL || 'https://generativelanguage.googleapis.com'}/v1beta/models/${this.aiModel}:generateContent?key=${this.aiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -501,15 +583,15 @@ For Supplier Quote:
     }
 
     try {
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]) as ParsedOrderJSON;
       return this.convertParsedToExtracted(parsed, expectedType);
     } catch (error) {
-      console.error('[EmailParser] Failed to parse AI response:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'email-parser-service', operation: 'parseAIResponse' });
       return this.createEmptyResult(expectedType);
     }
   }
 
-  private convertParsedToExtracted(parsed: any, expectedType: EmailType): ExtractedOrderData {
+  private convertParsedToExtracted(parsed: ParsedOrderJSON, expectedType: EmailType): ExtractedOrderData {
     const type = parsed.type || expectedType;
     const result: ExtractedOrderData = {
       emailType: type as EmailType,
@@ -526,7 +608,7 @@ For Supplier Quote:
         deliveryDate: parsed.deliveryDate,
         shippingAddress: parsed.shippingAddress,
         paymentTerms: parsed.paymentTerms,
-        items: (parsed.items || []).map((item: any, idx: number) => ({
+        items: (parsed.items || []).map((item: OCRExtractedItem, idx: number) => ({
           lineNumber: idx + 1,
           partNumber: item.partNumber,
           description: item.description || '',
@@ -544,7 +626,7 @@ For Supplier Quote:
       // Set field confidence
       if (parsed.poNumber) result.fieldConfidence['poNumber'] = 0.9;
       if (parsed.customerName) result.fieldConfidence['customerName'] = 0.8;
-      if (parsed.items?.length > 0) result.fieldConfidence['items'] = 0.7;
+      if (parsed.items && parsed.items.length > 0) result.fieldConfidence['items'] = 0.7;
     } else if (type === 'supplier_quote') {
       result.supplierQuote = {
         quoteNumber: parsed.quoteNumber || '',
@@ -553,7 +635,7 @@ For Supplier Quote:
         validUntil: parsed.validUntil,
         leadTimeDays: Number(parsed.leadTimeDays) || 0,
         paymentTerms: parsed.paymentTerms,
-        items: (parsed.items || []).map((item: any, idx: number) => ({
+        items: (parsed.items || []).map((item: OCRExtractedItem, idx: number) => ({
           lineNumber: idx + 1,
           partNumber: item.partNumber,
           description: item.description || '',

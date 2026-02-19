@@ -67,7 +67,7 @@ export function WorkCenterCard({
           <Button variant="outline" size="sm" className="flex-1" asChild>
             <Link href={`/production/work-centers/${id}`}>View</Link>
           </Button>
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild aria-label="Cài đặt">
             <Link href={`/production/work-centers/${id}/edit`}>
               <Settings className="h-4 w-4" />
             </Link>

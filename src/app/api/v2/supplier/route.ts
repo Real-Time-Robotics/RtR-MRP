@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // SUPPLIER PORTAL API
 // Provides data for supplier self-service portal - Production Implementation
@@ -303,7 +307,11 @@ function generateDashboardSummary(supplierId: string) {
 //   - page: page number
 //   - limit: items per page
 // =============================================================================
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const view = searchParams.get('view') || 'dashboard';
@@ -430,7 +438,7 @@ export async function GET(request: NextRequest) {
       }
 
       case 'orders': {
-        const where: any = { supplierId };
+        const where: Prisma.PurchaseOrderWhereInput = { supplierId };
         if (status) {
           where.status = status.toLowerCase();
         }
@@ -499,9 +507,9 @@ export async function GET(request: NextRequest) {
       }
 
       case 'invoices': {
-        const where: any = { supplierId };
+        const where: Prisma.PurchaseInvoiceWhereInput = { supplierId };
         if (status) {
-          where.status = status.toLowerCase();
+          where.status = status.toLowerCase() as Prisma.PurchaseInvoiceWhereInput['status'];
         }
 
         const [dbInvoices, total] = await Promise.all([
@@ -572,11 +580,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/supplier' });
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Đã xảy ra lỗi', code: 'SUPPLIER_ERROR' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST /api/v2/supplier
@@ -584,7 +592,11 @@ export async function GET(request: NextRequest) {
 //   - action: 'confirm_order' | 'update_delivery' | 'submit_invoice'
 //   - data: action-specific payload
 // =============================================================================
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const supplierId = await getAuthenticatedSupplierId(request);
 
@@ -595,7 +607,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.enum(['confirm_order', 'update_delivery', 'submit_invoice']),
+      data: z.object({
+        orderId: z.string().optional(),
+        trackingNumber: z.string().optional(),
+        carrier: z.string().optional(),
+        estimatedDate: z.string().optional(),
+        invoiceId: z.string().optional(),
+      }),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, data } = body;
 
     switch (action) {
@@ -699,8 +729,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/supplier' });
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Đã xảy ra lỗi', code: 'SUPPLIER_ERROR' },
       { status: 500 }
     );
   }
-}
+});

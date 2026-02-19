@@ -56,7 +56,7 @@ const DEFAULT_CONFIG: LoggerConfig = {
 // HELPER FUNCTIONS
 // =============================================================================
 
-function maskSensitiveData(data: any, sensitiveFields: string[]): any {
+function maskSensitiveData(data: unknown, sensitiveFields: string[]): unknown {
   if (data === null || data === undefined) {
     return data;
   }

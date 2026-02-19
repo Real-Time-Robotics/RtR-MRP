@@ -39,6 +39,7 @@ import {
   CATEGORY_CONFIG,
 } from '@/lib/reports/report-engine';
 import { SCHEDULED_REPORT_TEMPLATES } from '@/lib/reports/report-templates';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // REPORTS DASHBOARD PAGE
@@ -82,7 +83,7 @@ export default function ReportsPage() {
         setTemplates(data.data.templates);
       }
     } catch (error) {
-      console.error('Failed to fetch templates:', error);
+      clientLogger.error('Failed to fetch templates:', error);
     } finally {
       setLoading(false);
     }
@@ -102,7 +103,7 @@ export default function ReportsPage() {
         setReportData(data.data);
       }
     } catch (error) {
-      console.error('Failed to generate report:', error);
+      clientLogger.error('Failed to generate report:', error);
     } finally {
       setGenerating(false);
     }
@@ -172,7 +173,7 @@ export default function ReportsPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download failed:', error);
+      clientLogger.error('Download failed:', error);
     } finally {
       setDownloading(null);
     }
@@ -203,6 +204,7 @@ export default function ReportsPage() {
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as ReportPeriod)}
+                aria-label="Chọn kỳ báo cáo"
                 className="px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm font-medium focus:ring-2 focus:ring-primary-500"
               >
                 {PERIOD_OPTIONS.map((option) => (

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { clientLogger } from '@/lib/client-logger';
 
 interface HoldInventoryItem {
   id: string;
@@ -61,7 +62,7 @@ export default function HoldManagementPage() {
       const data = await res.json();
       setInventory(data.inventory || []);
     } catch {
-      console.error("Failed to fetch HOLD inventory");
+      clientLogger.error("Failed to fetch HOLD inventory");
     } finally {
       setLoading(false);
     }

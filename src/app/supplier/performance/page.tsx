@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // SUPPLIER PERFORMANCE PAGE
@@ -161,7 +162,7 @@ export default function SupplierPerformancePage() {
         setData(json.data);
       }
     } catch (error) {
-      console.error('Error fetching performance:', error);
+      clientLogger.error('Error fetching performance', error);
     } finally {
       setLoading(false);
     }
@@ -201,6 +202,7 @@ export default function SupplierPerformancePage() {
         <select
           value={selectedPeriod}
           onChange={(e) => setSelectedPeriod(e.target.value)}
+          aria-label="Chọn kỳ"
           className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         >
           <option value="Q4 2025">Q4 2025</option>

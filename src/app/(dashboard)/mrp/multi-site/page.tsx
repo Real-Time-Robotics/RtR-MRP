@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Site {
   id: string;
@@ -111,7 +112,7 @@ export default function MultiSitePage() {
         setSites(data);
       }
     } catch (error) {
-      console.error("Failed to fetch sites:", error);
+      clientLogger.error("Failed to fetch sites:", error);
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +126,7 @@ export default function MultiSitePage() {
         setTransfers(data);
       }
     } catch (error) {
-      console.error("Failed to fetch transfers:", error);
+      clientLogger.error("Failed to fetch transfers:", error);
     }
   };
 
@@ -137,7 +138,7 @@ export default function MultiSitePage() {
         setParts(data);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -158,7 +159,7 @@ export default function MultiSitePage() {
         throw new Error("Failed to create site");
       }
     } catch (error) {
-      console.error("Failed to create site:", error);
+      clientLogger.error("Failed to create site:", error);
       toast({ title: "Failed to create site", variant: "destructive" });
     }
   };
@@ -198,7 +199,7 @@ export default function MultiSitePage() {
         throw new Error("Failed to create transfer");
       }
     } catch (error) {
-      console.error("Failed to create transfer:", error);
+      clientLogger.error("Failed to create transfer:", error);
       toast({ title: "Failed to create transfer order", variant: "destructive" });
     }
   };

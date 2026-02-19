@@ -3,7 +3,13 @@
 // Premium Vietnamese UI with modern minimalist aesthetics
 // =============================================================================
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'RTR MRP - Hệ thống quản lý sản xuất drone chuyên nghiệp',
+  description: 'Nền tảng MRP hàng đầu cho sản xuất UAV công nghiệp. Quản lý BOM đa cấp, theo dõi linh kiện và tuân thủ NDAA.',
+};
 import Image from 'next/image';
 import {
   ArrowRight,
@@ -980,6 +986,7 @@ function Footer() {
               <input
                 type="email"
                 placeholder="Email của bạn"
+                aria-label="Email đăng ký bản tin"
                 className="flex-1 px-3 py-2 text-[14px] border border-gray-200 dark:border-gray-700 rounded-l-lg focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400"
               />
               <button className="px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-200 border border-l-0 border-gray-200 dark:border-gray-700 rounded-r-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">

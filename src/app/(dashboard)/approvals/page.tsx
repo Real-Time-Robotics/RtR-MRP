@@ -27,6 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 interface WorkflowInstance {
   id: string;
@@ -117,7 +118,7 @@ export default function ApprovalsPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
+      clientLogger.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -220,7 +221,8 @@ export default function ApprovalsPage() {
             />
             {search && (
               <button onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Xóa tìm kiếm">
                 <X className="h-4 w-4" />
               </button>
             )}

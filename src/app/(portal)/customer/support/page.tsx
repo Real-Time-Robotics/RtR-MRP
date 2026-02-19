@@ -6,10 +6,11 @@ import {
   Clock, CheckCircle, AlertCircle, User, X,
   Package, Truck, FileText, HelpCircle, ChevronRight
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
+import {
+  CustomerPortalEngine,
   SupportTicket
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // CUSTOMER SUPPORT PAGE
@@ -43,7 +44,7 @@ export default function CustomerSupportPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch tickets:', error);
+      clientLogger.error('Failed to fetch tickets', error);
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +78,7 @@ export default function CustomerSupportPage() {
         fetchTickets();
       }
     } catch (error) {
-      console.error('Failed to create ticket:', error);
+      clientLogger.error('Failed to create ticket', error);
     }
   };
 
@@ -101,7 +102,7 @@ export default function CustomerSupportPage() {
         fetchTickets();
       }
     } catch (error) {
-      console.error('Failed to reply:', error);
+      clientLogger.error('Failed to reply', error);
     }
   };
 
@@ -156,6 +157,7 @@ export default function CustomerSupportPage() {
               <input
                 type="text"
                 placeholder="Tìm ticket..."
+                aria-label="Tìm kiếm"
                 className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
               />
             </div>
@@ -224,7 +226,7 @@ export default function CustomerSupportPage() {
                       {selectedTicket.soNumber && ` • Đơn hàng: ${selectedTicket.soNumber}`}
                     </p>
                   </div>
-                  <button onClick={() => setSelectedTicket(null)} className="lg:hidden">
+                  <button onClick={() => setSelectedTicket(null)} className="lg:hidden" aria-label="Đóng">
                     <X className="w-5 h-5 text-gray-400" />
                   </button>
                 </div>
@@ -268,6 +270,7 @@ export default function CustomerSupportPage() {
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       placeholder="Nhập tin nhắn..."
+                      aria-label="Nhập tin nhắn"
                       className="flex-1 px-4 py-3 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       rows={2}
                     />
@@ -275,6 +278,7 @@ export default function CustomerSupportPage() {
                       onClick={handleReply}
                       disabled={!newMessage.trim()}
                       className="px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      aria-label="Gửi"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -300,7 +304,7 @@ export default function CustomerSupportPage() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold">Tạo ticket hỗ trợ mới</h3>
-                <button onClick={() => setShowNewTicket(false)}>
+                <button onClick={() => setShowNewTicket(false)} aria-label="Đóng">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
@@ -312,6 +316,7 @@ export default function CustomerSupportPage() {
                     <select
                       value={newTicket.category}
                       onChange={(e) => setNewTicket(t => ({ ...t, category: e.target.value as SupportTicket['category'] }))}
+                      aria-label="Danh mục"
                       className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     >
                       <option value="ORDER">Đơn hàng</option>
@@ -326,6 +331,7 @@ export default function CustomerSupportPage() {
                     <select
                       value={newTicket.priority}
                       onChange={(e) => setNewTicket(t => ({ ...t, priority: e.target.value as SupportTicket['priority'] }))}
+                      aria-label="Độ ưu tiên"
                       className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     >
                       <option value="LOW">Thấp</option>
@@ -342,6 +348,7 @@ export default function CustomerSupportPage() {
                     type="text"
                     value={newTicket.soNumber}
                     onChange={(e) => setNewTicket(t => ({ ...t, soNumber: e.target.value }))}
+                    aria-label="Mã đơn hàng"
                     className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     placeholder="VD: SO-2025-0001"
                   />
@@ -353,6 +360,7 @@ export default function CustomerSupportPage() {
                     type="text"
                     value={newTicket.subject}
                     onChange={(e) => setNewTicket(t => ({ ...t, subject: e.target.value }))}
+                    aria-label="Tiêu đề"
                     className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
                     placeholder="Tóm tắt vấn đề của bạn"
                   />
@@ -363,6 +371,7 @@ export default function CustomerSupportPage() {
                   <textarea
                     value={newTicket.description}
                     onChange={(e) => setNewTicket(t => ({ ...t, description: e.target.value }))}
+                    aria-label="Mô tả chi tiết"
                     className="w-full px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl resize-none focus:outline-none"
                     rows={4}
                     placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."

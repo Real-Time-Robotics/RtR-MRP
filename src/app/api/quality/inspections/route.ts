@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { logger } from "@/lib/logger";
 import { generateInspectionNumber } from "@/lib/quality/inspection-engine";
 import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for Inspection creation
 const InspectionCreateSchema = z.object({
@@ -72,12 +73,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
 
@@ -339,4 +339,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

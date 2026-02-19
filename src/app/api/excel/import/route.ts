@@ -1,7 +1,8 @@
 // src/app/api/excel/import/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";import { logger } from '@/lib/logger';
 
 import {
@@ -10,15 +11,15 @@ import {
   detectEntityType,
 } from "@/lib/excel";
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // POST - Upload and parse file, create import job
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const formData = await request.formData();
+  try {
+const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const entityType = formData.get("entityType") as string | null;
     const useAI = formData.get("useAI") !== "false"; // Default to true
@@ -128,17 +129,31 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update mapping and validate data
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { jobId, mappings, entityType, updateMode } = await request.json();
+  try {
+const putBodySchema = z.object({
+      jobId: z.string(),
+      mappings: z.unknown(),
+      entityType: z.string(),
+      updateMode: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = putBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { jobId, mappings, entityType, updateMode } = parseResult.data;
 
     if (!jobId || !mappings || !entityType) {
       return NextResponse.json(
@@ -182,17 +197,16 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // GET - Get import job status
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
 
     if (jobId) {
@@ -226,4 +240,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
