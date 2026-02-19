@@ -223,7 +223,7 @@ export class QualityMetricsCalculator {
     const end = options.endDate || new Date();
     const start = options.startDate || new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       status: 'completed',
       createdAt: { gte: start, lte: end },
     };
@@ -279,7 +279,7 @@ export class QualityMetricsCalculator {
     const end = options.endDate || new Date();
     const start = options.startDate || new Date(end.getTime() - 90 * 24 * 60 * 60 * 1000);
 
-    const inspectionWhere: any = {
+    const inspectionWhere: Record<string, unknown> = {
       type: 'RECEIVING',
       status: 'completed',
       createdAt: { gte: start, lte: end },
@@ -289,7 +289,7 @@ export class QualityMetricsCalculator {
 
     const inspections = await prisma.inspection.findMany({ where: inspectionWhere });
 
-    const ncrWhere: any = { createdAt: { gte: start, lte: end } };
+    const ncrWhere: Record<string, unknown> = { createdAt: { gte: start, lte: end } };
     if (options.partId) ncrWhere.partId = options.partId;
 
     const ncrs = await prisma.nCR.findMany({ where: ncrWhere });

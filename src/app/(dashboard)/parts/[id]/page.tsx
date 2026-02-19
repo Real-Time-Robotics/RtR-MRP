@@ -4,7 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useAIContextSync } from "@/hooks/use-ai-context-sync";
 import Link from "next/link";
-import { PartFormDialog } from "@/components/parts/part-form-dialog";
+import dynamic from 'next/dynamic';
+
+const PartFormDialog = dynamic(
+  () => import('@/components/parts/part-form-dialog').then(m => ({ default: m.PartFormDialog })),
+  { ssr: false, loading: () => null }
+);
 import {
   ArrowLeft,
   Edit2,
@@ -32,6 +37,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { EntityAuditHistory } from "@/components/audit/entity-audit-history";
 import {
   Table,
   TableBody,
@@ -41,6 +47,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -123,7 +130,24 @@ interface Part {
   priceBreakQty3: number | null;
   priceBreakCost3: number | null;
 
+  // Planning (nested from API)
+  planning?: {
+    moq?: number;
+    orderMultiple?: number;
+    standardPack?: number;
+    minStockLevel?: number;
+    reorderPoint?: number;
+    maxStock?: number | null;
+    safetyStock?: number;
+  };
+
   supplier: { id: string; name: string } | null;
+  partSuppliers: Array<{
+    id: string;
+    supplierId: string;
+    isPreferred: boolean;
+    supplier: { id: string; code: string; name: string };
+  }>;
   alternates: Array<{
     id: string;
     alternateType: string;
@@ -257,7 +281,7 @@ export default function PartDetailPage() {
         setPart(data);
       }
     } catch (error) {
-      console.error("Failed to fetch part:", error);
+      clientLogger.error("Failed to fetch part:", error);
     } finally {
       setLoading(false);
     }
@@ -281,7 +305,7 @@ export default function PartDetailPage() {
         setAiError(data.error || "Failed to fetch AI recommendations");
       }
     } catch (error) {
-      console.error("Failed to fetch AI recommendations:", error);
+      clientLogger.error("Failed to fetch AI recommendations:", error);
       setAiError("Failed to connect to AI service");
     } finally {
       setAiLoading(false);
@@ -314,7 +338,7 @@ export default function PartDetailPage() {
         setAiError(data.error || "Failed to apply recommendations");
       }
     } catch (error) {
-      console.error("Failed to apply recommendations:", error);
+      clientLogger.error("Failed to apply recommendations:", error);
       setAiError("Failed to apply recommendations");
     } finally {
       setApplying(false);
@@ -357,7 +381,7 @@ export default function PartDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/parts">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Quay lại">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
@@ -427,7 +451,7 @@ export default function PartDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="procurement">Procurement</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
@@ -439,6 +463,7 @@ export default function PartDetailPage() {
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             AI
           </TabsTrigger>
+          <TabsTrigger value="audit">Lịch sử</TabsTrigger>
           <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
@@ -620,6 +645,16 @@ export default function PartDetailPage() {
                   label="Primary Supplier"
                   value={part.supplier?.name}
                 />
+                {part.partSuppliers && part.partSuppliers.filter(ps => !ps.isPreferred).length > 0 && (
+                  <InfoRow
+                    label="Secondary Suppliers"
+                    value={part.partSuppliers
+                      .filter(ps => !ps.isPreferred)
+                      .map(ps => ps.supplier?.name)
+                      .filter(Boolean)
+                      .join(", ")}
+                  />
+                )}
                 <InfoRow label="Lead Time" value={`${part.leadTimeDays} days`} />
               </CardContent>
             </Card>
@@ -632,13 +667,13 @@ export default function PartDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1">
-                <InfoRow label="MOQ" value={(part as any).planning?.moq ?? part.moq} />
-                <InfoRow label="Order Multiple" value={(part as any).planning?.orderMultiple ?? part.orderMultiple} />
-                <InfoRow label="Standard Pack" value={(part as any).planning?.standardPack ?? part.standardPack} />
-                <InfoRow label="Min Stock Level" value={(part as any).planning?.minStockLevel ?? part.minStockLevel} />
-                <InfoRow label="Reorder Point" value={(part as any).planning?.reorderPoint ?? part.reorderPoint} />
-                <InfoRow label="Max Stock" value={(part as any).planning?.maxStock ?? part.maxStock} />
-                <InfoRow label="Safety Stock" value={(part as any).planning?.safetyStock ?? part.safetyStock} />
+                <InfoRow label="MOQ" value={part.planning?.moq ?? part.moq} />
+                <InfoRow label="Order Multiple" value={part.planning?.orderMultiple ?? part.orderMultiple} />
+                <InfoRow label="Standard Pack" value={part.planning?.standardPack ?? part.standardPack} />
+                <InfoRow label="Min Stock Level" value={part.planning?.minStockLevel ?? part.minStockLevel} />
+                <InfoRow label="Reorder Point" value={part.planning?.reorderPoint ?? part.reorderPoint} />
+                <InfoRow label="Max Stock" value={part.planning?.maxStock ?? part.maxStock} />
+                <InfoRow label="Safety Stock" value={part.planning?.safetyStock ?? part.safetyStock} />
               </CardContent>
             </Card>
 
@@ -1402,6 +1437,11 @@ export default function PartDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        {/* Audit Trail Tab */}
+        <TabsContent value="audit" className="mt-4">
+          <EntityAuditHistory entityType="Part" entityId={part.id} title="Lịch sử thay đổi" />
         </TabsContent>
 
         {/* Discussions Tab */}

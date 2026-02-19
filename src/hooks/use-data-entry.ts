@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { clientLogger } from '@/lib/client-logger';
 
 /**
  * Configuration for the useDataEntry hook
@@ -10,12 +11,12 @@ interface UseDataEntryConfig<T> {
      * Async function to submit data to the API.
      * Should throw an error if submission fails.
      */
-    onSubmit: (data: T) => Promise<any>;
+    onSubmit: (data: T) => Promise<unknown>;
 
     /**
      * Callback to run after successful submission (e.g., refresh list).
      */
-    onSuccess?: (response: any) => void;
+    onSuccess?: (response: unknown) => void;
 
     /**
      * Custom success message.
@@ -69,9 +70,9 @@ export function useDataEntry<T>({
 
                 close();
                 return true;
-            } catch (err: any) {
-                console.error('Data Entry Error:', err);
-                const msg = err.message || errorMessage;
+            } catch (err: unknown) {
+                clientLogger.error('Data Entry Error', err);
+                const msg = err instanceof Error ? err.message : errorMessage;
                 setError(msg);
                 toast.error(msg);
                 return false;

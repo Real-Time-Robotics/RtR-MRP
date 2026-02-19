@@ -7,6 +7,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "./prisma";
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // PASSWORD POLICY
@@ -97,10 +98,10 @@ async function incrementFailedAttempts(userId: string): Promise<void> {
           lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS),
         },
       });
-      console.warn(`[AUTH] Account locked due to failed attempts: ${userId}`);
+      logger.warn(`[AUTH] Account locked due to failed attempts: ${userId}`, { context: 'auth' });
     }
   } catch (error) {
-    console.error('[AUTH] Failed to increment failed attempts:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'auth', operation: 'incrementFailedAttempts' });
   }
 }
 
@@ -115,13 +116,23 @@ async function resetFailedAttempts(userId: string): Promise<void> {
       },
     });
   } catch (error) {
-    console.error('[AUTH] Failed to reset failed attempts:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'auth', operation: 'resetFailedAttempts' });
   }
 }
 
 // =============================================================================
 // NEXTAUTH CONFIGURATION
 // =============================================================================
+
+// =============================================================================
+// SSO PROVIDER (conditional)
+// =============================================================================
+
+function getSSOProvider(): never[] {
+  // SSO via @prismy/sso is not available in this build.
+  // To enable, install @prismy/sso and set ENABLE_SUPABASE_SSO=true.
+  return [];
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -134,7 +145,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.warn('[AUTH] Login attempt with missing credentials');
+          logger.warn('[AUTH] Login attempt with missing credentials', { context: 'auth' });
           return null;
         }
 
@@ -157,26 +168,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!user) {
-            console.warn(`[AUTH] Login attempt for non-existent user: ${email}`);
+            logger.warn(`[AUTH] Login attempt for non-existent user: ${email}`, { context: 'auth' });
             return null;
           }
 
           // Check if account is locked
           const lockStatus = await checkAccountLock(user.id);
           if (lockStatus.locked) {
-            console.warn(`[AUTH] Login attempt for locked account: ${email}`);
+            logger.warn(`[AUTH] Login attempt for locked account: ${email}`, { context: 'auth' });
             throw new Error(lockStatus.message);
           }
 
           // Check if user is active
           if (user.status !== "active") {
-            console.warn(`[AUTH] Login attempt for inactive user: ${email}`);
+            logger.warn(`[AUTH] Login attempt for inactive user: ${email}`, { context: 'auth' });
             return null;
           }
 
           // Verify password
           if (!user.password) {
-            console.warn(`[AUTH] User has no password set: ${email}`);
+            logger.warn(`[AUTH] User has no password set: ${email}`, { context: 'auth' });
             return null;
           }
 
@@ -186,7 +197,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           );
 
           if (!isValid) {
-            console.warn(`[AUTH] Invalid password for user: ${email}`);
+            logger.warn(`[AUTH] Invalid password for user: ${email}`, { context: 'auth' });
             await incrementFailedAttempts(user.id);
             return null;
           }
@@ -212,17 +223,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (error instanceof Error && error.message === 'MFA_REQUIRED') {
             throw error;
           }
-          console.error('[AUTH] Login error:', error);
+          logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'auth', operation: 'login' });
           return null;
         }
       },
     }),
+    ...getSSOProvider(),
   ],
   callbacks: {
     async signIn({ user }) {
       // Validate user object exists with required fields
       if (!user || !user.id) {
-        console.error('[AUTH] SignIn callback: Invalid user object');
+        logger.error('[AUTH] SignIn callback: Invalid user object', { context: 'auth' });
         return false;
       }
       return true;

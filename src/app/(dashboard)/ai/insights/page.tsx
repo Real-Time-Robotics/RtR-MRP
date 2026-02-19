@@ -20,6 +20,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // AI INSIGHTS PAGE
@@ -113,7 +114,7 @@ export default function AIInsightsPage() {
         setAnomalies(anomaliesJson.data.anomalies);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      clientLogger.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -229,6 +230,7 @@ export default function AIInsightsPage() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
+            aria-label="Bộ lọc mức ưu tiên"
             className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm"
           >
             <option value="ALL">All Priorities</option>

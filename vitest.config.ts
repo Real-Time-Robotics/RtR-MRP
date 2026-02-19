@@ -29,6 +29,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Stub out optional nodemailer dep that isn't installed
+      'nodemailer': path.resolve(__dirname, './src/__tests__/__mocks__/nodemailer.ts'),
     },
   },
 })

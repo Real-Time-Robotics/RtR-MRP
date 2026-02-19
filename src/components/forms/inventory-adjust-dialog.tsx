@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Package, ArrowRightLeft, Plus, Minus, RefreshCw, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -88,17 +90,6 @@ interface InventoryAdjustDialogProps {
   onSuccess?: () => void;
 }
 
-const ADJUSTMENT_REASONS = [
-  'Điều chỉnh tồn kho',
-  'Kiểm kê định kỳ',
-  'Hàng hư hỏng',
-  'Hàng hết hạn',
-  'Nhập kho bổ sung',
-  'Xuất kho nội bộ',
-  'Sai số liệu',
-  'Khác',
-];
-
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -109,10 +100,22 @@ export function InventoryAdjustDialog({
   inventoryItem,
   onSuccess,
 }: InventoryAdjustDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [parts, setParts] = useState<Part[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [activeTab, setActiveTab] = useState<'adjust' | 'transfer'>('adjust');
+
+  const ADJUSTMENT_REASONS = [
+    { value: 'inventory_adjust', label: t('adjReason.inventoryAdjust') },
+    { value: 'cycle_counting', label: t('adjReason.cycleCounting') },
+    { value: 'damaged', label: t('adjReason.damaged') },
+    { value: 'expired', label: t('adjReason.expired') },
+    { value: 'additional_receipt', label: t('adjReason.additionalReceipt') },
+    { value: 'internal_issue', label: t('adjReason.internalIssue') },
+    { value: 'data_error', label: t('adjReason.dataError') },
+    { value: 'other', label: t('adjReason.other') },
+  ];
 
   // Adjustment form
   const adjustForm = useForm<AdjustmentFormData>({
@@ -156,7 +159,7 @@ export function InventoryAdjustDialog({
         setParts(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch parts:', error);
+      clientLogger.error('Failed to fetch parts', error);
     }
   };
 
@@ -168,7 +171,7 @@ export function InventoryAdjustDialog({
         setWarehouses(result.data || result || []);
       }
     } catch (error) {
-      console.error('Failed to fetch warehouses:', error);
+      clientLogger.error('Failed to fetch warehouses', error);
     }
   };
 
@@ -233,15 +236,15 @@ export function InventoryAdjustDialog({
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success('Điều chỉnh tồn kho thành công!');
+      toast.success(t('invAdjust.adjustSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to adjust inventory:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      clientLogger.error('Failed to adjust inventory', error);
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -251,7 +254,7 @@ export function InventoryAdjustDialog({
     if (data.fromWarehouseId === data.toWarehouseId) {
       transferForm.setError('toWarehouseId', {
         type: 'manual',
-        message: 'Kho đích phải khác kho nguồn',
+        message: t('invAdjust.destDifferent'),
       });
       return;
     }
@@ -277,15 +280,15 @@ export function InventoryAdjustDialog({
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success('Chuyển kho thành công!');
+      toast.success(t('invAdjust.transferSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to transfer inventory:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      clientLogger.error('Failed to transfer inventory', error);
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -312,12 +315,12 @@ export function InventoryAdjustDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Điều chỉnh tồn kho
+            {t('invAdjust.title')}
           </DialogTitle>
           <DialogDescription>
             {inventoryItem
-              ? `Điều chỉnh cho ${inventoryItem.partNumber} - ${inventoryItem.name}`
-              : 'Điều chỉnh hoặc chuyển kho cho part'}
+              ? t('invAdjust.descForItem', { partNumber: inventoryItem.partNumber, name: inventoryItem.name })
+              : t('invAdjust.descGeneral')}
           </DialogDescription>
         </DialogHeader>
 
@@ -325,11 +328,11 @@ export function InventoryAdjustDialog({
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="adjust" className="flex items-center gap-1">
               <RefreshCw className="h-4 w-4" />
-              Điều chỉnh
+              {t('invAdjust.tabAdjust')}
             </TabsTrigger>
             <TabsTrigger value="transfer" className="flex items-center gap-1">
               <ArrowRightLeft className="h-4 w-4" />
-              Chuyển kho
+              {t('invAdjust.tabTransfer')}
             </TabsTrigger>
           </TabsList>
 
@@ -343,7 +346,7 @@ export function InventoryAdjustDialog({
                     name="partId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Part *</FormLabel>
+                        <FormLabel>{t('invAdjust.part')}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -351,7 +354,7 @@ export function InventoryAdjustDialog({
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Chọn part" />
+                              <SelectValue placeholder={t('invAdjust.selectPart')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -372,7 +375,7 @@ export function InventoryAdjustDialog({
                     name="warehouseId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Kho *</FormLabel>
+                        <FormLabel>{t('invAdjust.warehouse')}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -380,7 +383,7 @@ export function InventoryAdjustDialog({
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Chọn kho" />
+                              <SelectValue placeholder={t('invAdjust.selectWarehouse')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -402,7 +405,7 @@ export function InventoryAdjustDialog({
                   name="adjustmentType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Loại điều chỉnh</FormLabel>
+                      <FormLabel>{t('invAdjust.adjustType')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -413,34 +416,34 @@ export function InventoryAdjustDialog({
                           <SelectItem value="add">
                             <span className="flex items-center gap-2">
                               <Plus className="h-4 w-4 text-green-600" />
-                              Cộng thêm
+                              {t('invAdjust.add')}
                             </span>
                           </SelectItem>
                           <SelectItem value="subtract">
                             <span className="flex items-center gap-2">
                               <Minus className="h-4 w-4 text-red-600" />
-                              Trừ bớt
+                              {t('invAdjust.subtract')}
                             </span>
                           </SelectItem>
                           <SelectItem value="set">
                             <span className="flex items-center gap-2">
                               <Target className="h-4 w-4 text-blue-600" />
-                              Đặt giá trị
+                              {t('invAdjust.setValue')}
                             </span>
                           </SelectItem>
                           <SelectItem value="cycle_count">
                             <span className="flex items-center gap-2">
                               <RefreshCw className="h-4 w-4 text-purple-600" />
-                              Kiểm kê
+                              {t('invAdjust.cycleCount')}
                             </span>
                           </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        {adjustForm.watch('adjustmentType') === 'add' && 'Cộng thêm số lượng vào tồn kho'}
-                        {adjustForm.watch('adjustmentType') === 'subtract' && 'Trừ bớt số lượng từ tồn kho'}
-                        {adjustForm.watch('adjustmentType') === 'set' && 'Đặt số lượng tồn kho về giá trị cụ thể'}
-                        {adjustForm.watch('adjustmentType') === 'cycle_count' && 'Cập nhật số lượng theo kết quả kiểm kê'}
+                        {adjustForm.watch('adjustmentType') === 'add' && t('invAdjust.addDesc')}
+                        {adjustForm.watch('adjustmentType') === 'subtract' && t('invAdjust.subtractDesc')}
+                        {adjustForm.watch('adjustmentType') === 'set' && t('invAdjust.setDesc')}
+                        {adjustForm.watch('adjustmentType') === 'cycle_count' && t('invAdjust.cycleCountDesc')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -452,13 +455,13 @@ export function InventoryAdjustDialog({
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Số lượng *</FormLabel>
+                      <FormLabel>{t('invAdjust.quantity')}</FormLabel>
                       <FormControl>
                         <Input type="number" min={0} {...field} />
                       </FormControl>
                       {inventoryItem && (
                         <FormDescription>
-                          Tồn kho hiện tại: {inventoryItem.quantity}
+                          {t('invAdjust.currentStock', { quantity: String(inventoryItem.quantity) })}
                         </FormDescription>
                       )}
                       <FormMessage />
@@ -471,17 +474,17 @@ export function InventoryAdjustDialog({
                   name="reason"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lý do *</FormLabel>
+                      <FormLabel>{t('invAdjust.reason')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn lý do" />
+                            <SelectValue placeholder={t('invAdjust.selectReason')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {ADJUSTMENT_REASONS.map((reason) => (
-                            <SelectItem key={reason} value={reason}>
-                              {reason}
+                            <SelectItem key={reason.value} value={reason.value}>
+                              {reason.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -496,7 +499,7 @@ export function InventoryAdjustDialog({
                   name="reference"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mã tham chiếu</FormLabel>
+                      <FormLabel>{t('invAdjust.reference')}</FormLabel>
                       <FormControl>
                         <Input placeholder="VD: INV-2024-001" {...field} />
                       </FormControl>
@@ -510,9 +513,9 @@ export function InventoryAdjustDialog({
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ghi chú</FormLabel>
+                      <FormLabel>{t('invAdjust.notes')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Ghi chú thêm..." {...field} />
+                        <Textarea placeholder={t('invAdjust.notesPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -526,11 +529,11 @@ export function InventoryAdjustDialog({
                     onClick={() => onOpenChange(false)}
                     disabled={loading}
                   >
-                    Hủy
+                    {t('form.cancel')}
                   </Button>
                   <Button type="submit" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Điều chỉnh
+                    {t('invAdjust.adjustBtn')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -546,7 +549,7 @@ export function InventoryAdjustDialog({
                   name="partId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Part *</FormLabel>
+                      <FormLabel>{t('invAdjust.part')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -554,7 +557,7 @@ export function InventoryAdjustDialog({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn part" />
+                            <SelectValue placeholder={t('invAdjust.selectPart')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -576,7 +579,7 @@ export function InventoryAdjustDialog({
                     name="fromWarehouseId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Từ kho *</FormLabel>
+                        <FormLabel>{t('invAdjust.fromWarehouse')}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -584,7 +587,7 @@ export function InventoryAdjustDialog({
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Kho nguồn" />
+                              <SelectValue placeholder={t('invAdjust.fromPlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -605,11 +608,11 @@ export function InventoryAdjustDialog({
                     name="toWarehouseId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Đến kho *</FormLabel>
+                        <FormLabel>{t('invAdjust.toWarehouse')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Kho đích" />
+                              <SelectValue placeholder={t('invAdjust.toPlaceholder')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -633,13 +636,13 @@ export function InventoryAdjustDialog({
                   name="quantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Số lượng chuyển *</FormLabel>
+                      <FormLabel>{t('invAdjust.transferQty')}</FormLabel>
                       <FormControl>
                         <Input type="number" min={1} {...field} />
                       </FormControl>
                       {inventoryItem && (
                         <FormDescription>
-                          Tồn kho tại kho nguồn: {inventoryItem.quantity}
+                          {t('invAdjust.sourceStock', { quantity: String(inventoryItem.quantity) })}
                         </FormDescription>
                       )}
                       <FormMessage />
@@ -652,9 +655,9 @@ export function InventoryAdjustDialog({
                   name="reason"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lý do chuyển</FormLabel>
+                      <FormLabel>{t('invAdjust.transferReason')}</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Lý do chuyển kho..." {...field} />
+                        <Textarea placeholder={t('invAdjust.transferReasonPlaceholder')} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -668,12 +671,12 @@ export function InventoryAdjustDialog({
                     onClick={() => onOpenChange(false)}
                     disabled={loading}
                   >
-                    Hủy
+                    {t('form.cancel')}
                   </Button>
                   <Button type="submit" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <ArrowRightLeft className="mr-2 h-4 w-4" />
-                    Chuyển kho
+                    {t('invAdjust.transferBtn')}
                   </Button>
                 </DialogFooter>
               </form>

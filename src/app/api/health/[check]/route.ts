@@ -4,12 +4,13 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  checkLiveness, 
-  checkReadiness, 
+import {
+  checkLiveness,
+  checkReadiness,
   checkHealth,
-  getHealthHttpStatus 
+  getHealthHttpStatus
 } from '@/lib/monitoring/health';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/health/live
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(health, { status: getHealthHttpStatus(health) });
     
   } catch (error) {
-    console.error('[HEALTH] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/health/[check]' });
     return NextResponse.json(
       {
         status: 'unhealthy',

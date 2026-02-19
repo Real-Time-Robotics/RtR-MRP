@@ -34,6 +34,22 @@ export {
   getARAging,
 } from "./invoicing";
 
+// Work Order Cost Accumulation
+export {
+  recordMaterialCost,
+  recordLaborCost,
+  getWOCostSummary,
+  calculateVariance,
+} from "./wo-cost-service";
+
+// MISA Export
+export {
+  exportToMISA,
+  exportPurchaseInvoicesToMISA,
+  exportSalesInvoicesToMISA,
+  generateMISACSV,
+} from "./misa-export-service";
+
 // General Ledger
 export {
   createJournalEntry,

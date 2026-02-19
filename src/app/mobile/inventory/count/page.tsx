@@ -2,19 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  ClipboardCheck, 
-  Package, 
-  MapPin, 
-  Scan, 
-  Check, 
-  Loader2, 
+import { clientLogger } from '@/lib/client-logger';
+import {
+  ClipboardCheck,
+  Package,
+  MapPin,
+  Scan,
+  Check,
+  Loader2,
   AlertCircle,
   Plus,
   Trash2,
   Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // =============================================================================
 // MOBILE CYCLE COUNT PAGE
@@ -99,22 +101,39 @@ export default function MobileInventoryCountPage() {
         const data = await response.json();
         setError(data.error || 'Lỗi khi gửi kiểm kê');
       }
-    } catch {
+    } catch (error) {
+      clientLogger.error('Failed to submit inventory count', error);
       setError('Lỗi kết nối');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Mock: Add sample items for demo
+  const [isLoadingItems, setIsLoadingItems] = useState(true);
+
+  // Fetch cycle count items from API
   useEffect(() => {
-    // Pre-populate with sample data
-    const sampleItems: CountItem[] = [
-      { id: '1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor', location: 'WH-01-R01-C01-S01', systemQty: 100, countedQty: null },
-      { id: '2', partNumber: 'RTR-ESC-002', description: 'ESC Controller 30A', location: 'WH-01-R01-C01-S01', systemQty: 80, countedQty: null },
-      { id: '3', partNumber: 'RTR-FRAME-003', description: 'Carbon Fiber Frame', location: 'WH-01-R01-C02-S01', systemQty: 45, countedQty: null },
-    ];
-    setCountItems(sampleItems);
+    async function fetchCycleCountItems() {
+      try {
+        const res = await fetch('/api/inventory/cycle-count?maxItems=20');
+        if (!res.ok) throw new Error('Không thể tải danh sách kiểm kê');
+        const json = await res.json();
+        const items: CountItem[] = (json.data || []).map((item: { id: string; partNumber?: string; part?: { partNumber?: string; name?: string }; description?: string; locationCode?: string; quantity?: number; systemQty?: number }) => ({
+          id: item.id,
+          partNumber: item.partNumber || item.part?.partNumber || '',
+          description: item.description || item.part?.name || '',
+          location: item.locationCode || '',
+          systemQty: item.quantity ?? item.systemQty ?? 0,
+          countedQty: null,
+        }));
+        setCountItems(items);
+      } catch (err) {
+        toast.error('Lỗi tải danh sách kiểm kê');
+      } finally {
+        setIsLoadingItems(false);
+      }
+    }
+    fetchCycleCountItems();
   }, []);
 
   if (success) {
@@ -163,7 +182,12 @@ export default function MobileInventoryCountPage() {
 
       {/* Count Items */}
       <div className="flex-1 overflow-auto p-4 space-y-3">
-        {countItems.length === 0 ? (
+        {isLoadingItems ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            <span className="ml-2 text-gray-500">Đang tải danh sách kiểm kê...</span>
+          </div>
+        ) : countItems.length === 0 ? (
           <div className="text-center py-12">
             <ClipboardCheck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">Chưa có items để kiểm kê</p>
@@ -234,6 +258,7 @@ export default function MobileInventoryCountPage() {
                         value={item.countedQty ?? ''}
                         onChange={(e) => updateCount(item.id, parseInt(e.target.value) || 0)}
                         placeholder={String(item.systemQty)}
+                        aria-label="Số lượng kiểm đếm"
                         className="w-16 h-10 text-center text-lg font-bold bg-gray-100 dark:bg-gray-700 rounded-lg"
                       />
                       <button
@@ -297,7 +322,10 @@ export default function MobileInventoryCountPage() {
             className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Đang xử lý...
+              </>
             ) : (
               <>
                 <Save className="w-5 h-5" />

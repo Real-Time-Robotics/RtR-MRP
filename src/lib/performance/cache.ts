@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - ADVANCED CACHING LAYER
 // Multi-tier caching with Redis and in-memory cache
@@ -170,7 +169,7 @@ class LRUCache<T> {
 // GLOBAL MEMORY CACHE INSTANCE
 // =============================================================================
 
-const memoryCache = new LRUCache<any>(5000);
+const memoryCache = new LRUCache<unknown>(5000);
 
 // =============================================================================
 // CACHE KEY BUILDERS
@@ -217,7 +216,7 @@ export const CacheKeys = {
 /**
  * Generate cache key from filters
  */
-export function filtersToKey(filters: Record<string, any>): string {
+export function filtersToKey(filters: Record<string, unknown>): string {
   const sorted = Object.keys(filters)
     .sort()
     .map(k => `${k}:${filters[k]}`)
@@ -333,7 +332,8 @@ export async function cacheAside<T>(
 /**
  * Memoize function result
  */
-export function memoize<T extends (...args: any[]) => Promise<any>>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic function wrapper requires flexible signature
+export function memoize<T extends (...args: never[]) => Promise<unknown>>(
   fn: T,
   keyFn: (...args: Parameters<T>) => string,
   options: CacheOptions = {}
@@ -341,7 +341,7 @@ export function memoize<T extends (...args: any[]) => Promise<any>>(
   return (async (...args: Parameters<T>) => {
     const key = keyFn(...args);
     return cacheAside(key, () => fn(...args), options);
-  }) as T;
+  }) as unknown as T;
 }
 
 // =============================================================================
@@ -353,22 +353,22 @@ export function memoize<T extends (...args: any[]) => Promise<any>>(
  */
 export function Cached(options: CacheOptions & { keyPrefix: string }) {
   return function (
-    target: any,
+    _target: unknown,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
-    const originalMethod = descriptor.value;
-    
-    descriptor.value = async function (...args: any[]) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
+
+    descriptor.value = async function (this: unknown, ...args: unknown[]) {
       const key = `${options.keyPrefix}:${propertyKey}:${JSON.stringify(args)}`;
-      
+
       return cacheAside(
         key,
         () => originalMethod.apply(this, args),
         options
       );
     };
-    
+
     return descriptor;
   };
 }
@@ -378,21 +378,21 @@ export function Cached(options: CacheOptions & { keyPrefix: string }) {
  */
 export function InvalidatesCache(patterns: string[]) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: unknown,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
-    const originalMethod = descriptor.value;
-    
-    descriptor.value = async function (...args: any[]) {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
+
+    descriptor.value = async function (this: unknown, ...args: unknown[]) {
       const result = await originalMethod.apply(this, args);
-      
+
       // Invalidate cache patterns
       await Promise.all(patterns.map(p => cacheDeletePattern(p)));
-      
+
       return result;
     };
-    
+
     return descriptor;
   };
 }

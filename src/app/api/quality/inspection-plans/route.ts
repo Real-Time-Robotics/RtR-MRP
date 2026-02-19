@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { generateInspectionPlanNumber } from "@/lib/quality/inspection-engine";
+import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for Inspection Characteristic
 const CharacteristicSchema = z.object({
   name: z.string().min(1, "Tên là bắt buộc").max(100),
@@ -34,14 +37,21 @@ const InspectionPlanCreateSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const search = searchParams.get("search");
+    const { page, pageSize } = parsePaginationParams(request);
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["planNumber", "name", "description"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (type) where.type = type;
     if (status) where.status = status;
 
@@ -66,7 +76,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
-    console.error("Lỗi tải danh sách kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspection-plans' });
     return NextResponse.json(
       { error: "Lỗi tải danh sách kế hoạch kiểm tra" },
       { status: 500 }
@@ -74,12 +84,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
 
     const body = await request.json();
 
@@ -158,10 +168,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(plan, { status: 201 });
   } catch (error) {
-    console.error("Lỗi tạo kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/inspection-plans' });
     return NextResponse.json(
       { error: "Lỗi tạo kế hoạch kiểm tra" },
       { status: 500 }
     );
   }
-}
+});

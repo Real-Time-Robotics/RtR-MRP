@@ -28,21 +28,12 @@ import { ChartOfAccounts, JournalEntryForm, TrialBalance } from "@/components/fi
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface GLAccount {
   id: string;
@@ -94,7 +85,7 @@ interface TrialBalanceData {
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
     </div>
   );
 }
@@ -111,19 +102,9 @@ function GeneralLedgerContent() {
   const [loading, setLoading] = useState(true);
   const [newJournalOpen, setNewJournalOpen] = useState(showNew);
   const [submitting, setSubmitting] = useState(false);
-  const [editAccountOpen, setEditAccountOpen] = useState(false);
-  const [newAccountOpen, setNewAccountOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<GLAccount | null>(null);
-  const [accountFormData, setAccountFormData] = useState({
-    accountNumber: "",
-    name: "",
-    description: "",
-    accountType: "ASSET",
-    accountCategory: "CURRENT",
-    normalBalance: "DEBIT",
-    isActive: true,
-    parentId: "",
-  });
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -176,7 +157,7 @@ function GeneralLedgerContent() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch GL data:", error);
+      clientLogger.error("Failed to fetch GL data:", error);
     } finally {
       setLoading(false);
     }
@@ -207,10 +188,10 @@ function GeneralLedgerContent() {
         await fetchData();
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create journal entry");
+        toast.error(error.error || "Failed to create journal entry");
       }
     } catch (error) {
-      console.error("Failed to create journal:", error);
+      clientLogger.error("Failed to create journal:", error);
     } finally {
       setSubmitting(false);
     }
@@ -228,69 +209,40 @@ function GeneralLedgerContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to post journal:", error);
+      clientLogger.error("Failed to post journal:", error);
     }
   };
 
   const handleEditAccount = (account: GLAccount) => {
     setEditingAccount(account);
-    setAccountFormData({
-      accountNumber: account.accountNumber,
-      name: account.name,
-      description: account.description || "",
-      accountType: account.accountType,
-      accountCategory: account.accountCategory,
-      normalBalance: account.normalBalance,
-      isActive: account.isActive,
-      parentId: account.parentId || "",
-    });
-    setEditAccountOpen(true);
+    setEditForm({ name: account.name, description: account.description || "" });
   };
 
-  const handleNewAccount = () => {
-    setEditingAccount(null);
-    setAccountFormData({
-      accountNumber: "",
-      name: "",
-      description: "",
-      accountType: "ASSET",
-      accountCategory: "CURRENT",
-      normalBalance: "DEBIT",
-      isActive: true,
-      parentId: "",
-    });
-    setNewAccountOpen(true);
-  };
-
-  const submitAccountForm = async () => {
-    setSubmitting(true);
+  const handleSaveAccount = async () => {
+    if (!editingAccount) return;
+    setEditSubmitting(true);
     try {
-      const isEdit = editingAccount !== null;
-      const url = "/api/finance/gl/accounts";
-      const method = isEdit ? "PUT" : "POST";
-
-      const body = isEdit
-        ? { id: editingAccount.id, ...accountFormData }
-        : accountFormData;
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch("/api/finance/gl/accounts", {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          accountId: editingAccount.id,
+          name: editForm.name,
+          description: editForm.description,
+        }),
       });
 
       if (res.ok) {
-        setEditAccountOpen(false);
-        setNewAccountOpen(false);
+        setEditingAccount(null);
         await fetchData();
       } else {
         const error = await res.json();
-        alert(error.error || `Failed to ${isEdit ? "update" : "create"} account`);
+        toast.error(error.error || "Failed to update account");
       }
     } catch (error) {
-      console.error("Failed to submit account:", error);
+      clientLogger.error("Failed to update account:", error);
     } finally {
-      setSubmitting(false);
+      setEditSubmitting(false);
     }
   };
 
@@ -306,7 +258,7 @@ function GeneralLedgerContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to delete account:", error);
+      clientLogger.error("Failed to delete account:", error);
     }
   };
 
@@ -314,7 +266,7 @@ function GeneralLedgerContent() {
     switch (status) {
       case "POSTED":
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-success-100 text-success-800">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Posted
           </Badge>
@@ -378,7 +330,7 @@ function GeneralLedgerContent() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Chart of Accounts</CardTitle>
-              <Button variant="outline" size="sm" onClick={handleNewAccount}>
+              <Button variant="outline" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Account
               </Button>
@@ -516,214 +468,60 @@ function GeneralLedgerContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Account Edit/New Dialog */}
+      {/* Edit Account Dialog */}
       <Dialog
-        open={editAccountOpen || newAccountOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditAccountOpen(false);
-            setNewAccountOpen(false);
-          }
-        }}
+        open={!!editingAccount}
+        onOpenChange={(open) => { if (!open) setEditingAccount(null); }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {editingAccount ? "Edit Account" : "New Account"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingAccount
-                ? "Update the account details below"
-                : "Fill in the details to create a new GL account"}
-            </DialogDescription>
+            <DialogTitle>Edit Account</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Account Number *</Label>
-                <Input
-                  value={accountFormData.accountNumber}
-                  onChange={(e) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      accountNumber: e.target.value,
-                    })
-                  }
-                  placeholder="e.g., 1100"
-                  disabled={editingAccount?.isSystemAccount}
+          {editingAccount && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Account Number</p>
+                <p className="font-mono">{editingAccount.accountNumber}</p>
+              </div>
+              <div>
+                <label htmlFor="edit-name" className="text-sm font-medium">
+                  Name
+                </label>
+                <input
+                  id="edit-name"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Account Name *</Label>
-                <Input
-                  value={accountFormData.name}
-                  onChange={(e) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      name: e.target.value,
-                    })
-                  }
-                  placeholder="e.g., Cash on Hand"
+              <div>
+                <label htmlFor="edit-desc" className="text-sm font-medium">
+                  Description
+                </label>
+                <input
+                  id="edit-desc"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                value={accountFormData.description}
-                onChange={(e) =>
-                  setAccountFormData({
-                    ...accountFormData,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Optional description"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Account Type *</Label>
-                <Select
-                  value={accountFormData.accountType}
-                  onValueChange={(value) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      accountType: value,
-                      normalBalance:
-                        value === "ASSET" || value === "EXPENSE"
-                          ? "DEBIT"
-                          : "CREDIT",
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ASSET">Asset</SelectItem>
-                    <SelectItem value="LIABILITY">Liability</SelectItem>
-                    <SelectItem value="EQUITY">Equity</SelectItem>
-                    <SelectItem value="REVENUE">Revenue</SelectItem>
-                    <SelectItem value="EXPENSE">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={accountFormData.accountCategory}
-                  onValueChange={(value) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      accountCategory: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CURRENT">Current</SelectItem>
-                    <SelectItem value="NON_CURRENT">Non-Current</SelectItem>
-                    <SelectItem value="OPERATING">Operating</SelectItem>
-                    <SelectItem value="NON_OPERATING">Non-Operating</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setEditingAccount(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAccount} disabled={editSubmitting || !editForm.name.trim()}>
+                  {editSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Normal Balance</Label>
-                <Select
-                  value={accountFormData.normalBalance}
-                  onValueChange={(value) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      normalBalance: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DEBIT">Debit</SelectItem>
-                    <SelectItem value="CREDIT">Credit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Parent Account</Label>
-                <Select
-                  value={accountFormData.parentId || "none"}
-                  onValueChange={(value) =>
-                    setAccountFormData({
-                      ...accountFormData,
-                      parentId: value === "none" ? "" : value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="No parent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Parent</SelectItem>
-                    {accounts
-                      .filter((a) => a.id !== editingAccount?.id)
-                      .map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.accountNumber} - {account.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                checked={accountFormData.isActive}
-                onCheckedChange={(checked) =>
-                  setAccountFormData({
-                    ...accountFormData,
-                    isActive: checked,
-                  })
-                }
-              />
-              <Label htmlFor="isActive">Active</Label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditAccountOpen(false);
-                  setNewAccountOpen(false);
-                }}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={submitAccountForm}
-                disabled={
-                  submitting ||
-                  !accountFormData.accountNumber ||
-                  !accountFormData.name
-                }
-              >
-                {submitting
-                  ? "Saving..."
-                  : editingAccount
-                  ? "Update Account"
-                  : "Create Account"}
-              </Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

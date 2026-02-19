@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { clientLogger } from '@/lib/client-logger'
 import { ThreadItem } from './ThreadItem'
 import { NewThreadModal } from './NewThreadModal'
 import { MessageSquarePlus, Loader2, RefreshCw } from 'lucide-react'
@@ -50,7 +51,7 @@ export function ThreadList({
       const data = await res.json()
       setThreads(data.data || [])
     } catch (error) {
-      console.error('Failed to fetch threads:', error)
+      clientLogger.error('Failed to fetch threads', error)
     } finally {
       setLoading(false)
     }
@@ -98,12 +99,13 @@ export function ThreadList({
             onClick={fetchThreads}
             className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-slate transition-colors"
             title="Làm mới"
+            aria-label="Làm mới"
           >
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setShowNewModal(true)}
-            className="h-7 px-2.5 flex items-center gap-1.5 bg-info-cyan text-steel-dark text-[11px] font-medium hover:bg-info-cyan/80 transition-colors"
+            className="h-9 px-2.5 flex items-center gap-1.5 bg-info-cyan text-steel-dark text-xs font-medium hover:bg-info-cyan/80 transition-colors"
           >
             <MessageSquarePlus className="w-3.5 h-3.5" />
             Tạo mới

@@ -4,14 +4,15 @@ import React from "react";
 import { KPIWidget } from "./KPIWidget";
 import { ChartWidget } from "./ChartWidget";
 import { TableWidget } from "./TableWidget";
-import type { DashboardWidget, WidgetData } from "@/lib/analytics/types";
+import type { DashboardWidget, WidgetData, KPIValue, ChartData } from "@/lib/analytics/types";
+import type { TableColumn, TableRow } from "./TableWidget";
 
 export interface WidgetRendererProps {
   widget: DashboardWidget;
   data?: WidgetData | null;
   onConfigure?: (widget: DashboardWidget) => void;
   onRemove?: (widgetId: string) => void;
-  onDrillDown?: (widget: DashboardWidget, item: any) => void;
+  onDrillDown?: (widget: DashboardWidget, item: { id?: string; entityId?: string } | null) => void;
 }
 
 export function WidgetRenderer({
@@ -21,8 +22,9 @@ export function WidgetRenderer({
   onRemove,
   onDrillDown,
 }: WidgetRendererProps) {
-  const handleDrillDown = (item: any) => {
-    onDrillDown?.(widget, item);
+  const handleDrillDown = (item: unknown) => {
+    const drillItem = item as { id?: string; entityId?: string } | null;
+    onDrillDown?.(widget, drillItem);
   };
 
   switch (widget.widgetType) {
@@ -33,7 +35,7 @@ export function WidgetRenderer({
           title={widget.title}
           titleVi={widget.titleVi}
           metric={widget.metric || ""}
-          initialData={data?.data}
+          initialData={data?.data as KPIValue | null | undefined}
           showTrend={widget.displayConfig.showTrend}
           showSparkline={widget.displayConfig.showTrend}
           showTarget={true}
@@ -53,7 +55,7 @@ export function WidgetRenderer({
           title={widget.title}
           titleVi={widget.titleVi}
           widgetType={widget.widgetType}
-          initialData={data?.data}
+          initialData={data?.data as ChartData | null | undefined}
           displayConfig={widget.displayConfig}
           refreshInterval={widget.refreshInterval}
           onDrillDown={widget.drillDownConfig?.enabled ? handleDrillDown : undefined}
@@ -66,7 +68,7 @@ export function WidgetRenderer({
           id={widget.id}
           title={widget.title}
           titleVi={widget.titleVi}
-          initialData={data?.data}
+          initialData={data?.data as { columns: TableColumn[]; rows: TableRow[] } | null | undefined}
           refreshInterval={widget.refreshInterval}
           onRowClick={widget.drillDownConfig?.enabled ? handleDrillDown : undefined}
         />
@@ -80,7 +82,7 @@ export function WidgetRenderer({
           title={widget.title}
           titleVi={widget.titleVi}
           metric={widget.metric || ""}
-          initialData={data?.data}
+          initialData={data?.data as KPIValue | null | undefined}
           showTrend={false}
           showSparkline={false}
           showTarget={true}
@@ -95,7 +97,7 @@ export function WidgetRenderer({
           title={widget.title}
           titleVi={widget.titleVi}
           metric={widget.metric || ""}
-          initialData={data?.data}
+          initialData={data?.data as KPIValue | null | undefined}
           showTrend={true}
           showSparkline={true}
           showTarget={false}

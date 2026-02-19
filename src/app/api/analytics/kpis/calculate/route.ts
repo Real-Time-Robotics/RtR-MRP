@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { kpiService } from '@/lib/analytics';
+import { KPICalculationParams } from '@/lib/analytics/types';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const calculateSchema = z.object({
   codes: z.array(z.string()).min(1),
   params: z.object({
@@ -15,11 +19,15 @@ const calculateSchema = z.object({
   }).optional(),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const body = await request.json();
+const body = await request.json();
     const parsed = calculateSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -30,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { codes, params } = parsed.data;
-    const results = await kpiService.calculateKPIs(codes, params as any);
+    const results = await kpiService.calculateKPIs(codes, params as KPICalculationParams);
 
     return NextResponse.json({
       success: true,
@@ -39,10 +47,10 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error calculating KPIs:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/kpis/calculate' });
     return NextResponse.json(
       { success: false, error: 'Failed to calculate KPIs' },
       { status: 500 }
     );
   }
-}
+});

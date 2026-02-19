@@ -3,27 +3,38 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getScenarioBuilder,
   getImpactAnalyzer,
   getAIScenarioAnalyzer,
 } from '@/lib/ai/simulation';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // In-memory cache (shared with main route - in production use Redis)
 const simulationCache = new Map<string, any>();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
 
     // Check cache first
     const cached = simulationCache.get(id);
@@ -36,26 +47,46 @@ export async function GET(
       { status: 404 }
     );
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to fetch result' },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { id } = await params;
-    const body = await request.json();
+  try {
+const { id } = await context.params;
+    const bodySchema = z.object({
+      action: z.enum(['generateExecutiveSummary', 'generateWhatIfQuestions', 'export']),
+      format: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
 
     // Get cached result
@@ -107,7 +138,7 @@ export async function POST(
           const timeline = cached.simulationResult?.timeline || [];
           const csv = [
             'Week,Date,Demand,Supply,Inventory,CapacityUsed,CapacityAvailable,Stockouts',
-            ...timeline.map((t: any) =>
+            ...timeline.map((t: { week: number; date: string; demand: number; supply: number; inventory: number; capacityUsed: number; capacityAvailable: number; stockouts: number }) =>
               [t.week, t.date, t.demand, t.supply, t.inventory, t.capacityUsed, t.capacityAvailable, t.stockouts].join(',')
             ),
           ].join('\n');
@@ -133,25 +164,33 @@ export async function POST(
         );
     }
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
 
     const deleted = simulationCache.delete(id);
 
@@ -160,10 +199,10 @@ export async function DELETE(
       message: deleted ? 'Result deleted' : 'Result not found',
     });
   } catch (error) {
-    console.error('[Results API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/simulation/results/[id]' });
     return NextResponse.json(
       { error: 'Failed to delete result' },
       { status: 500 }
     );
   }
-}
+});

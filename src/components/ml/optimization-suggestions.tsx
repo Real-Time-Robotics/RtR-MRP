@@ -337,6 +337,7 @@ export function OptimizationSuggestions() {
                             variant="ghost"
                             className="h-7 text-xs"
                             onClick={() => setAppliedIds(prev => new Set([...prev, id]))}
+                            aria-label="Dismiss"
                           >
                             <X className="w-3 h-3" />
                           </Button>

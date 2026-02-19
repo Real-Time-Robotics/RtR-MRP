@@ -39,7 +39,7 @@ interface ProcessedDocument {
   createdEntities: string[];
 }
 
-const documentTypeInfo: Record<DocumentType, { label: string; icon: any; color: string }> = {
+const documentTypeInfo: Record<DocumentType, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
   supplier_quote: { label: 'Báo giá NCC', icon: Building2, color: 'blue' },
   customer_po: { label: 'Đơn hàng KH', icon: ShoppingCart, color: 'green' },
   invoice: { label: 'Hóa đơn', icon: Receipt, color: 'purple' },
@@ -58,7 +58,24 @@ export default function DocumentsPage() {
     setRecentDocuments([]);
   }, []);
 
-  const handleProcessComplete = (result: any) => {
+  const handleProcessComplete = (result: {
+    success: boolean;
+    documentType: DocumentType;
+    confidence: number;
+    extractedData: Record<string, unknown>;
+    processingTime: number;
+    warnings?: string[];
+    error?: string;
+    createdEntities?: {
+      supplier?: { name: string };
+      customer?: { name: string };
+      salesOrder?: { orderNumber: string; lineCount: number };
+      quote?: { quoteNumber: string; itemCount: number };
+      invoice?: { invoiceNumber: string };
+      certificate?: { certificateNumber: string };
+      pendingReview?: { reason: string };
+    };
+  }) => {
     if (result.success) {
       const newDoc: ProcessedDocument = {
         id: Date.now().toString(),
@@ -95,9 +112,9 @@ export default function DocumentsPage() {
               <button
                 onClick={() => setActiveTab('upload')}
                 className={cn(
-                  'h-7 px-3 text-[11px] font-medium flex items-center gap-1.5 transition-colors',
+                  'h-9 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors',
                   activeTab === 'upload'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary-600 text-white'
                     : 'bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 )}
               >
@@ -107,9 +124,9 @@ export default function DocumentsPage() {
               <button
                 onClick={() => setActiveTab('history')}
                 className={cn(
-                  'h-7 px-3 text-[11px] font-medium flex items-center gap-1.5 transition-colors',
+                  'h-9 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors',
                   activeTab === 'history'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary-600 text-white'
                     : 'bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 )}
               >
@@ -199,11 +216,11 @@ export default function DocumentsPage() {
                             </p>
                           </div>
                           {doc.status === 'success' ? (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <CheckCircle className="w-4 h-4 text-success-500" />
                           ) : doc.status === 'partial' ? (
-                            <Clock className="w-4 h-4 text-yellow-500" />
+                            <Clock className="w-4 h-4 text-warning-500" />
                           ) : (
-                            <XCircle className="w-4 h-4 text-red-500" />
+                            <XCircle className="w-4 h-4 text-danger-500" />
                           )}
                         </div>
                       );
@@ -213,11 +230,11 @@ export default function DocumentsPage() {
               )}
 
               {/* Tips */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded">
-                <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-400 mb-2">
+              <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 p-4 rounded">
+                <h3 className="text-sm font-semibold text-primary-800 dark:text-primary-400 mb-2">
                   Mẹo sử dụng
                 </h3>
-                <ul className="space-y-1 text-[11px] text-blue-700 dark:text-blue-500">
+                <ul className="space-y-1 text-[11px] text-primary-700 dark:text-primary-500">
                   <li>• Chụp ảnh rõ nét, đủ ánh sáng</li>
                   <li>• Tài liệu nằm ngang, không bị che</li>
                   <li>• Hỗ trợ tiếng Việt và tiếng Anh</li>
@@ -239,7 +256,8 @@ export default function DocumentsPage() {
                   <input
                     type="text"
                     placeholder="Tìm kiếm..."
-                    className="h-7 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-[11px] focus:ring-2 focus:ring-blue-500 rounded"
+                    aria-label="Tìm kiếm"
+                    className="h-9 pl-8 pr-3 bg-gray-100 dark:bg-gray-700 border-0 text-xs focus:ring-2 focus:ring-primary-500 rounded"
                   />
                 </div>
               </div>
@@ -254,7 +272,7 @@ export default function DocumentsPage() {
                 </p>
                 <button
                   onClick={() => setActiveTab('upload')}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded hover:bg-primary-700"
                 >
                   Tải lên ngay
                 </button>
@@ -306,10 +324,10 @@ export default function DocumentsPage() {
                               className={cn(
                                 'text-[11px] font-medium',
                                 doc.confidence >= 0.9
-                                  ? 'text-green-600'
+                                  ? 'text-success-600'
                                   : doc.confidence >= 0.7
-                                  ? 'text-yellow-600'
-                                  : 'text-red-600'
+                                  ? 'text-warning-600'
+                                  : 'text-danger-600'
                               )}
                             >
                               {Math.round(doc.confidence * 100)}%
@@ -323,7 +341,7 @@ export default function DocumentsPage() {
                               {doc.createdEntities.map((entity) => (
                                 <span
                                   key={entity}
-                                  className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] rounded"
+                                  className="px-1.5 py-0.5 bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400 text-[10px] rounded"
                                 >
                                   {entity}
                                 </span>
@@ -335,11 +353,11 @@ export default function DocumentsPage() {
                           </td>
                           <td className="px-3 py-2 text-center">
                             {doc.status === 'success' ? (
-                              <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
+                              <CheckCircle className="w-4 h-4 text-success-500 mx-auto" />
                             ) : doc.status === 'partial' ? (
-                              <Clock className="w-4 h-4 text-yellow-500 mx-auto" />
+                              <Clock className="w-4 h-4 text-warning-500 mx-auto" />
                             ) : (
-                              <XCircle className="w-4 h-4 text-red-500 mx-auto" />
+                              <XCircle className="w-4 h-4 text-danger-500 mx-auto" />
                             )}
                           </td>
                         </tr>

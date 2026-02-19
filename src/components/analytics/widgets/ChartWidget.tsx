@@ -47,7 +47,7 @@ export interface ChartWidgetProps {
   initialData?: ChartData | null;
   displayConfig?: WidgetDisplayConfig;
   refreshInterval?: number;
-  onDrillDown?: (item: any) => void;
+  onDrillDown?: (item: unknown) => void;
   className?: string;
 }
 
@@ -120,12 +120,23 @@ export function ChartWidget({
   };
 
   // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipPayloadItem {
+    color: string;
+    name: string;
+    value: number;
+    dataKey: string;
+  }
+
+  const CustomTooltip = ({ active, payload, label }: {
+    active?: boolean;
+    payload?: TooltipPayloadItem[];
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-popover border rounded-lg px-3 py-2 shadow-lg">
           <p className="text-sm font-medium text-foreground">{label}</p>
-          {payload.map((item: any, index: number) => (
+          {payload.map((item, index: number) => (
             <p
               key={index}
               className="text-sm"
@@ -144,7 +155,7 @@ export function ChartWidget({
   const renderLineChart = () => {
     if (!data?.data) return null;
 
-    const chartData = data.data as any[];
+    const chartData = data.data as Record<string, string | number>[];
     const series = data.series || [{ key: "value", name: "Giá trị" }];
 
     return (
@@ -239,12 +250,13 @@ export function ChartWidget({
     if (!data?.data) return null;
 
     const chartData = data.data as ChartDataPoint[];
+    const pieData = chartData.map(d => ({ name: d.name, value: d.value, color: d.color }));
 
     return (
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
-            data={chartData as any}
+            data={pieData}
             dataKey="value"
             nameKey="name"
             cx="50%"
@@ -282,7 +294,7 @@ export function ChartWidget({
   const renderAreaChart = () => {
     if (!data?.data) return null;
 
-    const chartData = data.data as any[];
+    const chartData = data.data as Record<string, string | number>[];
     const series = data.series || [{ key: "value", name: "Giá trị" }];
 
     return (

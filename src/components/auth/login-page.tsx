@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-context';
 import { authConfig } from '@/lib/auth/auth-types';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // LOGIN PAGE
@@ -26,6 +27,7 @@ import { authConfig } from '@/lib/auth/auth-types';
 export function LoginPage() {
   const router = useRouter();
   const { login, status, error: authError } = useAuth();
+  const { t } = useLanguage();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,13 +51,13 @@ export function LoginPage() {
 
     // Validation
     if (!email.trim()) {
-      setError('Vui lòng nhập email');
+      setError(t('login.emailRequired'));
       setIsLoading(false);
       return;
     }
 
     if (!password) {
-      setError('Vui lòng nhập mật khẩu');
+      setError(t('login.passwordRequired'));
       setIsLoading(false);
       return;
     }
@@ -69,7 +71,7 @@ export function LoginPage() {
         router.push(authConfig.dashboardPath);
       }, 500);
     } else {
-      setError(result.error || 'Đăng nhập thất bại');
+      setError(result.error || t('login.failed'));
     }
 
     setIsLoading(false);
@@ -111,10 +113,10 @@ export function LoginPage() {
               <Factory className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              RTR MRP System
+              {t('login.title')}
             </h1>
             <p className="text-gray-500 mt-1">
-              Đăng nhập để tiếp tục
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -132,14 +134,14 @@ export function LoginPage() {
             {success && (
               <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <p className="text-sm text-green-700 dark:text-green-400">Đăng nhập thành công! Đang chuyển hướng...</p>
+                <p className="text-sm text-green-700 dark:text-green-400">{t('login.success')}</p>
               </div>
             )}
 
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                {t('login.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -148,6 +150,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
+                  aria-label={t('login.email')}
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   disabled={isLoading}
                 />
@@ -158,13 +161,13 @@ export function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Mật khẩu
+                  {t('login.password')}
                 </label>
                 <Link
                   href={authConfig.forgotPasswordPath}
                   className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400"
                 >
-                  Quên mật khẩu?
+                  {t('login.forgotPassword')}
                 </Link>
               </div>
               <div className="relative">
@@ -174,6 +177,7 @@ export function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  aria-label={t('login.password')}
                   className="w-full pl-12 pr-12 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   disabled={isLoading}
                 />
@@ -197,7 +201,7 @@ export function LoginPage() {
                 className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
               />
               <label htmlFor="remember" className="text-sm text-gray-600 dark:text-gray-400">
-                Ghi nhớ đăng nhập
+                {t('login.rememberMe')}
               </label>
             </div>
 
@@ -210,16 +214,16 @@ export function LoginPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Đang đăng nhập...
+                  {t('login.signingIn')}
                 </>
               ) : success ? (
                 <>
                   <CheckCircle className="w-5 h-5" />
-                  Thành công!
+                  {t('login.successBtn')}
                 </>
               ) : (
                 <>
-                  Đăng nhập
+                  {t('login.signIn')}
                   <ChevronRight className="w-5 h-5" />
                 </>
               )}
@@ -228,7 +232,7 @@ export function LoginPage() {
 
           {/* Demo Accounts */}
           <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 mb-3 font-medium uppercase">Tài khoản demo</p>
+            <p className="text-xs text-gray-500 mb-3 font-medium uppercase">{t('login.demoAccounts')}</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -263,12 +267,12 @@ export function LoginPage() {
 
           {/* Register Link */}
           <p className="text-center text-sm text-gray-500 mt-6">
-            Chưa có tài khoản?{' '}
+            {t('login.noAccount')}{' '}
             <Link
               href={authConfig.registerPath}
               className="text-purple-600 hover:text-purple-700 font-medium"
             >
-              Đăng ký ngay
+              {t('login.register')}
             </Link>
           </p>
         </div>
@@ -278,10 +282,10 @@ export function LoginPage() {
       <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-700 p-12 items-center justify-center">
         <div className="max-w-lg text-white">
           <h2 className="text-4xl font-bold mb-6">
-            Quản lý sản xuất thông minh
+            {t('login.brandHeading')}
           </h2>
           <p className="text-lg text-purple-100 mb-8">
-            Hệ thống MRP toàn diện giúp bạn quản lý đơn hàng, tồn kho, sản xuất và chất lượng một cách hiệu quả.
+            {t('login.brandDesc')}
           </p>
 
           <div className="space-y-4">
@@ -290,8 +294,8 @@ export function LoginPage() {
                 <CheckCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-semibold">Quản lý đơn hàng</h3>
-                <p className="text-sm text-purple-200">Theo dõi từ đặt hàng đến giao hàng</p>
+                <h3 className="font-semibold">{t('login.feature1')}</h3>
+                <p className="text-sm text-purple-200">{t('login.feature1Desc')}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -299,8 +303,8 @@ export function LoginPage() {
                 <CheckCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-semibold">Tồn kho real-time</h3>
-                <p className="text-sm text-purple-200">Cập nhật tức thì, cảnh báo thông minh</p>
+                <h3 className="font-semibold">{t('login.feature2')}</h3>
+                <p className="text-sm text-purple-200">{t('login.feature2Desc')}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -308,8 +312,8 @@ export function LoginPage() {
                 <CheckCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-semibold">MRP tự động</h3>
-                <p className="text-sm text-purple-200">Tính toán nhu cầu vật tư chính xác</p>
+                <h3 className="font-semibold">{t('login.feature3')}</h3>
+                <p className="text-sm text-purple-200">{t('login.feature3Desc')}</p>
               </div>
             </div>
           </div>

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { generateCAPANumber } from "@/lib/quality/capa-workflow";
+import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for CAPA creation
 const CAPACreateSchema = z.object({
@@ -22,10 +25,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const type = searchParams.get("type");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const search = searchParams.get("search");
+    const { page, pageSize } = parsePaginationParams(request);
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["capaNumber", "title", "description", "sourceReference"]);
+    const where: Record<string, unknown> = {
+      ...searchQuery,
+    };
     if (status && status !== "all") where.status = status;
     if (type && type !== "all") where.type = type;
 
@@ -48,17 +54,16 @@ export async function GET(request: NextRequest) {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
-    console.error("Lỗi tải danh sách CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/capa' });
     return NextResponse.json({ error: "Lỗi tải danh sách CAPA" }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
 
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(capa, { status: 201 });
   } catch (error) {
-    console.error("Lỗi tạo CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/capa' });
     return NextResponse.json({ error: "Lỗi tạo CAPA" }, { status: 500 });
   }
-}
+});

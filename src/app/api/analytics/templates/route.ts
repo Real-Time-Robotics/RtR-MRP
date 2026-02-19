@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService } from '@/lib/analytics';
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const templates = await dashboardService.getTemplates();
+const templates = await dashboardService.getTemplates();
 
     return NextResponse.json({
       success: true,
@@ -14,19 +21,23 @@ export async function GET(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching templates:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/templates' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch templates' },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    await dashboardService.seedTemplates();
+await dashboardService.seedTemplates();
 
     return NextResponse.json({
       success: true,
@@ -35,10 +46,10 @@ export async function POST(request: NextRequest) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error seeding templates:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/templates' });
     return NextResponse.json(
       { success: false, error: 'Failed to seed templates' },
       { status: 500 }
     );
   }
-}
+});

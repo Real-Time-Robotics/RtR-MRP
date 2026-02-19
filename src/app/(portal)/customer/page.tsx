@@ -7,11 +7,12 @@ import {
   Clock, CheckCircle, Package, ChevronRight, RefreshCw,
   Star, Calendar, DollarSign, Award, TrendingUp, Eye
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
-  CustomerDashboard, 
-  SalesOrder 
+import {
+  CustomerPortalEngine,
+  CustomerDashboard,
+  SalesOrder
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // CUSTOMER DASHBOARD
@@ -31,7 +32,7 @@ export default function CustomerDashboardPage() {
         setDashboard(result.data);
       }
     } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
+      clientLogger.error('Failed to fetch dashboard', error);
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +86,7 @@ export default function CustomerDashboardPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link href="/customer/orders">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 transition-all cursor-pointer">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))] hover:border-emerald-300 transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                 <ShoppingCart className="w-6 h-6 text-blue-600" />
@@ -102,7 +103,7 @@ export default function CustomerDashboardPage() {
         </Link>
 
         <Link href="/customer/deliveries">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 transition-all cursor-pointer">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))] hover:border-emerald-300 transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
                 <Truck className="w-6 h-6 text-purple-600" />
@@ -114,7 +115,7 @@ export default function CustomerDashboardPage() {
         </Link>
 
         <Link href="/customer/invoices">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 transition-all cursor-pointer">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))] hover:border-emerald-300 transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
                 <FileText className="w-6 h-6 text-yellow-600" />
@@ -131,7 +132,7 @@ export default function CustomerDashboardPage() {
         </Link>
 
         <Link href="/customer/support">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 hover:border-emerald-300 transition-all cursor-pointer">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))] hover:border-emerald-300 transition-all cursor-pointer">
             <div className="flex items-center justify-between">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
                 <MessageSquare className="w-6 h-6 text-green-600" />
@@ -153,7 +154,7 @@ export default function CustomerDashboardPage() {
           <div className="space-y-2">
             {notifications.filter(n => !n.read).map(notif => (
               <Link key={notif.id} href={notif.actionUrl || '#'}>
-                <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-center justify-between p-3 bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-xl hover:bg-gray-50 dark:hover:bg-[rgb(var(--sidebar-item-hover))]">
                   <div className="flex items-center gap-3">
                     {notif.type === 'ORDER_STATUS' && <Package className="w-5 h-5 text-blue-500" />}
                     {notif.type === 'DELIVERY_UPDATE' && <Truck className="w-5 h-5 text-purple-500" />}
@@ -174,8 +175,8 @@ export default function CustomerDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Orders */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))]">
+          <div className="p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))] flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-blue-500" />
               Đơn hàng gần đây
@@ -210,7 +211,7 @@ export default function CustomerDashboardPage() {
                         <span>Tiến độ sản xuất</span>
                         <span>{order.productionProgress}%</span>
                       </div>
-                      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-purple-500 rounded-full" 
                           style={{ width: `${order.productionProgress}%` }}
@@ -235,8 +236,8 @@ export default function CustomerDashboardPage() {
         </div>
 
         {/* Upcoming Deliveries */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))]">
+          <div className="p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))] flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
               <Truck className="w-5 h-5 text-purple-500" />
               Giao hàng sắp đến
@@ -287,8 +288,8 @@ export default function CustomerDashboardPage() {
 
       {/* Pending Invoices */}
       {pendingInvoices.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))]">
+          <div className="p-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))] flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2">
               <FileText className="w-5 h-5 text-yellow-500" />
               Hóa đơn chờ thanh toán
@@ -349,7 +350,7 @@ export default function CustomerDashboardPage() {
       )}
 
       {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border border-gray-200 dark:border-[rgb(var(--border-primary))] p-4">
         <h3 className="font-semibold mb-4">Thao tác nhanh</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link href="/customer/orders">

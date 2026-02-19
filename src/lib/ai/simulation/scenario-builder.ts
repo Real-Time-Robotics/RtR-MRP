@@ -333,7 +333,7 @@ export class ScenarioBuilder {
     overrides: {
       name?: string;
       createdBy?: string;
-      parameterOverrides?: Record<string, any>;
+      parameterOverrides?: Record<string, unknown>;
     } = {}
   ): Scenario | null {
     const template = SCENARIO_TEMPLATES.find((t) => t.id === templateId);
@@ -680,11 +680,16 @@ export class ScenarioBuilder {
    * Load historical scenario data from database
    */
   async loadBaselineData(scenarioId: string): Promise<{
-    inventory: any[];
-    openOrders: any[];
-    plannedOrders: any[];
-    workOrders: any[];
-    capacity: any[];
+    inventory: Array<{ partId: string; quantity: number }>;
+    openOrders: Array<Record<string, unknown>>;
+    plannedOrders: Array<Record<string, unknown>>;
+    workOrders: Array<Record<string, unknown>>;
+    capacity: Array<{
+      workCenterId: string;
+      name: string;
+      dailyCapacityHours: number;
+      efficiency: number | null;
+    }>;
   }> {
     const [inventory, salesOrders, purchaseOrders, workOrders, workCenters] = await Promise.all([
       prisma.inventory.groupBy({
@@ -734,7 +739,7 @@ export class ScenarioBuilder {
 
   private applyParameterOverrides(
     config: ScenarioConfig,
-    overrides: Record<string, any>
+    overrides: Record<string, unknown>
   ): ScenarioConfig {
     const cloned = JSON.parse(JSON.stringify(config));
 

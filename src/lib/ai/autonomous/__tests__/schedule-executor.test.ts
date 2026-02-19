@@ -34,13 +34,13 @@ describe('ScheduleExecutor', () => {
   const createTestSuggestion = (
     overrides: Partial<ScheduleSuggestion> = {}
   ): ScheduleSuggestion => ({
-    id: 'sugg-1',
+    id: 'suggestion-1',
     workOrderId: 'wo-1',
     woNumber: 'WO-001',
     productName: 'Test Product',
     currentSchedule: {
-      workCenterId: null,
-      workCenterName: null,
+      workCenterId: 'wc-1',
+      workCenterName: 'Work Center 1',
       startDate: new Date(),
       endDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
     },
@@ -52,19 +52,19 @@ describe('ScheduleExecutor', () => {
     },
     operations: [],
     changeType: 'reschedule',
-    priority: 50,
     reason: 'Optimization',
-    confidenceScore: 85,
-    createdAt: new Date(),
     impact: {
       onTimeDeliveryChange: 5,
       capacityUtilizationChange: 3,
-      setupTimeChange: -1,
+      setupTimeChange: 0,
       conflictsResolved: 0,
       affectedWorkOrders: [],
     },
+    priority: 50,
+    confidenceScore: 85,
+    createdAt: new Date(),
     ...overrides,
-  });
+  } as ScheduleSuggestion);
 
   const createTestScheduleResult = (
     overrides: Partial<ScheduleResult> = {}
@@ -86,14 +86,14 @@ describe('ScheduleExecutor', () => {
       projectedCapacityUtilization: 75,
       currentSetupTime: 10,
       projectedSetupTime: 8,
-      makespan: 14,
+      makespan: 30,
       conflictCount: 0,
       unscheduledCount: 0,
     },
     conflicts: [],
     warnings: [],
     ...overrides,
-  });
+  } as ScheduleResult);
 
   beforeEach(() => {
     executor = ScheduleExecutor.getInstance();
@@ -355,7 +355,7 @@ describe('ScheduleExecutor', () => {
         suggestions: Array(5)
           .fill(null)
           .map((_, i) =>
-            createTestSuggestion({ workOrderId: `wo-${i}`, woNumber: `WO-00${i}` })
+            createTestSuggestion({ workOrderId: `wo-${i}`, woNumber: `WO-00${i}` } as Partial<ScheduleSuggestion>)
           ),
       });
 

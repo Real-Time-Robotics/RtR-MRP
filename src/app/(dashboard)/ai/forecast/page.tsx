@@ -28,16 +28,62 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
-import { ForecastChart } from "@/components/ai/forecast-chart";
+import dynamic from "next/dynamic";
 import { ConfidenceBadge } from "@/components/ai/confidence-badge";
-import {
-  AccuracyMetrics,
-  AccuracyBadge,
-  SeasonalPatternChart,
-  ForecastTable,
-  ForecastList,
-  AIExplanationPanel,
-} from "@/components/ai/forecast";
+
+// Lazy-load chart/visualization components (recharts ~500KB)
+const ForecastChart = dynamic(
+  () => import("@/components/ai/forecast-chart").then(mod => mod.ForecastChart),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-[400px] rounded-lg" />,
+  }
+);
+
+const SeasonalPatternChart = dynamic(
+  () => import("@/components/ai/forecast/seasonal-pattern-chart").then(mod => mod.SeasonalPatternChart),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-64 rounded-lg" />,
+  }
+);
+
+const AccuracyMetrics = dynamic(
+  () => import("@/components/ai/forecast/accuracy-metrics").then(mod => mod.AccuracyMetrics),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
+
+const AccuracyBadge = dynamic(
+  () => import("@/components/ai/forecast/accuracy-metrics").then(mod => mod.AccuracyBadge),
+  { ssr: false, loading: () => <div className="animate-pulse bg-muted h-6 w-16 rounded" /> }
+);
+
+const ForecastTable = dynamic(
+  () => import("@/components/ai/forecast/forecast-table").then(mod => mod.ForecastTable),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-64 rounded-lg" />,
+  }
+);
+
+const ForecastList = dynamic(
+  () => import("@/components/ai/forecast/forecast-table").then(mod => mod.ForecastList),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
+
+const AIExplanationPanel = dynamic(
+  () => import("@/components/ai/forecast/ai-explanation-panel").then(mod => mod.AIExplanationPanel),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-48 rounded-lg" />,
+  }
+);
 import {
   useForecast,
   useForecastAccuracy,
@@ -46,6 +92,7 @@ import {
 } from "@/hooks/use-forecast";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -108,7 +155,7 @@ export default function ForecastDashboardPage() {
           setSelectedProduct(productList[0].id);
         }
       } catch (error) {
-        console.error("Failed to fetch products:", error);
+        clientLogger.error("Failed to fetch products:", error);
         toast({
           title: "Error",
           description: "Failed to load products",
@@ -481,8 +528,8 @@ export default function ForecastDashboardPage() {
             metrics={accuracy || null}
             trend={
               accuracyTrends.length >= 2
-                ? accuracyTrends[accuracyTrends.length - 1]?.averageAccuracy >
-                  accuracyTrends[0]?.averageAccuracy
+                ? (accuracyTrends[accuracyTrends.length - 1]?.averageAccuracy ?? 0) >
+                  (accuracyTrends[0]?.averageAccuracy ?? 0)
                   ? "improving"
                   : "declining"
                 : "stable"
@@ -549,7 +596,7 @@ export default function ForecastDashboardPage() {
                           <p className="text-sm font-medium truncate max-w-[150px]">
                             {item.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">{item.sku}</p>
+                          <p className="text-xs text-muted-foreground">{item.partNumber}</p>
                         </div>
                       </div>
                       <AccuracyBadge mape={item.metrics?.mape || 0} size="sm" />
@@ -581,7 +628,7 @@ export default function ForecastDashboardPage() {
                         <p className="text-sm font-medium truncate max-w-[150px]">
                           {item.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">{item.sku}</p>
+                        <p className="text-xs text-muted-foreground">{item.partNumber}</p>
                       </div>
                       <Badge className="bg-red-100 text-red-800 border-0">
                         {(100 - (item.metrics?.mape || 0)).toFixed(0)}%

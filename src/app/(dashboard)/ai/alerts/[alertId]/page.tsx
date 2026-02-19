@@ -26,11 +26,14 @@ import {
   Alert,
   AlertPriority,
   AlertActionType,
+  AlertType,
+  AlertSource,
   UrgencyPrediction,
   getTypeLabel,
   getSourceLabel,
   getPriorityLabel,
 } from '@/lib/ai/alerts';
+import { clientLogger } from '@/lib/client-logger';
 
 interface PageProps {
   params: Promise<{ alertId: string }>;
@@ -70,7 +73,7 @@ export default function AlertDetailPage({ params }: PageProps) {
         router.push('/ai/alerts');
       }
     } catch (error) {
-      console.error('Failed to fetch alert:', error);
+      clientLogger.error('Failed to fetch alert:', error);
       toast({
         title: 'Lỗi',
         description: 'Không thể tải thông tin cảnh báo',
@@ -110,7 +113,7 @@ export default function AlertDetailPage({ params }: PageProps) {
         });
       }
     } catch (error) {
-      console.error('Failed to execute action:', error);
+      clientLogger.error('Failed to execute action:', error);
     } finally {
       setActionLoading(null);
     }
@@ -132,7 +135,7 @@ export default function AlertDetailPage({ params }: PageProps) {
       });
       router.push('/ai/alerts');
     } catch (error) {
-      console.error('Failed to dismiss:', error);
+      clientLogger.error('Failed to dismiss:', error);
     }
   };
 
@@ -187,7 +190,7 @@ export default function AlertDetailPage({ params }: PageProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Quay lại">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
@@ -199,8 +202,8 @@ export default function AlertDetailPage({ params }: PageProps) {
             <Badge variant={getPriorityBadgeVariant(alert.priority)}>
               {getPriorityLabel(alert.priority)}
             </Badge>
-            <Badge variant="outline">{getTypeLabel(alert.type as any)}</Badge>
-            <Badge variant="secondary">{getSourceLabel(alert.source as any)}</Badge>
+            <Badge variant="outline">{getTypeLabel(alert.type as AlertType)}</Badge>
+            <Badge variant="secondary">{getSourceLabel(alert.source as AlertSource)}</Badge>
             {alert.isEscalated && (
               <Badge variant="destructive">Đã Escalate</Badge>
             )}

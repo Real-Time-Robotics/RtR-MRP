@@ -3,7 +3,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getScenarioBuilder,
   getSimulationEngine,
@@ -13,22 +15,39 @@ import {
   SimulationResult,
 } from '@/lib/ai/simulation';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const compareBodySchema = z.object({
+  scenarioIds: z.array(z.string()).min(2, 'At least 2 scenario IDs are required'),
+  generateAIInsight: z.boolean().optional(),
+});
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { scenarioIds, generateAIInsight = true } = body;
-
-    if (!scenarioIds || !Array.isArray(scenarioIds) || scenarioIds.length < 2) {
+  try {
+const rawBody = await request.json();
+    const parseResult = compareBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'At least 2 scenario IDs are required' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { scenarioIds, generateAIInsight = true } = parseResult.data;
 
     if (scenarioIds.length > 5) {
       return NextResponse.json(
@@ -97,10 +116,10 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('[Comparison API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/compare' });
     return NextResponse.json(
       { error: 'Failed to compare scenarios', details: (error as Error).message },
       { status: 500 }
     );
   }
-}
+});

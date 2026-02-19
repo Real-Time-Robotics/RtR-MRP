@@ -129,6 +129,7 @@ export function FileUpload({
           accept={accept}
           onChange={handleInputChange}
           disabled={disabled}
+          aria-label="Chọn tệp để tải lên"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
         />
 
@@ -188,6 +189,7 @@ export function FileUpload({
           <button
             onClick={clearFile}
             className="p-1 hover:bg-green-100 rounded transition-colors"
+            aria-label="Xóa file"
           >
             <X className="w-4 h-4 text-green-600" />
           </button>

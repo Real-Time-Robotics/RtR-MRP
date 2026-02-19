@@ -1,11 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { getClientIp, getRequestId, getRoute } from '@/lib/request-context';
+import { logger } from '@/lib/logger';
 
 interface FieldChange {
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   displayName?: string;  // Human-readable field name
 }
 
@@ -14,15 +15,15 @@ interface AuditLogInput {
   entityId: string;
   entityName?: string;
   action: string;
-  oldValues?: Record<string, any>;
-  newValues?: Record<string, any>;
+  oldValues?: Prisma.InputJsonValue;
+  newValues?: Prisma.InputJsonValue;
   summary?: string;
   userId: string;
   userRole?: string;
   ipAddress?: string;
   userAgent?: string;
   sessionId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // API-level logging (Gate 5.3)
@@ -75,7 +76,7 @@ export class AuditLogger {
     entityId: string,
     entityName: string,
     userId: string,
-    newData?: Record<string, any>,
+    newData?: Record<string, unknown>,
     context?: { userRole?: string; ipAddress?: string; userAgent?: string }
   ): Promise<string> {
     return this.log({
@@ -83,7 +84,7 @@ export class AuditLogger {
       entityId,
       entityName,
       action: 'CREATE',
-      newValues: newData,
+      newValues: newData as Prisma.InputJsonValue,
       summary: `Created ${entityType.toLowerCase().replace('_', ' ')} "${entityName}"`,
       userId,
       ...context,
@@ -98,8 +99,8 @@ export class AuditLogger {
     entityId: string,
     entityName: string,
     userId: string,
-    oldData: Record<string, any>,
-    newData: Record<string, any>,
+    oldData: Record<string, unknown>,
+    newData: Record<string, unknown>,
     context?: { userRole?: string; ipAddress?: string; userAgent?: string }
   ): Promise<string | null> {
     const fieldChanges = this.calculateFieldChanges(oldData, newData);
@@ -114,8 +115,8 @@ export class AuditLogger {
       entityId,
       entityName,
       action: 'UPDATE',
-      oldValues: oldData,
-      newValues: newData,
+      oldValues: oldData as Prisma.InputJsonValue,
+      newValues: newData as Prisma.InputJsonValue,
       summary: this.generateUpdateSummary(entityType, entityName, fieldChanges),
       userId,
       metadata: { fieldChanges },
@@ -131,7 +132,7 @@ export class AuditLogger {
     entityId: string,
     entityName: string,
     userId: string,
-    deletedData?: Record<string, any>,
+    deletedData?: Record<string, unknown>,
     context?: { userRole?: string; ipAddress?: string; userAgent?: string }
   ): Promise<string> {
     return this.log({
@@ -139,7 +140,7 @@ export class AuditLogger {
       entityId,
       entityName,
       action: 'DELETE',
-      oldValues: deletedData,
+      oldValues: deletedData as Prisma.InputJsonValue,
       summary: `Deleted ${entityType.toLowerCase().replace('_', ' ')} "${entityName}"`,
       userId,
       ...context,
@@ -255,7 +256,7 @@ export class AuditLogger {
   /**
    * Sanitize value for storage (handle dates, objects, etc.)
    */
-  private sanitizeValue(value: any): any {
+  private sanitizeValue(value: unknown): unknown {
     if (value === null || value === undefined) return null;
     if (value instanceof Date) return value.toISOString();
     if (typeof value === 'object') {
@@ -384,7 +385,7 @@ export function logApi(
     ...(error ? { error: error instanceof Error ? error.message : String(error) } : {}),
   };
 
-  console.log(JSON.stringify(payload));
+  logger.info('API audit log', payload);
 }
 
 export const auditLogger = new AuditLogger();

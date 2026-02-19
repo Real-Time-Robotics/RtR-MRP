@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCoCPDF } from "@/lib/quality/coc-generator";
+import { logger } from "@/lib/logger";
+import { withAuth } from '@/lib/api/with-auth';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     const blob = await generateCoCPDF(id);
 
@@ -16,10 +20,10 @@ export async function GET(
 
     return new NextResponse(blob, { headers });
   } catch (error) {
-    console.error("Failed to generate certificate PDF:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/certificates/[id]/generate' });
     return NextResponse.json(
       { error: "Failed to generate certificate PDF" },
       { status: 500 }
     );
   }
-}
+});

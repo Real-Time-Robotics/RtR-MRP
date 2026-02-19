@@ -4,16 +4,51 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 import { getAISupplierAnalyzer } from '@/lib/ai/supplier-risk';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const supplierRiskBodySchema = z.object({
+  action: z.enum(['supply_chain', 'supplier_insight', 'compare', 'mitigation', 'report']),
+  supplierId: z.string().optional(),
+  supplierIds: z.array(z.string()).optional(),
+  months: z.number().optional(),
+  reportType: z.enum(['executive', 'detailed', 'quarterly']).optional(),
+});
 // =============================================================================
 // POST - AI Analysis
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const body = await request.json();
-    const { action, supplierId, supplierIds, months = 12, reportType = 'detailed' } = body;
+const rawBody = await request.json();
+    const parseResult = supplierRiskBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { action, supplierId, supplierIds, months = 12, reportType = 'detailed' } = parseResult.data;
 
     const aiAnalyzer = getAISupplierAnalyzer();
 
@@ -195,13 +230,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
     }
   } catch (error) {
-    console.error('[Supplier Risk API] AI Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/supplier-risk/analyze' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to perform AI analysis',
       },
       { status: 500 }
     );
   }
-}
+});

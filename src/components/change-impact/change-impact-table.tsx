@@ -136,7 +136,6 @@ export function ChangeImpactTable({ items, onNavigate }: ChangeImpactTableProps)
         key: 'actions',
         header: '',
         width: '80px',
-        align: 'right',
         render: (_, row) =>
           row.canNavigate && row.navigationUrl ? (
             <Button

@@ -3,6 +3,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
 interface EndpointMetric {
   endpoint: string;
@@ -35,7 +38,7 @@ interface BaselineReport {
 }
 
 // GET - Collect current baseline metrics
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
   const startTime = Date.now();
 
   try {
@@ -73,13 +76,13 @@ export async function GET(request: NextRequest) {
       baseline: report,
     });
   } catch (error) {
-    console.error('Baseline collection error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/monitoring/baseline' });
     return NextResponse.json(
       { error: 'Failed to collect baseline' },
       { status: 500 }
     );
   }
-}
+});
 
 // Collect database table metrics
 async function collectDatabaseMetrics(): Promise<{
@@ -205,9 +208,21 @@ async function measureEndpoint(path: string): Promise<void> {
 }
 
 // POST - Save baseline to file
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
   try {
-    const { baseline, name } = await request.json();
+    const bodySchema = z.object({
+      baseline: z.record(z.string(), z.unknown()).optional(),
+      name: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { baseline, name } = parseResult.data;
 
     // In production, this would save to a database or file system
     // For now, return the baseline with a reference ID
@@ -221,10 +236,10 @@ export async function POST(request: NextRequest) {
       savedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Baseline save error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/monitoring/baseline' });
     return NextResponse.json(
       { error: 'Failed to save baseline' },
       { status: 500 }
     );
   }
-}
+});

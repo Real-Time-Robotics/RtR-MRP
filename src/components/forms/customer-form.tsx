@@ -10,6 +10,7 @@ import {
   detectChanges,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
+import { useMutation } from '@/hooks/use-mutation';
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Users, User, Mail, Phone, CreditCard } from 'lucide-react';
-import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -99,7 +100,7 @@ const CUSTOMER_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldCh
 // =============================================================================
 
 export function CustomerForm({ open, onOpenChange, customer, onSuccess }: CustomerFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const isEditing = !!customer;
 
   // Change Impact state
@@ -121,6 +122,21 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
       creditLimit: null,
       status: 'active',
     },
+  });
+
+  const mutation = useMutation<CustomerFormData, Customer>({
+    url: isEditing ? `/api/customers/${customer!.id}` : '/api/customers',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/customers'],
+    successMessage: isEditing ? t('customerForm.updateSuccess') : t('customerForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      contactEmail: data.contactEmail || null,
+      type: data.type || null,
+      country: data.country || null,
+    }),
   });
 
   useEffect(() => {
@@ -157,62 +173,17 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
     onError: () => {
-      // Even on error, proceed with save (impact check is informational)
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
   });
-
-  const performSave = async (data: CustomerFormData) => {
-    setLoading(true);
-    try {
-      const cleanData = {
-        ...data,
-        contactEmail: data.contactEmail || null,
-        type: data.type || null,
-        country: data.country || null,
-      };
-
-      const url = isEditing ? `/api/customers/${customer.id}` : '/api/customers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof CustomerFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      }
-
-      toast.success(isEditing ? 'Cập nhật khách hàng thành công!' : 'Tạo khách hàng thành công!');
-      onSuccess?.(result.data);
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const onSubmit = async (data: CustomerFormData) => {
     // Only check impact when editing and there are tracked changes
@@ -237,7 +208,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
     }
 
     // No tracked changes or new record - save directly
-    performSave(data);
+    mutation.mutate(data);
   };
 
   return (
@@ -246,10 +217,10 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
+            {isEditing ? t('customerForm.editTitle') : t('customerForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin khách hàng' : 'Điền thông tin để tạo khách hàng mới'}
+            {isEditing ? t('customerForm.editDesc') : t('customerForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -261,7 +232,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mã khách hàng *</FormLabel>
+                    <FormLabel>{t('customerForm.code')}</FormLabel>
                     <FormControl>
                       <Input placeholder="CUS-001" {...field} disabled={isEditing} />
                     </FormControl>
@@ -275,7 +246,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Trạng thái</FormLabel>
+                    <FormLabel>{t('form.status')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -283,9 +254,9 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="active">Hoạt động</SelectItem>
-                        <SelectItem value="inactive">Ngưng</SelectItem>
-                        <SelectItem value="pending">Chờ duyệt</SelectItem>
+                        <SelectItem value="active">{t('status.active')}</SelectItem>
+                        <SelectItem value="inactive">{t('status.inactiveShort')}</SelectItem>
+                        <SelectItem value="pending">{t('status.approval')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -299,7 +270,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tên khách hàng *</FormLabel>
+                  <FormLabel>{t('customerForm.name')}</FormLabel>
                   <FormControl>
                     <Input placeholder="Công ty ABC" {...field} />
                   </FormControl>
@@ -314,11 +285,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loại khách hàng</FormLabel>
+                    <FormLabel>{t('customerForm.type')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại" />
+                          <SelectValue placeholder={t('customerForm.selectType')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -337,7 +308,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="country"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quốc gia</FormLabel>
+                    <FormLabel>{t('customerForm.country')}</FormLabel>
                     <FormControl>
                       <Input placeholder="Việt Nam" {...field} value={field.value || ''} />
                     </FormControl>
@@ -353,7 +324,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="contactName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Người liên hệ</FormLabel>
+                    <FormLabel>{t('customerForm.contactName')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -370,7 +341,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="contactPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số điện thoại</FormLabel>
+                    <FormLabel>{t('customerForm.contactPhone')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -388,7 +359,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="contactEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>{t('customerForm.contactEmail')}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -405,7 +376,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
               name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Địa chỉ thanh toán</FormLabel>
+                  <FormLabel>{t('customerForm.billingAddress')}</FormLabel>
                   <FormControl>
                     <Textarea placeholder="123 Đường ABC, Quận XYZ, TP.HCM" {...field} value={field.value || ''} />
                   </FormControl>
@@ -420,11 +391,11 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="paymentTerms"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Điều khoản thanh toán</FormLabel>
+                    <FormLabel>{t('customerForm.paymentTerms')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn" />
+                          <SelectValue placeholder={t('form.selectPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -443,7 +414,7 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
                 name="creditLimit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Hạn mức tín dụng (USD)</FormLabel>
+                    <FormLabel>{t('customerForm.creditLimit')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -464,12 +435,12 @@ export function CustomerForm({ open, onOpenChange, customer, onSuccess }: Custom
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                Hủy
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isLoading}>
+                {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo khách hàng'}
+              <Button type="submit" disabled={mutation.isLoading}>
+                {mutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditing ? t('form.save') : t('customerForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -504,39 +475,30 @@ interface DeleteCustomerDialogProps {
 }
 
 export function DeleteCustomerDialog({ open, onOpenChange, customer, onSuccess }: DeleteCustomerDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
-  const handleDelete = async () => {
-    if (!customer) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      toast.success('Đã xóa khách hàng thành công!');
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/customers/${customer?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/customers'],
+    successMessage: t('customerForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa khách hàng <strong>{customer?.name}</strong> ({customer?.code})?
+            {t('form.deleteConfirmSimple', { itemType: t('customers.pageTitle'), name: customer?.name || '', code: customer?.code || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Hủy</Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleteMutation.isLoading}>{t('form.cancel')}</Button>
+          <Button variant="destructive" onClick={() => customer && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

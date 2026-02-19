@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -15,9 +16,11 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
 
-const SEARCH_FIELDS = ["name", "code", "email", "contactName"];
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+const SEARCH_FIELDS = ["name", "code", "contactEmail", "contactName"];
 
 // =============================================================================
 // VALIDATION SCHEMA
@@ -26,6 +29,7 @@ const SEARCH_FIELDS = ["name", "code", "email", "contactName"];
 const createSupplierSchema = z.object({
   code: z.string().min(1, 'Mã nhà cung cấp là bắt buộc'),
   name: z.string().min(1, 'Tên nhà cung cấp là bắt buộc'),
+  taxId: z.string().max(20).nullish(),
   country: z.string().min(1, 'Quốc gia là bắt buộc'),
   ndaaCompliant: z.boolean().default(true),
   contactName: z.string().nullish(),
@@ -43,14 +47,14 @@ const createSupplierSchema = z.object({
 // GET - List suppliers
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
 
     // Parse pagination params
     const params = parsePaginationParams(request);
@@ -78,13 +82,14 @@ export async function GET(request: NextRequest) {
     ]);
 
     return paginatedSuccess(
-      buildPaginatedResponse(suppliers, totalCount, params, startTime)
+      buildPaginatedResponse(suppliers, totalCount, params, startTime),
+      { cacheControl: 'private, max-age=60, stale-while-revalidate=120' },
     );
   } catch (error) {
-    console.error("Lỗi tải danh sách nhà cung cấp:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/suppliers' });
     return paginatedError("Lỗi tải danh sách nhà cung cấp", 500);
   }
-}
+});
 
 // =============================================================================
 // POST - Create supplier
@@ -92,7 +97,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   // Parse and validate body
   let body;
@@ -119,6 +124,18 @@ async function postHandler(
   });
   if (codeExists) {
     return errorResponse('Mã nhà cung cấp đã tồn tại', 409);
+  }
+
+  // Check duplicate taxId if provided
+  if (validation.data.taxId) {
+    const taxIdExists = await prisma.supplier.findFirst({
+      where: { taxId: validation.data.taxId },
+    });
+    if (taxIdExists) {
+      return validationErrorResponse({
+        taxId: [`Mã số thuế đã tồn tại cho nhà cung cấp: ${taxIdExists.name} (${taxIdExists.code})`],
+      });
+    }
   }
 
   // Create supplier

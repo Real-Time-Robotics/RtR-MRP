@@ -1,20 +1,21 @@
 // Mobile API - Work Orders
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const number = searchParams.get("number");
     const status = searchParams.get("status");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
 
     // Get single work order
     if (id || number) {
@@ -88,10 +89,10 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile work orders API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/work-orders' });
     return NextResponse.json(
       { error: "Failed to fetch work orders" },
       { status: 500 }
     );
   }
-}
+});

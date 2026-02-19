@@ -1,11 +1,35 @@
 // src/app/api/compliance/mfa/verify/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from 'zod';
 import { verifyMFALogin, createMFAChallenge, verifyMFAChallenge } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
+import { withAuth } from '@/lib/api/with-auth';
 
-export async function POST(request: NextRequest) {
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.string(),
+      userId: z.string().optional(),
+      code: z.string().optional(),
+      challengeId: z.string().optional(),
+      purpose: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, userId, code, challengeId, purpose } = body;
     const ipAddress = request.headers.get("x-forwarded-for") || "unknown";
 
@@ -65,10 +89,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("MFA verification error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/mfa/verify' });
     return NextResponse.json(
       { error: "MFA verification failed" },
       { status: 500 }
     );
   }
-}
+});

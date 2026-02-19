@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getSchedule } from "@/lib/production/scheduling-engine";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const startDateStr = searchParams.get("startDate");
@@ -17,10 +24,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(schedule);
   } catch (error) {
-    console.error("Failed to fetch schedule:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/scheduler' });
     return NextResponse.json(
       { error: "Failed to fetch schedule" },
       { status: 500 }
     );
   }
-}
+});

@@ -2,11 +2,14 @@
 // API endpoint to import stress test data from Excel file
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from '@/lib/logger';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 
 const EXCEL_FILE = path.join(process.cwd(), 'data', 'RTR_MRP_StressTest_2024.xls');
 
@@ -32,14 +35,9 @@ function parseNumber(value: unknown, defaultValue: number = 0): number {
 }
 
 // GET - Check status and get info about stress test file
-export async function GET() {
+export const GET = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const fileExists = fs.existsSync(EXCEL_FILE);
+const fileExists = fs.existsSync(EXCEL_FILE);
     let fileInfo = null;
 
     if (fileExists) {
@@ -63,7 +61,7 @@ export async function GET() {
           sheets,
         };
       } catch (readError) {
-        console.error('Error reading Excel file:', readError);
+        logger.logError(readError instanceof Error ? readError : new Error(String(readError)), { context: '/api/excel/stress-test' });
         // Return file info without sheet details if reading fails
         fileInfo = {
           fileName: 'RTR_MRP_StressTest_2024.xls',
@@ -108,20 +106,36 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Stress test status error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Failed to get status' }, { status: 500 });
   }
-}
+});
 
 // POST - Import stress test data
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user.id);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
     }
 
-    const { entities = ['all'] } = await request.json();
+    const bodySchema = z.object({
+      entities: z.array(z.string()).default(['all']),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { entities } = parseResult.data;
 
     if (!fs.existsSync(EXCEL_FILE)) {
       return NextResponse.json(
@@ -530,7 +544,7 @@ export async function POST(request: NextRequest) {
       totals: { processed: totalProcessed, errors: totalErrors },
     });
   } catch (error) {
-    console.error('Stress test import error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/stress-test' });
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });
   }
-}
+});

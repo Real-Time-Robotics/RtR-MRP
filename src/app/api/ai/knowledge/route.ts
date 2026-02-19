@@ -4,21 +4,44 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import { getRAGKnowledgeService, KnowledgeType } from '@/lib/ai/rag-knowledge-service';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const knowledgeBodySchema = z.object({
+  action: z.enum(['index_all', 'index', 'query']),
+  type: z.string().optional(),
+  query: z.string().optional(),
+  types: z.array(z.enum(['part', 'supplier', 'customer', 'product', 'order', 'bom', 'document', 'sop'])).optional(),
+  limit: z.number().optional(),
+  threshold: z.number().optional(),
+});
 // =============================================================================
 // GET: Get knowledge stats or search
 // =============================================================================
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const ragService = getRAGKnowledgeService();
 
@@ -93,38 +116,57 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[RAG API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/knowledge' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST: Index knowledge or query RAG
 // =============================================================================
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = knowledgeBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
     const ragService = getRAGKnowledgeService();
 
     // Index all knowledge
     if (action === 'index_all') {
-      console.log('[RAG API] Starting full index...');
+      logger.info('Starting full knowledge base index');
       const startTime = Date.now();
 
       const results = await ragService.indexAll();
 
       const duration = Date.now() - startTime;
-      console.log(`[RAG API] Index completed in ${duration}ms`);
+      logger.info('Knowledge base index completed', { durationMs: duration });
 
       return NextResponse.json({
         success: true,
@@ -215,10 +257,10 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('[RAG API] POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/knowledge' });
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 }
     );
   }
-}
+});

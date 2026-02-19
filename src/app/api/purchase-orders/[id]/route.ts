@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import {
@@ -7,7 +8,11 @@ import {
   errorResponse,
   notFoundResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
+import { generateInspectionNumber } from '@/lib/quality/inspection-engine';
+import { auditUpdate, auditStatusChange, auditDelete } from '@/lib/audit/route-audit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION
@@ -37,8 +42,12 @@ const updatePOSchema = z.object({
 
 async function getHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -63,8 +72,12 @@ async function getHandler(
 
 async function putHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -101,7 +114,7 @@ async function putHandler(
   const { lines, ...headerData } = validation.data;
 
   // Build header update data
-  const updateData: Record<string, unknown> = { ...headerData };
+  const updateData: Prisma.PurchaseOrderUpdateInput = { ...headerData };
   if (headerData.orderDate) updateData.orderDate = new Date(headerData.orderDate);
   if (headerData.expectedDate) updateData.expectedDate = new Date(headerData.expectedDate);
 
@@ -159,6 +172,13 @@ async function putHandler(
     });
   });
 
+  // Audit trail: log changes
+  if (validation.data.status && validation.data.status !== existing.status) {
+    auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, validation.data.status);
+  } else {
+    auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
+  }
+
   // === INVENTORY UPDATE: When PO status changes to "received" ===
   const isBeingReceived =
     validation.data.status === 'received' && existing.status !== 'received';
@@ -168,52 +188,69 @@ async function putHandler(
     const poLines = order.lines || existing.lines;
 
     if (poLines.length > 0) {
-      // Find default warehouse (first active warehouse)
-      let defaultWarehouse = await prisma.warehouse.findFirst({
-        where: { status: 'active' },
-        orderBy: { createdAt: 'asc' },
+      // Find RECEIVING warehouse (dedicated for incoming goods)
+      let receivingWarehouse = await prisma.warehouse.findFirst({
+        where: { type: 'RECEIVING' },
       });
-
-      // Create a default warehouse if none exists
-      if (!defaultWarehouse) {
-        defaultWarehouse = await prisma.warehouse.create({
+      // Fallback to default warehouse if no RECEIVING warehouse
+      if (!receivingWarehouse) {
+        receivingWarehouse = await prisma.warehouse.findFirst({
+          where: { status: 'active' },
+          orderBy: { createdAt: 'asc' },
+        });
+      }
+      if (!receivingWarehouse) {
+        receivingWarehouse = await prisma.warehouse.create({
           data: {
-            code: 'WH-MAIN',
-            name: 'Kho chính',
+            code: 'WH-RECEIVING',
+            name: 'Receiving Area',
+            type: 'RECEIVING',
             status: 'active',
           },
         });
       }
 
-      // Update inventory for each PO line
+      // Generate inspection numbers before transaction (may have side effects)
+      const inspectionNumbers: Record<string, string> = {};
       for (const line of poLines) {
-        const existingInventory = await prisma.inventory.findFirst({
-          where: { partId: line.partId, warehouseId: defaultWarehouse.id },
+        const existingInspection = await prisma.inspection.findFirst({
+          where: { poLineId: line.id, type: 'RECEIVING' },
         });
-
-        if (existingInventory) {
-          await prisma.inventory.update({
-            where: { id: existingInventory.id },
-            data: {
-              quantity: existingInventory.quantity + line.quantity,
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          await prisma.inventory.create({
-            data: {
-              partId: line.partId,
-              warehouseId: defaultWarehouse.id,
-              quantity: line.quantity,
-              reservedQty: 0,
-              locationCode: 'RECEIVING',
-            },
-          });
+        if (!existingInspection) {
+          inspectionNumbers[line.id] = await generateInspectionNumber('RECEIVING');
         }
+      }
 
-        // Create audit log
-        try {
-          await prisma.lotTransaction.create({
+      // Atomically update inventory + create audit logs + create inspections
+      await prisma.$transaction(async (tx) => {
+        // Update inventory for each PO line
+        for (const line of poLines) {
+          const existingInventory = await tx.inventory.findFirst({
+            where: { partId: line.partId, warehouseId: receivingWarehouse!.id, locationCode: 'RECEIVING' },
+          });
+
+          if (existingInventory) {
+            await tx.inventory.update({
+              where: { id: existingInventory.id },
+              data: {
+                quantity: existingInventory.quantity + line.quantity,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            await tx.inventory.create({
+              data: {
+                partId: line.partId,
+                warehouseId: receivingWarehouse!.id,
+                quantity: line.quantity,
+                reservedQty: 0,
+                locationCode: 'RECEIVING',
+              },
+            });
+          }
+
+          // Create audit log
+          await tx.lotTransaction.create({
             data: {
               lotNumber: `PO-RCV-${existing.poNumber}-${line.lineNumber || Date.now()}`,
               partId: line.partId,
@@ -225,10 +262,27 @@ async function putHandler(
               notes: `Nhận hàng từ PO: ${existing.poNumber}`,
             },
           });
-        } catch {
-          // Skip audit log if it fails (non-critical)
         }
-      }
+
+        // Auto-create receiving inspections for each PO line
+        for (const line of poLines) {
+          if (inspectionNumbers[line.id]) {
+            await tx.inspection.create({
+              data: {
+                inspectionNumber: inspectionNumbers[line.id],
+                type: 'RECEIVING',
+                status: 'pending',
+                partId: line.partId,
+                poLineId: line.id,
+                quantityReceived: line.quantity,
+                quantityInspected: 0,
+                inspectedBy: user.id || 'system',
+                lotNumber: `LOT-${existing.poNumber}-${line.lineNumber || 1}`,
+              },
+            });
+          }
+        }
+      });
     }
   }
 
@@ -241,8 +295,12 @@ async function putHandler(
 
 async function deleteHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -251,6 +309,7 @@ async function deleteHandler(
 
   if (existing.status === 'draft') {
     await prisma.purchaseOrder.delete({ where: { id } });
+    auditDelete(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, { poNumber: existing.poNumber });
     return successResponse({ deleted: true, id });
   }
 
@@ -262,6 +321,8 @@ async function deleteHandler(
     where: { id },
     data: { status: 'cancelled' },
   });
+
+  auditStatusChange(request, { id: user.id, name: user.name, email: user.email }, "PurchaseOrder", id!, existing.status, "cancelled");
 
   return successResponse({ cancelled: true, id });
 }

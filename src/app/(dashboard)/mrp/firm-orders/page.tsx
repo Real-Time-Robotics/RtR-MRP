@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FirmOrderTable } from "@/components/mrp/firm-order-table";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface PlannedOrder {
   id: string;
@@ -48,7 +49,7 @@ export default function FirmOrdersPage() {
         setOrders(data);
       }
     } catch (error) {
-      console.error("Failed to fetch orders:", error);
+      clientLogger.error("Failed to fetch orders:", error);
       toast({ title: "Failed to fetch orders", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -63,7 +64,7 @@ export default function FirmOrdersPage() {
         setParts(data);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -82,7 +83,7 @@ export default function FirmOrdersPage() {
         throw new Error("Failed to update order");
       }
     } catch (error) {
-      console.error("Failed to update order:", error);
+      clientLogger.error("Failed to update order:", error);
       toast({ title: "Failed to update order", variant: "destructive" });
     }
   };
@@ -105,7 +106,7 @@ export default function FirmOrdersPage() {
         throw new Error("Failed to update order");
       }
     } catch (error) {
-      console.error("Failed to update order:", error);
+      clientLogger.error("Failed to update order:", error);
       toast({ title: "Failed to update order", variant: "destructive" });
     }
   };
@@ -123,7 +124,7 @@ export default function FirmOrdersPage() {
         throw new Error("Failed to delete order");
       }
     } catch (error) {
-      console.error("Failed to delete order:", error);
+      clientLogger.error("Failed to delete order:", error);
       toast({ title: "Failed to delete order", variant: "destructive" });
     }
   };
@@ -149,7 +150,7 @@ export default function FirmOrdersPage() {
         throw new Error("Failed to create order");
       }
     } catch (error) {
-      console.error("Failed to create order:", error);
+      clientLogger.error("Failed to create order:", error);
       toast({ title: "Failed to create order", variant: "destructive" });
     }
   };

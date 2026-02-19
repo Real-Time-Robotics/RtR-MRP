@@ -2,19 +2,28 @@
 // Background job management API
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { jobQueue, JOB_NAMES } from "@/lib/jobs/job-queue";
+import { logger } from '@/lib/logger';
+import { z } from "zod";
+
 import "@/lib/jobs/handlers"; // Ensure handlers are registered
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const JobCreateSchema = z.object({
+  name: z.string().min(1, "Job name is required"),
+  data: z.record(z.string(), z.unknown()).default({}),
+  priority: z.number().int().default(0),
+});
 
 // GET - List jobs and stats
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
     let jobs;
@@ -42,28 +51,36 @@ export async function GET(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    console.error("Jobs API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to fetch jobs" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Create a new job
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const body = await request.json();
+
+    const validation = JobCreateSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
     }
 
-    const body = await request.json();
-    const { name, data = {}, priority = 0 } = body;
+    const { name, data, priority } = validation.data;
 
-    // Validate job name
+    // Validate job name against registered names
     const validJobNames = Object.values(JOB_NAMES);
-    if (!name || !validJobNames.includes(name)) {
+    if (!validJobNames.includes(name)) {
       return NextResponse.json(
         {
           error: "Invalid job name",
@@ -86,23 +103,22 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Create job error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to create job" },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Clear old jobs
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const hoursOld = parseInt(searchParams.get("hoursOld") || "24");
 
     const cleared = jobQueue.clear(hoursOld * 60 * 60 * 1000);
@@ -112,10 +128,10 @@ export async function DELETE(request: NextRequest) {
       cleared,
     });
   } catch (error) {
-    console.error("Clear jobs error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/jobs' });
     return NextResponse.json(
       { error: "Failed to clear jobs" },
       { status: 500 }
     );
   }
-}
+});

@@ -217,7 +217,7 @@ export class QualityDataExtractor {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       createdAt: { gte: startDate },
     };
 
@@ -634,8 +634,8 @@ export class QualityDataExtractor {
   // =============================================================================
 
   private calculateMonthlyQualityTrend(
-    inspections: any[],
-    ncrs: any[],
+    inspections: Array<{ createdAt: Date; result: string | null }>,
+    ncrs: Array<{ createdAt: Date; quantityAffected?: number | null }>,
     months: number
   ): QualityTrendData[] {
     const trend: QualityTrendData[] = [];

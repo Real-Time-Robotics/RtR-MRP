@@ -5,12 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import { AIMigrationEngine, DataTransformer, TARGET_SCHEMAS } from '@/lib/migration-engine';
+import { AIMigrationEngine, DataTransformer, TARGET_SCHEMAS, type MigrationAnalysis, type ColumnMapping } from '@/lib/migration-engine';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const migrationEngine = new AIMigrationEngine();
 const dataTransformer = new DataTransformer();
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
@@ -31,13 +39,13 @@ export async function POST(request: NextRequest) {
 
       const fileResult = {
         filename: file.name,
-        sheets: [] as any[]
+        sheets: [] as Array<{ name: string; rowCount: number; columns: string[]; analysis: MigrationAnalysis }>
       };
 
       // Analyze each sheet
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
         if (jsonData.length < 2) continue; // Skip empty sheets
 
@@ -52,7 +60,7 @@ export async function POST(request: NextRequest) {
         for (const mapping of analysis.mappings) {
           const colIndex = headers.indexOf(mapping.sourceColumn);
           if (colIndex >= 0) {
-            (mapping as any).sampleValues = sampleData
+            (mapping as unknown as Record<string, unknown>).sampleValues = sampleData
               .map(row => row[colIndex])
               .filter(v => v != null)
               .slice(0, 3);
@@ -109,20 +117,37 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Migration analysis error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/migration/analyze' });
     return NextResponse.json(
       { error: 'Failed to analyze files', details: String(error) },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // Transform & Preview endpoint
 // =============================================================================
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      fileData: z.array(z.record(z.string(), z.unknown())),
+      mappings: z.array(z.record(z.string(), z.unknown())),
+      targetTable: z.string(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { fileData, mappings, targetTable } = body;
 
     if (!fileData || !mappings || !targetTable) {
@@ -140,7 +165,7 @@ export async function PUT(request: NextRequest) {
       try {
         const transformed = dataTransformer.transformRow(
           fileData[i],
-          mappings,
+          mappings as unknown as ColumnMapping[],
           targetTable
         );
         transformedRows.push(transformed);
@@ -163,10 +188,10 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Transform error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/migration/analyze' });
     return NextResponse.json(
       { error: 'Failed to transform data', details: String(error) },
       { status: 500 }
     );
   }
-}
+});

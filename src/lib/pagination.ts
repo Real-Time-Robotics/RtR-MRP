@@ -65,10 +65,10 @@ export const MIN_PAGE_SIZE = 10;
 export function parsePaginationParams(request: NextRequest): PaginationParams {
   const { searchParams } = new URL(request.url);
 
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
   const pageSize = Math.min(
     MAX_PAGE_SIZE,
-    Math.max(MIN_PAGE_SIZE, parseInt(searchParams.get('pageSize') || searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)))
+    Math.max(MIN_PAGE_SIZE, parseInt(searchParams.get('pageSize') || searchParams.get('limit') || String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE)
   );
   const cursor = searchParams.get('cursor') || undefined;
   const sortBy = searchParams.get('sortBy') || undefined;
@@ -81,10 +81,10 @@ export function parsePaginationParams(request: NextRequest): PaginationParams {
  * Parse pagination from request body (for POST requests)
  */
 export function parsePaginationFromBody(body: Record<string, unknown>): PaginationParams {
-  const page = Math.max(1, parseInt(String(body.page || '1')));
+  const page = Math.max(1, parseInt(String(body.page || '1')) || 1);
   const pageSize = Math.min(
     MAX_PAGE_SIZE,
-    Math.max(MIN_PAGE_SIZE, parseInt(String(body.pageSize || body.limit || DEFAULT_PAGE_SIZE)))
+    Math.max(MIN_PAGE_SIZE, parseInt(String(body.pageSize || body.limit || DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE)
   );
   const cursor = body.cursor as string | undefined;
   const sortBy = body.sortBy as string | undefined;
@@ -262,10 +262,13 @@ export function buildSearchQuery(
 /**
  * Success response with pagination
  */
-export function paginatedSuccess<T>(response: PaginatedResponse<T> | CursorPaginatedResponse<T>) {
+export function paginatedSuccess<T>(
+  response: PaginatedResponse<T> | CursorPaginatedResponse<T>,
+  options?: { cacheControl?: string },
+) {
   return Response.json(response, {
     headers: {
-      'Cache-Control': 'private, max-age=30',
+      'Cache-Control': options?.cacheControl ?? 'private, max-age=30, stale-while-revalidate=60',
       'X-Response-Time': `${response.meta.took}ms`,
       'X-Cached': response.meta.cached ? 'true' : 'false',
     },

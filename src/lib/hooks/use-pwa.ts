@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -22,6 +23,28 @@ interface ServiceWorkerState {
   isUpdating: boolean;
   registration: ServiceWorkerRegistration | null;
   error: Error | null;
+}
+
+// Navigator Network Information API (experimental)
+interface NetworkInformation extends EventTarget {
+  effectiveType: string;
+  downlink: number;
+  rtt: number;
+  saveData: boolean;
+  addEventListener(type: 'change', listener: () => void): void;
+  removeEventListener(type: 'change', listener: () => void): void;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
+interface WindowWithMSStream extends Window {
+  MSStream?: unknown;
 }
 
 interface NetworkState {
@@ -103,7 +126,7 @@ export function useServiceWorker(): ServiceWorkerState & {
       });
 
     } catch (error) {
-      console.error('[PWA] Service worker registration failed:', error);
+      clientLogger.error('[PWA] Service worker registration failed', error);
       setState((prev) => ({
         ...prev,
         error: error as Error,
@@ -196,7 +219,7 @@ export function useNetworkStatus(): NetworkState {
 
     // Update network info if available
     const updateNetworkInfo = () => {
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithConnection).connection;
 
       if (connection) {
         setState((prev) => ({
@@ -224,7 +247,7 @@ export function useNetworkStatus(): NetworkState {
     window.addEventListener('offline', handleOffline);
 
     // Network info change listener
-    const connection = (navigator as any).connection;
+    const connection = (navigator as NavigatorWithConnection).connection;
     if (connection) {
       connection.addEventListener('change', updateNetworkInfo);
     }
@@ -254,13 +277,13 @@ export function useInstallPrompt(): InstallPromptState {
   // Check if iOS
   const isIOS = typeof window !== 'undefined' &&
     /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-    !(window as any).MSStream;
+    !(window as WindowWithMSStream).MSStream;
 
   useEffect(() => {
     // Check if already installed
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true ||
+        (window.navigator as NavigatorWithStandalone).standalone === true ||
         document.referrer.includes('android-app://');
 
       setIsInstalled(isStandalone);
@@ -309,7 +332,7 @@ export function useInstallPrompt(): InstallPromptState {
 
       return false;
     } catch (error) {
-      console.error('[PWA] Install prompt error:', error);
+      clientLogger.error('[PWA] Install prompt error', error);
       return false;
     }
   }, []);
@@ -349,7 +372,7 @@ export function usePushNotifications() {
       setPermission(result);
       return result === 'granted';
     } catch (error) {
-      console.error('[PWA] Notification permission error:', error);
+      clientLogger.error('[PWA] Notification permission error', error);
       return false;
     }
   }, [isSupported]);
@@ -372,7 +395,7 @@ export function usePushNotifications() {
 
       return subscription;
     } catch (error) {
-      console.error('[PWA] Push subscription error:', error);
+      clientLogger.error('[PWA] Push subscription error', error);
       return null;
     }
   }, [isSupported, permission]);
@@ -386,7 +409,7 @@ export function usePushNotifications() {
       setSubscription(null);
       return true;
     } catch (error) {
-      console.error('[PWA] Push unsubscribe error:', error);
+      clientLogger.error('[PWA] Push unsubscribe error', error);
       return false;
     }
   }, [subscription]);
@@ -408,7 +431,7 @@ export function usePushNotifications() {
         ...options,
       });
     } catch (error) {
-      console.error('[PWA] Show notification error:', error);
+      clientLogger.error('[PWA] Show notification error', error);
     }
   }, [isSupported, permission]);
 

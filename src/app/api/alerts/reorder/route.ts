@@ -5,14 +5,28 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getInventoryAlertService } from '@/lib/alerts/inventory-alert-service';
 import { createAlert } from '@/lib/alerts/alert-engine';
+import { logger } from '@/lib/logger';
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const reorderBodySchema = z.object({
+  action: z.enum(["check", "create_pr", "dismiss", "refresh"]),
+  partIds: z.array(z.string()).optional(),
+});
 
 // =============================================================================
 // GET - Fetch reorder alerts and suggestions
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const view = searchParams.get('view') || 'summary'; // summary | items | suggestions
@@ -65,21 +79,33 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Reorder Alerts] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/alerts/reorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch reorder alerts' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Trigger actions
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parseResult = reorderBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
 
     const alertService = getInventoryAlertService();
@@ -189,10 +215,10 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Reorder Alerts] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/alerts/reorder' });
     return NextResponse.json(
       { success: false, error: 'Failed to process action' },
       { status: 500 }
     );
   }
-}
+});

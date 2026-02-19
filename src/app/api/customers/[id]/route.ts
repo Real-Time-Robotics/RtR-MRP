@@ -1,13 +1,17 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 import {
   withPermission,
   successResponse,
   errorResponse,
   notFoundResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
+import { auditUpdate, auditDelete } from '@/lib/audit/route-audit';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // VALIDATION SCHEMA
@@ -33,8 +37,12 @@ const updateCustomerSchema = z.object({
 
 async function getHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -68,8 +76,12 @@ async function getHandler(
 
 async function putHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -79,7 +91,8 @@ async function putHandler(
   let body;
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/customers/[id]', detail: 'Invalid JSON body' });
     return errorResponse('Dữ liệu JSON không hợp lệ', 400);
   }
 
@@ -110,6 +123,9 @@ async function putHandler(
     },
   });
 
+  // Audit trail: log changes
+  auditUpdate(request, { id: user.id, name: user.name, email: user.email }, "Customer", id!, existing as unknown as Record<string, unknown>, validation.data as Record<string, unknown>);
+
   return successResponse(customer);
 }
 
@@ -119,8 +135,12 @@ async function putHandler(
 
 async function deleteHandler(
   request: NextRequest,
-  { params, user }: { params?: Record<string, string>; user: any }
+  { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const id = params?.id;
   if (!id) return errorResponse('ID không hợp lệ', 400);
 
@@ -150,6 +170,9 @@ async function deleteHandler(
     where: { id },
     data: { status: 'inactive' },
   });
+
+  // Audit trail: log delete
+  auditDelete(request, { id: user.id, name: user.name, email: user.email }, "Customer", id!, { code: existing.code, name: existing.name });
 
   return successResponse({ deleted: true, id });
 }

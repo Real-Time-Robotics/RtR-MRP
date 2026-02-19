@@ -1,7 +1,8 @@
 // src/app/api/finance/costing/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import {
   runFullCostRollup,
@@ -9,14 +10,24 @@ import {
   rollupPartCost,
   saveRollupResults,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
+import {
+  parsePaginationParams,
+  buildOffsetPaginationQuery,
+  buildPaginatedResponse,
+  paginatedSuccess,
+  paginatedError,
+} from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET - Get cost rollup status and data
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const partId = searchParams.get("partId");
@@ -49,35 +60,55 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(rollup);
     }
 
-    // Get all cost rollups
-    const rollups = await prisma.partCostRollup.findMany({
-      include: {
-        part: {
-          select: { partNumber: true, name: true, category: true },
-        },
-      },
-      orderBy: { part: { partNumber: "asc" } },
-    });
+    // Get all cost rollups with pagination
+    const params = parsePaginationParams(request);
+    const startTime = Date.now();
 
-    return NextResponse.json({ rollups });
-  } catch (error) {
-    console.error("Costing GET error:", error);
-    return NextResponse.json(
-      { error: "Failed to get costing data" },
-      { status: 500 }
+    const [totalCount, rollups] = await Promise.all([
+      prisma.partCostRollup.count(),
+      prisma.partCostRollup.findMany({
+        ...buildOffsetPaginationQuery(params),
+        include: {
+          part: {
+            select: { partNumber: true, name: true, category: true },
+          },
+        },
+        orderBy: { part: { partNumber: "asc" } },
+      }),
+    ]);
+
+    return paginatedSuccess(
+      buildPaginatedResponse(rollups, totalCount, params, startTime)
     );
+  } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/costing' });
+    return paginatedError("Failed to get costing data", 500);
   }
-}
+});
 
 // POST - Run cost rollup
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+// Role-based access control: Finance routes require ADMIN or MANAGER
+
+    const bodySchema = z.object({
+      partId: z.string().optional(),
+      runAll: z.boolean().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { partId, runAll } = body;
 
     if (runAll) {
@@ -107,10 +138,10 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Costing POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/costing' });
     return NextResponse.json(
       { error: "Failed to run cost rollup" },
       { status: 500 }
     );
   }
-}
+});

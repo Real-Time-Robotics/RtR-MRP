@@ -31,6 +31,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 import { useAIChat, AI_QUICK_ACTIONS, type ChatMessage } from '@/hooks/use-ai-chat';
 
 // =============================================================================
@@ -56,6 +57,20 @@ const colorMap: Record<string, string> = {
   green: 'text-green-500 bg-green-50 dark:bg-green-900/20',
   pink: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
 };
+
+// =============================================================================
+// SAFE TEXT RENDERER - Parses **bold** markers into React elements
+// =============================================================================
+
+function parseTextWithBold(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+}
 
 // =============================================================================
 // MESSAGE COMPONENT
@@ -117,22 +132,20 @@ function MessageBubble({ message, onCopy, copiedId }: MessageBubbleProps) {
             {/* Render content with markdown-like formatting */}
             <div className="text-sm whitespace-pre-wrap">
               {message.content.split('\n').map((line: string, i: number) => {
-                // Bold text
-                const boldLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                 // Bullet points
                 if (line.startsWith('- ') || line.startsWith('• ')) {
                   return (
-                    <p key={i} className="ml-2 my-0.5" dangerouslySetInnerHTML={{ __html: '• ' + boldLine.slice(2) }} />
+                    <p key={i} className="ml-2 my-0.5">{'• '}{parseTextWithBold(line.slice(2))}</p>
                   );
                 }
                 // Headers
                 if (line.startsWith('### ')) {
-                  return <p key={i} className="font-bold mt-2 mb-1">{line.slice(4)}</p>;
+                  return <p key={i} className="font-bold mt-2 mb-1">{parseTextWithBold(line.slice(4))}</p>;
                 }
                 if (line.startsWith('## ')) {
-                  return <p key={i} className="font-bold text-base mt-3 mb-1">{line.slice(3)}</p>;
+                  return <p key={i} className="font-bold text-base mt-3 mb-1">{parseTextWithBold(line.slice(3))}</p>;
                 }
-                return <p key={i} className="my-0.5" dangerouslySetInnerHTML={{ __html: boldLine }} />;
+                return <p key={i} className="my-0.5">{parseTextWithBold(line)}</p>;
               })}
             </div>
 
@@ -198,7 +211,7 @@ export function AIAssistantWidgetV2() {
     retryLastMessage,
     providerStatus,
   } = useAIChat({
-    onError: (err: string) => console.error('AI Chat Error:', err),
+    onError: (err: string) => clientLogger.error('AI Chat Error', err),
   });
 
   // Scroll to bottom on new messages
@@ -418,6 +431,7 @@ export function AIAssistantWidgetV2() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Hỏi điều gì đó..."
+              aria-label="Hỏi điều gì đó"
               disabled={isLoading}
               className={cn(
                 'w-full px-4 py-3 pr-12',

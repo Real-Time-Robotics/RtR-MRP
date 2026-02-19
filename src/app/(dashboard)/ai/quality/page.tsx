@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -113,7 +114,7 @@ export default function AIQualityDashboardPage() {
         setDefectCategories(data.data.topDefectCategories);
       }
     } catch (error) {
-      console.error("Failed to fetch quality data:", error);
+      clientLogger.error("Failed to fetch quality data:", error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +133,7 @@ export default function AIQualityDashboardPage() {
         setBatchAssessment(data.data);
       }
     } catch (error) {
-      console.error("Failed to run batch assessment:", error);
+      clientLogger.error("Failed to run batch assessment:", error);
     } finally {
       setAssessmentLoading(false);
     }
@@ -194,7 +195,7 @@ export default function AIQualityDashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-[120px] h-9 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -309,7 +310,7 @@ export default function AIQualityDashboardPage() {
             size="sm"
             onClick={runBatchAssessment}
             disabled={assessmentLoading}
-            className="h-7 text-[11px]"
+            className="text-xs"
           >
             {assessmentLoading ? (
               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -535,25 +536,25 @@ export default function AIQualityDashboardPage() {
         </CardHeader>
         <CardContent className="px-3 py-2">
           <div className="flex flex-wrap gap-1.5">
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality">
                 <Activity className="h-3.5 w-3.5 mr-1.5" />
                 Quality Dashboard
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/ncr">
                 <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                 NCR Reports
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/capa">
                 <Target className="h-3.5 w-3.5 mr-1.5" />
                 CAPA Management
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/spc">
                 <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
                 SPC Analysis

@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { logger } from "@/lib/logger";
 
+const transferLineSchema = z.object({
+  partId: z.string().min(1),
+  quantity: z.number().positive(),
+});
+
+const transferPostSchema = z.object({
+  fromSiteId: z.string().min(1, 'fromSiteId là bắt buộc'),
+  toSiteId: z.string().min(1, 'toSiteId là bắt buộc'),
+  requestDate: z.string().optional(),
+  lines: z.array(transferLineSchema).min(1, 'Cần ít nhất một dòng chuyển kho'),
+  notes: z.string().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // GET /api/mrp/multi-site/transfers - Get transfer orders
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const fromSiteId = searchParams.get("fromSiteId") || undefined;
     const toSiteId = searchParams.get("toSiteId") || undefined;
     const status = searchParams.get("status") || undefined;
@@ -32,26 +53,30 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(transfers);
   } catch (error) {
-    console.error("Transfers GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to get transfer orders" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/multi-site/transfers - Create a transfer order
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { fromSiteId, toSiteId, requestDate, lines, notes } = body;
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    if (!fromSiteId || !toSiteId || !lines || lines.length === 0) {
+  try {
+const body = await request.json();
+    const parsed = transferPostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "fromSiteId, toSiteId, and lines are required" },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { fromSiteId, toSiteId, requestDate, lines, notes } = parsed.data;
 
     // Generate transfer number
     const count = await prisma.transferOrder.count();
@@ -72,8 +97,9 @@ export async function POST(request: NextRequest) {
         expectedDate,
         notes,
         lines: {
-          create: lines.map((line: { partId: string; quantity: number }) => ({
+          create: lines.map((line, index) => ({
             partId: line.partId,
+            lineNumber: index + 1,
             quantity: new Decimal(line.quantity),
             shippedQty: new Decimal(0),
             receivedQty: new Decimal(0),
@@ -96,18 +122,22 @@ export async function POST(request: NextRequest) {
       transfer,
     });
   } catch (error) {
-    console.error("Transfers POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to create transfer order" },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/mrp/multi-site/transfers - Update transfer order status
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+const body = await request.json();
     const { transferId, action, lineUpdates } = body;
 
     if (!transferId || !action) {
@@ -193,10 +223,10 @@ export async function PUT(request: NextRequest) {
       transfer: updated,
     });
   } catch (error) {
-    console.error("Transfers PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/mrp/multi-site/transfers' });
     return NextResponse.json(
       { error: "Failed to update transfer order" },
       { status: 500 }
     );
   }
-}
+});

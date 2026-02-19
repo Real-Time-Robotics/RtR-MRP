@@ -7,6 +7,8 @@
 // TYPES
 // =============================================================================
 
+import { logger } from '@/lib/logger';
+
 export interface Metric {
   name: string;
   value: number;
@@ -224,7 +226,7 @@ class AlertManager {
           this.notify(existingAlert);
         }
       } catch (error) {
-        console.error(`Error checking alert rule ${rule.name}:`, error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'monitoring', operation: 'checkAlertRule', ruleName: rule.name });
       }
     }
   }
@@ -251,7 +253,7 @@ class AlertManager {
       try {
         handler(alert);
       } catch (error) {
-        console.error('Error in alert handler:', error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'monitoring', operation: 'alertHandler' });
       }
     }
   }
@@ -291,7 +293,7 @@ class PerformanceTracker {
     // Check for slow operations
     const threshold = this.slowThreshold[entry.operation] || 1000;
     if (entry.duration > threshold) {
-      console.warn(`[SLOW] ${entry.operation}: ${entry.duration.toFixed(2)}ms (threshold: ${threshold}ms)`);
+      logger.warn(`[SLOW] ${entry.operation}: ${entry.duration.toFixed(2)}ms (threshold: ${threshold}ms)`, { context: 'monitoring' });
       metrics.increment('slow_operations', 1, { operation: entry.operation });
     }
   }

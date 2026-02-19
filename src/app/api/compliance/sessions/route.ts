@@ -1,20 +1,22 @@
 // src/app/api/compliance/sessions/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import {
   getUserActiveSessions,
   revokeSession,
   revokeAllUserSessions,
   getSessionStatistics,
 } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const GET = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
@@ -29,20 +31,20 @@ export async function GET(request: NextRequest) {
     const sessions = await getUserActiveSessions(session.user.id);
     return NextResponse.json({ sessions });
   } catch (error) {
-    console.error("Sessions query error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/compliance/sessions' });
     return NextResponse.json(
       { error: "Query failed" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const sessionToken = searchParams.get("token");
@@ -77,10 +79,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Session revocation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/compliance/sessions' });
     return NextResponse.json(
       { error: "Revocation failed" },
       { status: 500 }
     );
   }
-}
+});

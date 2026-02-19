@@ -6,6 +6,7 @@
 // =============================================================================
 
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -527,7 +528,7 @@ export class POSuggestionEngine {
           suggestions.push(suggestion);
         }
       } catch (error) {
-        console.error(`[PO Suggestion Engine] Error generating suggestion for ${need.partNumber}:`, error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'po-suggestion-engine', partNumber: need.partNumber });
       }
     }
 
@@ -669,7 +670,7 @@ export class POSuggestionEngine {
 
   private identifyRisks(
     supplier: SupplierSelection,
-    part: any,
+    _part: { id: string; partNumber: string; name: string },
     quantity: number
   ): SuggestionRisk[] {
     const risks: SuggestionRisk[] = [];
@@ -750,7 +751,7 @@ export class POSuggestionEngine {
   }
 
   private generateExplanation(
-    part: any,
+    _part: { id: string; partNumber: string; name: string },
     supplier: SupplierSelection,
     quantityCalc: { recommendedQty: number; eoqQuantity: number; safetyStockQty: number },
     reorderReason: ReorderReason,
@@ -793,7 +794,7 @@ export class POSuggestionEngine {
   }
 
   private async buildMetadata(
-    part: any,
+    part: { id: string; partNumber: string; name: string },
     supplier: SupplierSelection,
     quantityCalc: { recommendedQty: number; eoqQuantity: number; moqQuantity: number }
   ): Promise<SuggestionMetadata> {

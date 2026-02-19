@@ -1,4 +1,10 @@
+import type { Metadata } from 'next';
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: 'Sales | RTR-MRP',
+  description: 'Sales management and revenue tracking for manufacturing operations - Quản lý bán hàng và theo dõi doanh thu sản xuất',
+};
 
 // Sales page redirects to Orders
 export default function SalesPage() {

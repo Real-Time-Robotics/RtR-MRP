@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService } from '@/lib/analytics';
+import { DashboardWidget } from '@/lib/analytics/types';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const addWidgetSchema = z.object({
   widgetType: z.enum(['kpi', 'chart-line', 'chart-bar', 'chart-pie', 'chart-area', 'chart-donut', 'gauge', 'table', 'sparkline', 'heatmap']),
   title: z.string().min(1).max(100),
@@ -22,12 +26,16 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    const existing = await dashboardService.getDashboard(id);
+const existing = await dashboardService.getDashboard(id);
     if (!existing) {
       return NextResponse.json(
         { success: false, error: 'Dashboard not found' },
@@ -45,7 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const widget = await dashboardService.addWidget(id, parsed.data as any);
+    const widget = await dashboardService.addWidget(id, parsed.data as Omit<DashboardWidget, 'id' | 'dashboardId'>);
 
     return NextResponse.json({
       success: true,
@@ -54,10 +62,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error adding widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/analytics/dashboards/[id]/widgets' });
     return NextResponse.json(
       { success: false, error: 'Failed to add widget' },
       { status: 500 }
     );
   }
-}
+});

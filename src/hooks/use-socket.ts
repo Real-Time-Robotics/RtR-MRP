@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
+import { clientLogger } from '@/lib/client-logger';
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -72,14 +73,14 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
 
       socket.on('connect', () => {
         if (isMounted) {
-          console.log('[Socket] Connected:', socket?.id);
+          clientLogger.info('[Socket] Connected', socket?.id);
           setIsConnected(true);
         }
       });
 
       socket.on('disconnect', (reason) => {
         if (isMounted && reason !== 'io client disconnect') {
-          console.log('[Socket] Disconnected:', reason);
+          clientLogger.info('[Socket] Disconnected', reason);
         }
         if (isMounted) {
           setIsConnected(false);
@@ -88,7 +89,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
 
       socket.on('connect_error', (error) => {
         if (isMounted) {
-          console.error('[Socket] Connection error:', error.message);
+          clientLogger.error('[Socket] Connection error', error);
         }
       });
 

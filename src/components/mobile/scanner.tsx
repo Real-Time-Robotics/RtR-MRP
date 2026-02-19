@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { BarcodeScanner, ScanResult } from "@/lib/mobile/scanner";
 import { parseBarcode, ParsedBarcode } from "@/lib/mobile/barcode-parser";
 import { feedback } from "@/lib/mobile/haptics";
+import { clientLogger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -72,7 +73,7 @@ export function Scanner({
   );
 
   const handleError = useCallback((err: Error) => {
-    console.error("Scanner error:", err);
+    clientLogger.error("Scanner error", err);
     feedback.scanError();
     setError(err.message);
   }, []);
@@ -207,6 +208,7 @@ export function Scanner({
           onClick={toggleTorch}
           disabled={!isActive}
           className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+          aria-label={torchOn ? "Tắt đèn flash" : "Bật đèn flash"}
         >
           {torchOn ? (
             <Flashlight className="h-5 w-5 text-yellow-400" />
@@ -221,6 +223,7 @@ export function Scanner({
           onClick={switchCamera}
           disabled={!isActive}
           className="rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+          aria-label="Chuyển camera"
         >
           <RefreshCw className="h-5 w-5 text-white" />
         </Button>
@@ -231,6 +234,7 @@ export function Scanner({
             size="icon"
             onClick={stopScanner}
             className="rounded-full bg-red-500/80 backdrop-blur-sm hover:bg-red-600"
+            aria-label="Dừng quét"
           >
             <CameraOff className="h-5 w-5 text-white" />
           </Button>
@@ -240,6 +244,7 @@ export function Scanner({
             size="icon"
             onClick={startScanner}
             className="rounded-full bg-green-500/80 backdrop-blur-sm hover:bg-green-600"
+            aria-label="Bắt đầu quét"
           >
             <Camera className="h-5 w-5 text-white" />
           </Button>
@@ -253,6 +258,7 @@ export function Scanner({
           size="icon"
           onClick={onClose}
           className="absolute top-4 right-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
+          aria-label="Đóng"
         >
           <X className="h-5 w-5 text-white" />
         </Button>

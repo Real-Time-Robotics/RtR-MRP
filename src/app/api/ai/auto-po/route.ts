@@ -4,7 +4,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getPOSuggestionEngine,
   getAIPOAnalyzer,
@@ -13,20 +15,50 @@ import {
 } from '@/lib/ai/autonomous';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const autoPOBodySchema = z.object({
+  partIds: z.array(z.string()).optional(),
+  autoAddToQueue: z.boolean().optional(),
+  includeAIEnhancement: z.boolean().optional(),
+  filters: z.object({
+    minConfidence: z.number().optional(),
+    maxSuggestions: z.number().optional(),
+    excludePartIds: z.array(z.string()).optional(),
+  }).optional(),
+});
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = autoPOBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       partIds,
       autoAddToQueue = true,
       includeAIEnhancement = true,
       filters,
-    } = body;
+    } = parseResult.data;
 
     const engine = getPOSuggestionEngine();
     const analyzer = getAIPOAnalyzer();
@@ -54,7 +86,7 @@ export async function POST(request: NextRequest) {
       let filtered = batchSuggestions;
       if (filters?.minConfidence) {
         filtered = filtered.filter(
-          (s: POSuggestion) => s.confidenceScore >= filters.minConfidence
+          (s: POSuggestion) => s.confidenceScore >= (filters.minConfidence ?? 0)
         );
       }
       if (filters?.maxSuggestions) {
@@ -62,7 +94,7 @@ export async function POST(request: NextRequest) {
       }
       if (filters?.excludePartIds) {
         filtered = filtered.filter(
-          (s: POSuggestion) => !filters.excludePartIds.includes(s.partId)
+          (s: POSuggestion) => !(filters.excludePartIds ?? []).includes(s.partId)
         );
       }
 
@@ -87,7 +119,7 @@ export async function POST(request: NextRequest) {
           );
           queueItems.push(queueItem);
         } catch (error) {
-          console.error('Failed to add suggestion to queue:', error);
+          logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po', detail: 'Failed to add suggestion to queue' });
         }
       }
     }
@@ -114,7 +146,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po' });
     return NextResponse.json(
       {
         error: 'Failed to generate PO suggestions',
@@ -123,16 +155,27 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const partId = searchParams.get('partId');
 
     if (!partId) {
@@ -164,10 +207,10 @@ export async function GET(request: NextRequest) {
       suggestion: enhanced,
     });
   } catch (error) {
-    console.error('[Auto-PO API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-po' });
     return NextResponse.json(
       { error: 'Failed to get PO suggestion' },
       { status: 500 }
     );
   }
-}
+});

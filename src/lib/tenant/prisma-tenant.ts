@@ -1,14 +1,29 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - TENANT PRISMA CLIENT
 // Automatically filters all queries by tenantId
 // =============================================================================
 
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
+
+/** Record shape for entities that have a tenantId field */
+interface TenantRecord {
+  tenantId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Type for dynamically accessing a Prisma model delegate by name.
+ * Prisma's extension API provides model names as strings; this type
+ * allows us to call findFirst on any model without `as any`.
+ */
+type PrismaModelDelegate = {
+  findFirst: (args: { where: Record<string, unknown> }) => Promise<TenantRecord | null>;
+};
 
 // Models that require tenant filtering
 // These models have a tenantId field
@@ -59,13 +74,21 @@ function isTenantModel(model: string): model is TenantModel {
   return TENANT_MODELS.includes(model.toLowerCase() as TenantModel);
 }
 
+/**
+ * Get a Prisma model delegate by name from the base client.
+ * This is used for ownership verification in update/delete operations.
+ */
+function getModelDelegate(prisma: PrismaClient, model: string): PrismaModelDelegate {
+  return (prisma as unknown as Record<string, PrismaModelDelegate>)[model];
+}
+
 // =============================================================================
 // TENANT PRISMA EXTENSION
 // =============================================================================
 
 /**
  * Creates a Prisma client that automatically filters by tenantId
- * 
+ *
  * Usage:
  * ```typescript
  * const prisma = createTenantPrisma(tenantId);
@@ -79,13 +102,13 @@ export function createTenantPrisma(tenantId: string) {
 
   return basePrisma.$extends({
     name: 'tenant-isolation',
-    
+
     query: {
       $allModels: {
         // =============================================
         // READ OPERATIONS
         // =============================================
-        
+
         async findMany({ model, args, query }) {
           if (isTenantModel(model)) {
             args.where = { ...args.where, tenantId };
@@ -102,11 +125,12 @@ export function createTenantPrisma(tenantId: string) {
 
         async findUnique({ model, args, query }) {
           const result = await query(args);
-          
+
           // Verify tenant ownership after fetching
           if (result && isTenantModel(model)) {
-            if ((result as any).tenantId !== tenantId) {
-              console.warn(`[TENANT] Access denied: ${model} belongs to different tenant`);
+            const record = result as TenantRecord;
+            if (record.tenantId !== tenantId) {
+              logger.warn(`[TENANT] Access denied: ${model} belongs to different tenant`, { context: 'prisma-tenant' });
               return null;
             }
           }
@@ -122,9 +146,10 @@ export function createTenantPrisma(tenantId: string) {
 
         async findUniqueOrThrow({ model, args, query }) {
           const result = await query(args);
-          
+
           if (result && isTenantModel(model)) {
-            if ((result as any).tenantId !== tenantId) {
+            const record = result as TenantRecord;
+            if (record.tenantId !== tenantId) {
               throw new Error(`Record belongs to different tenant`);
             }
           }
@@ -146,7 +171,8 @@ export function createTenantPrisma(tenantId: string) {
         async createMany({ model, args, query }) {
           if (isTenantModel(model)) {
             if (Array.isArray(args.data)) {
-              args.data = args.data.map((item: any) => ({ ...item, tenantId }));
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma $allModels extension uses dynamic model types; items are model-specific create inputs
+              args.data = (args.data as Record<string, unknown>[]).map((item) => ({ ...item, tenantId })) as typeof args.data;
             } else {
               args.data = { ...args.data, tenantId };
             }
@@ -169,10 +195,11 @@ export function createTenantPrisma(tenantId: string) {
           if (isTenantModel(model)) {
             // Ensure we only update our tenant's records
             // First check if record exists and belongs to tenant
-            const existing = await basePrisma[model as any].findFirst({
-              where: { ...args.where, tenantId },
+            const delegate = getModelDelegate(basePrisma, model);
+            const existing = await delegate.findFirst({
+              where: { ...(args.where as Record<string, unknown>), tenantId },
             });
-            
+
             if (!existing) {
               throw new Error(`Record not found or belongs to different tenant`);
             }
@@ -190,10 +217,11 @@ export function createTenantPrisma(tenantId: string) {
         async delete({ model, args, query }) {
           if (isTenantModel(model)) {
             // Verify ownership before delete
-            const existing = await basePrisma[model as any].findFirst({
-              where: { ...args.where, tenantId },
+            const delegate = getModelDelegate(basePrisma, model);
+            const existing = await delegate.findFirst({
+              where: { ...(args.where as Record<string, unknown>), tenantId },
             });
-            
+
             if (!existing) {
               throw new Error(`Record not found or belongs to different tenant`);
             }
@@ -253,11 +281,11 @@ const tenantClients = new Map<string, TenantPrismaClient>();
  */
 export function getTenantPrisma(tenantId: string): TenantPrismaClient {
   let client = tenantClients.get(tenantId);
-  
+
   if (!client) {
     client = createTenantPrisma(tenantId);
     tenantClients.set(tenantId, client);
-    
+
     // Clean up old clients if too many (simple LRU-like behavior)
     if (tenantClients.size > 100) {
       const firstKey = tenantClients.keys().next().value;
@@ -266,7 +294,7 @@ export function getTenantPrisma(tenantId: string): TenantPrismaClient {
       }
     }
   }
-  
+
   return client;
 }
 
@@ -276,7 +304,7 @@ export function getTenantPrisma(tenantId: string): TenantPrismaClient {
 
 /**
  * Execute raw SQL with tenant filter
- * 
+ *
  * Usage:
  * ```typescript
  * const results = await tenantQuery(
@@ -289,13 +317,13 @@ export function getTenantPrisma(tenantId: string): TenantPrismaClient {
 export async function tenantQuery<T = unknown>(
   tenantId: string,
   sql: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T> {
   const prisma = new PrismaClient();
-  
+
   // Ensure tenantId is in params if query uses it
   // This is just a helper - the caller should properly parameterize
-  
+
   try {
     const result = await prisma.$queryRawUnsafe<T>(sql, ...params);
     return result;

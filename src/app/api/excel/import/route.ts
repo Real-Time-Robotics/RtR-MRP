@@ -1,24 +1,28 @@
 // src/app/api/excel/import/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
+import { prisma } from "@/lib/prisma";import { logger } from '@/lib/logger';
+
 import {
   parseFile,
   autoDetectMappings,
+  detectEntityType,
 } from "@/lib/excel";
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // POST - Upload and parse file, create import job
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const formData = await request.formData();
+  try {
+const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const entityType = formData.get("entityType") as string | null;
+    const useAI = formData.get("useAI") !== "false"; // Default to true
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -47,13 +51,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-detect mappings if entity type is provided
-    let mappings = null;
-    const detectedType = entityType;
+    // Detect entity type if not provided
+    let detectedType = entityType;
+    let entityDetectionResult = null;
 
-    if (entityType) {
-      const detected = autoDetectMappings(sheet.headers, entityType);
+    if (!entityType) {
+      // Use rule-based detection (now supports Vietnamese)
+      const detection = detectEntityType(sheet.headers);
+      detectedType = detection.entityType;
+      entityDetectionResult = {
+        entityType: detection.entityType,
+        confidence: detection.confidence,
+        matchedHeaders: detection.matchedHeaders,
+        source: "rules",
+        needsAIConfirmation: detection.confidence < 0.7,
+      };
+    }
+
+    // Auto-detect mappings
+    let mappings = null;
+    let mappingResult = null;
+
+    if (detectedType) {
+      const detected = autoDetectMappings(sheet.headers, detectedType);
       mappings = detected.mappings;
+      mappingResult = {
+        mappings: detected.mappings,
+        unmappedColumns: detected.unmappedColumns,
+        missingRequiredFields: detected.missingRequiredFields,
+        hasUnmappedColumns: detected.unmappedColumns.length > 0,
+        needsAISuggestions: useAI && detected.unmappedColumns.length > 0,
+      };
     }
 
     // Create import job
@@ -82,27 +110,50 @@ export async function POST(request: NextRequest) {
       })),
       activeSheet: parseResult.activeSheet,
       entityType: detectedType,
+      entityDetection: entityDetectionResult,
       mappings,
+      mappingResult,
       preview: sheet.data.slice(0, 10),
+      // AI enhancement hints
+      aiHints: {
+        canUseAI: useAI,
+        needsEntityConfirmation: entityDetectionResult?.needsAIConfirmation,
+        needsMappingSuggestions: mappingResult?.needsAISuggestions,
+        aiEndpoint: "/api/excel/import/ai",
+      },
     });
   } catch (error) {
-    console.error("Import upload error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Upload failed" },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update mapping and validate data
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { jobId, mappings, entityType, updateMode } = await request.json();
+  try {
+const putBodySchema = z.object({
+      jobId: z.string(),
+      mappings: z.unknown(),
+      entityType: z.string(),
+      updateMode: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = putBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { jobId, mappings, entityType, updateMode } = parseResult.data;
 
     if (!jobId || !mappings || !entityType) {
       return NextResponse.json(
@@ -140,23 +191,22 @@ export async function PUT(request: NextRequest) {
       status: "validating",
     });
   } catch (error) {
-    console.error("Import mapping error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Mapping update failed" },
       { status: 500 }
     );
   }
-}
+});
 
 // GET - Get import job status
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
 
     if (jobId) {
@@ -184,10 +234,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ jobs });
   } catch (error) {
-    console.error("Import status error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/import' });
     return NextResponse.json(
       { error: "Failed to get import status" },
       { status: 500 }
     );
   }
-}
+});

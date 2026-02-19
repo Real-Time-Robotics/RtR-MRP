@@ -132,9 +132,28 @@ export interface BomExplosionResult {
   status: "OK" | "SHORTAGE";
   moduleCode?: string;
   moduleName?: string;
+  level: number;
+  isSubAssembly: boolean;
+  parentPartNumber?: string;
+  children?: BomExplosionResult[];
+  quantityPer: number;
 }
 
 // ============ INVENTORY ============
+export type WarehouseType = 'RECEIVING' | 'QUARANTINE' | 'MAIN' | 'WIP' | 'FINISHED_GOODS' | 'SHIPPING' | 'HOLD' | 'SCRAP';
+
+/** Material flow order for warehouse sorting */
+export const WAREHOUSE_FLOW_ORDER: Record<string, number> = {
+  RECEIVING: 1,
+  QUARANTINE: 2,
+  MAIN: 3,
+  WIP: 4,
+  FINISHED_GOODS: 5,
+  SHIPPING: 6,
+  HOLD: 7,
+  SCRAP: 8,
+};
+
 export interface Warehouse {
   id: string;
   code: string;

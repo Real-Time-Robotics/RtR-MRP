@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { CapacityBar } from "@/components/production/capacity-bar";
+import { clientLogger } from '@/lib/client-logger';
 
 interface CapacitySummary {
   totalWorkCenters: number;
@@ -42,7 +43,7 @@ export default function CapacityPage() {
         setData(result);
       }
     } catch (error) {
-      console.error("Failed to fetch capacity:", error);
+      clientLogger.error("Failed to fetch capacity:", error);
     } finally {
       setLoading(false);
     }

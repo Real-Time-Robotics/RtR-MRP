@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Play, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, Play, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 
 interface DemandChange {
   partId?: string;
@@ -360,8 +360,17 @@ export function SimulationBuilder({
           onClick={handleSubmit}
           disabled={!name || isLoading}
         >
-          <Play className="h-4 w-4 mr-2" />
-          {isLoading ? "Creating..." : "Create & Run Simulation"}
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Đang tạo...
+            </>
+          ) : (
+            <>
+              <Play className="h-4 w-4 mr-2" />
+              Create & Run Simulation
+            </>
+          )}
         </Button>
       </div>
     </div>

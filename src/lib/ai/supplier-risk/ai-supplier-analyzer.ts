@@ -5,6 +5,7 @@
 
 import { getAIProvider, AIProviderService, createSystemMessage, createUserMessage } from '@/lib/ai/provider';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   SupplierDataExtractor,
   getSupplierDataExtractor,
@@ -24,7 +25,96 @@ import {
   EarlyWarningSystem,
   getEarlyWarningSystem,
   EarlyWarningSignal,
+  AlertSummary,
 } from './early-warning-system';
+import {
+  SupplyChainRiskProfile,
+} from './risk-calculator';
+import {
+  SupplierRanking,
+} from './supplier-performance-scorer';
+
+// =============================================================================
+// INTERNAL TYPES FOR AI PARSING
+// =============================================================================
+
+/** Parsed mitigation strategy from risk assessment */
+interface MitigationStrategy {
+  priority: number;
+  strategy: string;
+  description: string;
+  actions: string[];
+  timeline: string;
+  expectedRiskReduction: number;
+}
+
+/** Parsed contingency plan item */
+interface ContingencyPlanItem {
+  scenario: string;
+  trigger: string;
+  response: string[];
+}
+
+/** Raw recommendation from AI JSON parsing */
+interface RawRecommendation {
+  priority?: string | number;
+  category?: string;
+  title?: string;
+  description?: string;
+  expectedOutcome?: string;
+  timeframe?: string;
+  effortLevel?: string;
+  roiPotential?: string;
+}
+
+/** Raw development plan from AI JSON parsing */
+interface RawDevelopmentPlan {
+  overallGoal?: string;
+  currentState?: string;
+  targetState?: string;
+  timeline?: string;
+  milestones?: RawMilestone[];
+  successMetrics?: string[];
+  resources?: string[];
+}
+
+/** Raw milestone from AI JSON parsing */
+interface RawMilestone {
+  name?: string;
+  description?: string;
+  targetDate?: string;
+  dependencies?: string[];
+}
+
+/** Raw concern from AI JSON parsing */
+interface RawConcern {
+  severity?: string;
+  title?: string;
+  description?: string;
+  affectedSuppliers?: string[];
+  potentialImpact?: string;
+  recommendedAction?: string;
+}
+
+/** Raw strategic initiative from AI JSON parsing */
+interface RawStrategicInitiative {
+  title?: string;
+  description?: string;
+  objective?: string;
+  timeline?: string;
+  expectedBenefit?: string;
+  stakeholders?: string[];
+}
+
+/** Raw optimization from AI JSON parsing */
+interface RawOptimization {
+  type?: string;
+  title?: string;
+  description?: string;
+  potentialSavings?: string;
+  implementationComplexity?: string;
+  timeToValue?: string;
+}
 
 // =============================================================================
 // TYPES
@@ -211,7 +301,7 @@ export class AISupplierAnalyzer {
         dataQuality,
       };
     } catch (error) {
-      console.error('[AI Supplier Analyzer] Error generating insight:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-supplier-analyzer', operation: 'generateInsight' });
       return this.generateFallbackInsight(
         supplierId,
         comprehensiveData,
@@ -243,7 +333,7 @@ export class AISupplierAnalyzer {
       const aiResponseText = await this.callAI(prompt);
       return this.parseSupplyChainAnalysis(aiResponseText, riskProfile, alertSummary);
     } catch (error) {
-      console.error('[AI Supplier Analyzer] Error analyzing supply chain:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-supplier-analyzer', operation: 'analyzeSupplyChain' });
       return this.generateFallbackSupplyChainAnalysis(riskProfile, alertSummary);
     }
   }
@@ -275,7 +365,7 @@ export class AISupplierAnalyzer {
       const aiResponseText = await this.callAI(prompt);
       return this.parseComparisonAnalysis(aiResponseText, scorecards);
     } catch (error) {
-      console.error('[AI Supplier Analyzer] Error comparing suppliers:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-supplier-analyzer', operation: 'compareSuppliers' });
       return this.generateFallbackComparison(scorecards);
     }
   }
@@ -347,7 +437,7 @@ export class AISupplierAnalyzer {
       const aiResponseText = await this.callAI(prompt);
       return aiResponseText;
     } catch (error) {
-      console.error('[AI Supplier Analyzer] Error generating report:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-supplier-analyzer', operation: 'generateReport' });
       return this.generateFallbackReport(comprehensiveData, scorecard, reportType);
     }
   }
@@ -410,9 +500,9 @@ Format response as JSON with keys: executiveSummary, performanceAnalysis, riskAs
   }
 
   private buildSupplyChainAnalysisPrompt(
-    riskProfile: any,
-    alertSummary: any,
-    rankings: any[]
+    riskProfile: SupplyChainRiskProfile,
+    alertSummary: AlertSummary,
+    rankings: SupplierRanking[]
   ): string {
     return `Analyze the overall supply chain health and provide strategic recommendations.
 
@@ -540,22 +630,31 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     };
   }
 
-  private parseRecommendations(raw: any[]): StrategicRecommendation[] {
+  private parseRecommendations(raw: RawRecommendation[]): StrategicRecommendation[] {
     if (!Array.isArray(raw)) return [];
+
+    const validCategories = ['risk_mitigation', 'performance_improvement', 'cost_optimization', 'relationship', 'diversification'] as const;
+    const validEffort = ['low', 'medium', 'high'] as const;
 
     return raw.slice(0, 5).map((r, index) => ({
       priority: this.mapPriority(r.priority || index),
-      category: r.category || 'performance_improvement',
+      category: (validCategories.includes(r.category as typeof validCategories[number])
+        ? r.category as StrategicRecommendation['category']
+        : 'performance_improvement') as StrategicRecommendation['category'],
       title: r.title || `Recommendation ${index + 1}`,
       description: r.description || '',
       expectedOutcome: r.expectedOutcome || 'Improved performance',
       timeframe: r.timeframe || '30-90 days',
-      effortLevel: r.effortLevel || 'medium',
-      roiPotential: r.roiPotential || 'medium',
+      effortLevel: (validEffort.includes(r.effortLevel as typeof validEffort[number])
+        ? r.effortLevel as StrategicRecommendation['effortLevel']
+        : 'medium') as StrategicRecommendation['effortLevel'],
+      roiPotential: (validEffort.includes(r.roiPotential as typeof validEffort[number])
+        ? r.roiPotential as StrategicRecommendation['roiPotential']
+        : 'medium') as StrategicRecommendation['roiPotential'],
     }));
   }
 
-  private parseDevelopmentPlan(raw: any): SupplierDevelopmentPlan {
+  private parseDevelopmentPlan(raw: RawDevelopmentPlan | undefined | null): SupplierDevelopmentPlan {
     if (!raw) return this.createDefaultDevelopmentPlan();
 
     return {
@@ -563,7 +662,7 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
       currentState: raw.currentState || 'Current assessment in progress',
       targetState: raw.targetState || 'Achieve Grade A performance',
       timeline: raw.timeline || '12 months',
-      milestones: (raw.milestones || []).slice(0, 4).map((m: any, i: number) => ({
+      milestones: (raw.milestones || []).slice(0, 4).map((m: RawMilestone, i: number) => ({
         name: m.name || `Milestone ${i + 1}`,
         description: m.description || '',
         targetDate: m.targetDate || 'TBD',
@@ -577,8 +676,8 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
 
   private parseSupplyChainAnalysis(
     aiText: string,
-    riskProfile: any,
-    alertSummary: any
+    riskProfile: SupplyChainRiskProfile,
+    alertSummary: AlertSummary
   ): SupplyChainAIAnalysis {
     try {
       const jsonMatch = aiText.match(/\{[\s\S]*\}/);
@@ -646,7 +745,7 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     return 'low';
   }
 
-  private mapPriority(value: any): StrategicRecommendation['priority'] {
+  private mapPriority(value: string | number | undefined): StrategicRecommendation['priority'] {
     if (typeof value === 'string') {
       const lower = value.toLowerCase();
       if (lower.includes('critical')) return 'critical';
@@ -711,7 +810,7 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     };
   }
 
-  private generateMitigationStrategies(riskAssessment: SupplierRiskAssessment): any[] {
+  private generateMitigationStrategies(riskAssessment: SupplierRiskAssessment): MitigationStrategy[] {
     const strategies = [];
     let priority = 1;
 
@@ -763,7 +862,7 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     return strategies;
   }
 
-  private generateContingencyPlan(riskAssessment: SupplierRiskAssessment): any[] {
+  private generateContingencyPlan(riskAssessment: SupplierRiskAssessment): ContingencyPlanItem[] {
     return [
       {
         scenario: 'Supplier production halt',
@@ -795,10 +894,13 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     ];
   }
 
-  private parseTopConcerns(raw: any[]): AIIdentifiedConcern[] {
+  private parseTopConcerns(raw: RawConcern[]): AIIdentifiedConcern[] {
     if (!Array.isArray(raw)) return [];
+    const validSeverities = ['critical', 'high', 'medium', 'low'] as const;
     return raw.slice(0, 5).map((c) => ({
-      severity: c.severity || 'medium',
+      severity: (validSeverities.includes(c.severity as typeof validSeverities[number])
+        ? c.severity as AIIdentifiedConcern['severity']
+        : 'medium') as AIIdentifiedConcern['severity'],
       title: c.title || 'Unnamed concern',
       description: c.description || '',
       affectedSuppliers: c.affectedSuppliers || [],
@@ -807,7 +909,7 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     }));
   }
 
-  private parseStrategicInitiatives(raw: any[]): AIStrategicInitiative[] {
+  private parseStrategicInitiatives(raw: RawStrategicInitiative[]): AIStrategicInitiative[] {
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 4).map((s, i) => ({
       priority: i + 1,
@@ -820,14 +922,20 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
     }));
   }
 
-  private parseOptimizations(raw: any[]): OptimizationOpportunity[] {
+  private parseOptimizations(raw: RawOptimization[]): OptimizationOpportunity[] {
     if (!Array.isArray(raw)) return [];
+    const validTypes = ['cost', 'risk', 'efficiency', 'quality'] as const;
+    const validComplexity = ['low', 'medium', 'high'] as const;
     return raw.slice(0, 4).map((o) => ({
-      type: o.type || 'efficiency',
+      type: (validTypes.includes(o.type as typeof validTypes[number])
+        ? o.type as OptimizationOpportunity['type']
+        : 'efficiency') as OptimizationOpportunity['type'],
       title: o.title || 'Optimization',
       description: o.description || '',
       potentialSavings: o.potentialSavings || 'TBD',
-      implementationComplexity: o.implementationComplexity || 'medium',
+      implementationComplexity: (validComplexity.includes(o.implementationComplexity as typeof validComplexity[number])
+        ? o.implementationComplexity as OptimizationOpportunity['implementationComplexity']
+        : 'medium') as OptimizationOpportunity['implementationComplexity'],
       timeToValue: o.timeToValue || '3-6 months',
     }));
   }
@@ -921,8 +1029,8 @@ Write a professional narrative report suitable for ${reportType === 'executive' 
   }
 
   private generateFallbackSupplyChainAnalysis(
-    riskProfile: any,
-    alertSummary: any
+    riskProfile: SupplyChainRiskProfile,
+    alertSummary: AlertSummary
   ): SupplyChainAIAnalysis {
     return {
       generatedAt: new Date(),
@@ -1015,7 +1123,7 @@ Report generated: ${new Date().toISOString()}
       });
       return response.content;
     } catch (error) {
-      console.error('[AI Supplier Analyzer] AI call failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-supplier-analyzer', operation: 'callAI' });
       throw error;
     }
   }

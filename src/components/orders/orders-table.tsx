@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Calendar, FileText, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -10,10 +10,12 @@ import { SalesOrderForm, DeleteSalesOrderDialog, SalesOrder } from '@/components
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // TYPES
@@ -22,6 +24,7 @@ import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 interface OrdersTableProps {
   initialData?: SalesOrder[];
 }
+
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -37,6 +40,7 @@ function formatCurrency(amount: number) {
 // =============================================================================
 
 function StatsCards({ orders }: { orders: SalesOrder[] }) {
+  const { t } = useLanguage();
   const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   return (
@@ -46,13 +50,13 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">
           <div className="text-lg font-semibold font-mono">{orders.length}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng đơn hàng</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.totalOrders')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="text-lg font-semibold font-mono text-green-600">{formatCurrency(totalValue)}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Tổng giá trị</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.totalValue')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
@@ -60,7 +64,7 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
           <div className="text-lg font-semibold font-mono text-blue-600">
             {orders.filter((o) => o.status === 'in_progress').length}
           </div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Đang sản xuất</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.inProduction')}</p>
         </CardContent>
       </Card>
       <Card className="border-gray-200 dark:border-mrp-border">
@@ -68,7 +72,7 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
           <div className="text-lg font-semibold font-mono text-amber-600">
             {orders.filter((o) => o.status === 'pending').length}
           </div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Chờ xử lý</p>
+          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.pendingCount')}</p>
         </CardContent>
       </Card>
     </div>
@@ -80,8 +84,7 @@ function StatsCards({ orders }: { orders: SalesOrder[] }) {
 // =============================================================================
 
 export function OrdersTable({ initialData = [] }: OrdersTableProps) {
-  const [orders, setOrders] = useState<SalesOrder[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -97,32 +100,12 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     priority: 'all',
   });
 
-  // Fetch orders
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
-      if (filters.priority !== 'all') params.set('priority', filters.priority);
-
-      const response = await fetch(`/api/sales-orders?${params.toString()}`);
-      const result = await response.json();
-
-      if (response.ok) {
-        setOrders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch orders:', error);
-      toast.error('Không thể tải danh sách đơn hàng');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filters]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // SWR-based data fetching with debounced search
+  const { data: orders, loading, refresh } = useApiData<SalesOrder>(
+    '/api/sales-orders',
+    { search, status: filters.status, priority: filters.priority },
+    { debounce: search ? 300 : 0 }
+  );
 
   // Handlers
   const handleAdd = () => {
@@ -141,18 +124,18 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
   };
 
   const handleFormSuccess = () => {
-    fetchOrders();
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchOrders();
+    refresh();
     setSelectedIds(new Set());
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa/hủy ${selectedIds.size} đơn hàng?`)) {
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: t('orders.title').toLowerCase() }))) {
       return;
     }
 
@@ -165,32 +148,32 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa/hủy ${failedCount} đơn hàng`);
+        toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: t('orders.title').toLowerCase() }));
       } else {
-        toast.success(`Đã xóa/hủy ${selectedIds.size} đơn hàng`);
+        toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('orders.title').toLowerCase() }));
       }
 
-      fetchOrders();
+      refresh();
       setSelectedIds(new Set());
     } catch (error) {
-      toast.error('Có lỗi xảy ra');
+      toast.error(t('error.occurred'));
     }
   };
 
   const handleExport = () => {
     if (orders.length === 0) {
-      toast.info('Không có dữ liệu để xuất');
+      toast.info(t('table.noDataToExport'));
       return;
     }
 
-    const exportColumns: ExportColumn[] = [
+    const exportColumns: ExportColumn<SalesOrder>[] = [
       { key: 'orderNumber', header: 'Order Number', width: 12 },
-      { key: 'customer', header: 'Customer', width: 25, format: (v) => v?.name || '-' },
+      { key: 'customer', header: 'Customer', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
       { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
       { key: 'requiredDate', header: 'Required Date', width: 12, type: 'date' },
-      { key: 'priority', header: 'Priority', width: 10, format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || '-' },
+      { key: 'priority', header: 'Priority', width: 10, format: (v) => { const s = v as string; return s ? s.charAt(0).toUpperCase() + s.slice(1) : '-'; } },
       { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
-      { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
+      { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
     ];
 
     const totalValue = orders.reduce((sum, so) => sum + (so.totalAmount || 0), 0);
@@ -206,27 +189,27 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       ['Pending', orders.filter(so => so.status === 'pending').length.toString()],
     ]);
 
-    toast.success('Đã xuất file Excel thành công');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
-    toast.info('Tính năng import đang được phát triển');
+    toast.info(t('table.importInDev'));
   };
 
   // Create action items for each row
   const createOrderActions = (order: SalesOrder): ActionDropdownItem[] => [
     {
-      label: 'Xem chi tiết',
+      label: t('table.viewDetails'),
       href: `/orders/${order.id}`,
     },
     {
-      label: 'Chỉnh sửa',
+      label: t('common.edit'),
       onClick: () => handleEdit(order),
       permission: 'orders:edit',
       disabled: !['draft', 'pending', 'confirmed'].includes(order.status),
     },
     {
-      label: order.status === 'draft' ? 'Xóa' : 'Hủy đơn',
+      label: order.status === 'draft' ? t('common.delete') : t('orders.cancelOrder'),
       onClick: () => handleDelete(order),
       permission: 'orders:delete',
       variant: 'destructive',
@@ -234,12 +217,11 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     },
   ];
 
-  // Column definitions for DataTable - SONG ÁNH 1:1 với Form
+  // Column definitions for DataTable
   const columns: Column<SalesOrder>[] = useMemo(() => [
-    // ===== HEADER INFO SECTION =====
     {
       key: 'orderNumber',
-      header: 'Số đơn hàng',
+      header: t('orders.orderNumber'),
       width: '120px',
       sortable: true,
       sticky: 'left',
@@ -251,7 +233,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     },
     {
       key: 'customer',
-      header: 'Khách hàng',
+      header: t('orders.customer'),
       width: '180px',
       sortable: true,
       render: (value) => value ? (
@@ -263,91 +245,141 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     },
     {
       key: 'status',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '110px',
-      align: 'center',
       sortable: true,
-      render: (value) => <OrderStatusBadge status={value} />,
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          draft: 'bg-gray-100 dark:bg-gray-800',
+          pending: 'bg-yellow-100 dark:bg-yellow-900/30',
+          confirmed: 'bg-green-100 dark:bg-green-900/30',
+          in_progress: 'bg-blue-100 dark:bg-blue-900/30',
+          completed: 'bg-emerald-100 dark:bg-emerald-900/30',
+          partially_shipped: 'bg-violet-100 dark:bg-violet-900/30',
+          shipped: 'bg-indigo-100 dark:bg-indigo-900/30',
+          delivered: 'bg-teal-100 dark:bg-teal-900/30',
+          cancelled: 'bg-red-100 dark:bg-red-900/30',
+        };
+        return map[value] || '';
+      },
+      render: (value) => {
+        const labels: Record<string, string> = {
+          draft: t('status.draft'), pending: t('status.pending'), confirmed: t('status.confirmed'),
+          in_progress: t('status.inProgress'), completed: t('status.completed'),
+          partially_shipped: t('status.partiallyShipped'), shipped: t('status.shipped'),
+          delivered: t('status.delivered'), cancelled: t('status.cancelled'),
+        };
+        return <span className="text-xs font-medium">{labels[value] || value}</span>;
+      },
     },
-
-    // ===== DATE INFO SECTION =====
     {
       key: 'orderDate',
-      header: 'Ngày đặt',
+      header: t('orders.orderDate'),
       width: '100px',
       sortable: true,
       render: (value) => formatDateShort(value),
     },
     {
       key: 'requiredDate',
-      header: 'Ngày yêu cầu',
+      header: t('orders.requiredDateCol'),
       width: '100px',
       sortable: true,
       render: (value) => formatDateShort(value),
     },
     {
       key: 'promisedDate',
-      header: 'Ngày cam kết',
+      header: t('orders.promisedDate'),
       width: '100px',
       sortable: true,
       hidden: true,
       render: (value) => value ? formatDateShort(value) : '-',
     },
-
-    // ===== PRIORITY SECTION =====
     {
       key: 'priority',
-      header: 'Ưu tiên',
+      header: t('orders.priority'),
       width: '90px',
-      align: 'center',
       sortable: true,
-      render: (value) => (
-        <span className={cn(
-          'capitalize text-xs font-medium px-2 py-0.5 rounded',
-          value === 'urgent' && 'bg-red-100 text-red-700',
-          value === 'high' && 'bg-amber-100 text-amber-700',
-          value === 'normal' && 'bg-blue-100 text-blue-700',
-          value === 'low' && 'bg-gray-100 text-gray-600'
-        )}>
-          {value === 'urgent' ? 'Khẩn' : value === 'high' ? 'Cao' : value === 'low' ? 'Thấp' : 'Bình thường'}
-        </span>
-      ),
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          urgent: 'bg-red-100 dark:bg-red-900/30',
+          high: 'bg-amber-100 dark:bg-amber-900/30',
+          normal: 'bg-blue-50 dark:bg-blue-900/20',
+          low: 'bg-gray-50 dark:bg-gray-800',
+        };
+        return map[value] || '';
+      },
+      render: (value) => {
+        const labels: Record<string, string> = {
+          urgent: t('priority.urgent'), high: t('priority.high'), normal: t('priority.normal'), low: t('priority.low'),
+        };
+        return <span className="text-xs font-medium">{labels[value] || value}</span>;
+      },
     },
-
-    // ===== LINE ITEMS SECTION =====
     {
       key: 'lines',
-      header: 'Số dòng',
-      width: '80px',
-      align: 'center',
-      render: (value) => (
-        <span className="font-mono text-xs">{value?.length || 0} items</span>
-      ),
+      header: t('orders.products'),
+      width: '250px',
+      render: (value, row) => {
+        const lines = value as SalesOrder['lines'];
+        const order = row as SalesOrder;
+        const hasShipments = ['partially_shipped', 'shipped', 'delivered'].includes(order.status);
+        if (!lines || lines.length === 0) {
+          return <span className="text-xs text-muted-foreground">{t('orders.noProducts')}</span>;
+        }
+        return (
+          <div className="space-y-0.5">
+            {lines.slice(0, 3).map((line, idx) => {
+              const shipped = line.shippedQty || 0;
+              const fullyShipped = shipped >= line.quantity;
+              const partiallyShipped = shipped > 0 && shipped < line.quantity;
+              return (
+                <div key={idx} className="flex items-center justify-between gap-2 text-xs">
+                  <span className={cn("truncate max-w-[140px]", fullyShipped && hasShipments && "text-green-700")} title={line.product?.name || line.productId}>
+                    {line.product?.name || line.productId}
+                  </span>
+                  <span className="shrink-0 flex items-center gap-1">
+                    {hasShipments ? (
+                      <span className={cn(
+                        "font-mono px-1 py-0.5 rounded text-[10px]",
+                        fullyShipped ? "bg-green-100 text-green-700" :
+                        partiallyShipped ? "bg-amber-100 text-amber-700" :
+                        "bg-gray-100 text-gray-500"
+                      )}>
+                        {shipped}/{line.quantity}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-muted-foreground">x{line.quantity}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
+            {lines.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">{t('orders.moreProducts', { count: String(lines.length - 3) })}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'totalAmount',
-      header: 'Tổng tiền',
+      header: t('column.totalAmount'),
       width: '120px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value) => (
         <span className="font-mono font-medium">${(value || 0).toLocaleString()}</span>
       ),
     },
-
-    // ===== NOTES SECTION =====
     {
       key: 'notes',
-      header: 'Ghi chú',
+      header: t('column.notes'),
       width: '200px',
       hidden: true,
       render: (value) => value ? (
         <span className="text-xs truncate" title={value}>{value}</span>
       ) : '-',
     },
-
-    // ===== ACTIONS =====
     {
       key: 'actions',
       header: '',
@@ -355,19 +387,18 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       sticky: 'right',
       render: (_, row) => <ActionDropdown items={createOrderActions(row)} />,
     },
-  ], []);
+  ], [t]);
 
   return (
-    // COMPACT: space-y-6 → space-y-3
-    <div className="space-y-3">
+    <div className="h-full flex flex-col gap-3">
       {/* Header - COMPACT */}
       <div>
         <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-2">
           <ShoppingCart className="h-4 w-4" />
-          Đơn hàng bán
+          {t('orders.pageTitle')}
         </h1>
         <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
-          Quản lý đơn đặt hàng từ khách hàng
+          {t('orders.pageDesc')}
         </p>
       </div>
 
@@ -375,43 +406,46 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       <StatsCards orders={orders} />
 
       {/* Table Card - COMPACT */}
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardHeader className="px-3 py-2">
+      <Card className="border-gray-200 dark:border-mrp-border flex-1 flex flex-col min-h-0 overflow-hidden">
+        <CardHeader className="px-3 py-2 shrink-0">
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Tìm kiếm số đơn, khách hàng..."
+            searchPlaceholder={t('orders.searchPlaceholder')}
             onAdd={handleAdd}
             onImport={handleImport}
             onExport={handleExport}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchOrders}
+            onRefresh={refresh}
             addPermission="orders:create"
             deletePermission="orders:delete"
-            addLabel="Tạo đơn hàng"
+            addLabel={t('orders.createOrder')}
             selectedCount={selectedIds.size}
             isLoading={loading}
             filters={[
               {
                 key: 'status',
-                label: 'Trạng thái',
+                label: t('column.status'),
                 options: [
-                  { value: 'draft', label: 'Nháp' },
-                  { value: 'pending', label: 'Chờ xử lý' },
-                  { value: 'confirmed', label: 'Đã xác nhận' },
-                  { value: 'in_progress', label: 'Đang thực hiện' },
-                  { value: 'completed', label: 'Hoàn thành' },
-                  { value: 'cancelled', label: 'Đã hủy' },
+                  { value: 'draft', label: t('status.draft') },
+                  { value: 'pending', label: t('status.pending') },
+                  { value: 'confirmed', label: t('status.confirmed') },
+                  { value: 'in_progress', label: t('status.inProgress') },
+                  { value: 'completed', label: t('status.completed') },
+                  { value: 'partially_shipped', label: t('status.partiallyShipped') },
+                  { value: 'shipped', label: t('status.shipped') },
+                  { value: 'delivered', label: t('status.delivered') },
+                  { value: 'cancelled', label: t('status.cancelled') },
                 ],
               },
               {
                 key: 'priority',
-                label: 'Ưu tiên',
+                label: t('orders.priority'),
                 options: [
-                  { value: 'low', label: 'Thấp' },
-                  { value: 'normal', label: 'Bình thường' },
-                  { value: 'high', label: 'Cao' },
-                  { value: 'urgent', label: 'Khẩn cấp' },
+                  { value: 'low', label: t('priority.low') },
+                  { value: 'normal', label: t('priority.normal') },
+                  { value: 'high', label: t('priority.high') },
+                  { value: 'urgent', label: t('priority.urgent') },
                 ],
               },
             ]}
@@ -422,21 +456,23 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             onClearFilters={() => setFilters({ status: 'all', priority: 'all' })}
           />
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
           <DataTable
             data={orders}
             columns={columns}
             keyField="id"
             loading={loading}
-            emptyMessage="Chưa có đơn hàng nào"
+            emptyMessage={t('orders.emptyMessage')}
             selectable
             selectedKeys={selectedIds}
             onSelectionChange={setSelectedIds}
             pagination
-            pageSize={20}
+            pageSize={50}
             searchable={false}
             stickyHeader
             columnToggle
+            virtualize
+            virtualRowHeight={36}
             excelMode={{
               enabled: true,
               showRowNumbers: true,

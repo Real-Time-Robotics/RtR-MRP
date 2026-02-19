@@ -5,12 +5,16 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getAccuracyTrackerService,
   AccuracyMetrics,
 } from '@/lib/ai/forecast';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -26,7 +30,7 @@ interface AccuracyRequest {
 
 interface AccuracyResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   latency?: number;
 }
@@ -35,11 +39,27 @@ interface AccuracyResponse {
 // GET - Get Accuracy Metrics
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<AccuracyResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'summary';
     const productId = searchParams.get('productId');
     const periodType = (searchParams.get('periodType') || 'monthly') as 'weekly' | 'monthly';
@@ -47,7 +67,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<AccuracyRe
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'summary': {
@@ -284,27 +304,59 @@ export async function GET(request: NextRequest): Promise<NextResponse<AccuracyRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast Accuracy] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/accuracy' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch accuracy data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Record Actual Values & Recalculate Accuracy
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<AccuracyResponse>> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const body: AccuracyRequest = await request.json();
+const bodySchema = z.object({
+      action: z.enum(['record', 'sync', 'compare', 'recalculate']),
+      productId: z.string().optional(),
+      period: z.string().optional(),
+      actualQuantity: z.number().optional(),
+      periodType: z.enum(['weekly', 'monthly']).optional(),
+      periodsBack: z.number().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const {
       action,
       productId,
@@ -316,7 +368,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<AccuracyR
 
     const accuracyTracker = getAccuracyTrackerService();
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'record': {
@@ -464,14 +516,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<AccuracyR
     });
 
   } catch (error) {
-    console.error('[AI Forecast Accuracy] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/accuracy' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process accuracy data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

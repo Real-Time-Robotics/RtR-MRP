@@ -1,7 +1,14 @@
-import { User, Building, Bell } from "lucide-react";
+import type { Metadata } from "next";
+import { User, Building, Bell, Warehouse, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { auth } from "@/lib/auth";
+import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: 'Settings | RTR-MRP',
+  description: 'System settings for account, security, notifications, and warehouse configuration - Cài đặt hệ thống, tài khoản, bảo mật, thông báo và kho hàng',
+};
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -67,6 +74,22 @@ export default async function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Warehouse Settings */}
+        <Link href="/settings/warehouse">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Warehouse className="h-5 w-5" />
+                  Warehouse Flow
+                </CardTitle>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <CardDescription>Configure WIP, FG, and Shipping warehouse flows with feature flags</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
 
         {/* Notifications */}
         <Card>

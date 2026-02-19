@@ -3,6 +3,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { createHash, randomBytes } from "crypto";
+import { logger } from '@/lib/logger';
 
 // Session configuration
 const SESSION_CONFIG = {
@@ -83,7 +84,7 @@ export async function createSession(options: {
 
     return { sessionToken, expiresAt };
   } catch (error) {
-    console.error("Session creation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'session-management', operation: 'createSession' });
     return { error: "Failed to create session" };
   }
 }
@@ -163,7 +164,7 @@ export async function validateSession(sessionToken: string): Promise<{
       },
     };
   } catch (error) {
-    console.error("Session validation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'session-management', operation: 'validateSession' });
     return { valid: false, error: "Session validation failed" };
   }
 }

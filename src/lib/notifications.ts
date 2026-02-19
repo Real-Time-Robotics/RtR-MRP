@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { broadcastNotification } from '@/lib/socket/emit';
+import { logger } from '@/lib/logger';
 
 interface MentionedUser {
   id: string;
@@ -116,7 +117,7 @@ export async function notifyMentions({
         createdAt: notification.createdAt.toISOString(),
       });
     } catch (err) {
-      console.error('Failed to broadcast notification:', err);
+      logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'notifications', operation: 'broadcastNotification' });
     }
   }
 
@@ -271,7 +272,7 @@ export async function notifyReply({
         createdAt: notification.createdAt.toISOString(),
       });
     } catch (err) {
-      console.error('Failed to broadcast reply notification:', err);
+      logger.logError(err instanceof Error ? err : new Error(String(err)), { context: 'notifications', operation: 'broadcastReplyNotification' });
     }
   }
 }

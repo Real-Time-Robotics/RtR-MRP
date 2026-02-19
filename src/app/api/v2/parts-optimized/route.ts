@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - OPTIMIZED PARTS API
 // Example demonstrating all performance optimizations
@@ -6,8 +5,11 @@
 // =============================================================================
 
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
 // Performance imports
 import {
@@ -38,6 +40,7 @@ import {
   queryProfiler,
 } from '@/lib/performance/profiler';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // VALIDATION SCHEMAS
 // =============================================================================
@@ -57,9 +60,13 @@ const querySchema = z.object({
 // GET - LIST PARTS (OPTIMIZED)
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = performance.now();
-  
+
   try {
     // Parse and validate query params
     const { searchParams } = new URL(request.url);
@@ -79,13 +86,13 @@ export async function GET(request: NextRequest) {
       cacheKey,
       async () => {
         // Build where clause
-        const where: any = {};
+        const where: Prisma.PartWhereInput = {};
         
         // Search optimization
         if (search) {
           const searchCondition = buildSearchConditions(search, ['partNumber', 'name', 'description']);
           if (searchCondition) {
-            where.OR = searchCondition.OR;
+            where.OR = searchCondition.OR as Prisma.PartWhereInput[];
           }
         }
         
@@ -94,18 +101,13 @@ export async function GET(request: NextRequest) {
           where.category = category;
         }
         
-        // Active filter (index-friendly)
+        // Active filter (index-friendly) - Part uses status field
         if (isActive !== undefined) {
-          where.isActive = isActive === 'true';
-        }
-        
-        // Multi-tenant filter
-        if (tenantId !== 'default') {
-          where.tenantId = tenantId;
+          where.status = isActive === 'true' ? 'active' : 'inactive';
         }
         
         // Build select clause (sparse fieldsets)
-        let select: any = DEFAULT_SELECTS.part.list;
+        let select: Record<string, boolean> = DEFAULT_SELECTS.part.list;
         
         if (fields) {
           const requestedFields = fields.split(',').map(f => f.trim());
@@ -128,7 +130,7 @@ export async function GET(request: NextRequest) {
         });
         
         return {
-          items: items.map((item: any) => omitEmpty(item)),
+          items: items.map((item: Record<string, unknown>) => omitEmpty(item)),
           total,
           page,
           pageSize,
@@ -155,22 +157,26 @@ export async function GET(request: NextRequest) {
       etag: true,
     });
     
-  } catch (error: any) {
-    console.error('[PARTS API] Error:', error);
-    
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/parts-optimized' });
+
     return optimizedResponse(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to fetch parts' },
       request,
       { status: 500, cache: CachePresets.noCache }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - CREATE PART (WITH CACHE INVALIDATION)
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const body = await request.json();
     const tenantId = request.headers.get('x-tenant-id') || 'default';
@@ -197,16 +203,16 @@ export async function POST(request: NextRequest) {
       { status: 201, cache: CachePresets.noCache }
     );
     
-  } catch (error: any) {
-    console.error('[PARTS API] Create error:', error);
-    
+  } catch (error: unknown) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/parts-optimized' });
+
     return optimizedResponse(
-      { success: false, error: error.message },
+      { success: false, error: 'Failed to create part' },
       request,
       { status: 500, cache: CachePresets.noCache }
     );
   }
-}
+});
 
 // =============================================================================
 // HELPER FUNCTIONS (Internal use only, not exported as route handlers)
@@ -249,7 +255,6 @@ async function _batchGetParts(ids: string[], request: NextRequest) {
   const parts = await prisma.part.findMany({
     where: {
       id: { in: ids },
-      ...(tenantId !== 'default' && { tenantId }),
     },
     select: DEFAULT_SELECTS.part.list,
   });
@@ -279,31 +284,25 @@ async function _getPartStats(request: NextRequest) {
         by: ['category'],
         _count: { id: true },
         where: {
-          isActive: true,
-          ...(tenantId !== 'default' && { tenantId }),
+          status: 'active',
         },
       });
-      
-      const totalCount = await prisma.part.count({
-        where: {
-          ...(tenantId !== 'default' && { tenantId }),
-        },
-      });
-      
+
+      const totalCount = await prisma.part.count();
+
       const activeCount = await prisma.part.count({
         where: {
-          isActive: true,
-          ...(tenantId !== 'default' && { tenantId }),
+          status: 'active',
         },
       });
-      
+
       return {
         total: totalCount,
         active: activeCount,
         inactive: totalCount - activeCount,
         byCategory: categoryStats.map(s => ({
           category: s.category,
-          count: s._count.id,
+          count: s._count?.id ?? 0,
         })),
       };
     },

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,20 +41,6 @@ export function InvoiceList({
 }: InvoiceListProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, string> = {
-      DRAFT: "bg-gray-100 text-gray-800",
-      SENT: "bg-blue-100 text-blue-800",
-      PENDING: "bg-yellow-100 text-yellow-800",
-      APPROVED: "bg-green-100 text-green-800",
-      PARTIALLY_PAID: "bg-orange-100 text-orange-800",
-      PAID: "bg-green-100 text-green-800",
-      OVERDUE: "bg-red-100 text-red-800",
-      CANCELLED: "bg-gray-100 text-gray-800",
-    };
-    return <Badge className={variants[status] || ""}>{status.replace("_", " ")}</Badge>;
-  };
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
@@ -104,13 +89,25 @@ export function InvoiceList({
       header: 'Status',
       width: '100px',
       sortable: true,
-      render: (value) => getStatusBadge(value),
+      cellClassName: (row) => {
+        const variants: Record<string, string> = {
+          DRAFT: "bg-gray-50 text-gray-800",
+          SENT: "bg-blue-50 text-blue-800",
+          PENDING: "bg-yellow-50 text-yellow-800",
+          APPROVED: "bg-green-50 text-green-800",
+          PARTIALLY_PAID: "bg-orange-50 text-orange-800",
+          PAID: "bg-green-50 text-green-800",
+          OVERDUE: "bg-red-50 text-red-800",
+          CANCELLED: "bg-gray-50 text-gray-800",
+        };
+        return variants[row.status] || "";
+      },
+      render: (value) => value.replace("_", " "),
     },
     {
       key: 'totalAmount',
       header: 'Amount',
       width: '100px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
@@ -119,7 +116,6 @@ export function InvoiceList({
       key: 'balance',
       header: 'Balance',
       width: '100px',
-      align: 'right',
       type: 'currency',
       render: (_, row) => {
         const balance = row.totalAmount - row.paidAmount;
@@ -130,7 +126,6 @@ export function InvoiceList({
       key: 'actions',
       header: '',
       width: '80px',
-      align: 'right',
       render: (_, row) => {
         const balance = row.totalAmount - row.paidAmount;
         return (

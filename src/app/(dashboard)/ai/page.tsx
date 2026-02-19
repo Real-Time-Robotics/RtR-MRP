@@ -20,10 +20,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { AiInsightCard } from "@/components/ai/ai-insight-card";
-import { generateMockRecommendations } from "@/lib/ai/mock-recommendations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnomalyAlerts } from "@/components/ml/anomaly-alerts";
 import { OptimizationSuggestions } from "@/components/ml/optimization-suggestions";
+import { clientLogger } from '@/lib/client-logger';
+
+interface Recommendation {
+  id: string;
+  type: "REORDER" | "SUPPLIER_CHANGE" | "SAFETY_STOCK" | "EXPEDITE" | "CONSOLIDATE";
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  category: "inventory" | "purchasing" | "production" | "supplier";
+  title: string;
+  description: string;
+  impact?: string;
+  savingsEstimate?: number;
+  confidence: number;
+  partId?: string;
+  supplierId?: string;
+  productId?: string;
+  status: string;
+}
 
 interface ModelStatus {
   modelId: string;
@@ -42,7 +58,8 @@ interface MLServiceStatus {
 export default function AiDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [recommendations, setRecommendations] = useState<ReturnType<typeof generateMockRecommendations>>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [mlServiceStatus, setMlServiceStatus] = useState<MLServiceStatus | null>(null);
   const [models, setModels] = useState<ModelStatus[]>([]);
@@ -60,10 +77,22 @@ export default function AiDashboardPage() {
 
   const loadData = async () => {
     setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setRecommendations(generateMockRecommendations());
-    setLastUpdated(new Date().toLocaleTimeString());
-    setLoading(false);
+    setError(null);
+    try {
+      const response = await fetch("/api/ai/recommendations");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recommendations (${response.status})`);
+      }
+      const data = await response.json();
+      setRecommendations(data.recommendations || []);
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      clientLogger.error("Failed to load recommendations:", err);
+      setError(err instanceof Error ? err.message : "Failed to load recommendations");
+      setRecommendations([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const checkMLService = async () => {
@@ -147,8 +176,8 @@ export default function AiDashboardPage() {
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-primary-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Demand Forecasting</p>
@@ -173,8 +202,8 @@ export default function AiDashboardPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Package className="h-5 w-5 text-green-600" />
+            <div className="p-2 bg-success-100 rounded-lg">
+              <Package className="h-5 w-5 text-success-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Inventory Optimization</p>
@@ -186,8 +215,8 @@ export default function AiDashboardPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-2 bg-danger-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-danger-600" />
             </div>
             <div>
               <p className="text-lg font-semibold">Anomaly Detection</p>
@@ -220,8 +249,8 @@ export default function AiDashboardPage() {
               onClick={() => router.push("/ai/forecast")}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-primary-600 dark:text-primary-400" />
                 </div>
                 <div>
                   <p className="font-medium">Forecast</p>
@@ -262,8 +291,8 @@ export default function AiDashboardPage() {
               onClick={() => router.push("/ai/simulation")}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                  <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="p-2 bg-success-100 dark:bg-success-900 rounded-lg">
+                  <Package className="h-5 w-5 text-success-600 dark:text-success-400" />
                 </div>
                 <div>
                   <p className="font-medium">Simulation</p>
@@ -279,8 +308,8 @@ export default function AiDashboardPage() {
           <div className="grid grid-cols-4 gap-4">
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="p-2 bg-danger-100 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-danger-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{highPriority.length}</p>
@@ -290,8 +319,8 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Brain className="h-5 w-5 text-amber-600" />
+                <div className="p-2 bg-warning-100 rounded-lg">
+                  <Brain className="h-5 w-5 text-warning-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{recommendations.length}</p>
@@ -301,8 +330,8 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-success-100 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-success-600" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">${totalSavings.toLocaleString()}</p>
@@ -312,11 +341,20 @@ export default function AiDashboardPage() {
             </Card>
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-primary-100 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-primary-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">87%</p>
+                  <p className="text-2xl font-bold">
+                    {recommendations.length > 0
+                      ? Math.round(
+                          (recommendations.reduce((sum, r) => sum + r.confidence, 0) /
+                            recommendations.length) *
+                            100
+                        )
+                      : 0}
+                    %
+                  </p>
                   <p className="text-sm text-muted-foreground">Avg Confidence</p>
                 </div>
               </div>
@@ -344,11 +382,19 @@ export default function AiDashboardPage() {
                 <div className="flex justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
+              ) : error ? (
+                <div className="flex flex-col items-center py-8 text-muted-foreground">
+                  <AlertTriangle className="h-8 w-8 mb-2 text-destructive" />
+                  <p className="text-sm">{error}</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={loadData}>
+                    Retry
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {highPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-red-600 mb-2">
+                      <h4 className="text-sm font-medium text-danger-600 mb-2">
                         HIGH PRIORITY ({highPriority.length})
                       </h4>
                       <div className="space-y-3">
@@ -369,7 +415,7 @@ export default function AiDashboardPage() {
 
                   {mediumPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-amber-600 mb-2">
+                      <h4 className="text-sm font-medium text-warning-600 mb-2">
                         MEDIUM PRIORITY ({mediumPriority.length})
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -380,7 +426,7 @@ export default function AiDashboardPage() {
 
                   {lowPriority.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-medium text-green-600 mb-2">
+                      <h4 className="text-sm font-medium text-success-600 mb-2">
                         LOW PRIORITY ({lowPriority.length})
                       </h4>
                       <p className="text-sm text-muted-foreground">
@@ -418,13 +464,13 @@ export default function AiDashboardPage() {
                 <div>
                   <h3 className="font-semibold">Supplier Health</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                    <Badge variant="outline" className="bg-success-100 text-success-800">
                       15 Low Risk
                     </Badge>
-                    <Badge variant="outline" className="bg-amber-100 text-amber-800">
+                    <Badge variant="outline" className="bg-warning-100 text-warning-800">
                       4 Medium
                     </Badge>
-                    <Badge variant="outline" className="bg-red-100 text-red-800">
+                    <Badge variant="outline" className="bg-danger-100 text-danger-800">
                       1 High Risk
                     </Badge>
                   </div>

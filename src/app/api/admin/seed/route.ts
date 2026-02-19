@@ -1,19 +1,33 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { generateSuppliers, generateParts, generateCustomers } from '@/lib/stress-test-data';
+import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic'; // Prevent caching
 
-export async function POST(request: NextRequest) {
-    try {
-        const session = await auth();
-        // Simple auth check - in production checking for ADMIN role is better
-        if (!session?.user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+export const POST = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { type, count } = await request.json();
+    try {
+        const bodySchema = z.object({
+            type: z.string(),
+            count: z.number().optional(),
+        });
+
+        const rawBody = await request.json();
+        const parseResult = bodySchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json(
+                { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+                { status: 400 }
+            );
+        }
+        const { type, count } = parseResult.data;
         const qty = Number(count) || 50; // Default 50 items if not specified, safe default
 
         // Cap at 10000 to prevent timeout/abuse
@@ -42,10 +56,10 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Seeding error:', error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/admin/seed' });
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Seeding failed' },
+            { error: 'Failed to seed data' },
             { status: 500 }
         );
     }
-}
+});

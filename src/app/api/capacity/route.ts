@@ -1,16 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
+import { z } from "zod";
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+const CapacityGenerateSchema = z.object({
+  action: z.literal("generate"),
+  workCenterId: z.string().optional(),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  adjustments: z.unknown().optional(),
+});
+
+const CapacityAdjustSchema = z.object({
+  action: z.literal("adjust"),
+  workCenterId: z.string().min(1, "Work center ID is required"),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  adjustments: z.object({
+    date: z.string().min(1, "Date is required"),
+    shiftHours: z.number().optional(),
+    holidayHours: z.number().optional(),
+    notes: z.string().optional(),
+  }),
+});
+
+const CapacityBodySchema = z.union([CapacityGenerateSchema, CapacityAdjustSchema]);
 
 // GET - Get capacity data for work centers
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const workCenterId = searchParams.get("workCenterId");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -94,29 +119,38 @@ export async function GET(request: NextRequest) {
       summary,
     });
   } catch (error) {
-    console.error("Capacity API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/capacity' });
     return NextResponse.json(
       { error: "Failed to fetch capacity data" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Generate or update capacity records
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const body = await request.json();
+
+    const validation = CapacityBodySchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
     }
 
-    const body = await request.json();
-    const { action, workCenterId, startDate, endDate, adjustments } = body;
+    const data = validation.data;
 
-    if (action === "generate") {
+    if (data.action === "generate") {
       // Generate capacity records for date range
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      const workCenterId = data.workCenterId;
 
       const workCenters = workCenterId
         ? [await prisma.workCenter.findUnique({ where: { id: workCenterId } })]
@@ -237,9 +271,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (action === "adjust") {
+    if (data.action === "adjust") {
       // Manual capacity adjustment
-      const { date, shiftHours, holidayHours, notes } = adjustments;
+      const { date, shiftHours, holidayHours, notes } = data.adjustments;
+      const workCenterId = data.workCenterId;
 
       const record = await prisma.workCenterCapacity.update({
         where: {
@@ -278,10 +313,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("Capacity POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/capacity' });
     return NextResponse.json(
       { error: "Failed to process capacity request" },
       { status: 500 }
     );
   }
-}
+});

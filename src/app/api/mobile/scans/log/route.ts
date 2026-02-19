@@ -1,49 +1,55 @@
 // Mobile API - Scan Logging
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
+import { z } from "zod";
 
-export async function POST(request: NextRequest) {
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
+const ScanLogSchema = z.object({
+  barcodeValue: z.string().min(1, "Barcode value is required"),
+  barcodeType: z.string().default("UNKNOWN"),
+  scanContext: z.string().default("LOOKUP"),
+  actionTaken: z.string().default("VIEW"),
+  resolvedType: z.string().optional(),
+  resolvedId: z.string().optional(),
+  deviceId: z.string().optional(),
+  deviceType: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+});
+
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+const body = await request.json();
 
-    const body = await request.json();
-    const {
-      barcodeValue,
-      barcodeType,
-      scanContext,
-      actionTaken,
-      resolvedType,
-      resolvedId,
-      deviceId,
-      deviceType,
-      latitude,
-      longitude,
-    } = body;
-
-    if (!barcodeValue) {
+    const validation = ScanLogSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "barcodeValue is required" },
+        { error: "Validation failed", details: validation.error.issues },
         { status: 400 }
       );
     }
 
+    const data = validation.data;
+
     const scanLog = await prisma.scanLog.create({
       data: {
-        barcodeValue,
-        barcodeType: barcodeType || "UNKNOWN",
-        scanContext: scanContext || "LOOKUP",
-        actionTaken: actionTaken || "VIEW",
-        resolvedType,
-        resolvedId,
-        deviceId,
-        deviceType,
+        barcodeValue: data.barcodeValue,
+        barcodeType: data.barcodeType,
+        scanContext: data.scanContext,
+        actionTaken: data.actionTaken,
+        resolvedType: data.resolvedType,
+        resolvedId: data.resolvedId,
+        deviceId: data.deviceId,
+        deviceType: data.deviceType,
         scannedBy: session.user.id,
-        latitude,
-        longitude,
+        latitude: data.latitude,
+        longitude: data.longitude,
       },
     });
 
@@ -55,23 +61,22 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Mobile scan log API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scans/log' });
     return NextResponse.json(
       { error: "Failed to log scan" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+const { searchParams } = new URL(request.url);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50") || 50, 100);
     const userId = searchParams.get("userId");
 
     const scans = await prisma.scanLog.findMany({
@@ -95,10 +100,10 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile scan log GET API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scans/log' });
     return NextResponse.json(
       { error: "Failed to fetch scans" },
       { status: 500 }
     );
   }
-}
+});

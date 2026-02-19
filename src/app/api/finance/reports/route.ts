@@ -1,17 +1,20 @@
 // src/app/api/finance/reports/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import { getTrialBalance, getVarianceSummary } from "@/lib/finance";
+import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET - Get financial reports
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const report = searchParams.get("report");
@@ -71,13 +74,13 @@ export async function GET(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("Finance reports GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/reports' });
     return NextResponse.json(
       { error: "Failed to generate report" },
       { status: 500 }
     );
   }
-}
+});
 
 // Generate Income Statement
 async function generateIncomeStatement(startDate?: Date, endDate?: Date) {

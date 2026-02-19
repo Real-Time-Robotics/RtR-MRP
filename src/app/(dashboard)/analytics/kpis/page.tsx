@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { KPIDefinition, KPIValue, KPICategory } from "@/lib/analytics/types";
+import { clientLogger } from '@/lib/client-logger';
 
 const CATEGORY_LABELS: Record<KPICategory, string> = {
   inventory: "Tồn kho",
@@ -89,7 +90,7 @@ export default function KPIsPage() {
           }
         }
       } catch (error) {
-        console.error("Error fetching KPIs:", error);
+        clientLogger.error("Error fetching KPIs:", error);
       } finally {
         setIsLoading(false);
       }
@@ -121,7 +122,7 @@ export default function KPIsPage() {
         setValues(valueMap);
       }
     } catch (error) {
-      console.error("Error refreshing KPIs:", error);
+      clientLogger.error("Error refreshing KPIs:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -152,7 +153,7 @@ export default function KPIsPage() {
       case "critical":
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "warning":
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning-500" />;
       default:
         return null;
     }
@@ -162,9 +163,9 @@ export default function KPIsPage() {
   const getTrendIcon = (direction?: string) => {
     switch (direction) {
       case "up":
-        return <TrendingUp className="h-4 w-4 text-green-500" />;
+        return <TrendingUp className="h-4 w-4 text-success-500" />;
       case "down":
-        return <TrendingDown className="h-4 w-4 text-red-500" />;
+        return <TrendingDown className="h-4 w-4 text-danger-500" />;
       default:
         return <Minus className="h-4 w-4 text-muted-foreground" />;
     }
@@ -243,7 +244,7 @@ export default function KPIsPage() {
                 {Object.values(values).filter((v) => v.status === "normal").length}
               </Badge>
             </div>
-            <p className="text-2xl font-bold mt-1 text-green-600">
+            <p className="text-2xl font-bold mt-1 text-success-600">
               {Object.values(values).filter((v) => v.status === "normal").length}
             </p>
           </CardContent>
@@ -256,7 +257,7 @@ export default function KPIsPage() {
                 {Object.values(values).filter((v) => v.status === "warning").length}
               </Badge>
             </div>
-            <p className="text-2xl font-bold mt-1 text-amber-500">
+            <p className="text-2xl font-bold mt-1 text-warning-500">
               {Object.values(values).filter((v) => v.status === "warning").length}
             </p>
           </CardContent>
@@ -316,7 +317,7 @@ export default function KPIsPage() {
                               className={cn(
                                 "text-2xl font-bold",
                                 value?.status === "critical" && "text-destructive",
-                                value?.status === "warning" && "text-amber-500"
+                                value?.status === "warning" && "text-warning-500"
                               )}
                             >
                               {value?.formattedValue || "—"}
@@ -325,7 +326,7 @@ export default function KPIsPage() {
                               <span
                                 className={cn(
                                   "text-sm",
-                                  value.changePercent > 0 ? "text-green-600" : "text-red-600"
+                                  value.changePercent > 0 ? "text-success-600" : "text-danger-600"
                                 )}
                               >
                                 {value.changePercent > 0 ? "+" : ""}

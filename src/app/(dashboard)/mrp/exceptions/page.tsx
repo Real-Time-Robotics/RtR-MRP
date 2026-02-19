@@ -13,6 +13,7 @@ import {
 import { ExceptionList } from "@/components/mrp/exception-list";
 import { Loader2, RefreshCw, Scan } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Exception {
   id: string;
@@ -60,7 +61,7 @@ export default function ExceptionsPage() {
         setExceptions(data);
       }
     } catch (error) {
-      console.error("Failed to fetch exceptions:", error);
+      clientLogger.error("Failed to fetch exceptions:", error);
       toast({ title: "Failed to fetch exceptions", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -84,7 +85,7 @@ export default function ExceptionsPage() {
         throw new Error("Failed to detect exceptions");
       }
     } catch (error) {
-      console.error("Failed to detect exceptions:", error);
+      clientLogger.error("Failed to detect exceptions:", error);
       toast({ title: "Failed to detect exceptions", variant: "destructive" });
     } finally {
       setIsDetecting(false);
@@ -111,7 +112,7 @@ export default function ExceptionsPage() {
         throw new Error("Failed to resolve exception");
       }
     } catch (error) {
-      console.error("Failed to resolve exception:", error);
+      clientLogger.error("Failed to resolve exception:", error);
       toast({ title: "Failed to resolve exception", variant: "destructive" });
     }
   };
@@ -135,7 +136,7 @@ export default function ExceptionsPage() {
         throw new Error("Failed to acknowledge exception");
       }
     } catch (error) {
-      console.error("Failed to acknowledge exception:", error);
+      clientLogger.error("Failed to acknowledge exception:", error);
       toast({ title: "Failed to acknowledge exception", variant: "destructive" });
     }
   };
@@ -160,7 +161,7 @@ export default function ExceptionsPage() {
         throw new Error("Failed to ignore exception");
       }
     } catch (error) {
-      console.error("Failed to ignore exception:", error);
+      clientLogger.error("Failed to ignore exception:", error);
       toast({ title: "Failed to ignore exception", variant: "destructive" });
     }
   };

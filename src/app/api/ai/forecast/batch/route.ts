@@ -5,6 +5,10 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
+import { Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getForecastEngine,
@@ -14,6 +18,21 @@ import {
   ForecastResult,
 } from '@/lib/ai/forecast';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const batchBodySchema = z.object({
+  action: z.enum(['generate', 'enhance', 'sync-actuals', 'cleanup', 'analyze']),
+  productIds: z.array(z.string()).optional(),
+  config: z.any().optional(),
+  periodType: z.enum(['weekly', 'monthly']).optional(),
+  options: z.object({
+    skipExisting: z.boolean().optional(),
+    maxProducts: z.number().optional(),
+    daysToKeep: z.number().optional(),
+    category: z.string().optional(),
+    months: z.number().optional(),
+  }).optional(),
+});
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -33,7 +52,7 @@ interface BatchRequest {
 
 interface BatchResponse {
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   latency?: number;
 }
@@ -50,7 +69,7 @@ interface BatchJobResult {
   };
   startTime: Date;
   endTime?: Date;
-  results?: any[];
+  results?: unknown[];
   errors?: string[];
 }
 
@@ -86,11 +105,27 @@ function checkBatchRateLimit(ip: string): boolean {
 // POST - Run Batch Forecast Operation
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse<BatchResponse>> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    // Rate limiting
+// Rate limiting
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
     if (!checkBatchRateLimit(ip)) {
       return NextResponse.json(
@@ -102,14 +137,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
       );
     }
 
-    const body: BatchRequest = await request.json();
+    const rawBody = await request.json();
+    const parseResult = batchBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       action,
       productIds,
       config = {},
       periodType = 'monthly',
       options = {},
-    } = body;
+    } = parseResult.data;
 
     const forecastEngine = getForecastEngine();
     const aiEnhancer = getAIEnhancerService();
@@ -118,7 +160,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
     // Generate job ID
     const jobId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    let result: any;
+    let result: unknown;
 
     switch (action) {
       case 'generate': {
@@ -238,7 +280,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
           );
         }
 
-        const enhancedResults: any[] = [];
+        const enhancedResults: unknown[] = [];
         const errors: string[] = [];
 
         for (const productId of productIds.slice(0, options.maxProducts || 50)) {
@@ -274,7 +316,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
 
       case 'sync-actuals': {
         // Sync actual sales data for accuracy tracking
-        const months = (options as any).months || 3;
+        const months = (options as Record<string, unknown>).months as number || 3;
         const syncResult = await accuracyTracker.autoRecordActuals(
           periodType,
           Math.min(months, 12)
@@ -293,7 +335,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-        let whereClause: any = {
+        const whereClause: Prisma.DemandForecastWhereInput = {
           createdAt: { lt: cutoffDate },
         };
 
@@ -367,27 +409,43 @@ export async function POST(request: NextRequest): Promise<NextResponse<BatchResp
     });
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to process batch forecast operation',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET - Get Batch Job Status
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse<BatchResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
     const action = searchParams.get('action') || 'status';
 
@@ -472,27 +530,43 @@ export async function GET(request: NextRequest): Promise<NextResponse<BatchRespo
     }
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch batch job data',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // DELETE - Cancel/Clear Batch Jobs
 // =============================================================================
 
-export async function DELETE(request: NextRequest): Promise<NextResponse<BatchResponse>> {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
     const scope = searchParams.get('scope') || 'single';
 
@@ -549,14 +623,14 @@ export async function DELETE(request: NextRequest): Promise<NextResponse<BatchRe
     });
 
   } catch (error) {
-    console.error('[AI Forecast Batch] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/forecast/batch' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to delete batch job',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

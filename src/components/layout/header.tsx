@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/providers/theme-provider";
 
 export function Header() {
   return (
-    <header className="h-16 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-6 flex items-center justify-between">
+    <header className="h-12 border-b border-neutral-200 dark:border-[rgb(var(--border-primary))] bg-white dark:bg-[rgb(var(--bg-secondary))] px-4 flex items-center justify-between">
       {/* Global Search */}
       <GlobalSearch />
 

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // Note: Redis cache disabled - not available on Render free tier
 // Using HTTP Cache-Control headers for browser caching instead
 
@@ -8,7 +11,11 @@ import { prisma } from '@/lib/prisma';
 // Comprehensive metrics and chart data for RTR MRP System
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, _context, _session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   try {
     const { searchParams } = new URL(request.url);
@@ -88,13 +95,13 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Analytics API error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch analytics data' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // INVENTORY METRICS
@@ -138,7 +145,7 @@ async function getInventoryMetrics(startDate: Date) {
       changePercent: 8.5
     };
   } catch (error) {
-    console.error('Inventory metrics error:', error);
+    logger.error('Inventory metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       totalParts: 0,
       totalValue: 0,
@@ -194,7 +201,7 @@ async function getSalesMetrics(startDate: Date) {
       changePercent: 15.3
     };
   } catch (error) {
-    console.error('Sales metrics error:', error);
+    logger.error('Sales metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       totalOrders: 0,
       totalRevenue: 0,
@@ -265,7 +272,7 @@ async function getProductionMetrics(startDate: Date) {
       changePercent: 5.2
     };
   } catch (error) {
-    console.error('Production metrics error:', error);
+    logger.error('Production metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       activeWorkOrders: 0,
       completedThisMonth: 0,
@@ -327,7 +334,7 @@ async function getQualityMetrics(startDate: Date) {
       changePercent: -2.1
     };
   } catch (error) {
-    console.error('Quality metrics error:', error);
+    logger.error('Quality metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       totalNCRs: 0,
       openNCRs: 0,
@@ -367,7 +374,7 @@ async function getSupplierMetrics() {
       changePercent: 3.7
     };
   } catch (error) {
-    console.error('Supplier metrics error:', error);
+    logger.error('Supplier metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       totalSuppliers: 0,
       activeSuppliers: 0,
@@ -416,7 +423,7 @@ async function getComplianceMetrics() {
       expiringSoonCerts: expiringSoonCerts || 0
     };
   } catch (error) {
-    console.error('Compliance metrics error:', error);
+    logger.error('Compliance metrics error', { context: 'GET /api/analytics', details: String(error) });
     return {
       ndaaCompliantParts: 0,
       itarControlledParts: 0,

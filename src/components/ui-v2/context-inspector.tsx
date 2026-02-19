@@ -33,7 +33,7 @@ export function ContextInspector() {
                     <Database className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                     <h3 className="font-semibold text-sm dark:text-slate-200">Context Inspector</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setSelectedId(null)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setSelectedId(null)} aria-label="Đóng">
                     <X className="h-4 w-4 dark:text-slate-400" />
                 </Button>
             </div>
@@ -45,31 +45,31 @@ export function ContextInspector() {
                     <Card className="dark:bg-slate-950 dark:border-slate-800 shadow-none border">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Selected Item</CardTitle>
-                            <div className="font-mono text-lg font-bold text-primary truncate" title={selectedItem?.partNumber || selectedId || ''}>
-                                {selectedItem?.partNumber || selectedId || 'None'}
+                            <div className="font-mono text-lg font-bold text-primary truncate" title={String(selectedItem?.partNumber ?? selectedId ?? '')}>
+                                {String(selectedItem?.partNumber ?? selectedId ?? 'None')}
                             </div>
-                            {selectedItem?.name && (
+                            {selectedItem?.name ? (
                                 <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                    {selectedItem.name}
+                                    {String(selectedItem.name)}
                                 </div>
-                            )}
+                            ) : null}
                         </CardHeader>
                         <CardContent className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <span className="text-slate-500 dark:text-slate-400 block">Quantity</span>
-                                <span className="font-medium dark:text-white">{selectedItem?.quantity ?? '-'}</span>
+                                <span className="font-medium dark:text-white">{String(selectedItem?.quantity ?? '-')}</span>
                             </div>
                             <div>
                                 <span className="text-slate-500 dark:text-slate-400 block">Available</span>
-                                <span className="font-medium dark:text-white">{selectedItem?.available ?? '-'}</span>
+                                <span className="font-medium dark:text-white">{String(selectedItem?.available ?? '-')}</span>
                             </div>
                             <div>
                                 <span className="text-slate-500 dark:text-slate-400 block">Status</span>
-                                <span className="font-medium dark:text-white">{selectedItem?.status ?? '-'}</span>
+                                <span className="font-medium dark:text-white">{String(selectedItem?.status ?? '-')}</span>
                             </div>
                             <div>
                                 <span className="text-slate-500 dark:text-slate-400 block">Warehouse</span>
-                                <span className="font-medium dark:text-white">{selectedItem?.warehouseName ?? 'Default'}</span>
+                                <span className="font-medium dark:text-white">{String(selectedItem?.warehouseName ?? 'Default')}</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -103,7 +103,7 @@ export function ContextInspector() {
                                 <Database className="h-3.5 w-3.5 text-white" />
                                 <span className="text-xs font-medium text-white">Database Record</span>
                                 <span className="ml-auto text-[10px] text-white/70 font-mono">
-                                    {selectedItem?.partNumber || selectedId || 'record'}
+                                    {String(selectedItem?.partNumber ?? selectedId ?? 'record')}
                                 </span>
                             </div>
 
@@ -205,7 +205,7 @@ export function ContextInspector() {
                                     AI Insight
                                 </div>
                                 <p className="text-xs text-blue-600 dark:text-blue-300">
-                                    {selectedItem?.quantity < selectedItem?.safetyStock
+                                    {Number(selectedItem?.quantity ?? 0) < Number(selectedItem?.safetyStock ?? 0)
                                         ? "This part is below safety stock levels. Consider ordering more."
                                         : "Stock levels appear healthy based on current consumption trends."}
                                 </p>
@@ -222,7 +222,7 @@ export function ContextInspector() {
     );
 }
 
-function Input(props: any) {
+function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     return <input {...props} className={cn("flex w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50", props.className)} />
 }
 import { cn } from "@/lib/utils";

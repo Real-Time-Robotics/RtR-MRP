@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // TYPES
@@ -226,7 +227,7 @@ export function useAIChat(options: UseChatOptions = {}): UseChatReturn {
         });
       }
     } catch (err) {
-      console.error('Health check failed:', err);
+      clientLogger.error('Health check failed', err);
     }
   }, [apiEndpoint]);
 

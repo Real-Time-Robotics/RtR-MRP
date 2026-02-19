@@ -1,19 +1,23 @@
 
 import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    const id = params.id;
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+    const { id } = await context.params;
 
     if (!id) {
         return NextResponse.json({ error: "Part ID required" }, { status: 400 });
     }
 
     try {
-        // 1. Fetch Part & Related Data
+// 1. Fetch Part & Related Data
         // We fetch Part + Inventory + Planning in one go
         // We fetch PO Lines separately to ensure clean types and filtering
         const [part, poLines] = await Promise.all([
@@ -103,7 +107,7 @@ export async function GET(
         return NextResponse.json({ data });
 
     } catch (error) {
-        console.error("Analysis API Error:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/part/[id]' });
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
-}
+});

@@ -6,7 +6,9 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from '@/lib/api/with-permission';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // =============================================================================
 // INVENTORY ADJUSTMENT API
@@ -37,8 +39,12 @@ const transferSchema = z.object({
 
 async function adjustHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   let body;
   try {
     body = await request.json();
@@ -107,23 +113,23 @@ async function adjustHandler(
       break;
   }
 
-  // Update inventory
-  const updatedInventory = await prisma.inventory.update({
-    where: { id: inventory.id },
-    data: {
-      quantity: newQuantity,
-      updatedAt: new Date(),
-    },
-    include: {
-      part: { select: { id: true, partNumber: true, name: true } },
-      warehouse: { select: { id: true, code: true, name: true } },
-    },
-  });
+  // Update inventory + create audit log atomically
+  const updatedInventory = await prisma.$transaction(async (tx) => {
+    const updated = await tx.inventory.update({
+      where: { id: inventory.id },
+      data: {
+        quantity: newQuantity,
+        updatedAt: new Date(),
+      },
+      include: {
+        part: { select: { id: true, partNumber: true, name: true } },
+        warehouse: { select: { id: true, code: true, name: true } },
+      },
+    });
 
-  // Create audit log (LotTransaction requires lotNumber and userId)
-  try {
+    // Create audit log (LotTransaction requires lotNumber and userId)
     if (user.id) {
-      await prisma.lotTransaction.create({
+      await tx.lotTransaction.create({
         data: {
           lotNumber: `ADJ-${Date.now()}`,
           partId,
@@ -136,9 +142,9 @@ async function adjustHandler(
         },
       });
     }
-  } catch {
-    // Skip audit log if it fails
-  }
+
+    return updated;
+  });
 
   return successResponse({
     inventory: updatedInventory,
@@ -158,7 +164,7 @@ async function adjustHandler(
 // Handle Transfer between warehouses
 // =============================================================================
 
-async function handleTransfer(body: unknown, user: any) {
+async function handleTransfer(body: unknown, user: AuthUser) {
   const validation = transferSchema.safeParse(body);
   if (!validation.success) {
     const errors: Record<string, string[]> = {};

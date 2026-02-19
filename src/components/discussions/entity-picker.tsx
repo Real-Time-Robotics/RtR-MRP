@@ -16,6 +16,7 @@ import {
   Calculator,
   Loader2,
 } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -88,7 +89,7 @@ export function EntityPicker({ onSelect, disabled, className }: EntityPickerProp
         setResults(data.results || []);
       }
     } catch (error) {
-      console.error('Entity search failed:', error);
+      clientLogger.error('Entity search failed', error);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -138,6 +139,7 @@ export function EntityPicker({ onSelect, disabled, className }: EntityPickerProp
               size="icon"
               disabled={disabled}
               className={cn('h-8 w-8', className)}
+              aria-label="Liên kết thực thể"
             >
               <Link2 className="h-4 w-4" />
             </Button>

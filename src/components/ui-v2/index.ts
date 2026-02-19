@@ -77,33 +77,5 @@ export type {
   CommandPaletteProps,
 } from './command-palette';
 
-// Loading & Empty States
-export {
-  LoadingSpinner,
-  PageLoading,
-  CardLoading,
-  InlineLoading,
-  EmptyState,
-  NoDataEmpty,
-  NoResultsEmpty,
-  NoPartsEmpty,
-  NoOrdersEmpty,
-  NoCustomersEmpty,
-  NoReportsEmpty,
-  Skeleton,
-  SkeletonText,
-  SkeletonAvatar,
-  SkeletonCard,
-  SkeletonKPICard,
-  SkeletonTable,
-  SkeletonChart,
-  SkeletonDashboard,
-  ErrorState,
-} from './loading';
-export type {
-  LoadingSpinnerProps,
-  PageLoadingProps,
-  EmptyStateProps,
-  SkeletonProps,
-  ErrorStateProps,
-} from './loading';
+// Loading & Empty States - moved to @/components/ui/skeleton-variants
+// Import from '@/components/ui/skeleton-variants' for: TableSkeleton, StatsSkeleton, ChartSkeleton, etc.

@@ -11,7 +11,7 @@ export type ContextEntityType = 'part' | 'supplier' | 'customer' | 'order' | 'pr
 export interface ContextItem {
     id: string;
     type?: ContextEntityType;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 // Store for managing grid state (selection, edits, etc.)

@@ -161,6 +161,7 @@ function BlockCard({ block, onUpdate, onRemove, onDragStart }: BlockCardProps) {
         <button
           className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab"
           onMouseDown={onDragStart}
+          aria-label="Kéo để sắp xếp"
         >
           <GripVertical className="w-4 h-4" />
         </button>
@@ -172,18 +173,21 @@ function BlockCard({ block, onUpdate, onRemove, onDragStart }: BlockCardProps) {
             type="text"
             value={block.title}
             onChange={(e) => onUpdate({ ...block, title: e.target.value })}
+            aria-label="Tiêu đề khối"
             className="w-full bg-transparent text-sm font-medium text-gray-900 dark:text-white border-none focus:ring-0 p-0"
           />
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
         >
           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
         <button
           onClick={onRemove}
           className="p-1 text-gray-400 hover:text-red-600"
+          aria-label="Xóa"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -211,6 +215,7 @@ function BlockCard({ block, onUpdate, onRemove, onDragStart }: BlockCardProps) {
               <select
                 value={block.dataSource || ''}
                 onChange={(e) => onUpdate({ ...block, dataSource: e.target.value as DataSource })}
+                aria-label="Nguồn dữ liệu"
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm"
               >
                 <option value="">Chọn nguồn...</option>
@@ -264,12 +269,12 @@ function AddBlockModal({ isOpen, onClose, onAdd }: AddBlockModalProps) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" role="presentation" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Thêm block</h3>
-            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Đóng">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -357,7 +362,8 @@ function ScheduleConfig({ schedule, onChange }: ScheduleConfigProps) {
               </label>
               <select
                 value={schedule.frequency}
-                onChange={(e) => onChange({ ...schedule, frequency: e.target.value as any })}
+                onChange={(e) => onChange({ ...schedule, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' })}
+                aria-label="Tần suất"
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
               >
                 <option value="daily">Hàng ngày</option>
@@ -373,6 +379,7 @@ function ScheduleConfig({ schedule, onChange }: ScheduleConfigProps) {
                 type="time"
                 value={schedule.time}
                 onChange={(e) => onChange({ ...schedule, time: e.target.value })}
+                aria-label="Thời gian"
                 className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
               />
             </div>
@@ -388,6 +395,7 @@ function ScheduleConfig({ schedule, onChange }: ScheduleConfigProps) {
               value={schedule.recipients.join(', ')}
               onChange={(e) => onChange({ ...schedule, recipients: e.target.value.split(',').map(s => s.trim()) })}
               placeholder="email1@company.com, email2@company.com"
+              aria-label="Người nhận email"
               className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
             />
           </div>
@@ -446,6 +454,7 @@ export function ReportBuilder() {
               type="text"
               value={reportName}
               onChange={(e) => setReportName(e.target.value)}
+              aria-label="Tên báo cáo"
               className="text-xl font-bold text-gray-900 dark:text-white bg-transparent border-none focus:ring-0 p-0"
             />
           </div>

@@ -91,8 +91,8 @@ export interface ResolutionAction {
   type: 'update_work_order' | 'update_operation' | 'add_overtime' | 'notify';
   target: string; // Work order ID or work center ID
   field?: string;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   message?: string;
 }
 

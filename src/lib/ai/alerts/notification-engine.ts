@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   Alert,
   AlertPriority,
@@ -289,10 +290,9 @@ export class NotificationEngine {
 
       // In production, send via email service (SendGrid, SES, etc.)
       // For now, just log
-      console.log('[NotificationEngine] Email notification:', {
+      logger.info('[NotificationEngine] Email notification', {
         to: user.email,
         subject: emailContent.subject,
-        body: emailContent.body,
       });
 
       // Log to audit
@@ -470,7 +470,7 @@ export class NotificationEngine {
         <p><a href="${process.env.NEXTAUTH_URL}/ai/alerts">Xem tất cả alerts</a></p>
       `;
 
-      console.log('[NotificationEngine] Digest email:', {
+      logger.info('[NotificationEngine] Digest email', {
         to: user.email,
         subject,
         alertCount: digest.criticalCount + digest.highCount + digest.mediumCount + digest.lowCount,

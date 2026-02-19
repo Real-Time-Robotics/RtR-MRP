@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { kpiService } from './kpi-service';
 import type {
   DashboardWidget,
@@ -30,7 +31,7 @@ class WidgetService {
     const startTime = Date.now();
 
     try {
-      let data: any;
+      let data: unknown;
 
       switch (widget.widgetType) {
         case 'kpi':
@@ -69,7 +70,7 @@ class WidgetService {
         },
       };
     } catch (error) {
-      console.error(`Error fetching widget data for ${widget.id}:`, error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'widget-service', widgetId: widget.id });
       return {
         widgetId: widget.id,
         data: null,
@@ -674,8 +675,8 @@ class WidgetService {
     return { from, to: now };
   }
 
-  private buildWhereClause(filters: QueryFilter[]): Record<string, any> {
-    const where: Record<string, any> = {};
+  private buildWhereClause(filters: QueryFilter[]): Record<string, unknown> {
+    const where: Record<string, unknown> = {};
 
     for (const filter of filters) {
       switch (filter.operator) {
@@ -706,9 +707,11 @@ class WidgetService {
         case 'contains':
           where[filter.field] = { contains: filter.value, mode: 'insensitive' };
           break;
-        case 'between':
-          where[filter.field] = { gte: filter.value[0], lte: filter.value[1] };
+        case 'between': {
+          const [rangeStart, rangeEnd] = filter.value as [unknown, unknown];
+          where[filter.field] = { gte: rangeStart, lte: rangeEnd };
           break;
+        }
       }
     }
 

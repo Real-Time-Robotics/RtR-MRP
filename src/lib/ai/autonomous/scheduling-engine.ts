@@ -8,6 +8,38 @@
 import prisma from '@/lib/prisma';
 
 // =============================================================================
+// INTERNAL HELPER TYPES (for Prisma query results and method signatures)
+// =============================================================================
+
+interface WorkOrderWithOperations {
+  id: string;
+  woNumber: string;
+  quantity: number;
+  completedQty: number;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  status: string;
+  operations?: WorkOrderOperationRecord[];
+  [key: string]: unknown;
+}
+
+interface WorkOrderOperationRecord {
+  plannedSetupTime: number;
+  plannedRunTime: number;
+  [key: string]: unknown;
+}
+
+interface ScheduledWorkOrder {
+  id: string;
+  woNumber: string;
+  plannedStart: Date | null;
+  plannedEnd: Date | null;
+  status: string;
+  operations: { workCenterId: string }[];
+  [key: string]: unknown;
+}
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -272,7 +304,7 @@ export class SchedulingEngine {
   // ===========================================================================
 
   async analyzeWorkOrders(filter?: ScheduleFilter): Promise<WorkOrderScheduleInfo[]> {
-    const where: any = {
+    const where: Record<string, unknown> = {
       status: {
         notIn: ['completed', 'cancelled'],
       },
@@ -956,10 +988,10 @@ export class SchedulingEngine {
     return map[priority.toLowerCase()] || 'normal';
   }
 
-  private calculateEstimatedDuration(workOrder: any): number {
-    if (workOrder.operations?.length > 0) {
+  private calculateEstimatedDuration(workOrder: WorkOrderWithOperations): number {
+    if (workOrder.operations && workOrder.operations.length > 0) {
       return workOrder.operations.reduce(
-        (sum: number, op: any) => sum + op.plannedSetupTime + op.plannedRunTime,
+        (sum: number, op: WorkOrderOperationRecord) => sum + op.plannedSetupTime + op.plannedRunTime,
         0
       );
     }
@@ -978,7 +1010,7 @@ export class SchedulingEngine {
   }
 
   private getScheduledSlotsForDate(
-    workOrders: any[],
+    workOrders: ScheduledWorkOrder[],
     date: Date,
     workCenterId: string
   ): ScheduledSlot[] {

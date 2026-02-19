@@ -5,17 +5,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { ContextType } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const contextType = searchParams.get('contextType');
     const contextId = searchParams.get('contextId');
 
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest) {
     // Find existing thread or create new one
     let thread = await prisma.conversationThread.findFirst({
       where: {
-        contextType: contextType as any,
+        contextType: contextType as ContextType,
         contextId,
       },
       include: {
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest) {
       // Create new thread
       thread = await prisma.conversationThread.create({
         data: {
-          contextType: contextType as any,
+          contextType: contextType as ContextType,
           contextId,
           createdById: session.user.id,
           participants: {
@@ -97,22 +100,38 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ thread });
   } catch (error) {
-    console.error('Error fetching thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads' });
     return NextResponse.json(
       { error: 'Failed to fetch thread' },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const bodySchema = z.object({
+      contextType: z.string(),
+      contextId: z.string(),
+      contextTitle: z.string().optional(),
+      title: z.string().optional(),
+      priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).optional(),
+      initialMessage: z.string().optional(),
+    });
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { contextType, contextId, contextTitle, title, priority, initialMessage } = body;
 
     if (!contextType || !contextId) {
@@ -125,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Check if thread already exists
     const existingThread = await prisma.conversationThread.findFirst({
       where: {
-        contextType: contextType as any,
+        contextType: contextType as ContextType,
         contextId,
       },
     });
@@ -140,7 +159,7 @@ export async function POST(request: NextRequest) {
     // Create thread with optional initial message
     const thread = await prisma.conversationThread.create({
       data: {
-        contextType: contextType as any,
+        contextType: contextType as ContextType,
         contextId,
         contextTitle,
         title,
@@ -188,10 +207,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ thread }, { status: 201 });
   } catch (error) {
-    console.error('Error creating thread:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads' });
     return NextResponse.json(
       { error: 'Failed to create thread' },
       { status: 500 }
     );
   }
-}
+});

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useExport, type ExportFormat, type ExportEntity } from '@/lib/hooks/use-export';
+import { useLanguage } from '@/lib/i18n/language-context';
 
 // =============================================================================
 // EXPORT DIALOG
@@ -32,8 +33,8 @@ interface ExportDialogProps {
 
 interface ExportOption {
   id: ExportEntity;
-  label: string;
-  description: string;
+  labelKey: string;
+  descKey: string;
   icon: React.ReactNode;
 }
 
@@ -50,13 +51,13 @@ interface FormatOption {
 // =============================================================================
 
 const entityOptions: ExportOption[] = [
-  { id: 'sales-orders', label: 'Đơn hàng', description: 'Danh sách đơn hàng bán', icon: <FileText className="w-5 h-5" /> },
-  { id: 'parts', label: 'Vật tư', description: 'Danh mục vật tư', icon: <FileSpreadsheet className="w-5 h-5" /> },
-  { id: 'inventory', label: 'Tồn kho', description: 'Báo cáo tồn kho hiện tại', icon: <FileSpreadsheet className="w-5 h-5" /> },
-  { id: 'suppliers', label: 'Nhà cung cấp', description: 'Danh sách NCC', icon: <FileText className="w-5 h-5" /> },
-  { id: 'customers', label: 'Khách hàng', description: 'Danh sách khách hàng', icon: <FileText className="w-5 h-5" /> },
-  { id: 'work-orders', label: 'Lệnh sản xuất', description: 'Danh sách lệnh SX', icon: <FileSpreadsheet className="w-5 h-5" /> },
-  { id: 'quality-records', label: 'Chất lượng', description: 'Báo cáo NCR', icon: <FileText className="w-5 h-5" /> },
+  { id: 'sales-orders', labelKey: 'export.salesOrders', descKey: 'export.salesOrdersDesc', icon: <FileText className="w-5 h-5" /> },
+  { id: 'parts', labelKey: 'export.parts', descKey: 'export.partsDesc', icon: <FileSpreadsheet className="w-5 h-5" /> },
+  { id: 'inventory', labelKey: 'export.inventory', descKey: 'export.inventoryDesc', icon: <FileSpreadsheet className="w-5 h-5" /> },
+  { id: 'suppliers', labelKey: 'export.suppliers', descKey: 'export.suppliersDesc', icon: <FileText className="w-5 h-5" /> },
+  { id: 'customers', labelKey: 'export.customers', descKey: 'export.customersDesc', icon: <FileText className="w-5 h-5" /> },
+  { id: 'work-orders', labelKey: 'export.workOrders', descKey: 'export.workOrdersDesc', icon: <FileSpreadsheet className="w-5 h-5" /> },
+  { id: 'quality-records', labelKey: 'export.qualityRecords', descKey: 'export.qualityRecordsDesc', icon: <FileText className="w-5 h-5" /> },
 ];
 
 const formatOptions: FormatOption[] = [
@@ -70,6 +71,7 @@ const formatOptions: FormatOption[] = [
 // =============================================================================
 
 export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDialogProps) {
+  const { t } = useLanguage();
   const [selectedEntity, setSelectedEntity] = useState<ExportEntity>(defaultEntity || 'sales-orders');
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('xlsx');
   const [customTitle, setCustomTitle] = useState(title || '');
@@ -84,10 +86,9 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
       entity: selectedEntity,
       title: customTitle || undefined,
     });
-    
+
     if (success) {
       setExportSuccess(true);
-      // Auto close after 2 seconds
       setTimeout(() => {
         onClose();
         setExportSuccess(false);
@@ -102,6 +103,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        role="presentation"
         onClick={onClose}
       />
 
@@ -118,13 +120,14 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
                 <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">Xuất dữ liệu</h2>
-                <p className="text-sm text-gray-500">Chọn dữ liệu và định dạng</p>
+                <h2 className="font-semibold text-gray-900 dark:text-white">{t("export.title")}</h2>
+                <p className="text-sm text-gray-500">{t("export.subtitle")}</p>
               </div>
             </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              aria-label="Đóng"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
@@ -137,7 +140,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
               <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
                 <Check className="w-5 h-5 text-green-600" />
                 <div>
-                  <p className="font-medium text-green-800 dark:text-green-200">Xuất thành công!</p>
+                  <p className="font-medium text-green-800 dark:text-green-200">{t("export.success")}</p>
                   <p className="text-sm text-green-600 dark:text-green-400">{lastExport.filename}</p>
                 </div>
               </div>
@@ -148,7 +151,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
               <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
                 <AlertCircle className="w-5 h-5 text-red-600" />
                 <div>
-                  <p className="font-medium text-red-800 dark:text-red-200">Lỗi xuất dữ liệu</p>
+                  <p className="font-medium text-red-800 dark:text-red-200">{t("export.errorTitle")}</p>
                   <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
                 </div>
               </div>
@@ -157,7 +160,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
             {/* Entity Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Chọn dữ liệu
+                {t("export.selectData")}
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {entityOptions.map((option) => (
@@ -186,9 +189,9 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
                           ? 'text-purple-900 dark:text-purple-100'
                           : 'text-gray-900 dark:text-white'
                       )}>
-                        {option.label}
+                        {t(option.labelKey)}
                       </p>
-                      <p className="text-xs text-gray-500">{option.description}</p>
+                      <p className="text-xs text-gray-500">{t(option.descKey)}</p>
                     </div>
                   </button>
                 ))}
@@ -198,7 +201,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
             {/* Format Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Định dạng file
+                {t("export.fileFormat")}
               </label>
               <div className="flex gap-3">
                 {formatOptions.map((option) => (
@@ -232,13 +235,14 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
             {/* Custom Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Tiêu đề báo cáo (tùy chọn)
+                {t("export.reportTitle")}
               </label>
               <input
                 type="text"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Nhập tiêu đề hoặc để trống..."
+                placeholder={t("export.titlePlaceholder")}
+                aria-label={t("export.reportTitle")}
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -251,7 +255,7 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
               disabled={isExporting}
               className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors disabled:opacity-50"
             >
-              Hủy
+              {t("export.cancel")}
             </button>
             <button
               onClick={handleExport}
@@ -261,12 +265,12 @@ export function ExportDialog({ isOpen, onClose, defaultEntity, title }: ExportDi
               {isExporting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Đang xuất...
+                  {t("export.exporting")}
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Xuất file
+                  {t("export.exportFile")}
                 </>
               )}
             </button>
@@ -293,12 +297,14 @@ interface ExportButtonProps {
 export function ExportButton({
   entity,
   format = 'xlsx',
-  label = 'Xuất Excel',
+  label,
   className,
   variant = 'default',
   size = 'md',
 }: ExportButtonProps) {
+  const { t } = useLanguage();
   const { isExporting, exportData } = useExport();
+  const resolvedLabel = label || t("export.exportExcel");
 
   const handleExport = async () => {
     await exportData({ format, entity });
@@ -332,7 +338,7 @@ export function ExportButton({
       ) : (
         <Download className="w-4 h-4" />
       )}
-      {label}
+      {resolvedLabel}
     </button>
   );
 }
@@ -347,9 +353,11 @@ interface ExportMenuProps {
   className?: string;
 }
 
-export function ExportMenu({ entity, label = 'Xuất', className }: ExportMenuProps) {
+export function ExportMenu({ entity, label, className }: ExportMenuProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const { isExporting, exportData } = useExport();
+  const resolvedLabel = label || t("export.exportLabel");
 
   const handleExport = async (format: ExportFormat) => {
     setIsOpen(false);
@@ -368,12 +376,12 @@ export function ExportMenu({ entity, label = 'Xuất', className }: ExportMenuPr
         ) : (
           <Download className="w-4 h-4" />
         )}
-        {label}
+        {resolvedLabel}
       </button>
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-40" role="presentation" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
             {formatOptions.map((option) => (
               <button

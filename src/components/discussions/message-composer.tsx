@@ -331,6 +331,7 @@ export function MessageComposer({
                 onClick={insertMentionTrigger}
                 disabled={disabled || isSending}
                 className="h-10 w-10 sm:h-8 sm:w-8 touch-manipulation"
+                aria-label="Nhắc đến người dùng"
               >
                 <AtSign className="h-5 w-5 sm:h-4 sm:w-4" />
               </Button>
@@ -372,6 +373,7 @@ export function MessageComposer({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled || isSending}
                 className="h-10 w-10 sm:h-8 sm:w-8 touch-manipulation"
+                aria-label="Đính kèm tệp"
               >
                 <Paperclip className="h-5 w-5 sm:h-4 sm:w-4" />
               </Button>
@@ -414,6 +416,7 @@ export function MessageComposer({
               onClick={handleSend}
               disabled={!hasContent || disabled || isSending}
               className="h-10 w-10 sm:h-8 sm:w-8 touch-manipulation"
+              aria-label="Gửi tin nhắn"
             >
               {isSending ? (
                 <Loader2 className="h-5 w-5 sm:h-4 sm:w-4 animate-spin" />

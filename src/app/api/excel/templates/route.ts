@@ -1,19 +1,20 @@
 // src/app/api/excel/templates/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import { generateImportTemplate, getFieldDefinitions, defaultColumnDefinitions } from "@/lib/excel";
+import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // GET - List available templates or download specific template
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const download = searchParams.get("download") === "true";
 
@@ -101,13 +102,13 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Template error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/templates' });
     return NextResponse.json(
       { error: "Failed to get templates" },
       { status: 500 }
     );
   }
-}
+});
 
 // Get available template types
 function getAvailableTemplates(): {

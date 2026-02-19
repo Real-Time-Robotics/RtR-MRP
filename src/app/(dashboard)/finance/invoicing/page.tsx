@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Invoice {
   id: string;
@@ -65,7 +66,7 @@ interface AgingData {
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
     </div>
   );
 }
@@ -121,7 +122,7 @@ function InvoicingContent() {
         setSuppliers(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch entities:", error);
+      clientLogger.error("Failed to fetch entities:", error);
     }
   };
 
@@ -164,7 +165,7 @@ function InvoicingContent() {
         setApAging(await apAgingRes.json());
       }
     } catch (error) {
-      console.error("Failed to fetch invoicing data:", error);
+      clientLogger.error("Failed to fetch invoicing data:", error);
     } finally {
       setLoading(false);
     }
@@ -218,7 +219,7 @@ function InvoicingContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to record payment:", error);
+      clientLogger.error("Failed to record payment:", error);
     } finally {
       setSubmitting(false);
     }
@@ -277,7 +278,7 @@ function InvoicingContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to create invoice:", error);
+      clientLogger.error("Failed to create invoice:", error);
     } finally {
       setSubmitting(false);
     }

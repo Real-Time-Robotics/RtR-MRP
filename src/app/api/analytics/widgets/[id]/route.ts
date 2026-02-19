@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
 import { dashboardService, widgetService } from '@/lib/analytics';
+import { DashboardWidget } from '@/lib/analytics/types';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // WIDGET API - UPDATE, DELETE, GET DATA
 // =============================================================================
@@ -48,12 +52,16 @@ interface RouteContext {
 }
 
 // GET /api/analytics/widgets/[id] - Get widget data
-export async function GET(request: NextRequest, context: RouteContext) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    // Get widget
+// Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
     });
@@ -66,7 +74,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Fetch widget data
-    const widgetData = await widgetService.getWidgetData(widget as any);
+    const widgetData = await widgetService.getWidgetData(widget as unknown as DashboardWidget);
 
     return NextResponse.json({
       success: true,
@@ -75,21 +83,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error fetching widget data:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch widget data' },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/analytics/widgets/[id] - Update widget
-export async function PUT(request: NextRequest, context: RouteContext) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    // Get widget
+// Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
     });
@@ -111,7 +123,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const updated = await dashboardService.updateWidget(id, parsed.data as any);
+    const updated = await dashboardService.updateWidget(id, parsed.data as Partial<DashboardWidget>);
 
     return NextResponse.json({
       success: true,
@@ -120,21 +132,25 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error updating widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to update widget' },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/analytics/widgets/[id] - Delete widget
-export async function DELETE(request: NextRequest, context: RouteContext) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
   const { id } = await context.params;
 
   try {
-    // Get widget
+// Get widget
     const widget = await prisma.dashboardWidget.findUnique({
       where: { id },
     });
@@ -155,10 +171,10 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       took: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('Error deleting widget:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/analytics/widgets/[id]' });
     return NextResponse.json(
       { success: false, error: 'Failed to delete widget' },
       { status: 500 }
     );
   }
-}
+});

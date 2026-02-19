@@ -3,14 +3,20 @@
 // Creates initial admin user if none exists
 // =============================================================================
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
+import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Create a new PrismaClient instance to avoid connection issues
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     // Check if any users exist
     const userCount = await prisma.user.count();
@@ -46,7 +52,7 @@ export async function GET() {
           code: "WH-MAIN",
           name: "Main Warehouse",
           location: "Default Location",
-          type: "mixed",
+          type: "MAIN",
           status: "active",
         },
       });
@@ -54,18 +60,14 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      message: "Admin user created successfully",
-      credentials: {
-        email: "admin@rtr.com",
-        password: defaultPassword,
-      },
+      message: "Admin user created successfully. Check server logs or environment for default credentials.",
     });
   } catch (error) {
-    console.error("Setup error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/setup' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Setup failed",
+        error: "Setup failed",
       },
       { status: 500 }
     );

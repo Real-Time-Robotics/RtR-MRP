@@ -117,7 +117,7 @@ describe('BOM Explode API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(500);
-      expect(data.error).toBe('No active BOM found for this product');
+      expect(data.error).toBe('Failed to explode BOM');
     });
   });
 });

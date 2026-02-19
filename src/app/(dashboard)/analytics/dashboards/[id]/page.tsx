@@ -4,9 +4,19 @@ import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Edit, RefreshCw, Share2, Download, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DashboardGrid } from "@/components/analytics/dashboards/DashboardGrid";
+import dynamic from "next/dynamic";
 import { DateRangePicker } from "@/components/analytics/common/DateRangePicker";
-import type { Dashboard, WidgetData, DateRangeConfig } from "@/lib/analytics/types";
+import type { Dashboard, DashboardWidget, WidgetData, DateRangeConfig } from "@/lib/analytics/types";
+import { clientLogger } from '@/lib/client-logger';
+
+// Lazy-load DashboardGrid (renders chart widgets that import recharts ~500KB)
+const DashboardGrid = dynamic(
+  () => import("@/components/analytics/dashboards/DashboardGrid").then(mod => mod.DashboardGrid),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -44,7 +54,7 @@ export default function DashboardViewPage({ params }: PageProps) {
           }
         }
       } catch (error) {
-        console.error("Error fetching dashboard:", error);
+        clientLogger.error("Error fetching dashboard:", error);
       } finally {
         setIsLoading(false);
       }
@@ -77,16 +87,36 @@ export default function DashboardViewPage({ params }: PageProps) {
 
       setWidgetData(newWidgetData);
     } catch (error) {
-      console.error("Error refreshing data:", error);
+      clientLogger.error("Error refreshing data:", error);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // Handle drill-down
-  const handleDrillDown = (widget: any, item: any) => {
-    // Navigate to detail view or open modal
-    console.log("Drill down:", widget, item);
+  // Handle drill-down: navigate to the relevant detail view based on widget type
+  const handleDrillDown = (widget: DashboardWidget, item: { id?: string; entityId?: string } | null) => {
+    const entityId = item?.id || item?.entityId;
+    if (!entityId) return;
+
+    // Route to the appropriate detail page based on widget data source / type
+    const widgetType = (widget?.widgetType || widget?.dataSource || "").toLowerCase();
+
+    if (widgetType.includes("order") || widgetType.includes("sales")) {
+      router.push(`/sales/orders/${entityId}`);
+    } else if (widgetType.includes("purchase") || widgetType.includes("po")) {
+      router.push(`/purchasing/orders/${entityId}`);
+    } else if (widgetType.includes("inventory") || widgetType.includes("part")) {
+      router.push(`/inventory/${entityId}`);
+    } else if (widgetType.includes("quality") || widgetType.includes("ncr")) {
+      router.push(`/quality/ncr/${entityId}`);
+    } else if (widgetType.includes("work") || widgetType.includes("production")) {
+      router.push(`/production/work-orders/${entityId}`);
+    } else if (widgetType.includes("supplier")) {
+      router.push(`/purchasing/suppliers/${entityId}`);
+    } else {
+      // Fallback: navigate to the widget's own drill-down page
+      router.push(`/analytics/dashboards/${id}?widget=${widget?.id}&item=${entityId}`);
+    }
   };
 
   if (isLoading) {
@@ -122,6 +152,7 @@ export default function DashboardViewPage({ params }: PageProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => router.push("/analytics/dashboards")}
+                aria-label="Quay lại"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -143,6 +174,7 @@ export default function DashboardViewPage({ params }: PageProps) {
                 size="icon"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
+                aria-label="Làm mới"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -153,15 +185,16 @@ export default function DashboardViewPage({ params }: PageProps) {
                 variant="outline"
                 size="icon"
                 onClick={() => router.push(`/analytics/dashboards/${id}/edit`)}
+                aria-label="Chỉnh sửa"
               >
                 <Edit className="h-4 w-4" />
               </Button>
 
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" aria-label="Chia sẻ">
                 <Share2 className="h-4 w-4" />
               </Button>
 
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" aria-label="Tải xuống">
                 <Download className="h-4 w-4" />
               </Button>
             </div>

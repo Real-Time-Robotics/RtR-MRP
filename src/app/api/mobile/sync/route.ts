@@ -4,7 +4,21 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+const syncPostSchema = z.object({
+  id: z.string().optional(),
+  type: z.enum([
+    'inventory_adjust', 'inventory_transfer', 'inventory_count',
+    'po_receive', 'so_pick', 'wo_start', 'wo_complete', 'quality_inspect',
+  ]),
+  data: z.record(z.string(), z.unknown()),
+  createdAt: z.string().optional(),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Mock master data
 const MOCK_PARTS = [
   { id: '1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor 2205', category: 'Motors', uom: 'EA', onHand: 150, reserved: 20, available: 130, reorderPoint: 50, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 100 }, { locationId: 'loc2', code: 'WH-01-R01-C02-S01', qty: 50 }], updatedAt: Date.now() },
@@ -34,8 +48,11 @@ const MOCK_LOCATIONS = [
  * GET /api/mobile/sync
  * Get sync status and download master data
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+const { searchParams } = new URL(req.url);
   const dataType = searchParams.get('type');
   const since = searchParams.get('since'); // Timestamp for delta sync
   
@@ -66,23 +83,27 @@ export async function GET(req: NextRequest) {
       locations: '/api/mobile/sync?type=locations',
     },
   });
-}
+});
 
 /**
  * POST /api/mobile/sync
  * Process offline operations
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const operation = await req.json();
-    const { id, type, data, createdAt } = operation;
-    
-    if (!type || !data) {
+const operation = await req.json();
+    const parsed = syncPostSchema.safeParse(operation);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Invalid operation format' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { id, type, data, createdAt } = parsed.data;
     
     // Process based on operation type
     let result;
@@ -128,13 +149,13 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Sync processing error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(
       { success: false, error: 'Failed to process operation' },
       { status: 500 }
     );
   }
-}
+});
 
 // Operation processors
 async function processInventoryAdjust(data: Record<string, unknown>) {
@@ -174,9 +195,13 @@ async function processQualityInspect(data: Record<string, unknown>) {
  * PUT /api/mobile/sync
  * Bulk sync operations
  */
-export async function PUT(req: NextRequest) {
+export const PUT = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const { operations } = await req.json();
+const { operations } = await req.json();
     
     if (!Array.isArray(operations)) {
       return NextResponse.json(
@@ -224,10 +249,10 @@ export async function PUT(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Bulk sync error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(
       { success: false, error: 'Failed to process bulk sync' },
       { status: 500 }
     );
   }
-}
+});

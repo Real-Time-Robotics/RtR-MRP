@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 const TYPE_OPTIONS = [
   { value: "CORRECTIVE", label: "Hành động khắc phục" },
@@ -69,11 +71,11 @@ export default function NewCAPAPage() {
         router.push(`/quality/capa/${capa.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create CAPA");
+        toast.error(error.error || "Failed to create CAPA");
       }
     } catch (error) {
-      console.error("Failed to create CAPA:", error);
-      alert("Failed to create CAPA");
+      clientLogger.error("Failed to create CAPA:", error);
+      toast.error("Failed to create CAPA");
     } finally {
       setLoading(false);
     }

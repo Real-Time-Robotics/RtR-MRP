@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { Permission, rolePermissions, UserRole } from '@/lib/auth/auth-types';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // API PERMISSION MIDDLEWARE
@@ -46,7 +47,7 @@ export interface HandlerContext {
 export type ApiHandler = (
   request: NextRequest,
   context: HandlerContext
-) => Promise<NextResponse>;
+) => Promise<Response>;
 
 /**
  * HTTP method to permission action mapping
@@ -104,7 +105,7 @@ export function withPermission(
   return async (
     request: NextRequest,
     context?: { params?: Record<string, string> }
-  ): Promise<NextResponse> => {
+  ): Promise<Response> => {
     try {
       // 1. Check authentication
       const session = await auth();
@@ -161,7 +162,7 @@ export function withPermission(
         user,
       });
     } catch (error) {
-      console.error('API Permission Middleware Error:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'api-permission-middleware' });
       return NextResponse.json(
         {
           success: false,
@@ -220,7 +221,7 @@ export function withAdminOnly(handler: ApiHandler) {
   return async (
     request: NextRequest,
     context?: { params?: Record<string, string> }
-  ): Promise<NextResponse> => {
+  ): Promise<Response> => {
     const session = await auth();
 
     if (!session?.user) {
@@ -262,7 +263,7 @@ export function withManagerOrAdmin(handler: ApiHandler) {
   return async (
     request: NextRequest,
     context?: { params?: Record<string, string> }
-  ): Promise<NextResponse> => {
+  ): Promise<Response> => {
     const session = await auth();
 
     if (!session?.user) {

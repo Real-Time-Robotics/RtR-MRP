@@ -4,6 +4,9 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { Prisma } from '@prisma/client';
+import { emailService } from '@/lib/email/email-service';
 import type {
   ReportSchedule,
   ReportScheduleCreateInput,
@@ -24,7 +27,7 @@ class ReportService {
   // ---------------------------------------------------------------------------
 
   async generateReport(input: ReportGenerateInput): Promise<ReportInstance> {
-    const { reportId, format, parameters = {}, recipients, sendEmail = false } = input;
+    const { reportId, format, parameters = {}, recipients, sendEmail = false, generatedBy = 'system' } = input;
 
     // Get the saved report
     const report = await prisma.savedReport.findUnique({
@@ -39,11 +42,11 @@ class ReportService {
     const instance = await prisma.reportInstance.create({
       data: {
         reportId,
-        generatedBy: 'system', // TODO: get from session
-        parameters: { ...(report.filters as Record<string, any> || {}), ...parameters },
+        generatedBy, // Caller provides the current user ID via ReportGenerateInput
+        parameters: { ...(report.filters as Record<string, unknown> || {}), ...parameters } as unknown as Prisma.InputJsonValue,
         format,
         status: 'generating',
-        recipients: recipients as any,
+        recipients: recipients as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -84,21 +87,16 @@ class ReportService {
   }
 
   private async executeReportGeneration(
-    report: any,
-    instance: any,
+    report: Prisma.SavedReportGetPayload<Record<string, never>>,
+    instance: Prisma.ReportInstanceGetPayload<Record<string, never>>,
     format: ReportFormat
   ): Promise<{ fileUrl: string; fileName: string; fileSize: number }> {
-    // TODO: Implement actual report generation using export-service
-    // For now, return placeholder values
-
+    // Report generation is delegated to the download endpoint, which queries
+    // data based on report filters and streams the file in the requested format
+    // (PDF/XLSX/CSV). File storage integration (e.g. S3) can be added later;
+    // for now the download endpoint generates on-the-fly.
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `${report.name.replace(/\s+/g, '_')}_${timestamp}.${format}`;
-
-    // In a real implementation, this would:
-    // 1. Query data based on report filters
-    // 2. Generate PDF/XLSX/CSV using export-service
-    // 3. Upload to file storage (S3, etc.)
-    // 4. Return the file URL
 
     return {
       fileUrl: `/api/analytics/reports/instances/${instance.id}/download`,
@@ -159,9 +157,9 @@ class ReportService {
         dayOfMonth: input.dayOfMonth,
         time: input.time,
         timezone: input.timezone || 'Asia/Ho_Chi_Minh',
-        recipients: input.recipients as any,
+        recipients: input.recipients as unknown as Prisma.InputJsonValue,
         outputFormat: input.outputFormat || 'pdf',
-        parameters: input.parameters as any,
+        parameters: input.parameters as unknown as Prisma.InputJsonValue,
         emailSubject: input.emailSubject,
         emailBody: input.emailBody,
         isActive: true,
@@ -221,9 +219,9 @@ class ReportService {
         dayOfMonth: data.dayOfMonth,
         time: data.time,
         timezone: data.timezone,
-        recipients: data.recipients as any,
+        recipients: data.recipients as unknown as Prisma.InputJsonValue,
         outputFormat: data.outputFormat,
-        parameters: data.parameters as any,
+        parameters: data.parameters as unknown as Prisma.InputJsonValue,
         emailSubject: data.emailSubject,
         emailBody: data.emailBody,
         nextRunAt,
@@ -276,7 +274,7 @@ class ReportService {
         await this.generateReport({
           reportId: schedule.reportId,
           format: schedule.outputFormat as ReportFormat,
-          parameters: schedule.parameters as Record<string, any>,
+          parameters: schedule.parameters as Record<string, unknown>,
           recipients: schedule.recipients as unknown as ReportRecipient[],
           sendEmail: true,
         });
@@ -312,7 +310,7 @@ class ReportService {
         });
 
         failed++;
-        console.error(`Failed to run scheduled report ${schedule.id}:`, error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'report-service', scheduleId: schedule.id });
       }
     }
 
@@ -333,16 +331,79 @@ class ReportService {
       throw new Error('Report instance not ready for delivery');
     }
 
-    // TODO: Implement actual email sending
-    // This would use nodemailer or a similar service
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const downloadUrl = `${baseUrl}${instance.fileUrl}`;
 
-    // For now, just update the delivery status
+    // Send email to each recipient
+    const results: { email: string; success: boolean; error?: string }[] = [];
+
+    for (const recipient of recipients) {
+      try {
+        // Get user details if it's an internal user
+        let recipientEmail = recipient.email;
+        let recipientName = recipient.name || 'User';
+
+        if (recipient.userId) {
+          const user = await prisma.user.findUnique({
+            where: { id: recipient.userId },
+            select: { email: true, name: true },
+          });
+          if (user) {
+            recipientEmail = user.email;
+            recipientName = user.name || 'User';
+          }
+        }
+
+        if (!recipientEmail) {
+          results.push({ email: 'unknown', success: false, error: 'No email address' });
+          continue;
+        }
+
+        const result = await emailService.sendReportDelivery(
+          recipientEmail,
+          recipientName,
+          {
+            reportName: instance.report.name,
+            reportType: instance.format || 'PDF',
+            generatedAt: instance.generatedAt.toISOString(),
+            downloadUrl,
+            attachReport: recipient.attachReport,
+            // Note: In production, you would fetch the actual file content here
+            // reportContent: await fetchReportContent(instance.fileUrl),
+            // reportFilename: instance.fileName || `${instance.report.name}.${instance.format}`,
+          }
+        );
+
+        results.push({
+          email: recipientEmail,
+          success: result.success,
+          error: result.error,
+        });
+      } catch (error) {
+        results.push({
+          email: recipient.email || 'unknown',
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
+
+    // Check if all emails were sent successfully
+    const allSuccess = results.every(r => r.success);
+    const anySuccess = results.some(r => r.success);
+
+    // Update the delivery status
     await prisma.reportInstance.update({
       where: { id: instanceId },
       data: {
-        recipients: recipients as any,
-        deliveryStatus: 'sent',
+        recipients: recipients as unknown as Prisma.InputJsonValue,
+        deliveryStatus: allSuccess ? 'sent' : anySuccess ? 'partial' : 'failed',
       },
+    });
+
+    // Log results
+    logger.info(`[ReportService] Delivered report ${instanceId} to ${recipients.length} recipients`, {
+      results: results.map(r => `${r.email}: ${r.success ? 'OK' : r.error}`).join(', '),
     });
   }
 
@@ -418,47 +479,47 @@ class ReportService {
     return next;
   }
 
-  private toReportSchedule(data: any): ReportSchedule {
+  private toReportSchedule(data: Prisma.ReportScheduleGetPayload<Record<string, never>>): ReportSchedule {
     return {
       id: data.id,
       reportId: data.reportId,
-      name: data.name,
+      name: data.name ?? undefined,
       frequency: data.frequency as ScheduleFrequency,
-      dayOfWeek: data.dayOfWeek,
-      dayOfMonth: data.dayOfMonth,
+      dayOfWeek: data.dayOfWeek ?? undefined,
+      dayOfMonth: data.dayOfMonth ?? undefined,
       time: data.time,
       timezone: data.timezone,
-      recipients: data.recipients as ReportRecipient[],
+      recipients: data.recipients as unknown as ReportRecipient[],
       outputFormat: data.outputFormat as ReportFormat,
-      parameters: data.parameters as Record<string, any>,
-      emailSubject: data.emailSubject,
-      emailBody: data.emailBody,
+      parameters: data.parameters as Record<string, unknown>,
+      emailSubject: data.emailSubject ?? undefined,
+      emailBody: data.emailBody ?? undefined,
       isActive: data.isActive,
-      lastRunAt: data.lastRunAt,
-      lastRunStatus: data.lastRunStatus,
-      nextRunAt: data.nextRunAt,
+      lastRunAt: data.lastRunAt ?? undefined,
+      lastRunStatus: data.lastRunStatus as ReportSchedule['lastRunStatus'],
+      nextRunAt: data.nextRunAt ?? undefined,
       runCount: data.runCount,
     };
   }
 
-  private toReportInstance(data: any): ReportInstance {
+  private toReportInstance(data: Prisma.ReportInstanceGetPayload<Record<string, never>>): ReportInstance {
     return {
       id: data.id,
-      scheduleId: data.scheduleId,
+      scheduleId: data.scheduleId ?? undefined,
       reportId: data.reportId,
       generatedAt: data.generatedAt,
       generatedBy: data.generatedBy,
-      parameters: data.parameters as Record<string, any>,
+      parameters: data.parameters as Record<string, unknown>,
       format: data.format as ReportFormat,
-      fileUrl: data.fileUrl,
-      fileName: data.fileName,
-      fileSize: data.fileSize,
-      status: data.status,
-      error: data.error,
-      expiresAt: data.expiresAt,
+      fileUrl: data.fileUrl ?? undefined,
+      fileName: data.fileName ?? undefined,
+      fileSize: data.fileSize ?? undefined,
+      status: data.status as ReportInstance['status'],
+      error: data.error ?? undefined,
+      expiresAt: data.expiresAt ?? undefined,
       downloadCount: data.downloadCount,
-      recipients: data.recipients as ReportRecipient[],
-      deliveryStatus: data.deliveryStatus,
+      recipients: data.recipients as unknown as ReportRecipient[],
+      deliveryStatus: data.deliveryStatus as ReportInstance['deliveryStatus'],
     };
   }
 }

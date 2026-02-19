@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   Alert,
   AlertType,
@@ -529,7 +530,7 @@ export class AlertProcessor {
         },
       });
     } catch (error) {
-      console.error('[AlertProcessor] Failed to log escalation:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-processor', operation: 'logEscalation' });
     }
 
     return true;

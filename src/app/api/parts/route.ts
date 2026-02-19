@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -10,22 +11,24 @@ import {
 } from "@/lib/pagination";
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { PartQuerySchema, PartCreateSchema } from "@/lib/validations";
+import { logger } from "@/lib/logger";
 import { logApi } from "@/lib/audit/audit-logger";
+import { auditCreate } from "@/lib/audit/route-audit";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Allowed filters for parts
 const ALLOWED_FILTERS = ["category", "lifecycleStatus", "makeOrBuy"];
 const SEARCH_FIELDS = ["partNumber", "name", "description", "manufacturerPn", "manufacturer"];
 
 // GET - List all parts with pagination
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     // Validate query params
     const queryResult = validateQuery(PartQuerySchema, request.nextUrl.searchParams);
     if (!queryResult.success) {
@@ -39,7 +42,7 @@ export async function GET(request: NextRequest) {
     const params = parsePaginationParams(request);
 
     // Build where clause
-    const where: Record<string, unknown> = {};
+    const where: Prisma.PartWhereInput = {};
 
     if (category) where.category = category;
     if (lifecycleStatus) where.lifecycleStatus = lifecycleStatus;
@@ -112,27 +115,26 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(parts, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch parts:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts' });
     return paginatedError("Failed to fetch parts", 500);
   }
-}
+});
 
 // POST - Create a new part
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
+  try {
     // Validate request body
     const bodyResult = await validateBody(PartCreateSchema, request);
     if (!bodyResult.success) {
-      console.error('[Part Create] Validation failed:', JSON.stringify(bodyResult.response, null, 2));
+      logger.error('[Part Create] Validation failed', { context: 'POST /api/parts', details: bodyResult.response });
       return bodyResult.response;
     }
     const data = bodyResult.data;
-    console.log('[Part Create] Validated data:', JSON.stringify(data, null, 2));
+    logger.debug('[Part Create] Validated data', { data });
 
     // Generate ID if not provided
     const id = data.id || `PRT-${Date.now()}`;
@@ -278,12 +280,6 @@ export async function POST(request: NextRequest) {
             serialControl: data.serialControl ?? false,
             shelfLifeDays: data.shelfLifeDays,
             inspectionRequired: data.inspectionRequired ?? true,
-            // inspectionPlan: data.inspectionPlan, // Schema doesn't have this on PartCompliance?? Checking...
-            // Checking Schema again: PartCompliance lines 283+
-            // inspectionRequired Boolean
-            // certificateRequired Boolean
-            // Schema has 'inspectionPlans InspectionPlan[]' on Part (line 146).
-
             aqlLevel: data.aqlLevel,
             certificateRequired: data.certificateRequired ?? false,
             rohsCompliant: data.rohsCompliant ?? true,
@@ -316,8 +312,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Create PartSupplier relations for secondary suppliers
+    if (data.secondarySupplierIds && data.secondarySupplierIds.length > 0) {
+      await prisma.partSupplier.createMany({
+        data: data.secondarySupplierIds.map((supplierId: string) => ({
+          partId: part.id,
+          supplierId,
+          isPreferred: false,
+          unitPrice: data.unitCost ?? 0,
+          leadTimeDays: data.leadTimeDays ?? 0,
+          minOrderQty: data.moq ?? 1,
+        })),
+      });
+    }
+
     // Re-fetch with supplier included
-    const result = data.primarySupplierId
+    const result = data.primarySupplierId || (data.secondarySupplierIds && data.secondarySupplierIds.length > 0)
       ? await prisma.part.findUnique({
           where: { id: part.id },
           include: {
@@ -330,21 +340,20 @@ export async function POST(request: NextRequest) {
         })
       : part;
 
+    // Audit trail: log creation
+    auditCreate(request, session.user, "Part", part.id, { partNumber: part.partNumber, name: part.name, category: part.category });
+
     return NextResponse.json(result, { status: 201 });
-  } catch (error: any) {
-    console.error("[Part Create] Failed to create part:", error);
-    console.error("[Part Create] Error details:", {
-      message: error.message,
-      code: error.code,
-      meta: error.meta,
-    });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string; meta?: { cause?: string } };
+    const errCode = prismaError?.code;
+    const errMeta = prismaError?.meta;
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/parts', code: errCode, meta: errMeta });
     return NextResponse.json(
       {
         error: "Failed to create part",
-        message: error.message,
-        details: error.meta?.cause || error.message
       },
       { status: 500 }
     );
   }
-}
+});

@@ -2,8 +2,11 @@
 // DEMO UNLOCK API - Unlock demo accounts that got locked
 // =============================================================================
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 
 const DEMO_EMAILS = [
   'admin@demo.rtr-mrp.com',
@@ -12,7 +15,11 @@ const DEMO_EMAILS = [
   'viewer@demo.rtr-mrp.com',
 ];
 
-export async function POST() {
+export const POST = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const results = [];
 
@@ -57,13 +64,13 @@ export async function POST() {
       results,
     });
   } catch (error) {
-    console.error('Demo unlock error:', error);
+    logger.error('Demo unlock error', { context: 'POST /api/demo/unlock', details: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to unlock demo accounts',
       },
       { status: 500 }
     );
   }
-}
+});

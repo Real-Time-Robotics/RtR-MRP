@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -55,7 +57,7 @@ export default function NewInspectionPlanPage() {
         setParts(data.parts || data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -79,11 +81,11 @@ export default function NewInspectionPlanPage() {
         router.push(`/quality/inspection-plans/${plan.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create inspection plan");
+        toast.error(error.error || "Failed to create inspection plan");
       }
     } catch (error) {
-      console.error("Failed to create inspection plan:", error);
-      alert("Failed to create inspection plan");
+      clientLogger.error("Failed to create inspection plan:", error);
+      toast.error("Failed to create inspection plan");
     } finally {
       setLoading(false);
     }

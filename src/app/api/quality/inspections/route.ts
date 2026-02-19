@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from "@/lib/logger";
 import { generateInspectionNumber } from "@/lib/quality/inspection-engine";
+import { buildSearchQuery, parsePaginationParams } from "@/lib/pagination";
 import { z } from "zod";
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // Validation schema for Inspection creation
 const InspectionCreateSchema = z.object({
@@ -10,6 +14,7 @@ const InspectionCreateSchema = z.object({
     (v) => (typeof v === 'string' ? v.toUpperCase() : v),
     z.enum(["RECEIVING", "IN_PROCESS", "FINAL"])
   ),
+  sourceType: z.enum(["PO", "NON_PO", "PRODUCTION"]).optional(),
   planId: z.string().optional().nullable(),
   partId: z.string().optional().nullable(),
   productId: z.string().optional().nullable(),
@@ -29,10 +34,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
-    const page = parseInt(searchParams.get("page") || "1");
-    const pageSize = parseInt(searchParams.get("pageSize") || "50");
+    const search = searchParams.get("search");
+    const { page, pageSize } = parsePaginationParams(request);
 
-    const where: Record<string, unknown> = {};
+    const searchQuery = buildSearchQuery(search, ["inspectionNumber", "lotNumber", "notes"]);
+    const where: Prisma.InspectionWhereInput = {
+      ...searchQuery,
+    };
     if (type) where.type = type;
     if (status) where.status = status;
 
@@ -57,7 +65,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     });
   } catch (error) {
-    console.error("Lỗi tải danh sách kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspections' });
     return NextResponse.json(
       { error: "Lỗi tải danh sách kiểm tra" },
       { status: 500 }
@@ -65,12 +73,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();
 
@@ -84,6 +91,127 @@ export async function POST(request: NextRequest) {
     }
 
     const data = validationResult.data;
+    const sourceType = data.sourceType || "PO";
+
+    // Branch validation by source type for RECEIVING inspections
+    if (data.type === "RECEIVING") {
+      if (sourceType === "PO") {
+        // PO source: require poLineId (existing logic)
+        if (!data.poLineId) {
+          return NextResponse.json(
+            { error: "Phải chọn dòng PO (poLineId) cho kiểm tra nhận hàng" },
+            { status: 400 }
+          );
+        }
+
+        const poLine = await prisma.purchaseOrderLine.findUnique({
+          where: { id: data.poLineId },
+          include: { po: { select: { id: true, status: true } } },
+        });
+
+        if (!poLine) {
+          return NextResponse.json(
+            { error: "Dòng PO không tồn tại" },
+            { status: 400 }
+          );
+        }
+
+        if (poLine.po.status !== "received") {
+          return NextResponse.json(
+            { error: "PO phải ở trạng thái Đã nhận hàng" },
+            { status: 400 }
+          );
+        }
+
+        const existingCompleted = await prisma.inspection.findFirst({
+          where: {
+            poLineId: data.poLineId,
+            type: "RECEIVING",
+            status: "completed",
+          },
+        });
+        if (existingCompleted) {
+          return NextResponse.json(
+            {
+              error: `Dòng PO này đã có inspection hoàn thành (${existingCompleted.inspectionNumber}). Không thể tạo thêm.`,
+            },
+            { status: 409 }
+          );
+        }
+
+        const remaining = poLine.quantity - poLine.receivedQty;
+        if (data.quantityReceived !== undefined && data.quantityReceived > remaining) {
+          return NextResponse.json(
+            {
+              error: `Số lượng nhận (${data.quantityReceived}) vượt quá số lượng còn lại (${remaining})`,
+            },
+            { status: 400 }
+          );
+        }
+      } else if (sourceType === "NON_PO") {
+        // Non-PO source: require partId + quantityReceived
+        if (!data.partId) {
+          return NextResponse.json(
+            { error: "Phải chọn linh kiện (partId) cho nhận hàng ngoài PO" },
+            { status: 400 }
+          );
+        }
+        if (!data.quantityReceived || data.quantityReceived <= 0) {
+          return NextResponse.json(
+            { error: "Số lượng nhận phải lớn hơn 0" },
+            { status: 400 }
+          );
+        }
+      } else if (sourceType === "PRODUCTION") {
+        // Production source: require workOrderId
+        if (!data.workOrderId) {
+          return NextResponse.json(
+            { error: "Phải chọn lệnh sản xuất (workOrderId) cho nhận hàng từ sản xuất" },
+            { status: 400 }
+          );
+        }
+
+        const wo = await prisma.workOrder.findUnique({
+          where: { id: data.workOrderId },
+          include: { product: { select: { id: true, sku: true, name: true } } },
+        });
+        if (!wo) {
+          return NextResponse.json(
+            { error: "Lệnh sản xuất không tồn tại" },
+            { status: 400 }
+          );
+        }
+
+        const woStatus = wo.status.toLowerCase();
+        if (woStatus !== "completed" && woStatus !== "in_progress") {
+          return NextResponse.json(
+            { error: "Lệnh sản xuất phải ở trạng thái Hoàn thành hoặc Đang thực hiện" },
+            { status: 400 }
+          );
+        }
+
+        // Prevent duplicate completed inspection on same WO
+        const existingWOInspection = await prisma.inspection.findFirst({
+          where: {
+            workOrderId: data.workOrderId,
+            type: "RECEIVING",
+            sourceType: "PRODUCTION",
+            status: "completed",
+          },
+        });
+        if (existingWOInspection) {
+          return NextResponse.json(
+            {
+              error: `WO này đã có inspection hoàn thành (${existingWOInspection.inspectionNumber}). Không thể tạo thêm.`,
+            },
+            { status: 409 }
+          );
+        }
+
+        // Auto-populate productId from WO
+        data.productId = wo.productId;
+      }
+    }
 
     // Validate entity references exist
     if (data.planId) {
@@ -107,7 +235,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (data.workOrderId) {
+    if (data.workOrderId && sourceType !== "PRODUCTION") {
       const wo = await prisma.workOrder.findUnique({ where: { id: data.workOrderId } });
       if (!wo) {
         return NextResponse.json({ error: "Lệnh sản xuất không tồn tại" }, { status: 400 });
@@ -127,6 +255,7 @@ export async function POST(request: NextRequest) {
       data: {
         inspectionNumber,
         type: data.type,
+        sourceType: data.type === "RECEIVING" ? sourceType : null,
         planId: data.planId || null,
         partId: data.partId || null,
         productId: data.productId || null,
@@ -144,12 +273,70 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // For PRODUCTION source: create RECEIVING inventory record + PRODUCED lot transaction
+    if (data.type === "RECEIVING" && sourceType === "PRODUCTION" && data.partId && data.quantityReceived) {
+      const receivingWarehouse = await prisma.warehouse.findFirst({
+        where: { type: "RECEIVING" },
+      });
+      // Fallback to default warehouse if no RECEIVING warehouse exists
+      const targetWarehouse = receivingWarehouse || await prisma.warehouse.findFirst({
+        where: { isDefault: true },
+      });
+
+      if (targetWarehouse) {
+        const lotNumber = data.lotNumber || `LOT-WO-${inspectionNumber}`;
+
+        const existingInv = await prisma.inventory.findFirst({
+          where: {
+            partId: data.partId,
+            warehouseId: targetWarehouse.id,
+            lotNumber: lotNumber,
+          },
+        });
+
+        if (existingInv) {
+          await prisma.inventory.update({
+            where: { id: existingInv.id },
+            data: { quantity: existingInv.quantity + data.quantityReceived },
+          });
+        } else {
+          await prisma.inventory.create({
+            data: {
+              partId: data.partId,
+              warehouseId: targetWarehouse.id,
+              quantity: data.quantityReceived,
+              reservedQty: 0,
+              lotNumber: lotNumber,
+              locationCode: "RECEIVING",
+            },
+          });
+        }
+
+        await prisma.lotTransaction.create({
+          data: {
+            lotNumber: lotNumber,
+            transactionType: "PRODUCED",
+            partId: data.partId,
+            quantity: data.quantityReceived,
+            previousQty: existingInv?.quantity ?? 0,
+            newQty: (existingInv?.quantity ?? 0) + data.quantityReceived,
+            workOrderId: data.workOrderId,
+            inspectionId: inspection.id,
+            toWarehouseId: targetWarehouse.id,
+            toLocation: "RECEIVING",
+            userId: session.user.id,
+            notes: `Production output from WO → Inspection ${inspectionNumber}`,
+          },
+        });
+      }
+    }
+
     return NextResponse.json(inspection, { status: 201 });
   } catch (error) {
-    console.error("Lỗi tạo kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/quality/inspections' });
     return NextResponse.json(
       { error: "Lỗi tạo kiểm tra" },
       { status: 500 }
     );
   }
-}
+});

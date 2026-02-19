@@ -14,6 +14,7 @@ import {
   Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MOBILE WORK ORDER PAGE
@@ -53,7 +54,7 @@ export default function MobileWorkOrderPage() {
           setWorkOrders(data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch WOs:', err);
+        clientLogger.error('Failed to fetch work orders', err);
       } finally {
         setIsLoading(false);
       }
@@ -90,7 +91,7 @@ export default function MobileWorkOrderPage() {
         }
       }
     } catch (err) {
-      console.error('Failed to record:', err);
+      clientLogger.error('Failed to record production', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -239,6 +240,7 @@ export default function MobileWorkOrderPage() {
                     type="number"
                     value={productionQty}
                     onChange={(e) => setProductionQty(Math.max(1, parseInt(e.target.value) || 1))}
+                    aria-label="Số lượng sản xuất"
                     className="w-24 h-14 text-center text-2xl font-bold bg-gray-100 dark:bg-gray-700 rounded-xl border-0"
                   />
                   <button

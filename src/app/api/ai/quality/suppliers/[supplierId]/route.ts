@@ -4,10 +4,13 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 import { getQualityDataExtractor } from '@/lib/ai/quality/quality-data-extractor';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 import { getAIQualityAnalyzer } from '@/lib/ai/quality/ai-quality-analyzer';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ supplierId: string }>;
 }
@@ -16,12 +19,25 @@ interface RouteParams {
 // GET - Supplier Quality Analysis
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const { supplierId } = await params;
+const { supplierId } = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const months = parseInt(searchParams.get('months') || '12');
     const includeAI = searchParams.get('includeAI') === 'true';
@@ -42,7 +58,8 @@ export async function GET(
       );
     }
 
-    const response: any = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: Record<string, any> = {
       success: true,
       data: {
         supplierId,
@@ -84,20 +101,20 @@ export async function GET(
           recommendation: insights.aiRecommendation,
         };
       } catch (aiError) {
-        console.warn('[Quality API] AI supplier insights failed:', aiError);
+        logger.warn('AI supplier insights failed', { context: 'GET /api/ai/quality/suppliers/[supplierId]', error: String(aiError) });
         response.data.aiInsights = null;
       }
     }
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[Quality API] Supplier Analysis Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality/suppliers/[supplierId]' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch supplier quality analysis',
       },
       { status: 500 }
     );
   }
-}
+});

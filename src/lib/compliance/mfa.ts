@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { createHash, randomBytes } from "crypto";
+import { logger } from '@/lib/logger';
 
 // TOTP Configuration
 const TOTP_CONFIG = {
@@ -206,7 +207,7 @@ export async function setupMFA(
       backupCodes, // Return plain codes to show user once
     };
   } catch (error) {
-    console.error("MFA setup error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'mfa', operation: 'setupMFA' });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Setup failed",

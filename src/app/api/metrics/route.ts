@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/metrics
@@ -47,7 +48,7 @@ rtr_mrp_memory_rss_bytes ${memUsage.rss}
       },
     });
   } catch (error) {
-    console.error('[METRICS] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/metrics' });
     return NextResponse.json(
       { error: 'Failed to generate metrics' },
       { status: 500 }

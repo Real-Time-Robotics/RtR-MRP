@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   getDataExtractorService,
   PreparedForecastData,
@@ -785,7 +786,7 @@ export class ForecastEngine {
           upperBound: forecast.upperBound,
           confidence: forecast.confidence,
           model: result.model,
-          factors: forecast.factors as any,
+          factors: forecast.factors as unknown as import('@prisma/client').Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
         create: {
@@ -797,7 +798,7 @@ export class ForecastEngine {
           upperBound: forecast.upperBound,
           confidence: forecast.confidence,
           model: result.model,
-          factors: forecast.factors as any,
+          factors: forecast.factors as unknown as import('@prisma/client').Prisma.InputJsonValue,
         },
       });
     }
@@ -834,7 +835,7 @@ export class ForecastEngine {
           failed++;
         }
       } catch (error) {
-        console.error(`Failed to forecast product ${product.id}:`, error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'forecast-engine', productId: product.id });
         failed++;
       }
     }

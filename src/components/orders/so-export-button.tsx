@@ -41,17 +41,17 @@ interface SOExportButtonProps {
 export function SOExportButton({ salesOrders, variant = 'outline', size = 'sm' }: SOExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
-  const columns: ExportColumn[] = [
+  const columns: ExportColumn<SalesOrder>[] = [
     { key: 'orderNumber', header: 'Order Number', width: 12 },
-    { key: 'customer', header: 'Customer', width: 25, format: (v) => v?.name || '-' },
-    { key: 'customerCode', header: 'Customer Code', width: 12, format: (_, row) => row.customer?.code || '-' },
+    { key: 'customer', header: 'Customer', width: 25, format: (v) => (v as { name?: string })?.name || '-' },
+    { key: 'customerCode', header: 'Customer Code', width: 12, format: (_, row) => (row as SalesOrder).customer?.code || '-' },
     { key: 'orderDate', header: 'Order Date', width: 12, type: 'date' },
     { key: 'requiredDate', header: 'Required Date', width: 12, type: 'date' },
-    { key: 'priority', header: 'Priority', width: 10, format: (v) => v?.charAt(0).toUpperCase() + v?.slice(1) || '-' },
-    { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => row.lines?.length || 0 },
+    { key: 'priority', header: 'Priority', width: 10, format: (v) => { const s = v as string; return s ? s.charAt(0).toUpperCase() + s.slice(1) : '-'; } },
+    { key: 'linesCount', header: 'Items', width: 8, type: 'number', align: 'center', format: (_, row) => String((row as SalesOrder).lines?.length || 0) },
     { key: 'totalAmount', header: 'Total Amount', width: 15, type: 'currency', align: 'right' },
-    { key: 'status', header: 'Status', width: 12, format: (v) => v?.replace('_', ' ').toUpperCase() || '-' },
-    { key: 'notes', header: 'Notes', width: 30, format: (v) => v || '' },
+    { key: 'status', header: 'Status', width: 12, format: (v) => (v as string)?.replace('_', ' ').toUpperCase() || '-' },
+    { key: 'notes', header: 'Notes', width: 30, format: (v) => (v as string) || '' },
   ];
 
   const handleExportExcel = () => {

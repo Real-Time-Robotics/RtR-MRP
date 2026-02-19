@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocketContextSafe } from '@/providers/socket-provider';
+import { clientLogger } from '@/lib/client-logger';
 
 export interface Notification {
   id: string;
@@ -21,6 +22,7 @@ export interface Notification {
   contextUrl?: string | null;
   isRead: boolean;
   readAt?: Date | null;
+  isArchived?: boolean;
   createdAt: Date;
 }
 
@@ -36,6 +38,8 @@ interface UseNotificationsReturn {
   error: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  archiveNotification: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
   requestBrowserPermission: () => Promise<void>;
 }
@@ -71,7 +75,7 @@ export function useNotifications(
       );
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      clientLogger.error('Failed to fetch notifications', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setIsLoading(false);
@@ -162,7 +166,7 @@ export function useNotifications(
         )
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      clientLogger.error('Failed to mark notification as read', err);
       throw err;
     }
   }, []);
@@ -183,7 +187,51 @@ export function useNotifications(
         prev.map((n) => ({ ...n, isRead: true, readAt: new Date() }))
       );
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      clientLogger.error('Failed to mark all notifications as read', err);
+      throw err;
+    }
+  }, []);
+
+  // Delete notification
+  const deleteNotification = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete notification');
+      }
+
+      // Update local state
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      clientLogger.error('Failed to delete notification', err);
+      throw err;
+    }
+  }, []);
+
+  // Archive notification
+  const archiveNotification = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isArchived: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to archive notification');
+      }
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, isArchived: true } : n
+        )
+      );
+    } catch (err) {
+      clientLogger.error('Failed to archive notification', err);
       throw err;
     }
   }, []);
@@ -202,6 +250,8 @@ export function useNotifications(
     error,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
+    archiveNotification,
     refresh: fetchNotifications,
     requestBrowserPermission,
   };
@@ -220,6 +270,6 @@ function showBrowserNotification(notification: Notification) {
       tag: notification.id, // Prevents duplicate notifications
     });
   } catch (err) {
-    console.error('Failed to show browser notification:', err);
+    clientLogger.error('Failed to show browser notification', err);
   }
 }

@@ -1,22 +1,43 @@
 // src/app/api/compliance/signatures/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withRoleAuth } from '@/lib/api/with-auth';
 import {
   createElectronicSignature,
   verifySignatureChain,
   getSignatureHistory,
   getWorkflowStatus,
 } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
-export async function POST(request: NextRequest) {
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
+export const POST = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    const body = await request.json();
+    const bodySchema = z.object({
+      entityType: z.string(),
+      entityId: z.string(),
+      action: z.enum(["APPROVE", "REJECT", "REVIEW", "RELEASE", "VERIFY", "COMPLETE", "AUTHOR", "WITNESS"]),
+      meaning: z.string().optional(),
+      verificationMethod: z.enum(["password", "mfa_totp", "biometric"]).optional(),
+      password: z.string().optional(),
+      totpCode: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { entityType, entityId, action, meaning, verificationMethod, password, totpCode } = body;
 
     if (!entityType || !entityId || !action) {
@@ -52,20 +73,20 @@ export async function POST(request: NextRequest) {
       signatureHash: result.signatureHash,
     });
   } catch (error) {
-    console.error("Signature creation error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/signatures' });
     return NextResponse.json(
       { error: "Signature creation failed" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get("entityType");
@@ -93,10 +114,10 @@ export async function GET(request: NextRequest) {
     const history = await getSignatureHistory(entityType, entityId);
     return NextResponse.json({ signatures: history });
   } catch (error) {
-    console.error("Signature query error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/compliance/signatures' });
     return NextResponse.json(
       { error: "Query failed" },
       { status: 500 }
     );
   }
-}
+});

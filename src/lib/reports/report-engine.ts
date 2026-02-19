@@ -495,7 +495,7 @@ export function generateMockReportData(type: ReportType, period: ReportPeriod): 
           data: {
             labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
             datasets: [
-              { label: 'Sản lượng', data: [1850, 1920, 1780, 1890, 1950, 1600, 1460], color: '#3B82F6' },
+              { label: 'Sản lượng', data: [1850, 1920, 1780, 1890, 1950, 1600, 1460], color: '#30a46c' },
             ],
           },
         },
@@ -596,7 +596,7 @@ export function generateMockReportData(type: ReportType, period: ReportPeriod): 
           data: {
             labels: ['PM', 'CM', 'Emergency', 'Inspection'],
             datasets: [
-              { label: 'Số lượng', data: [78, 45, 12, 21], color: '#3B82F6' },
+              { label: 'Số lượng', data: [78, 45, 12, 21], color: '#30a46c' },
             ],
           },
         },
@@ -648,7 +648,7 @@ export function generateMockReportData(type: ReportType, period: ReportPeriod): 
           data: {
             labels: ['CNC-001', 'CNC-002', 'Assembly', 'Packaging', 'QC'],
             datasets: [
-              { label: '%', data: [82, 95, 75, 68, 72], color: '#3B82F6' },
+              { label: '%', data: [82, 95, 75, 68, 72], color: '#30a46c' },
             ],
           },
         },

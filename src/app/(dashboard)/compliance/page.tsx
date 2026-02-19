@@ -174,10 +174,10 @@ function MetricCard({
         <div className="flex items-end gap-2">
           <span className="text-2xl font-bold">{value}%</span>
           {status === "success" && (
-            <CheckCircle2 className="mb-1 h-4 w-4 text-green-500" />
+            <CheckCircle2 className="mb-1 h-4 w-4 text-success-500" />
           )}
           {status === "warning" && (
-            <AlertTriangle className="mb-1 h-4 w-4 text-yellow-500" />
+            <AlertTriangle className="mb-1 h-4 w-4 text-warning-500" />
           )}
         </div>
         <Progress value={value} className="mt-2" />
@@ -219,12 +219,12 @@ export default function ComplianceDashboard() {
       </div>
 
       {/* Overall Compliance Score */}
-      <Card className="border-2 border-green-500/20 bg-green-500/5">
+      <Card className="border-2 border-success-500/20 bg-success-500/5">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-green-500/20 p-3">
-                <Shield className="h-6 w-6 text-green-500" />
+              <div className="rounded-lg bg-success-500/20 p-3">
+                <Shield className="h-6 w-6 text-success-500" />
               </div>
               <div>
                 <CardTitle>Overall Compliance Score</CardTitle>
@@ -232,10 +232,10 @@ export default function ComplianceDashboard() {
               </div>
             </div>
             <div className="text-right">
-              <span className="text-4xl font-bold text-green-500">
+              <span className="text-4xl font-bold text-success-500">
                 {complianceMetrics.overallScore}%
               </span>
-              <Badge variant="outline" className="ml-2 border-green-500 text-green-500">
+              <Badge variant="outline" className="ml-2 border-success-500 text-success-500">
                 Excellent
               </Badge>
             </div>
@@ -329,9 +329,9 @@ export default function ComplianceDashboard() {
                         <TableCell>{sig.user}</TableCell>
                         <TableCell>
                           {sig.verified ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <CheckCircle2 className="h-4 w-4 text-success-500" />
                           ) : (
-                            <Clock className="h-4 w-4 text-yellow-500" />
+                            <Clock className="h-4 w-4 text-warning-500" />
                           )}
                         </TableCell>
                       </TableRow>
@@ -400,7 +400,7 @@ export default function ComplianceDashboard() {
                   <div className="text-sm text-muted-foreground">Total Signatures</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
-                  <div className="text-2xl font-bold text-green-500">156</div>
+                  <div className="text-2xl font-bold text-success-500">156</div>
                   <div className="text-sm text-muted-foreground">Verified Valid</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
@@ -433,7 +433,7 @@ export default function ComplianceDashboard() {
                           {new Date(sig.timestamp).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          <CheckCircle2 className="h-4 w-4 text-success-500" />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -453,11 +453,11 @@ export default function ComplianceDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-6 rounded-lg border border-green-500/50 bg-green-500/10 p-4">
+              <div className="mb-6 rounded-lg border border-success-500/50 bg-success-500/10 p-4">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  <CheckCircle2 className="h-6 w-6 text-success-500" />
                   <div>
-                    <div className="font-medium text-green-500">
+                    <div className="font-medium text-success-500">
                       Audit Trail Integrity Verified
                     </div>
                     <div className="text-sm text-muted-foreground" suppressHydrationWarning>
@@ -511,7 +511,7 @@ export default function ComplianceDashboard() {
                   <div className="text-sm text-muted-foreground">Certified Users</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
-                  <div className="text-2xl font-bold text-green-500">0</div>
+                  <div className="text-2xl font-bold text-success-500">0</div>
                   <div className="text-sm text-muted-foreground">Access Denials (24h)</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
@@ -569,11 +569,11 @@ export default function ComplianceDashboard() {
                   <div className="text-sm text-muted-foreground">Total Events (7d)</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
-                  <div className="text-2xl font-bold text-yellow-500">23</div>
+                  <div className="text-2xl font-bold text-warning-500">23</div>
                   <div className="text-sm text-muted-foreground">Warnings</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">
-                  <div className="text-2xl font-bold text-red-500">2</div>
+                  <div className="text-2xl font-bold text-danger-500">2</div>
                   <div className="text-sm text-muted-foreground">Critical</div>
                 </div>
                 <div className="rounded-lg bg-muted p-4">

@@ -202,9 +202,10 @@ export const PART_FIELD_IMPACT_RULES: FieldImpactRule[] = [
     targetField: 'lineCost',
     targetFieldLabel: 'Line Cost',
     valueType: 'currency',
-    calculateImpact: (oldValue, newValue, context: { quantity: number }) => {
-      const oldCost = (oldValue as number) * context.quantity;
-      const newCost = (newValue as number) * context.quantity;
+    calculateImpact: (oldValue, newValue, context) => {
+      const qty = (context as Record<string, unknown>).quantity as number;
+      const oldCost = (oldValue as number) * qty;
+      const newCost = (newValue as number) * qty;
       if (oldCost === newCost) return null;
       return {
         field: 'lineCost',
@@ -222,9 +223,10 @@ export const PART_FIELD_IMPACT_RULES: FieldImpactRule[] = [
     targetField: 'totalValue',
     targetFieldLabel: 'Total Value',
     valueType: 'currency',
-    calculateImpact: (oldValue, newValue, context: { quantity: number }) => {
-      const oldTotal = (oldValue as number) * context.quantity;
-      const newTotal = (newValue as number) * context.quantity;
+    calculateImpact: (oldValue, newValue, context) => {
+      const qty = (context as Record<string, unknown>).quantity as number;
+      const oldTotal = (oldValue as number) * qty;
+      const newTotal = (newValue as number) * qty;
       if (oldTotal === newTotal) return null;
       return {
         field: 'totalValue',

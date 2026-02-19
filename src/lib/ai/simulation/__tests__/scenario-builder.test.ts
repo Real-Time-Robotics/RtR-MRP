@@ -52,7 +52,7 @@ describe('ScenarioBuilder', () => {
       expect(scenario.name).toBe('Test Demand Surge');
       expect(scenario.type).toBe('demand');
       expect(scenario.status).toBe('draft');
-      expect((scenario.config as DemandScenarioConfig).parameters.demandChange).toBe(25);
+      expect((scenario.config.parameters as DemandScenarioConfig['parameters']).demandChange).toBe(25);
       expect(scenario.simulationHorizonDays).toBe(90);
     });
 
@@ -83,7 +83,7 @@ describe('ScenarioBuilder', () => {
       );
 
       expect(scenario.type).toBe('supply');
-      expect((scenario.config as SupplyScenarioConfig).parameters.leadTimeChange).toBe(14);
+      expect((scenario.config.parameters as SupplyScenarioConfig['parameters']).leadTimeChange).toBe(14);
     });
 
     it('should create a capacity scenario', () => {
@@ -108,7 +108,7 @@ describe('ScenarioBuilder', () => {
       );
 
       expect(scenario.type).toBe('capacity');
-      expect((scenario.config as CapacityScenarioConfig).parameters.capacityChange).toBe(-20);
+      expect((scenario.config.parameters as CapacityScenarioConfig['parameters']).capacityChange).toBe(-20);
     });
 
     it('should create a custom scenario', () => {

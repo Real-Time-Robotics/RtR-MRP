@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { isOnline, onNetworkStatusChange, getPendingOperations } from "@/lib/mobile";
 import { cn } from "@/lib/utils";
+import { clientLogger } from "@/lib/client-logger";
 import { WifiOff, CloudOff } from "lucide-react";
 
 interface OfflineIndicatorProps {
@@ -32,7 +33,7 @@ export function OfflineIndicator({
         const pending = await getPendingOperations();
         setPendingCount(pending.length);
       } catch (error) {
-        console.error("Failed to get pending operations:", error);
+        clientLogger.error("Failed to get pending operations", error);
       }
     };
 

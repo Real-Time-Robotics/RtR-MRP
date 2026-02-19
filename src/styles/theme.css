@@ -35,19 +35,19 @@
   /* Border colors - BOLD & DEFINED */
   --border-primary: 185 190 200;  /* strong visible borders */
   --border-secondary: 160 168 185; /* bolder secondary borders */
-  --border-focus: 29 78 216;      /* blue-700 for bold focus */
+  --border-focus: 36 145 99;      /* Prismy green for focus */
 
-  /* Primary colors (Blue) */
-  --primary-50: 239 246 255;
-  --primary-100: 219 234 254;
-  --primary-200: 191 219 254;
-  --primary-300: 147 197 253;
-  --primary-400: 96 165 250;
-  --primary-500: 59 130 246;
-  --primary-600: 37 99 235;
-  --primary-700: 29 78 216;
-  --primary-800: 30 64 175;
-  --primary-900: 30 58 138;
+  /* Primary colors (Prismy Green) */
+  --primary-50: 240 253 244;
+  --primary-100: 220 252 231;
+  --primary-200: 187 247 208;
+  --primary-300: 134 239 172;
+  --primary-400: 62 207 142;
+  --primary-500: 48 164 108;
+  --primary-600: 36 145 99;
+  --primary-700: 26 127 79;
+  --primary-800: 22 101 52;
+  --primary-900: 20 83 45;
 
   /* Success colors (Green) */
   --success-50: 240 253 244;
@@ -92,7 +92,7 @@
   --sidebar-bg: 255 255 255;
   --sidebar-border: 185 190 200;
   --sidebar-item-hover: 229 231 235;
-  --sidebar-item-active: 199 224 254;
+  --sidebar-item-active: 220 252 231;
 
   /* Cards - BOLD */
   --card-bg: 255 255 255;
@@ -102,7 +102,7 @@
   /* Inputs - BOLD */
   --input-bg: 255 255 255;
   --input-border: 160 168 185;
-  --input-focus-ring: 29 78 216;
+  --input-focus-ring: 36 145 99;
   --input-placeholder: 107 114 128;
 
   /* Tables - BOLD */
@@ -126,18 +126,18 @@
   /* Color scheme for native elements */
   color-scheme: dark;
 
-  /* Background colors - NEUTRAL (no blue tint) */
-  --bg-primary: 10 10 10;         /* neutral-950 */
-  --bg-secondary: 23 23 23;       /* neutral-900 */
-  --bg-tertiary: 38 38 38;        /* neutral-800 */
-  --bg-elevated: 23 23 23;        /* neutral-900 */
+  /* Background colors - Prismy warm dark */
+  --bg-primary: 8 9 10;           /* Prismy #08090a */
+  --bg-secondary: 28 28 28;       /* warmer */
+  --bg-tertiary: 42 42 42;
+  --bg-elevated: 28 28 28;
   --bg-overlay: 0 0 0;
 
-  /* Surface colors - NEUTRAL */
-  --surface-1: 10 10 10;          /* neutral-950 */
-  --surface-2: 23 23 23;          /* neutral-900 */
-  --surface-3: 38 38 38;          /* neutral-800 */
-  --surface-4: 64 64 64;          /* neutral-700 */
+  /* Surface colors - Prismy warm */
+  --surface-1: 8 9 10;
+  --surface-2: 28 28 28;
+  --surface-3: 42 42 42;
+  --surface-4: 64 64 64;
 
   /* Text colors - NEUTRAL */
   --text-primary: 250 250 250;    /* neutral-50 */
@@ -146,22 +146,22 @@
   --text-muted: 115 115 115;      /* neutral-500 */
   --text-inverse: 10 10 10;       /* neutral-950 */
 
-  /* Border colors - NEUTRAL */
-  --border-primary: 38 38 38;     /* neutral-800 */
-  --border-secondary: 64 64 64;   /* neutral-700 */
-  --border-focus: 96 165 250;     /* blue-400 */
+  /* Border colors - Prismy */
+  --border-primary: 42 42 42;
+  --border-secondary: 64 64 64;
+  --border-focus: 62 207 142;     /* Prismy green */
 
-  /* Primary colors (Blue - keep accent color) */
-  --primary-50: 30 58 138;
-  --primary-100: 30 64 175;
-  --primary-200: 29 78 216;
-  --primary-300: 37 99 235;
-  --primary-400: 59 130 246;
-  --primary-500: 96 165 250;
-  --primary-600: 147 197 253;
-  --primary-700: 191 219 254;
-  --primary-800: 219 234 254;
-  --primary-900: 239 246 255;
+  /* Primary colors (Prismy Green) */
+  --primary-50: 20 83 45;
+  --primary-100: 22 101 52;
+  --primary-200: 21 128 61;
+  --primary-300: 48 164 108;
+  --primary-400: 62 207 142;
+  --primary-500: 78 222 128;
+  --primary-600: 134 239 172;
+  --primary-700: 187 247 208;
+  --primary-800: 220 252 231;
+  --primary-900: 240 253 244;
 
   /* Success colors */
   --success-50: 21 128 61;
@@ -198,27 +198,27 @@
   --shadow-lg: 0 10px 15px -3px rgb(var(--shadow-color) / 0.4), 0 4px 6px -4px rgb(var(--shadow-color) / 0.3);
   --shadow-xl: 0 20px 25px -5px rgb(var(--shadow-color) / 0.5), 0 8px 10px -6px rgb(var(--shadow-color) / 0.4);
 
-  /* Sidebar - NEUTRAL */
-  --sidebar-bg: 10 10 10;         /* neutral-950 */
-  --sidebar-border: 38 38 38;     /* neutral-800 */
-  --sidebar-item-hover: 23 23 23; /* neutral-900 */
-  --sidebar-item-active: 38 38 38; /* neutral-800 */
+  /* Sidebar - Prismy warm */
+  --sidebar-bg: 28 28 28;
+  --sidebar-border: 42 42 42;
+  --sidebar-item-hover: 35 35 35;
+  --sidebar-item-active: 42 42 42;
 
-  /* Cards - NEUTRAL */
-  --card-bg: 23 23 23;            /* neutral-900 */
-  --card-border: 38 38 38;        /* neutral-800 */
-  --card-hover: 38 38 38;         /* neutral-800 */
+  /* Cards - Prismy warm */
+  --card-bg: 35 35 35;
+  --card-border: 42 42 42;
+  --card-hover: 42 42 42;
 
-  /* Inputs - NEUTRAL */
-  --input-bg: 23 23 23;           /* neutral-900 */
-  --input-border: 64 64 64;       /* neutral-700 */
-  --input-focus-ring: 96 165 250;
+  /* Inputs - Prismy warm */
+  --input-bg: 28 28 28;
+  --input-border: 64 64 64;
+  --input-focus-ring: 62 207 142;
   --input-placeholder: 115 115 115; /* neutral-500 */
 
-  /* Tables - NEUTRAL */
-  --table-header-bg: 23 23 23;    /* neutral-900 */
-  --table-row-hover: 38 38 38;    /* neutral-800 */
-  --table-border: 38 38 38;       /* neutral-800 */
+  /* Tables - Prismy warm */
+  --table-header-bg: 28 28 28;
+  --table-row-hover: 42 42 42;
+  --table-border: 42 42 42;
 }
 
 /* =============================================================================

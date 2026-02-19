@@ -5,8 +5,16 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const optimizeBodySchema = z.object({
+  algorithm: z.string().optional(),
+  compareAlgorithms: z.boolean().optional(),
+});
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -103,18 +111,36 @@ function runMockOptimization(algorithm: string): OptimizationResult {
 // POST: Run optimization
 // =============================================================================
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = optimizeBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       algorithm = 'balanced_load',
       compareAlgorithms = false,
-    } = body;
+    } = parseResult.data;
 
     // If comparing algorithms, run all and compare
     if (compareAlgorithms) {
@@ -176,7 +202,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Optimize API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-schedule/optimize' });
     return NextResponse.json(
       {
         error: 'Không thể tối ưu hóa lịch sản xuất',
@@ -185,7 +211,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 function getAlgorithmName(algorithm: string): string {
   const names: Record<string, string> = {
@@ -203,14 +229,25 @@ function getAlgorithmName(algorithm: string): string {
 // GET: Get available algorithms
 // =============================================================================
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const algorithms = [
+  try {
+const algorithms = [
       {
         id: 'priority_first',
         name: 'Ưu tiên cao trước',
@@ -275,10 +312,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-Schedule Optimize API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/auto-schedule/optimize' });
     return NextResponse.json(
       { error: 'Không thể lấy thông tin thuật toán' },
       { status: 500 }
     );
   }
-}
+});

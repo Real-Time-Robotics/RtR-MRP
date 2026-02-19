@@ -19,7 +19,9 @@ import {
   Loader2,
   CheckCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { clientLogger } from '@/lib/client-logger';
 
 const EXPORT_TYPES = [
   {
@@ -131,8 +133,8 @@ export default function ExportPage() {
       setExportSuccess(true);
       setTimeout(() => setExportSuccess(false), 3000);
     } catch (error) {
-      console.error("Export error:", error);
-      alert("Export failed. Please try again.");
+      clientLogger.error("Export error:", error);
+      toast.error("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -224,7 +226,7 @@ export default function ExportPage() {
                   className={cn(
                     "flex-1 px-4 py-2 border rounded-lg text-sm font-medium transition-colors",
                     format === "xlsx"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      ? "border-primary-500 bg-primary-50 text-primary-700"
                       : "border-gray-200 hover:border-gray-300"
                   )}
                 >
@@ -235,7 +237,7 @@ export default function ExportPage() {
                   className={cn(
                     "flex-1 px-4 py-2 border rounded-lg text-sm font-medium transition-colors",
                     format === "csv"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
+                      ? "border-primary-500 bg-primary-50 text-primary-700"
                       : "border-gray-200 hover:border-gray-300"
                   )}
                 >
@@ -254,7 +256,8 @@ export default function ExportPage() {
                 onChange={(e) =>
                   setFilters({ ...filters, status: e.target.value || undefined })
                 }
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                aria-label="Bộ lọc trạng thái"
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">All Status</option>
                 <option value="active">Active</option>
@@ -274,7 +277,8 @@ export default function ExportPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, fromDate: e.target.value || undefined })
                   }
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  aria-label="Từ ngày"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                   placeholder="From"
                 />
                 <input
@@ -283,7 +287,8 @@ export default function ExportPage() {
                   onChange={(e) =>
                     setFilters({ ...filters, toDate: e.target.value || undefined })
                   }
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  aria-label="Đến ngày"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
                   placeholder="To"
                 />
               </div>
@@ -296,7 +301,7 @@ export default function ExportPage() {
               className={cn(
                 "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors",
                 selectedType && !isExporting
-                  ? "bg-green-600 text-white hover:bg-green-700"
+                  ? "bg-success-600 text-white hover:bg-success-700"
                   : "bg-gray-100 text-gray-400 cursor-not-allowed"
               )}
             >
@@ -322,9 +327,9 @@ export default function ExportPage() {
       </div>
 
       {/* Info Section */}
-      <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-        <h3 className="font-semibold text-green-900 mb-2">Export Tips</h3>
-        <ul className="text-sm text-green-800 space-y-1">
+      <div className="bg-success-50 border border-success-200 rounded-xl p-6">
+        <h3 className="font-semibold text-success-900 mb-2">Export Tips</h3>
+        <ul className="text-sm text-success-800 space-y-1">
           <li>
             - Excel format (.xlsx) preserves formatting and formulas
           </li>

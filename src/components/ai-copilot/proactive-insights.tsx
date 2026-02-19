@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
   Package, DollarSign, Clock, Users, Truck, Factory, Award,
   ChevronRight, X, Bell, Eye, EyeOff, RefreshCw, Loader2,
   Lightbulb, Target, Zap, ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // RTR AI COPILOT - PROACTIVE INSIGHTS
@@ -67,7 +68,7 @@ const PRIORITY_COLORS: Record<string, { bg: string; text: string; border: string
 };
 
 // Type icons
-const TYPE_ICONS: Record<string, { icon: any; color: string }> = {
+const TYPE_ICONS: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string }> = {
   alert: { icon: AlertTriangle, color: 'text-red-500' },
   opportunity: { icon: Lightbulb, color: 'text-yellow-500' },
   trend: { icon: TrendingUp, color: 'text-blue-500' },
@@ -284,6 +285,7 @@ function InsightCard({
           <button
             onClick={(e) => { e.stopPropagation(); onDismiss(); }}
             className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            aria-label="Đóng"
           >
             <X className="h-4 w-4" />
           </button>
@@ -362,7 +364,7 @@ export default function ProactiveInsights({
       const data = generateInsights(module);
       setInsights(data);
     } catch (error) {
-      console.error('Error fetching insights:', error);
+      clientLogger.error('Error fetching insights', error);
     } finally {
       setIsLoading(false);
     }
@@ -442,6 +444,7 @@ export default function ProactiveInsights({
           onClick={fetchInsights}
           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           title={language === 'vi' ? 'Làm mới' : 'Refresh'}
+          aria-label={language === 'vi' ? 'Làm mới' : 'Refresh'}
         >
           <RefreshCw className="h-4 w-4" />
         </button>

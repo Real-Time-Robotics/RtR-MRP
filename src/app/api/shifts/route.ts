@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -9,15 +12,32 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const shiftBodySchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  startTime: z.string(),
+  endTime: z.string(),
+  durationHours: z.number(),
+  breakMinutes: z.number().optional(),
+  breakSchedule: z.any().optional(),
+  workingDays: z.array(z.number()).optional(),
+  overtimeAfterHours: z.number().optional(),
+  overtimeRate: z.number().optional(),
+  efficiencyFactor: z.number().optional(),
+  isDefault: z.boolean().optional(),
+});
 // GET - List shifts
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -42,20 +62,27 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(shifts, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Shifts API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts' });
     return paginatedError("Failed to fetch shifts", 500);
   }
-}
+});
 
 // POST - Create shift
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+
+    const rawBody = await request.json();
+    const parseResult = shiftBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       code,
       name,
@@ -70,15 +97,7 @@ export async function POST(request: NextRequest) {
       overtimeRate,
       efficiencyFactor,
       isDefault,
-    } = body;
-
-    // Validate required fields
-    if (!code || !name || !startTime || !endTime || !durationHours) {
-      return NextResponse.json(
-        { error: "Missing required fields: code, name, startTime, endTime, durationHours" },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     // If setting as default, unset other defaults
     if (isDefault) {
@@ -109,10 +128,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(shift, { status: 201 });
   } catch (error) {
-    console.error("Create shift error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/shifts' });
     return NextResponse.json(
       { error: "Failed to create shift" },
       { status: 500 }
     );
   }
-}
+});

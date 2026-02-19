@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, createContext, useContext } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 import {
   AlertTriangle,
   Trash2,
@@ -98,7 +99,7 @@ export function ConfirmDialog({
       await onConfirm();
       onClose();
     } catch (error) {
-      console.error('Confirm error:', error);
+      clientLogger.error('Confirm error', error);
     } finally {
       setIsConfirming(false);
     }
@@ -113,6 +114,7 @@ export function ConfirmDialog({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-in fade-in duration-200"
+        role="presentation"
         onClick={!loading ? onClose : undefined}
       />
 
@@ -141,6 +143,7 @@ export function ConfirmDialog({
               onClick={onClose}
               disabled={loading}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              aria-label="Đóng"
             >
               <X className="w-5 h-5" />
             </button>
@@ -201,20 +204,21 @@ export function DeleteConfirmDialog({
   onClose,
   onConfirm,
   itemName,
-  itemType = 'mục',
+  itemType,
   isLoading,
 }: DeleteConfirmDialogProps) {
   const { t } = useLanguage();
+  const resolvedItemType = itemType || t('confirm.item');
   return (
     <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title={t('common.confirmDelete', { itemType })}
+      title={t('common.confirmDelete', { itemType: resolvedItemType })}
       description={
         itemName
-          ? `Bạn có chắc muốn xóa "${itemName}"? Hành động này không thể hoàn tác.`
-          : `Bạn có chắc muốn xóa ${itemType} này? Hành động này không thể hoàn tác.`
+          ? t('confirm.deleteWithName', { name: itemName })
+          : t('confirm.deleteGeneric', { itemType: resolvedItemType })
       }
       confirmLabel={t('common.delete')}
       variant="danger"
@@ -232,14 +236,15 @@ export function DiscardChangesDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
       onConfirm={onConfirm}
-      title="Bỏ thay đổi?"
-      description="Bạn có những thay đổi chưa lưu. Bạn có chắc muốn bỏ các thay đổi này?"
-      confirmLabel="Bỏ thay đổi"
+      title={t('confirm.discardTitle')}
+      description={t('confirm.discardDescription')}
+      confirmLabel={t('confirm.discardConfirm')}
       variant="warning"
     />
   );
@@ -261,7 +266,7 @@ export function UnsavedChangesDialog({
     <>
       {/* Backdrop */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" role="presentation" onClick={onClose} />
       )}
 
       {/* Dialog */}
@@ -278,7 +283,7 @@ export function UnsavedChangesDialog({
                     {t('common.confirmSave')}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Bạn có những thay đổi chưa lưu. Bạn muốn lưu trước khi rời đi?
+                    {t('confirm.unsavedDescription')}
                   </p>
                 </div>
               </div>

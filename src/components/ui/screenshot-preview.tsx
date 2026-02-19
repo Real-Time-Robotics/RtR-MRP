@@ -56,6 +56,7 @@ export function ScreenshotPreview({ result, onDownload, onCopy, onClose }: Scree
             onClick={handleZoomOut}
             className="w-8 h-8 flex items-center justify-center text-[#8b9ab0] hover:bg-[#252a35] hover:text-[#e8eaed] transition-colors"
             title="Thu nhỏ (−25%)"
+            aria-label="Thu nhỏ"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -70,6 +71,7 @@ export function ScreenshotPreview({ result, onDownload, onCopy, onClose }: Scree
             onClick={handleZoomIn}
             className="w-8 h-8 flex items-center justify-center text-[#8b9ab0] hover:bg-[#252a35] hover:text-[#e8eaed] transition-colors"
             title="Phóng to (+25%)"
+            aria-label="Phóng to"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -100,6 +102,7 @@ export function ScreenshotPreview({ result, onDownload, onCopy, onClose }: Scree
                 : "text-[#8b9ab0] hover:bg-[#252a35] hover:text-[#e8eaed]"
             )}
             title="Thông tin ảnh"
+            aria-label="Thông tin ảnh"
           >
             <Info className="w-4 h-4" />
           </button>
@@ -140,6 +143,7 @@ export function ScreenshotPreview({ result, onDownload, onCopy, onClose }: Scree
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center text-[#8b9ab0] hover:bg-[#ef4444]/20 hover:text-[#ef4444] transition-colors"
             title="Đóng (ESC)"
+            aria-label="Đóng"
           >
             <X className="w-4 h-4" />
           </button>

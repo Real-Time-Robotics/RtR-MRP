@@ -7,6 +7,7 @@
 
 import { getAIProvider, createSystemMessage, createUserMessage } from '@/lib/ai/provider';
 import prisma from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   POSuggestion,
   AlternativeSupplier,
@@ -138,7 +139,7 @@ export class AIPOAnalyzer {
         },
       };
     } catch (error) {
-      console.error('[AI PO Analyzer] Enhancement failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-po-analyzer', operation: 'enhance' });
       // Return suggestion without AI enhancement
       return {
         ...suggestion,
@@ -392,36 +393,85 @@ export class AIPOAnalyzer {
   }
 
   /**
-   * Learn from approval/rejection decisions
-   * Note: Currently stores in memory only. Database storage will be added when schema is updated.
+   * Learn from approval/rejection decisions.
+   * Persists decisions to AiModelLog for future pattern analysis and model improvement.
    */
   async learnFromDecision(decision: ApprovalDecision): Promise<void> {
     if (!this.config.learningEnabled) return;
 
     try {
-      // TODO: Store decision in database when aILearningLog model is available
-      // For now, just log the decision
-      console.log(`[AI PO Analyzer] Learning recorded for ${decision.suggestionId}: ${decision.decision}`);
+      // Persist the decision to AiModelLog for historical learning
+      await prisma.aiModelLog.create({
+        data: {
+          modelName: 'po-analyzer',
+          version: '1.0',
+          runType: 'recommendation',
+          inputData: JSON.parse(JSON.stringify({
+            suggestionId: decision.suggestionId,
+            userId: decision.userId,
+            modifications: decision.modifications || null,
+          })),
+          outputData: {
+            decision: decision.decision,
+            reason: decision.reason || null,
+            timestamp: decision.timestamp.toISOString(),
+          },
+          status: 'success',
+        },
+      });
+
+      logger.info(`[AI PO Analyzer] Learning recorded for ${decision.suggestionId}: ${decision.decision}`);
 
       // Update pattern analysis
       await this.updatePatternAnalysis(decision);
     } catch (error) {
-      console.error('[AI PO Analyzer] Failed to record learning:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-po-analyzer', operation: 'recordLearning' });
     }
   }
 
   /**
-   * Get insights from historical decisions
-   * Note: Currently returns default insights. Database queries will be added when schema is updated.
+   * Get insights from historical decisions.
+   * Queries AiModelLog for past approval/rejection patterns and enriches insights.
    */
   async getLearningInsights(suggestion: POSuggestion): Promise<LearningInsight[]> {
     const insights: LearningInsight[] = [];
 
     try {
-      // TODO: Get historical decisions from database when aILearningLog model is available
-      // For now, return basic insights based on suggestion data
+      // Query historical decisions from AiModelLog for this part
+      const historicalLogs = await prisma.aiModelLog.findMany({
+        where: {
+          modelName: 'po-analyzer',
+          runType: 'recommendation',
+          status: 'success',
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      });
 
-      // Add general insight about the part
+      // Analyze approval/rejection patterns
+      const partLogs = historicalLogs.filter((log) => {
+        const input = log.inputData as Record<string, unknown> | null;
+        return input?.suggestionId?.toString().includes(suggestion.partId);
+      });
+
+      if (partLogs.length > 0) {
+        const approvedCount = partLogs.filter(
+          (log) => (log.outputData as Record<string, unknown>)?.decision === 'approved'
+        ).length;
+        const approvalRate = Math.round((approvedCount / partLogs.length) * 100);
+
+        insights.push({
+          type: 'trend',
+          insight: `${partLogs.length} previous decisions found for this part (${approvalRate}% approval rate)`,
+          confidence: Math.min(90, 50 + partLogs.length * 5),
+          actionable: approvalRate >= 80,
+          action: approvalRate >= 80
+            ? 'High historical approval rate supports fast-track review'
+            : 'Mixed approval history -- review carefully',
+        });
+      }
+
+      // Add general insight about confidence
       if (suggestion.confidenceScore >= 0.8) {
         insights.push({
           type: 'pattern',
@@ -443,7 +493,7 @@ export class AIPOAnalyzer {
         });
       }
     } catch (error) {
-      console.error('[AI PO Analyzer] Failed to get learning insights:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-po-analyzer', operation: 'getLearningInsights' });
     }
 
     return insights;
@@ -523,7 +573,7 @@ export class AIPOAnalyzer {
         optimizations: optimizations.length > 0 ? optimizations.slice(0, 3) : undefined,
       };
     } catch (error) {
-      console.error('[AI PO Analyzer] AI analysis failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-po-analyzer', operation: 'aiAnalysis' });
       return {};
     }
   }
@@ -611,7 +661,7 @@ Hãy:
   private async updatePatternAnalysis(decision: ApprovalDecision): Promise<void> {
     // This would update a pattern analysis store
     // For now, we just log
-    console.log(`[AI PO Analyzer] Pattern update: ${decision.decision} for ${decision.suggestionId}`);
+    logger.info(`[AI PO Analyzer] Pattern update: ${decision.decision} for ${decision.suggestionId}`);
   }
 
   private assessDataQuality(suggestion: POSuggestion): number {

@@ -1,6 +1,7 @@
 // QR Code and Barcode generation utilities
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
+import { clientLogger } from '@/lib/client-logger';
 
 export interface QRCodeOptions {
   width?: number;
@@ -249,7 +250,7 @@ export async function generateBulkCodes(
         type: item.type,
       });
     } catch (error) {
-      console.error(`Failed to generate code for ${item.id}:`, error);
+      clientLogger.error(`Failed to generate code for ${item.id}`, error);
     }
   }
 

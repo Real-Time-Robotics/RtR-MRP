@@ -5,20 +5,11 @@
  * This service manages the approval workflow for PO suggestions
  */
 
-// Note: aIPOSuggestion model persistence is currently disabled until schema is updated
-// The PurchaseOrder model is used for actual PO creation
+// PO suggestion queue persistence uses AiRecommendation model + AuditLog for audit trail
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { POSuggestion } from './po-suggestion-engine';
 import { EnhancedPOSuggestion } from './ai-po-analyzer';
-
-// Placeholder for AI-specific database operations (will be enabled when schema is ready)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const mockDb = {
-  async create(_data: any) { return null; },
-  async update(_data: any) { return null; },
-  async findUnique(_data: any) { return null; },
-  async findMany(_data?: any) { return []; },
-};
 
 // ==================== Interfaces ====================
 
@@ -55,8 +46,8 @@ export type ApprovalDecision = 'approved' | 'rejected' | 'modified';
 
 export interface POModification {
   field: string;
-  originalValue: any;
-  newValue: any;
+  originalValue: string | number | Date | null;
+  newValue: string | number | Date | null;
   modifiedBy: string;
   modifiedAt: Date;
   reason?: string;
@@ -110,6 +101,29 @@ export interface BulkApprovalResult {
   };
 }
 
+/** Shape of a serialized queue record loaded from the database */
+interface QueueDbRecord {
+  id: string;
+  partId: string;
+  supplierId?: string;
+  suggestedQuantity?: number;
+  unitPrice?: number;
+  totalAmount?: number;
+  expectedDeliveryDate?: Date;
+  confidence?: number;
+  status: string;
+  priority?: string;
+  createdAt: Date;
+  createdBy?: string;
+  reviewedAt?: Date;
+  reviewedBy?: string;
+  decisionReason?: string;
+  modifications?: string;
+  resultingPOId?: string;
+  expiresAt?: Date;
+  metadata?: string;
+}
+
 // ==================== Queue Service ====================
 
 class ApprovalQueueService {
@@ -133,19 +147,54 @@ class ApprovalQueueService {
   }
 
   /**
-   * Initialize queue from database
-   * Note: Currently uses in-memory storage only. Database integration will be added when schema is updated.
+   * Initialize queue from database.
+   * Loads pending PO recommendations from AiRecommendation and hydrates the in-memory queue.
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      // TODO: Load pending items from database when aIPOSuggestion model is available
-      // For now, just initialize empty in-memory queue
+      // Load active PO-related recommendations that have not expired
+      const pendingRecs = await prisma.aiRecommendation.findMany({
+        where: {
+          status: { in: ['active', 'pending', 'in_review'] },
+          category: 'purchasing',
+          type: { in: ['REORDER', 'EXPEDITE'] },
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: this.MAX_QUEUE_SIZE,
+      });
+
+      for (const rec of pendingRecs) {
+        const factors = (rec.factors as Record<string, unknown>) || {};
+        const suggestion = (factors.suggestion as EnhancedPOSuggestion) || null;
+
+        // Skip records that don't carry an embedded suggestion payload
+        if (!suggestion) continue;
+
+        const item: QueueItem = {
+          id: rec.id,
+          suggestion,
+          status: (rec.status === 'in_review' ? 'in_review' : 'pending') as QueueItemStatus,
+          priority: (rec.priority === 'HIGH' ? 'high' : rec.priority === 'MEDIUM' ? 'medium' : 'low') as QueuePriority,
+          addedAt: rec.createdAt,
+          addedBy: (factors.createdBy as string) || 'system',
+          expiresAt: rec.expiresAt || new Date(rec.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+          tags: (factors.tags as string[]) || [],
+          notes: (factors.notes as string[]) || [],
+        };
+
+        this.queue.set(item.id, item);
+      }
+
       this.initialized = true;
-      console.log(`Approval queue initialized with ${this.queue.size} items (in-memory mode)`);
+      logger.info(`Approval queue initialized with ${this.queue.size} items from database`);
     } catch (error) {
-      console.error('Failed to initialize approval queue:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'approval-queue-service', operation: 'initialize' });
       this.initialized = true;
     }
   }
@@ -196,30 +245,37 @@ class ApprovalQueueService {
       notes: options?.notes ?? []
     };
 
-    // Persist to database
-    await mockDb.create({
+    // Persist to database via AiRecommendation model
+    await prisma.aiRecommendation.create({
       data: {
         id: queueItem.id,
+        type: 'REORDER',
+        priority,
+        category: 'purchasing',
+        title: `PO Suggestion: ${suggestion.partName || suggestion.partId}`,
+        description: typeof suggestion.explanation === 'string'
+          ? suggestion.explanation
+          : JSON.stringify(suggestion.explanation),
+        impact: `Order ${suggestion.quantity} units at $${suggestion.unitPrice}/unit`,
+        savingsEstimate: suggestion.totalAmount,
+        confidence: suggestion.confidenceScore,
         partId: suggestion.partId,
         supplierId: suggestion.supplierId,
-        suggestedQuantity: suggestion.quantity,
-        unitPrice: suggestion.unitPrice,
-        totalAmount: suggestion.totalAmount,
-        suggestedOrderDate: new Date(),
-        expectedDeliveryDate: suggestion.expectedDeliveryDate,
-        confidence: suggestion.confidenceScore,
-        reasoning: JSON.stringify(suggestion.explanation),
         status: 'pending',
-        priority,
         expiresAt,
-        metadata: JSON.stringify({
+        factors: JSON.parse(JSON.stringify({
+          queueType: 'po_suggestion',
           aiEnhancement: suggestion.aiEnhancement,
           reorderLevel: suggestion.reorderReason?.reorderPoint || 0,
           currentStock: suggestion.reorderReason?.currentStock || 0,
           tags: queueItem.tags,
-          notes: queueItem.notes
-        }),
-        createdBy: addedBy
+          notes: queueItem.notes,
+          unitPrice: suggestion.unitPrice,
+          quantity: suggestion.quantity,
+          totalAmount: suggestion.totalAmount,
+          expectedDeliveryDate: suggestion.expectedDeliveryDate?.toISOString(),
+          createdBy: addedBy,
+        })),
       }
     });
 
@@ -341,14 +397,16 @@ class ApprovalQueueService {
       queueItem.resultingPOId = purchaseOrder.id;
 
       // Update database
-      await mockDb.update({
+      await prisma.aiRecommendation.update({
         where: { id },
         data: {
           status: 'approved',
-          reviewedAt: new Date(),
-          reviewedBy: approvedBy,
-          resultingPOId: purchaseOrder.id,
-          decisionReason: reason
+          implementedAt: new Date(),
+          factors: {
+            reviewedBy: approvedBy,
+            resultingPOId: purchaseOrder.id,
+            decisionReason: reason,
+          },
         }
       });
 
@@ -374,7 +432,7 @@ class ApprovalQueueService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Failed to approve queue item:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'approval-queue-service', operation: 'approve' });
       return {
         success: false,
         queueItemId: id,
@@ -425,13 +483,15 @@ class ApprovalQueueService {
       queueItem.reviewedBy = rejectedBy;
 
       // Update database
-      await mockDb.update({
+      await prisma.aiRecommendation.update({
         where: { id },
         data: {
           status: 'rejected',
-          reviewedAt: new Date(),
-          reviewedBy: rejectedBy,
-          decisionReason: reason
+          dismissedAt: new Date(),
+          factors: {
+            reviewedBy: rejectedBy,
+            decisionReason: reason,
+          },
         }
       });
 
@@ -460,7 +520,7 @@ class ApprovalQueueService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Failed to reject queue item:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'approval-queue-service', operation: 'reject' });
       return {
         success: false,
         queueItemId: id,
@@ -478,7 +538,7 @@ class ApprovalQueueService {
     id: string,
     modifications: Array<{
       field: 'quantity' | 'supplier' | 'orderDate' | 'unitPrice';
-      newValue: any;
+      newValue: string | number;
       reason?: string;
     }>,
     approvedBy: string
@@ -528,14 +588,16 @@ class ApprovalQueueService {
       queueItem.resultingPOId = purchaseOrder.id;
 
       // Update database
-      await mockDb.update({
+      await prisma.aiRecommendation.update({
         where: { id },
         data: {
           status: 'modified_approved',
-          reviewedAt: new Date(),
-          reviewedBy: approvedBy,
-          resultingPOId: purchaseOrder.id,
-          modifications: JSON.stringify(appliedMods)
+          implementedAt: new Date(),
+          factors: JSON.parse(JSON.stringify({
+            reviewedBy: approvedBy,
+            resultingPOId: purchaseOrder.id,
+            modifications: appliedMods,
+          })),
         }
       });
 
@@ -561,7 +623,7 @@ class ApprovalQueueService {
         timestamp: new Date()
       };
     } catch (error) {
-      console.error('Failed to modify and approve queue item:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'approval-queue-service', operation: 'modifyAndApprove' });
       return {
         success: false,
         queueItemId: id,
@@ -704,7 +766,7 @@ class ApprovalQueueService {
 
     queueItem.status = 'in_review';
 
-    await mockDb.update({
+    await prisma.aiRecommendation.update({
       where: { id },
       data: { status: 'in_review' }
     });
@@ -732,7 +794,7 @@ class ApprovalQueueService {
 
     queueItem.status = 'pending';
 
-    await mockDb.update({
+    await prisma.aiRecommendation.update({
       where: { id },
       data: { status: 'pending' }
     });
@@ -753,14 +815,15 @@ class ApprovalQueueService {
     queueItem.notes.push(timestampedNote);
 
     // Update in database
-    const existing = await mockDb.findUnique({ where: { id } }) as any;
-    await mockDb.update({
+    const existing = await prisma.aiRecommendation.findUnique({ where: { id } });
+    const existingFactors = (existing?.factors as Record<string, unknown>) || {};
+    await prisma.aiRecommendation.update({
       where: { id },
       data: {
-        metadata: JSON.stringify({
-          ...JSON.parse(existing?.metadata || '{}'),
-          notes: queueItem.notes
-        })
+        factors: {
+          ...existingFactors,
+          notes: queueItem.notes,
+        },
       }
     });
 
@@ -949,35 +1012,33 @@ class ApprovalQueueService {
     return `PO-${year}${month}-${sequence}`;
   }
 
-  private getFieldValue(suggestion: EnhancedPOSuggestion, field: string): any {
-    const s = suggestion as any;
+  private getFieldValue(suggestion: EnhancedPOSuggestion, field: string): string | number | Date | null {
     switch (field) {
       case 'quantity':
-        return s.quantity || s.suggestedQuantity;
+        return suggestion.quantity;
       case 'supplier':
-        return s.supplierId || s.selectedSupplier?.id;
+        return suggestion.supplierId;
       case 'orderDate':
-        return s.expectedDeliveryDate || s.suggestedOrderDate;
+        return suggestion.expectedDeliveryDate;
       case 'unitPrice':
-        return s.unitPrice || s.selectedSupplier?.unitPrice;
+        return suggestion.unitPrice;
       default:
         return null;
     }
   }
 
-  private applyModification(suggestion: EnhancedPOSuggestion, field: string, value: any): void {
-    const s = suggestion as any;
+  private applyModification(suggestion: EnhancedPOSuggestion, field: string, value: string | number): void {
     switch (field) {
       case 'quantity':
-        s.quantity = value;
-        suggestion.totalAmount = value * (s.unitPrice || s.selectedSupplier?.unitPrice || 0);
+        suggestion.quantity = value as number;
+        suggestion.totalAmount = (value as number) * (suggestion.unitPrice || 0);
         break;
       case 'orderDate':
-        s.expectedDeliveryDate = new Date(value);
+        suggestion.expectedDeliveryDate = new Date(value);
         break;
       case 'unitPrice':
-        s.unitPrice = value;
-        suggestion.totalAmount = (s.quantity || 0) * value;
+        suggestion.unitPrice = value as number;
+        suggestion.totalAmount = (suggestion.quantity || 0) * (value as number);
         break;
       // Supplier change would require more complex handling
     }
@@ -997,7 +1058,7 @@ class ApprovalQueueService {
       const item = this.queue.get(id)!;
       item.status = 'expired';
 
-      await mockDb.update({
+      await prisma.aiRecommendation.update({
         where: { id },
         data: { status: 'expired' }
       });
@@ -1006,11 +1067,11 @@ class ApprovalQueueService {
     }
 
     if (expiredIds.length > 0) {
-      console.log(`Cleaned up ${expiredIds.length} expired queue items`);
+      logger.info(`Cleaned up ${expiredIds.length} expired queue items`);
     }
   }
 
-  private dbToQueueItem(dbItem: any): QueueItem {
+  private dbToQueueItem(dbItem: QueueDbRecord): QueueItem {
     const metadata = JSON.parse(dbItem.metadata || '{}');
 
     return {
@@ -1041,8 +1102,8 @@ class ApprovalQueueService {
         expiresAt: dbItem.expiresAt || new Date(),
         aiEnhancement: metadata.aiEnhancement || { enhancedExplanation: '', decisionFactors: [], marketInsights: [], optimizationSuggestions: [], whatIfScenarios: [], learningInsights: [] }
       } as EnhancedPOSuggestion,
-      status: dbItem.status,
-      priority: dbItem.priority || 'medium',
+      status: (dbItem.status || 'pending') as QueueItemStatus,
+      priority: (dbItem.priority || 'medium') as QueuePriority,
       addedAt: dbItem.createdAt,
       addedBy: dbItem.createdBy || 'system',
       reviewedAt: dbItem.reviewedAt,
@@ -1053,7 +1114,7 @@ class ApprovalQueueService {
       decisionReason: dbItem.decisionReason,
       modifications: dbItem.modifications ? JSON.parse(dbItem.modifications) : undefined,
       resultingPOId: dbItem.resultingPOId,
-      expiresAt: dbItem.expiresAt,
+      expiresAt: dbItem.expiresAt || new Date(),
       tags: metadata.tags || [],
       notes: metadata.notes || []
     };
@@ -1063,21 +1124,20 @@ class ApprovalQueueService {
     action: string;
     queueItemId: string;
     userId: string;
-    details: Record<string, any>;
+    details: Record<string, unknown>;
   }): Promise<void> {
     try {
-      await mockDb.create({
+      await prisma.auditLog.create({
         data: {
           action: event.action,
           entityType: 'po_suggestion',
           entityId: event.queueItemId,
           userId: event.userId,
-          details: JSON.stringify(event.details),
-          timestamp: new Date()
+          metadata: event.details as Record<string, string | number | boolean | null>,
         }
       });
     } catch (error) {
-      console.error('Failed to log audit event:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'approval-queue-service', operation: 'logAuditEvent' });
     }
   }
 }

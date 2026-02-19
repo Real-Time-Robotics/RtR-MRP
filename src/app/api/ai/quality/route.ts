@@ -5,16 +5,36 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 import { getQualityMetricsCalculator } from '@/lib/ai/quality/quality-metrics-calculator';
 import { getQualityPredictionEngine } from '@/lib/ai/quality/quality-prediction-engine';
+import { z } from 'zod';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // GET - Quality Dashboard Metrics
 // =============================================================================
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const days = parseInt(searchParams.get('days') || '30');
 
     const endDate = new Date();
@@ -47,24 +67,52 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       generatedAt: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[Quality API] GET Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/quality' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch quality metrics',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST - Batch Quality Assessment
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const body = await request.json();
+const bodySchema = z.object({
+      partType: z.string().optional(),
+      limit: z.number().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { partType, limit = 50 } = body;
 
     const predictionEngine = getQualityPredictionEngine();
@@ -91,13 +139,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
   } catch (error) {
-    console.error('[Quality API] POST Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/quality' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to perform quality assessment',
       },
       { status: 500 }
     );
   }
-}
+});

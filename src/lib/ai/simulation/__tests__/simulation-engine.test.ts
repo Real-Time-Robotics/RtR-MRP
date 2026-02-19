@@ -57,9 +57,6 @@ describe('SimulationEngine', () => {
     id: 'test-scenario-1',
     name: 'Test Scenario',
     description: 'A test scenario',
-    type: 'demand',
-    status: 'ready',
-    createdBy: 'test-user',
     baselineDate: new Date(),
     simulationHorizonDays: 90,
     createdAt: new Date(),
@@ -69,7 +66,6 @@ describe('SimulationEngine', () => {
       parameters: {
         demandChange: 20,
         affectedProducts: [],
-        seasonalAdjustment: true,
         startDate: new Date(),
         endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       },
@@ -140,8 +136,8 @@ describe('SimulationEngine', () => {
         config: {
           type: 'custom',
           parameters: {
-            name: 'Custom Test',
-            description: 'Custom scenario test',
+            name: 'Custom',
+            description: 'Custom scenario',
             demandFactors: { demandChange: 10 },
             supplyFactors: { priceChange: 5 },
             capacityFactors: { capacityChange: -10 },
@@ -175,7 +171,6 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 50, // 50% increase
             affectedProducts: [],
-            seasonalAdjustment: true,
             startDate: new Date(),
             endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
@@ -240,7 +235,6 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 100, // Large demand increase
             affectedProducts: [],
-            seasonalAdjustment: true,
             startDate: new Date(),
             endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
@@ -286,7 +280,7 @@ describe('SimulationEngine', () => {
         config: {
           type: 'supply',
           parameters: {
-            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'partial', severity: 50, durationDays: 30 }],
+            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'partial', severity: 50, durationDays: 14 }],
             leadTimeChange: 30,
             priceChange: 20,
             startDate: new Date(),
@@ -335,7 +329,6 @@ describe('SimulationEngine', () => {
           parameters: {
             demandChange: 30,
             affectedProducts: [],
-            seasonalAdjustment: true,
             startDate: new Date(),
             endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           },
@@ -354,7 +347,7 @@ describe('SimulationEngine', () => {
         config: {
           type: 'supply',
           parameters: {
-            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'delay', severity: 30, durationDays: 14 }],
+            supplierDisruption: [{ supplierId: 'SUP-001', disruptionType: 'delay', severity: 40, durationDays: 14 }],
             leadTimeChange: 14,
             priceChange: 10,
             startDate: new Date(),

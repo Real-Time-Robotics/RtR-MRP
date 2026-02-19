@@ -21,6 +21,8 @@ import {
   AlertPriority,
   AlertStatus,
   AlertActionType,
+  AlertType,
+  AlertSource,
   getTypeLabel,
   getSourceLabel,
 } from '@/lib/ai/alerts';
@@ -178,10 +180,10 @@ export function AlertCard({
             <div className="flex items-center gap-2 flex-wrap mb-1">
               {getPriorityBadge(alert.priority)}
               <Badge variant="outline" className="text-xs">
-                {getTypeLabel(alert.type as any)}
+                {getTypeLabel(alert.type as AlertType)}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                {getSourceLabel(alert.source as any)}
+                {getSourceLabel(alert.source as AlertSource)}
               </span>
               {alert.isEscalated && (
                 <Badge variant="destructive" className="text-xs">

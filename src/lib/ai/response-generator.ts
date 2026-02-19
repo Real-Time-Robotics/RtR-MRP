@@ -9,6 +9,52 @@ import { QueryIntent, DetectedIntent } from './prompts';
 // TYPES
 // =============================================================================
 
+/** Generic inventory item from data context */
+interface InventoryAlertItem {
+  partNumber: string;
+  partName: string;
+  onHand: number;
+  minStock: number;
+  safetyStock?: number;
+  status: string;
+  unit?: string;
+}
+
+/** Generic order item from data context */
+interface OrderItem {
+  orderNumber: string;
+  customer?: string;
+  value?: number;
+  requiredDate?: string;
+  status?: string;
+}
+
+/** Generic work order item from data context */
+interface WorkOrderItem {
+  orderNumber: string;
+  product?: string;
+  status: string;
+  progress?: number;
+}
+
+/** Generic purchase suggestion from data context */
+interface PurchaseSuggestionItem {
+  partNumber: string;
+  quantity: number;
+  unit?: string;
+  supplier?: string;
+  totalCost?: number;
+  priority: string;
+}
+
+/** Generic NCR item from data context */
+interface NCRItem {
+  ncrNumber: string;
+  description?: string;
+  status?: string;
+  severity?: string;
+}
+
 export interface AIAction {
   id: string;
   type: 'create' | 'navigate' | 'export' | 'alert' | 'analyze';
@@ -19,7 +65,7 @@ export interface AIAction {
   icon: string;
   riskLevel: 'low' | 'medium' | 'high';
   requiresApproval: boolean;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   endpoint?: string;
   href?: string;
 }
@@ -36,7 +82,7 @@ export interface StructuredResponse {
 export interface ResponseSection {
   title: string;
   type: 'stats' | 'table' | 'list' | 'chart';
-  data: any;
+  data: Record<string, unknown> | Record<string, unknown>[];
 }
 
 export interface ResponseAlert {
@@ -49,13 +95,14 @@ export interface ResponseAlert {
 // ACTION GENERATORS
 // =============================================================================
 
-function generateInventoryActions(data: Record<string, any>): AIAction[] {
+function generateInventoryActions(data: Record<string, unknown>): AIAction[] {
   const actions: AIAction[] = [];
-  const { alerts, items, summary } = data;
+  const alerts = data.alerts as InventoryAlertItem[] | undefined;
+  const items = data.items as InventoryAlertItem[] | undefined;
 
   // Check for critical items
   const criticalItems = (alerts || items || []).filter(
-    (item: any) => item.status === 'CRITICAL' || item.status === 'OUT'
+    (item) => item.status === 'CRITICAL' || item.status === 'OUT'
   );
 
   if (criticalItems.length > 0) {
@@ -71,9 +118,9 @@ function generateInventoryActions(data: Record<string, any>): AIAction[] {
       riskLevel: 'low',
       requiresApproval: false,
       payload: {
-        items: criticalItems.map((item: any) => ({
+        items: criticalItems.map((item) => ({
           partNumber: item.partNumber,
-          quantity: Math.max(item.minStock - item.onHand + item.safetyStock, 1),
+          quantity: Math.max(item.minStock - item.onHand + (item.safetyStock || 0), 1),
         })),
         priority: 'URGENT',
       },
@@ -98,7 +145,7 @@ function generateInventoryActions(data: Record<string, any>): AIAction[] {
 
   // Check for low stock items
   const lowStockItems = (alerts || items || []).filter(
-    (item: any) => item.status === 'LOW'
+    (item) => item.status === 'LOW'
   );
 
   if (lowStockItems.length > 0) {
@@ -113,7 +160,7 @@ function generateInventoryActions(data: Record<string, any>): AIAction[] {
       riskLevel: 'low',
       requiresApproval: false,
       payload: {
-        items: lowStockItems.map((item: any) => ({
+        items: lowStockItems.map((item) => ({
           partNumber: item.partNumber,
           quantity: Math.max(item.minStock - item.onHand, 1),
         })),
@@ -141,9 +188,9 @@ function generateInventoryActions(data: Record<string, any>): AIAction[] {
   return actions;
 }
 
-function generateOrderActions(data: Record<string, any>): AIAction[] {
+function generateOrderActions(data: Record<string, unknown>): AIAction[] {
   const actions: AIAction[] = [];
-  const { pending, orders } = data;
+  const pending = data.pending as OrderItem[] | undefined;
 
   if (pending && pending.length > 0) {
     // Action: View pending orders
@@ -172,7 +219,7 @@ function generateOrderActions(data: Record<string, any>): AIAction[] {
       icon: 'Calculator',
       riskLevel: 'low',
       requiresApproval: false,
-      payload: { orderIds: pending.map((o: any) => o.orderNumber) },
+      payload: { orderIds: pending.map((o) => o.orderNumber) },
       href: '/mrp/run',
     });
   }
@@ -195,13 +242,13 @@ function generateOrderActions(data: Record<string, any>): AIAction[] {
   return actions;
 }
 
-function generateProductionActions(data: Record<string, any>): AIAction[] {
+function generateProductionActions(data: Record<string, unknown>): AIAction[] {
   const actions: AIAction[] = [];
-  const { workOrders, issues, summary } = data;
+  const workOrders = data.workOrders as WorkOrderItem[] | undefined;
 
   // Check for waiting material issues
   const waitingOrders = (workOrders || []).filter(
-    (wo: any) => wo.status === 'Waiting Material' || wo.status === 'waiting_material'
+    (wo) => wo.status === 'Waiting Material' || wo.status === 'waiting_material'
   );
 
   if (waitingOrders.length > 0) {
@@ -215,7 +262,7 @@ function generateProductionActions(data: Record<string, any>): AIAction[] {
       icon: 'Package',
       riskLevel: 'medium',
       requiresApproval: false,
-      payload: { woNumbers: waitingOrders.map((wo: any) => wo.orderNumber) },
+      payload: { woNumbers: waitingOrders.map((wo) => wo.orderNumber) },
       href: '/production?status=waiting',
     });
   }
@@ -238,14 +285,14 @@ function generateProductionActions(data: Record<string, any>): AIAction[] {
   return actions;
 }
 
-function generatePurchaseActions(data: Record<string, any>): AIAction[] {
+function generatePurchaseActions(data: Record<string, unknown>): AIAction[] {
   const actions: AIAction[] = [];
-  const { suggestions, totalValue } = data;
+  const suggestions = data.suggestions as PurchaseSuggestionItem[] | undefined;
 
   if (suggestions && suggestions.length > 0) {
     // Group by priority
-    const urgent = suggestions.filter((s: any) => s.priority === 'URGENT');
-    const high = suggestions.filter((s: any) => s.priority === 'HIGH');
+    const urgent = suggestions.filter((s) => s.priority === 'URGENT');
+    const high = suggestions.filter((s) => s.priority === 'HIGH');
 
     if (urgent.length > 0) {
       actions.push({
@@ -285,13 +332,13 @@ function generatePurchaseActions(data: Record<string, any>): AIAction[] {
   return actions;
 }
 
-function generateQualityActions(data: Record<string, any>): AIAction[] {
+function generateQualityActions(data: Record<string, unknown>): AIAction[] {
   const actions: AIAction[] = [];
-  const { ncrs, summary } = data;
+  const ncrs = data.ncrs as NCRItem[] | undefined;
 
   if (ncrs && ncrs.length > 0) {
     const criticalNCRs = ncrs.filter(
-      (n: any) => n.severity === 'critical' || n.severity === 'high'
+      (n) => n.severity === 'critical' || n.severity === 'high'
     );
 
     if (criticalNCRs.length > 0) {
@@ -335,16 +382,16 @@ function generateQualityActions(data: Record<string, any>): AIAction[] {
 
 function generateAlerts(
   intent: QueryIntent,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): ResponseAlert[] {
   const alerts: ResponseAlert[] = [];
 
   switch (intent) {
     case 'inventory_status':
     case 'inventory_shortage': {
-      const { alerts: items, summary } = data;
-      const criticalCount = (items || []).filter(
-        (i: any) => i.status === 'CRITICAL' || i.status === 'OUT'
+      const invItems = (data.alerts || data.items) as InventoryAlertItem[] | undefined;
+      const criticalCount = (invItems || []).filter(
+        (i) => i.status === 'CRITICAL' || i.status === 'OUT'
       ).length;
 
       if (criticalCount > 0) {
@@ -367,7 +414,7 @@ function generateAlerts(
         });
       }
 
-      const lowCount = (items || []).filter((i: any) => i.status === 'LOW').length;
+      const lowCount = (invItems || []).filter((i) => i.status === 'LOW').length;
       if (lowCount > 0) {
         alerts.push({
           type: 'warning',
@@ -379,19 +426,21 @@ function generateAlerts(
 
     case 'order_status':
     case 'order_summary': {
-      const { pending } = data;
-      if (pending && pending.length > 5) {
+      const orderPending = data.pending as OrderItem[] | undefined;
+      if (orderPending && orderPending.length > 5) {
         alerts.push({
           type: 'warning',
-          message: `⚠️ Có ${pending.length} đơn hàng chờ xử lý. Cân nhắc xử lý sớm để không bị trễ.`,
+          message: `⚠️ Có ${orderPending.length} đơn hàng chờ xử lý. Cân nhắc xử lý sớm để không bị trễ.`,
         });
       }
       break;
     }
 
     case 'production_status': {
-      const { waitingCount, efficiency } = data.summary || {};
-      if (waitingCount > 0) {
+      const prodSummary = data.summary as Record<string, number> | undefined;
+      const waitingCount = prodSummary?.waitingCount;
+      const efficiency = prodSummary?.efficiency;
+      if (waitingCount && waitingCount > 0) {
         alerts.push({
           type: 'warning',
           message: `⚠️ ${waitingCount} lệnh sản xuất đang chờ vật tư. Cần kiểm tra tồn kho.`,
@@ -407,8 +456,10 @@ function generateAlerts(
     }
 
     case 'quality_report': {
-      const { openNCRs, passRate } = data.summary || {};
-      if (openNCRs > 5) {
+      const qualSummary = data.summary as Record<string, number> | undefined;
+      const openNCRs = qualSummary?.openNCRs;
+      const passRate = qualSummary?.passRate;
+      if (openNCRs && openNCRs > 5) {
         alerts.push({
           type: 'warning',
           message: `⚠️ Có ${openNCRs} NCR đang mở. Cần xử lý để đảm bảo chất lượng.`,
@@ -504,7 +555,7 @@ function getRelatedQueries(intent: QueryIntent): string[] {
 
 export function generateStructuredResponse(
   intent: DetectedIntent,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): StructuredResponse {
   const { intent: queryIntent, confidence } = intent;
 
@@ -574,32 +625,33 @@ export function generateStructuredResponse(
 // SUMMARY GENERATOR
 // =============================================================================
 
-function generateSummary(intent: QueryIntent, data: Record<string, any>): string {
+function generateSummary(intent: QueryIntent, data: Record<string, unknown>): string {
   switch (intent) {
     case 'inventory_status': {
-      const { summary } = data;
+      const summary = data.summary as Record<string, number> | undefined;
       if (!summary) return 'Không có dữ liệu tồn kho.';
       return `📦 **Tồn kho**: ${summary.totalItems} vật tư | 🟢 OK: ${summary.okCount} | 🟡 Sắp hết: ${summary.lowCount} | 🔴 Nguy hiểm: ${summary.outCount}`;
     }
     case 'inventory_shortage': {
-      const { critical, low } = data;
+      const critical = data.critical as unknown[] | undefined;
+      const low = data.low as unknown[] | undefined;
       const criticalCount = critical?.length || 0;
       const lowCount = low?.length || 0;
       return `⚠️ **Cảnh báo tồn kho**: ${criticalCount} vật tư nguy hiểm, ${lowCount} vật tư sắp hết cần chú ý.`;
     }
     case 'order_status':
     case 'order_summary': {
-      const { summary } = data;
+      const summary = data.summary as Record<string, number> | undefined;
       if (!summary) return 'Không có dữ liệu đơn hàng.';
       return `📋 **Đơn hàng**: Tổng ${summary.totalOrders} | Chờ xử lý: ${summary.pendingCount} | Đang xử lý: ${summary.processingCount} | Hoàn thành: ${summary.completedCount}`;
     }
     case 'production_status': {
-      const { summary } = data;
+      const summary = data.summary as Record<string, number> | undefined;
       if (!summary) return 'Không có dữ liệu sản xuất.';
       return `🏭 **Sản xuất**: Hiệu suất ${summary.efficiency?.toFixed(1)}% | Đang chạy: ${summary.runningCount} | Chờ vật tư: ${summary.waitingCount}`;
     }
     case 'quality_report': {
-      const { summary } = data;
+      const summary = data.summary as Record<string, number> | undefined;
       if (!summary) return 'Không có dữ liệu chất lượng.';
       return `✅ **Chất lượng**: Tỷ lệ đạt ${summary.passRate?.toFixed(1)}% | NCR mở: ${summary.openNCRs} | Kiểm tra hôm nay: ${summary.inspectionsToday}`;
     }
@@ -614,38 +666,40 @@ function generateSummary(intent: QueryIntent, data: Record<string, any>): string
 
 function generateDetailSections(
   intent: QueryIntent,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): ResponseSection[] {
   const sections: ResponseSection[] = [];
 
   switch (intent) {
     case 'inventory_status':
     case 'inventory_shortage': {
-      const { alerts, items, summary } = data;
+      const invAlerts = data.alerts as InventoryAlertItem[] | undefined;
+      const invItems = data.items as InventoryAlertItem[] | undefined;
+      const invSummary = data.summary as Record<string, number> | undefined;
 
-      if (summary) {
+      if (invSummary) {
         sections.push({
           title: 'Thống kê tồn kho',
           type: 'stats',
           data: {
-            'Tổng vật tư': summary.totalItems,
-            'Đủ hàng': summary.okCount,
-            'Sắp hết': summary.lowCount,
-            'Nguy hiểm': summary.outCount,
-            'Giá trị': formatCurrency(summary.totalValue),
+            'Tổng vật tư': invSummary.totalItems,
+            'Đủ hàng': invSummary.okCount,
+            'Sắp hết': invSummary.lowCount,
+            'Nguy hiểm': invSummary.outCount,
+            'Giá trị': formatCurrency(invSummary.totalValue),
           },
         });
       }
 
-      const criticalItems = (alerts || items || [])
-        .filter((i: any) => i.status === 'CRITICAL' || i.status === 'OUT')
+      const criticalItems = (invAlerts || invItems || [])
+        .filter((i) => i.status === 'CRITICAL' || i.status === 'OUT')
         .slice(0, 10);
 
       if (criticalItems.length > 0) {
         sections.push({
           title: 'Vật tư cần đặt gấp',
           type: 'table',
-          data: criticalItems.map((item: any) => ({
+          data: criticalItems.map((item) => ({
             'Mã vật tư': item.partNumber,
             'Tên': item.partName,
             'Tồn kho': item.onHand,
@@ -659,16 +713,16 @@ function generateDetailSections(
 
     case 'order_status':
     case 'order_summary': {
-      const { pending, orders } = data;
+      const orderPending = data.pending as OrderItem[] | undefined;
 
-      if (pending && pending.length > 0) {
+      if (orderPending && orderPending.length > 0) {
         sections.push({
           title: 'Đơn hàng chờ xử lý',
           type: 'table',
-          data: pending.slice(0, 5).map((o: any) => ({
+          data: orderPending.slice(0, 5).map((o) => ({
             'Mã đơn': o.orderNumber,
             'Khách hàng': o.customer,
-            'Giá trị': formatCurrency(o.value),
+            'Giá trị': formatCurrency(o.value || 0),
             'Hạn giao': o.requiredDate,
           })),
         });
@@ -677,7 +731,8 @@ function generateDetailSections(
     }
 
     case 'purchase_suggestion': {
-      const { suggestions, bySupplier, totalValue } = data;
+      const purchSuggestions = data.suggestions as PurchaseSuggestionItem[] | undefined;
+      const totalValue = data.totalValue as number | undefined;
 
       if (totalValue) {
         sections.push({
@@ -685,20 +740,20 @@ function generateDetailSections(
           type: 'stats',
           data: {
             'Tổng giá trị': formatCurrency(totalValue),
-            'Số vật tư': suggestions?.length || 0,
+            'Số vật tư': purchSuggestions?.length || 0,
           },
         });
       }
 
-      if (suggestions && suggestions.length > 0) {
+      if (purchSuggestions && purchSuggestions.length > 0) {
         sections.push({
           title: 'Chi tiết đề xuất mua',
           type: 'table',
-          data: suggestions.slice(0, 10).map((s: any) => ({
+          data: purchSuggestions.slice(0, 10).map((s) => ({
             'Vật tư': s.partNumber,
             'Số lượng': `${s.quantity} ${s.unit}`,
             'Nhà CC': s.supplier,
-            'Giá trị': formatCurrency(s.totalCost),
+            'Giá trị': formatCurrency(s.totalCost || 0),
             'Ưu tiên': s.priority,
           })),
         });

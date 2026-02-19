@@ -67,13 +67,13 @@ export function SimulationResultsChart({
     return value.toString();
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
     if (!active || !payload || !payload.length) return null;
 
     return (
       <div className="bg-white p-3 border rounded-lg shadow-lg">
         <p className="font-medium mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry: { name: string; value: number; color: string }, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
             {entry.name}: {formatNumber(entry.value)}
           </p>
@@ -125,7 +125,7 @@ export function SimulationResultsChart({
                 <Line
                   type="monotone"
                   dataKey="demand"
-                  stroke="#3b82f6"
+                  stroke="#30a46c"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   name="Demand"

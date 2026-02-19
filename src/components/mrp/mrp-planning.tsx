@@ -362,9 +362,10 @@ export default function MRPPlanningPage() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         className="rounded"
+                        aria-label="Chọn tất cả đơn hàng"
                         checked={selectedOrders.length === salesOrdersForMRP.length}
                         onChange={() => {
                           if (selectedOrders.length === salesOrdersForMRP.length) {
@@ -394,9 +395,10 @@ export default function MRPPlanningPage() {
                       onClick={() => toggleOrderSelection(order.id)}
                     >
                       <td className="py-3 px-4">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           className="rounded"
+                          aria-label={`Chọn đơn hàng ${order.orderNumber}`}
                           checked={selectedOrders.includes(order.id)}
                           onChange={() => toggleOrderSelection(order.id)}
                         />
@@ -431,9 +433,10 @@ export default function MRPPlanningPage() {
                 Kết quả tính toán nhu cầu vật tư
               </h3>
               <div className="flex items-center gap-2">
-                <select 
+                <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
+                  aria-label="Bộ lọc trạng thái"
                   className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700"
                 >
                   <option value="all">Tất cả</option>
@@ -557,7 +560,7 @@ export default function MRPPlanningPage() {
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                     <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                      <input type="checkbox" className="rounded" />
+                      <input type="checkbox" className="rounded" aria-label="Chọn tất cả đề xuất mua hàng" />
                     </th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Ưu tiên</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Mã vật tư</th>
@@ -582,7 +585,7 @@ export default function MRPPlanningPage() {
                       )}
                     >
                       <td className="py-3 px-4">
-                        <input type="checkbox" className="rounded" />
+                        <input type="checkbox" className="rounded" aria-label={`Chọn ${item.partNumber}`} />
                       </td>
                       <td className="py-3 px-4">
                         <StatusBadge status={item.priority} />
@@ -618,13 +621,13 @@ export default function MRPPlanningPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-1">
-                          <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Xem chi tiết">
+                          <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors" title="Xem chi tiết" aria-label="Xem chi tiết">
                             <Eye className="w-4 h-4 text-gray-500" />
                           </button>
-                          <button className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="Duyệt">
+                          <button className="p-1.5 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-lg transition-colors" title="Duyệt" aria-label="Duyệt">
                             <CheckCircle className="w-4 h-4 text-green-600" />
                           </button>
-                          <button className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Tạo PO">
+                          <button className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Tạo PO" aria-label="Tạo PO">
                             <Send className="w-4 h-4 text-blue-600" />
                           </button>
                         </div>

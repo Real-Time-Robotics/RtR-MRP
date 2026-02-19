@@ -7,7 +7,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmbeddingService } from '@/lib/ai/embedding-service';
 import { globalSearch } from '@/lib/search-engine';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -63,7 +67,7 @@ async function hybridSearch(
 
   // Merge and deduplicate results
   const seen = new Set<string>();
-  const merged: any[] = [];
+  const merged: Array<{ id: string; type: string; title: string; subtitle: string; link: string; score?: number; source: string; relevanceScore: number; metadata?: Record<string, unknown> }> = [];
 
   // Add semantic results first (higher priority)
   semanticResults.forEach((result) => {
@@ -99,7 +103,11 @@ async function hybridSearch(
 // MAIN HANDLER
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
@@ -113,7 +121,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request
-    const body: SearchRequest = await request.json();
+    const bodySchema = z.object({
+      query: z.string(),
+      types: z.array(z.enum(['part', 'supplier', 'customer', 'product'])).optional(),
+      limit: z.number().optional(),
+      mode: z.enum(['semantic', 'keyword', 'hybrid']).optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { query, types, limit = 10, mode = 'hybrid' } = body;
 
     if (!query || typeof query !== 'string' || query.length < 2) {
@@ -153,22 +175,26 @@ export async function POST(request: NextRequest) {
       latency,
     });
   } catch (error) {
-    console.error('[Semantic Search] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/search/semantic' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Search failed',
+        error: 'Search failed',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET - Index Status & Trigger
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const searchParams = request.nextUrl.searchParams;
   const action = searchParams.get('action');
 
@@ -187,7 +213,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: error instanceof Error ? error.message : 'Indexing failed',
+          error: 'Indexing failed',
         },
         { status: 500 }
       );
@@ -200,4 +226,4 @@ export async function GET(request: NextRequest) {
     success: true,
     stats,
   });
-}
+});

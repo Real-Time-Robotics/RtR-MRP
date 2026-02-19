@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CostBreakdownChart, CostRollupStatus, VarianceCard } from "@/components/finance";
+import { clientLogger } from '@/lib/client-logger';
 
 interface CostRollup {
   partId: string;
@@ -62,7 +63,7 @@ interface Variance {
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
     </div>
   );
 }
@@ -107,7 +108,7 @@ function CostingContent() {
         setVariances(data.data?.variances || []);
       }
     } catch (error) {
-      console.error("Failed to fetch costing data:", error);
+      clientLogger.error("Failed to fetch costing data:", error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ function CostingContent() {
         await fetchData();
       }
     } catch (error) {
-      console.error("Failed to run rollup:", error);
+      clientLogger.error("Failed to run rollup:", error);
     } finally {
       setRunningRollup(false);
     }
@@ -242,12 +243,12 @@ function CostingContent() {
                               </TableCell>
                               <TableCell>
                                 {rollup.isStale ? (
-                                  <Badge variant="outline" className="text-yellow-600">
+                                  <Badge variant="outline" className="text-warning-600">
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     Stale
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-green-600">
+                                  <Badge variant="outline" className="text-success-600">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Current
                                   </Badge>
@@ -378,9 +379,9 @@ function CostingContent() {
                             <span
                               className={
                                 v.favorability === "FAVORABLE"
-                                  ? "text-green-600"
+                                  ? "text-success-600"
                                   : v.favorability === "UNFAVORABLE"
-                                  ? "text-red-600"
+                                  ? "text-danger-600"
                                   : ""
                               }
                             >
@@ -389,12 +390,12 @@ function CostingContent() {
                           </TableCell>
                           <TableCell>
                             {v.favorability === "FAVORABLE" ? (
-                              <Badge className="bg-green-100 text-green-800">
+                              <Badge className="bg-success-100 text-success-800">
                                 <TrendingUp className="h-3 w-3 mr-1" />
                                 Favorable
                               </Badge>
                             ) : v.favorability === "UNFAVORABLE" ? (
-                              <Badge className="bg-red-100 text-red-800">
+                              <Badge className="bg-danger-100 text-danger-800">
                                 <TrendingDown className="h-3 w-3 mr-1" />
                                 Unfavorable
                               </Badge>

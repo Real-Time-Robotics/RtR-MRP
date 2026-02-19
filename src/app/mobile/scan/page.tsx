@@ -16,6 +16,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 import { BarcodeScanner } from '@/components/mobile/barcode-scanner';
 
 // =============================================================================
@@ -72,7 +73,7 @@ export default function MobileScanPage() {
         });
       }
     } catch (error) {
-      console.error('Scan error:', error);
+      clientLogger.error('Scan error', error);
       setScanResult({
         type: 'UNKNOWN',
         value: barcode,

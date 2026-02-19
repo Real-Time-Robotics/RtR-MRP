@@ -26,13 +26,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TrialBalance } from "@/components/finance";
+import { clientLogger } from '@/lib/client-logger';
 
 type ReportType = "trial-balance" | "income-statement" | "balance-sheet" | "cost-analysis" | "margin-analysis";
 
 function LoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+      <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
     </div>
   );
 }
@@ -73,7 +74,7 @@ function FinanceReportsContent() {
         setReportData(data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch report:", error);
+      clientLogger.error("Failed to fetch report:", error);
     } finally {
       setLoading(false);
     }
@@ -158,7 +159,7 @@ function FinanceReportsContent() {
                       ))}
                       <TableRow className="bg-muted/50 font-bold">
                         <TableCell colSpan={2}>Total Revenue</TableCell>
-                        <TableCell className="text-right text-green-600">
+                        <TableCell className="text-right text-success-600">
                           {formatCurrency(incomeData.revenue?.total || 0)}
                         </TableCell>
                       </TableRow>
@@ -182,7 +183,7 @@ function FinanceReportsContent() {
                       ))}
                       <TableRow className="bg-muted/50 font-bold">
                         <TableCell colSpan={2}>Total Expenses</TableCell>
-                        <TableCell className="text-right text-red-600">
+                        <TableCell className="text-right text-danger-600">
                           {formatCurrency(incomeData.expenses?.total || 0)}
                         </TableCell>
                       </TableRow>
@@ -197,7 +198,7 @@ function FinanceReportsContent() {
                   <span className="text-lg font-bold">Net Income</span>
                   <span
                     className={`text-2xl font-bold ${
-                      (incomeData.netIncome || 0) >= 0 ? "text-green-600" : "text-red-600"
+                      (incomeData.netIncome || 0) >= 0 ? "text-success-600" : "text-danger-600"
                     }`}
                   >
                     {formatCurrency(incomeData.netIncome || 0)}
@@ -326,21 +327,21 @@ function FinanceReportsContent() {
             <CardContent className="space-y-6">
               {/* Summary */}
               <div className="grid grid-cols-4 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg text-center">
+                <div className="p-4 bg-primary-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Material Cost</p>
-                  <p className="text-xl font-bold text-blue-600">
+                  <p className="text-xl font-bold text-primary-600">
                     {formatCurrency(costData.summary?.totalMaterialCost || 0)}
                   </p>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg text-center">
+                <div className="p-4 bg-success-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Labor Cost</p>
-                  <p className="text-xl font-bold text-green-600">
+                  <p className="text-xl font-bold text-success-600">
                     {formatCurrency(costData.summary?.totalLaborCost || 0)}
                   </p>
                 </div>
-                <div className="p-4 bg-yellow-50 rounded-lg text-center">
+                <div className="p-4 bg-warning-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Overhead Cost</p>
-                  <p className="text-xl font-bold text-yellow-600">
+                  <p className="text-xl font-bold text-warning-600">
                     {formatCurrency(costData.summary?.totalOverheadCost || 0)}
                   </p>
                 </div>
@@ -407,21 +408,21 @@ function FinanceReportsContent() {
             <CardContent className="space-y-6">
               {/* Summary */}
               <div className="grid grid-cols-4 gap-4">
-                <div className="p-4 bg-green-50 rounded-lg text-center">
+                <div className="p-4 bg-success-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-xl font-bold text-green-600">
+                  <p className="text-xl font-bold text-success-600">
                     {formatCurrency(marginData.totals?.revenue || 0)}
                   </p>
                 </div>
-                <div className="p-4 bg-red-50 rounded-lg text-center">
+                <div className="p-4 bg-danger-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Total Cost</p>
-                  <p className="text-xl font-bold text-red-600">
+                  <p className="text-xl font-bold text-danger-600">
                     {formatCurrency(marginData.totals?.cost || 0)}
                   </p>
                 </div>
-                <div className="p-4 bg-blue-50 rounded-lg text-center">
+                <div className="p-4 bg-primary-50 rounded-lg text-center">
                   <p className="text-sm text-muted-foreground">Gross Margin</p>
-                  <p className="text-xl font-bold text-blue-600">
+                  <p className="text-xl font-bold text-primary-600">
                     {formatCurrency(marginData.totals?.margin || 0)}
                   </p>
                 </div>
@@ -456,7 +457,7 @@ function FinanceReportsContent() {
                         <TableCell className="text-right">{formatCurrency(inv.revenue)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(inv.cost)}</TableCell>
                         <TableCell
-                          className={`text-right ${inv.margin >= 0 ? "text-green-600" : "text-red-600"}`}
+                          className={`text-right ${inv.margin >= 0 ? "text-success-600" : "text-danger-600"}`}
                         >
                           {formatCurrency(inv.margin)}
                         </TableCell>
@@ -465,10 +466,10 @@ function FinanceReportsContent() {
                             variant={inv.marginPercent >= 20 ? "default" : "secondary"}
                             className={
                               inv.marginPercent >= 30
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-success-100 text-success-800"
                                 : inv.marginPercent >= 20
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
+                                ? "bg-warning-100 text-warning-800"
+                                : "bg-danger-100 text-danger-800"
                             }
                           >
                             {inv.marginPercent.toFixed(1)}%

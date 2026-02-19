@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { clientLogger } from '@/lib/client-logger';
 
 interface MrpRunData {
   id: string;
@@ -86,7 +87,7 @@ export default function MrpRunDetailPage() {
 
       setData(normalizedData);
     } catch (error) {
-      console.error("Failed to fetch MRP run:", error);
+      clientLogger.error("Failed to fetch MRP run:", error);
       setError(error instanceof Error ? error.message : "Failed to load MRP run");
     } finally {
       setLoading(false);

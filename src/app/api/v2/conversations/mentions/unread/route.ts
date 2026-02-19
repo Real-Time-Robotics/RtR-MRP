@@ -1,14 +1,17 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api/with-auth'
 import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // GET unread mentions count for current user
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Get user's role for role-based mentions
     const user = await prisma.user.findUnique({
@@ -64,23 +67,34 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching unread mentions:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/mentions/unread' })
     return NextResponse.json(
       { error: 'Failed to fetch unread mentions' },
       { status: 500 }
     )
   }
-}
+});
 
 // POST - Mark mentions as read
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json()
+  try {
+
+    const bodySchema = z.object({
+      mentionIds: z.array(z.string()).optional(),
+    })
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      )
+    }
+    const body = parseResult.data
     const { mentionIds } = body
 
     if (mentionIds && Array.isArray(mentionIds)) {
@@ -123,10 +137,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Error marking mentions as read:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/mentions/unread' })
     return NextResponse.json(
       { error: 'Failed to mark mentions as read' },
       { status: 500 }
     )
   }
-}
+});

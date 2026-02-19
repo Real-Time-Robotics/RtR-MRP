@@ -6,10 +6,11 @@ import {
   Truck, Search, Calendar, Package, ChevronRight, RefreshCw,
   MapPin, Clock, CheckCircle, ExternalLink, AlertCircle
 } from 'lucide-react';
-import { 
-  CustomerPortalEngine, 
+import {
+  CustomerPortalEngine,
   CustomerDelivery
 } from '@/lib/customer/customer-engine';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // CUSTOMER DELIVERIES PAGE
@@ -31,7 +32,7 @@ export default function CustomerDeliveriesPage() {
         setDeliveries(result.data.deliveries || []);
       }
     } catch (error) {
-      console.error('Failed to fetch deliveries:', error);
+      clientLogger.error('Failed to fetch deliveries', error);
     } finally {
       setIsLoading(false);
     }
@@ -82,29 +83,32 @@ export default function CustomerDeliveriesPage() {
         </div>
         <button
           onClick={() => fetchDeliveries()}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))]"
+          aria-label="Làm mới"
         >
           <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-4 border border-gray-200 dark:border-[rgb(var(--border-primary))]">
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Tìm theo mã giao hàng, SO, tracking..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-xl focus:outline-none"
+            aria-label="Bộ lọc trạng thái"
+            className="px-4 py-2 bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] rounded-xl focus:outline-none"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="PREPARING">Đang chuẩn bị</option>
@@ -119,12 +123,12 @@ export default function CustomerDeliveriesPage() {
       {/* Deliveries List */}
       <div className="space-y-4">
         {isLoading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-8 text-center border border-gray-200 dark:border-[rgb(var(--border-primary))]">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400 mb-3" />
             <p className="text-gray-500">Đang tải...</p>
           </div>
         ) : filteredDeliveries.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl p-8 text-center border border-gray-200 dark:border-[rgb(var(--border-primary))]">
             <Truck className="w-12 h-12 mx-auto text-gray-300 mb-3" />
             <p className="text-gray-500">Không có giao hàng nào</p>
           </div>
@@ -132,14 +136,14 @@ export default function CustomerDeliveriesPage() {
           filteredDeliveries.map(delivery => (
             <div
               key={delivery.id}
-              className={`bg-white dark:bg-gray-800 rounded-2xl border overflow-hidden ${
+              className={`bg-white dark:bg-[rgb(var(--bg-secondary))] rounded-2xl border overflow-hidden ${
                 delivery.status === 'IN_TRANSIT' 
                   ? 'border-purple-300 dark:border-purple-600' 
-                  : 'border-gray-200 dark:border-gray-700'
+                  : 'border-gray-200 dark:border-[rgb(var(--border-primary))]'
               }`}
             >
               {/* Delivery Header */}
-              <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="p-4 border-b border-gray-100 dark:border-[rgb(var(--border-primary))]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${CustomerPortalEngine.getDeliveryStatusColor(delivery.status)}`}>
@@ -159,7 +163,7 @@ export default function CustomerDeliveriesPage() {
                   </div>
                   {delivery.trackingNumber && (
                     <div className="text-right">
-                      <p className="text-sm font-mono bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg">
+                      <p className="text-sm font-mono bg-gray-100 dark:bg-[rgb(var(--bg-tertiary))] px-3 py-1.5 rounded-lg">
                         {delivery.trackingNumber}
                       </p>
                       {delivery.carrier && (
@@ -212,7 +216,7 @@ export default function CustomerDeliveriesPage() {
 
               {/* In Transit Alert */}
               {delivery.status === 'IN_TRANSIT' && (
-                <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/20 border-b border-gray-100 dark:border-gray-700">
+                <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/20 border-b border-gray-100 dark:border-[rgb(var(--border-primary))]">
                   <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                     <Truck className="w-5 h-5 animate-bounce" />
                     <span className="font-medium">Đang trên đường giao đến bạn!</span>
@@ -267,7 +271,7 @@ export default function CustomerDeliveriesPage() {
                     href={`https://tracking.example.com/${delivery.trackingNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"
+                    className="px-4 py-2 text-gray-600 dark:text-[rgb(var(--text-tertiary))] rounded-xl hover:bg-gray-100 dark:hover:bg-[rgb(var(--sidebar-item-hover))] flex items-center gap-2 text-sm"
                   >
                     <ExternalLink className="w-4 h-4" />
                     Theo dõi vận đơn

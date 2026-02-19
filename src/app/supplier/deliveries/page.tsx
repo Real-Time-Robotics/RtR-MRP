@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Truck,
   Search,
@@ -95,7 +96,7 @@ function SupplierDeliveriesContent() {
         setDeliveries(json.data.deliveries);
       }
     } catch (error) {
-      console.error('Error fetching deliveries:', error);
+      clientLogger.error('Failed to fetch deliveries', error);
     } finally {
       setLoading(false);
     }
@@ -131,7 +132,7 @@ function SupplierDeliveriesContent() {
         setEditingDelivery(null);
       }
     } catch (error) {
-      console.error('Error updating delivery:', error);
+      clientLogger.error('Failed to update delivery', error);
     } finally {
       setSaving(false);
     }
@@ -169,6 +170,7 @@ function SupplierDeliveriesContent() {
           <input
             type="text"
             placeholder="Tìm theo mã giao hàng, PO hoặc tracking..."
+            aria-label="Tìm kiếm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -180,6 +182,7 @@ function SupplierDeliveriesContent() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as DeliveryStatus | 'ALL')}
+            aria-label="Bộ lọc trạng thái"
             className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">Tất cả trạng thái</option>
@@ -282,6 +285,7 @@ function SupplierDeliveriesContent() {
                         <select
                           value={editForm.carrier}
                           onChange={(e) => setEditForm(prev => ({ ...prev, carrier: e.target.value }))}
+                          aria-label="Đơn vị vận chuyển"
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         >
                           <option value="">Chọn đơn vị</option>
@@ -299,6 +303,7 @@ function SupplierDeliveriesContent() {
                           value={editForm.trackingNumber}
                           onChange={(e) => setEditForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
                           placeholder="Nhập mã tracking"
+                          aria-label="Mã vận đơn"
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         />
                       </div>
@@ -310,6 +315,7 @@ function SupplierDeliveriesContent() {
                           type="date"
                           value={editForm.estimatedDate}
                           onChange={(e) => setEditForm(prev => ({ ...prev, estimatedDate: e.target.value }))}
+                          aria-label="Ngày giao dự kiến"
                           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         />
                       </div>

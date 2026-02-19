@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { clientLogger } from "@/lib/client-logger";
 import {
   Search,
   Package,
@@ -109,7 +110,7 @@ export function GlobalSearch() {
           }
         }
       } catch (error) {
-        console.error("Search failed:", error);
+        clientLogger.error("Search failed", error);
         // Fallback to basic search on error
         try {
           const fallbackRes = await fetch(
@@ -236,6 +237,11 @@ export function GlobalSearch() {
                     key={result.id}
                     value={result.id}
                     onSelect={() => handleSelect(result)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelect(result);
+                    }}
                     className="cursor-pointer"
                   >
                     <Icon className="mr-2 h-4 w-4 text-muted-foreground" />

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for Inspection Plan update
 const InspectionPlanUpdateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -17,6 +19,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { id } = await params;
 
@@ -41,7 +47,7 @@ export async function GET(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Lỗi tải kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi tải kế hoạch kiểm tra" },
       { status: 500 }
@@ -49,17 +55,13 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     // Check if plan exists
     const existing = await prisma.inspectionPlan.findUnique({ where: { id } });
@@ -99,25 +101,21 @@ export async function PATCH(
 
     return NextResponse.json(plan);
   } catch (error) {
-    console.error("Lỗi cập nhật kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi cập nhật kế hoạch kiểm tra" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
-
-    const { id } = await params;
+    const { id } = await context.params;
 
     // Check if plan exists
     const existing = await prisma.inspectionPlan.findUnique({ where: { id } });
@@ -134,10 +132,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Lỗi xóa kế hoạch kiểm tra:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/quality/inspection-plans/[id]' });
     return NextResponse.json(
       { error: "Lỗi xóa kế hoạch kiểm tra" },
       { status: 500 }
     );
   }
-}
+});

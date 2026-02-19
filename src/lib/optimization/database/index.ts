@@ -3,11 +3,42 @@
 // Production-ready database utilities for high-volume data
 // =============================================================================
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
 // Re-export the existing Prisma instance from the project
 import { prisma } from '@/lib/prisma';
 export { prisma };
+
+// =============================================================================
+// PRISMA MODEL DELEGATE INTERFACES
+// =============================================================================
+
+/** Represents a Prisma model delegate with createMany capability */
+interface PrismaCreateManyDelegate {
+  createMany(args: { data: Record<string, unknown>[]; skipDuplicates?: boolean }): Prisma.PrismaPromise<{ count: number }>;
+}
+
+/** Represents a Prisma model delegate with update capability */
+interface PrismaUpdateDelegate {
+  update(args: { where: { id: string }; data: Record<string, unknown> }): Prisma.PrismaPromise<unknown>;
+}
+
+/** Represents a Prisma model delegate with deleteMany capability */
+interface PrismaDeleteManyDelegate {
+  deleteMany(args: { where: { id: { in: string[] } } }): Prisma.PrismaPromise<{ count: number }>;
+}
+
+/** Represents a Prisma model delegate with findMany capability */
+interface PrismaFindManyDelegate {
+  findMany(args: Record<string, unknown>): Prisma.PrismaPromise<unknown[]>;
+}
+
+/** Represents a Prisma model delegate with findMany and count capability */
+interface PrismaFindManyWithCountDelegate {
+  findMany(args: Record<string, unknown>): Prisma.PrismaPromise<unknown[]>;
+  count(args: { where: Record<string, unknown> }): Prisma.PrismaPromise<number>;
+}
 
 // =============================================================================
 // BATCH OPERATIONS FOR LARGE DATASETS
@@ -16,7 +47,7 @@ export { prisma };
 export interface BatchOptions {
   batchSize?: number;
   onProgress?: (processed: number, total: number) => void;
-  onError?: (error: Error, item: any) => void;
+  onError?: (error: Error, item: unknown) => void;
   continueOnError?: boolean;
 }
 
@@ -65,8 +96,8 @@ export async function batchProcess<T, R>(
 /**
  * Batch create with conflict handling
  */
-export async function batchCreate<T extends Record<string, any>>(
-  model: any,
+export async function batchCreate<T extends Record<string, unknown>>(
+  model: PrismaCreateManyDelegate,
   data: T[],
   options: BatchOptions & { skipDuplicates?: boolean } = {}
 ): Promise<{ created: number; skipped: number; errors: number }> {
@@ -88,7 +119,7 @@ export async function batchCreate<T extends Record<string, any>>(
       skipped += batch.length - result.count;
     } catch (error) {
       errors += batch.length;
-      console.error(`Batch create error at index ${i}:`, error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'database-optimization', operation: 'batchCreate', index: i });
     }
 
     options.onProgress?.(Math.min(i + batchSize, data.length), data.length);
@@ -100,8 +131,8 @@ export async function batchCreate<T extends Record<string, any>>(
 /**
  * Batch update with transactions
  */
-export async function batchUpdate<T extends { id: string }>(
-  model: any,
+export async function batchUpdate<T extends { id: string; [key: string]: unknown }>(
+  model: PrismaUpdateDelegate,
   updates: T[],
   options: BatchOptions = {}
 ): Promise<{ updated: number; errors: number }> {
@@ -123,7 +154,7 @@ export async function batchUpdate<T extends { id: string }>(
       updated += batch.length;
     } catch (error) {
       errors += batch.length;
-      console.error(`Batch update error at index ${i}:`, error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'database-optimization', operation: 'batchUpdate', index: i });
     }
 
     options.onProgress?.(Math.min(i + batchSize, updates.length), updates.length);
@@ -136,7 +167,7 @@ export async function batchUpdate<T extends { id: string }>(
  * Batch delete with safety checks
  */
 export async function batchDelete(
-  model: any,
+  model: PrismaDeleteManyDelegate,
   ids: string[],
   options: BatchOptions = {}
 ): Promise<{ deleted: number; errors: number }> {
@@ -155,7 +186,7 @@ export async function batchDelete(
       deleted += result.count;
     } catch (error) {
       errors += batch.length;
-      console.error(`Batch delete error at index ${i}:`, error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'database-optimization', operation: 'batchDelete', index: i });
     }
 
     options.onProgress?.(Math.min(i + batchSize, ids.length), ids.length);
@@ -185,13 +216,13 @@ export interface CursorPaginationResult<T> {
  * Efficient cursor-based pagination for large tables
  */
 export async function cursorPaginate<T extends { id: string }>(
-  model: any,
-  where: Record<string, any> = {},
+  model: PrismaFindManyDelegate,
+  where: Record<string, unknown> = {},
   options: CursorPaginationOptions = {}
 ): Promise<CursorPaginationResult<T>> {
   const { cursor, take = 20, orderBy = { createdAt: 'desc' } } = options;
 
-  const queryOptions: any = {
+  const queryOptions: Record<string, unknown> = {
     where,
     take: take + 1, // Fetch one extra to check if there's more
     orderBy,
@@ -202,7 +233,7 @@ export async function cursorPaginate<T extends { id: string }>(
     queryOptions.skip = 1; // Skip the cursor item
   }
 
-  const items = await model.findMany(queryOptions);
+  const items = (await model.findMany(queryOptions)) as T[];
   const hasMore = items.length > take;
   const data = hasMore ? items.slice(0, -1) : items;
   const nextCursor = hasMore ? data[data.length - 1]?.id : null;
@@ -216,7 +247,7 @@ export async function cursorPaginate<T extends { id: string }>(
 
 export interface StreamOptions {
   batchSize?: number;
-  where?: Record<string, any>;
+  where?: Record<string, unknown>;
   orderBy?: Record<string, 'asc' | 'desc'>;
   select?: Record<string, boolean>;
 }
@@ -225,14 +256,14 @@ export interface StreamOptions {
  * Stream large datasets without loading everything into memory
  */
 export async function* streamRecords<T extends { id: string }>(
-  model: any,
+  model: PrismaFindManyDelegate,
   options: StreamOptions = {}
 ): AsyncGenerator<T[], void, unknown> {
   const { batchSize = 1000, where = {}, orderBy = { id: 'asc' }, select } = options;
   let cursor: string | undefined;
 
   while (true) {
-    const queryOptions: any = {
+    const queryOptions: Record<string, unknown> = {
       where,
       take: batchSize,
       orderBy,
@@ -244,7 +275,7 @@ export async function* streamRecords<T extends { id: string }>(
       queryOptions.skip = 1;
     }
 
-    const batch: T[] = await model.findMany(queryOptions);
+    const batch = (await model.findMany(queryOptions)) as T[];
 
     if (batch.length === 0) break;
 
@@ -260,9 +291,9 @@ export async function* streamRecords<T extends { id: string }>(
  * Export large dataset to file using streaming
  */
 export async function exportToStream(
-  model: any,
+  model: PrismaFindManyDelegate,
   writeStream: NodeJS.WritableStream,
-  options: StreamOptions & { transform?: (item: any) => string } = {}
+  options: StreamOptions & { transform?: (item: Record<string, unknown>) => string } = {}
 ): Promise<{ count: number }> {
   const { transform = JSON.stringify } = options;
   let count = 0;
@@ -298,7 +329,7 @@ export function buildSelect(fields: string[]): Record<string, boolean> {
 export function buildSearchConditions(
   search: string,
   fields: string[]
-): Record<string, any> {
+): Record<string, unknown> {
   if (!search || search.length < 2) return {};
 
   const searchTerm = search.trim();
@@ -321,8 +352,8 @@ export function buildDateRange(
   field: string,
   from?: Date | string,
   to?: Date | string
-): Record<string, any> {
-  const conditions: Record<string, any> = {};
+): Record<string, unknown> {
+  const conditions: Record<string, Date> = {};
 
   if (from) {
     conditions.gte = new Date(from);
@@ -338,11 +369,11 @@ export function buildDateRange(
  * Parallel count and data fetch
  */
 export async function findManyWithCount<T>(
-  model: any,
+  model: PrismaFindManyWithCountDelegate,
   options: {
-    where?: Record<string, any>;
+    where?: Record<string, unknown>;
     select?: Record<string, boolean>;
-    include?: Record<string, any>;
+    include?: Record<string, unknown>;
     orderBy?: Record<string, 'asc' | 'desc'>;
     skip?: number;
     take?: number;
@@ -355,7 +386,7 @@ export async function findManyWithCount<T>(
     model.count({ where }),
   ]);
 
-  return { data, total };
+  return { data: data as T[], total: total as number };
 }
 
 // =============================================================================
@@ -403,7 +434,7 @@ export async function reconnectDatabase(): Promise<boolean> {
     await prisma.$connect();
     return true;
   } catch (error) {
-    console.error('Database reconnection failed:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'database-optimization', operation: 'reconnectDatabase' });
     return false;
   }
 }
@@ -431,14 +462,15 @@ export async function executeWithRetry<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
-    } catch (error: any) {
-      lastError = error;
-      
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
       // Check for deadlock or serialization failure
-      const isRetryable = 
-        error.code === 'P2034' || // Transaction failed due to serialization failure
-        error.code === '40001' || // Serialization failure (PostgreSQL)
-        error.message?.includes('deadlock');
+      const prismaErr = error as { code?: string; message?: string };
+      const isRetryable =
+        prismaErr.code === 'P2034' || // Transaction failed due to serialization failure
+        prismaErr.code === '40001' || // Serialization failure (PostgreSQL)
+        prismaErr.message?.includes('deadlock');
       
       if (!isRetryable || attempt === maxRetries) {
         throw error;
@@ -474,7 +506,7 @@ export async function safeTransaction<T>(
 /**
  * Efficient bulk upsert using raw SQL for PostgreSQL
  */
-export async function bulkUpsert<T extends Record<string, any>>(
+export async function bulkUpsert<T extends Record<string, unknown>>(
   tableName: string,
   data: T[],
   uniqueFields: string[],

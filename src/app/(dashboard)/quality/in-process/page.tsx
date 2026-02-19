@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardCheck, CheckCircle, XCircle, Clock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface Inspection {
@@ -59,18 +58,6 @@ export default function InProcessInspectionPage() {
     },
   ];
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "passed":
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Đạt</Badge>;
-      case "failed":
-        return <Badge className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Không đạt</Badge>;
-      case "in_progress":
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="h-3 w-3 mr-1" />Đang KT</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
 
   const columns: Column<Inspection>[] = useMemo(() => [
     {
@@ -101,7 +88,6 @@ export default function InProcessInspectionPage() {
       key: 'quantity',
       header: 'Số lượng',
       width: '80px',
-      align: 'center',
       sortable: true,
     },
     {
@@ -120,9 +106,23 @@ export default function InProcessInspectionPage() {
       key: 'status',
       header: 'Trạng thái',
       width: '110px',
-      align: 'center',
       sortable: true,
-      render: (value) => getStatusBadge(value),
+      cellClassName: (value) => {
+        switch (value) {
+          case 'passed': return 'bg-green-50 dark:bg-green-950/30';
+          case 'failed': return 'bg-red-50 dark:bg-red-950/30';
+          case 'in_progress': return 'bg-yellow-50 dark:bg-yellow-950/30';
+          default: return '';
+        }
+      },
+      render: (value) => {
+        switch (value) {
+          case 'passed': return <span className="text-green-800 dark:text-green-300">Đạt</span>;
+          case 'failed': return <span className="text-red-800 dark:text-red-300">Không đạt</span>;
+          case 'in_progress': return <span className="text-yellow-800 dark:text-yellow-300">Đang KT</span>;
+          default: return <span>{value}</span>;
+        }
+      },
     },
   ], []);
 
@@ -202,7 +202,8 @@ export default function InProcessInspectionPage() {
             emptyMessage="Chưa có phiếu kiểm tra"
             pagination
             pageSize={20}
-            searchable={false}
+            searchable={true}
+            searchColumns={['workOrderNumber', 'partNumber', 'partName', 'operation', 'inspectedBy']}
             stickyHeader
             excelMode={{
               enabled: true,

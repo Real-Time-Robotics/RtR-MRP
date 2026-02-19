@@ -38,6 +38,7 @@ export const PAYMENT_TERMS = [
 export const supplierSchema = z.object({
     code: z.string().min(1, 'Mã nhà cung cấp là bắt buộc').max(20),
     name: z.string().min(1, 'Tên nhà cung cấp là bắt buộc').max(200),
+    taxId: z.string().max(20, 'Mã số thuế tối đa 20 ký tự').optional().nullable(),
     country: z.string().min(1, 'Quốc gia là bắt buộc'),
     ndaaCompliant: z.boolean(),
     contactName: z.string().max(100).optional().nullable(),
@@ -56,6 +57,7 @@ export type SupplierFormData = z.infer<typeof supplierSchema>;
 export const defaultSupplierValues: SupplierFormData = {
     code: '',
     name: '',
+    taxId: '',
     country: 'Việt Nam',
     ndaaCompliant: true,
     contactName: '',

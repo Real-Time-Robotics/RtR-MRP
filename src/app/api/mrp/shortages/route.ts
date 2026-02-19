@@ -1,9 +1,17 @@
+import { NextRequest } from 'next/server';
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
-export async function GET() {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    // Get all parts with their inventory and requirements
+// Get all parts with their inventory and requirements
     const parts = await prisma.part.findMany({
       include: {
         inventory: true,
@@ -125,10 +133,10 @@ export async function GET() {
 
     return NextResponse.json(shortages);
   } catch (error) {
-    console.error("Failed to fetch shortages:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/shortages' });
     return NextResponse.json(
       { error: "Failed to fetch shortages" },
       { status: 500 }
     );
   }
-}
+});

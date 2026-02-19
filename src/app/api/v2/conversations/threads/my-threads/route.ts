@@ -1,8 +1,14 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 export async function GET(request: NextRequest) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const session = await auth()
     if (!session?.user?.id) {
@@ -73,7 +79,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching my threads:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads/my-threads' })
     return NextResponse.json(
       { error: 'Failed to fetch threads' },
       { status: 500 }

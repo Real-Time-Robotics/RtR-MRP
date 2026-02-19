@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from 'react';
+import { clientLogger } from '@/lib/client-logger';
 import {
   parseScanBarcode as parseBarcode,
   triggerHaptic,
@@ -100,7 +101,7 @@ export function useMobile(options: UseMobileOptions = {}) {
         setRecentScans(scans);
         setOfflineStatus(status);
       } catch (error) {
-        console.error('Failed to load mobile data:', error);
+        clientLogger.error('Failed to load mobile data', error);
       }
     };
 

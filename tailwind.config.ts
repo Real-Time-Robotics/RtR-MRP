@@ -33,17 +33,17 @@ const config: Config = {
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))',
-  				50: '#EFF6FF',
-  				100: '#DBEAFE',
-  				200: '#BFDBFE',
-  				300: '#93C5FD',
-  				400: '#60A5FA',
-  				500: '#3B82F6',
-  				600: '#2563EB',
-  				700: '#1D4ED8',
-  				800: '#1E40AF',
-  				900: '#1E3A8A',
-  				950: '#172554',
+  				50: '#f0fdf4',
+  				100: '#dcfce7',
+  				200: '#bbf7d0',
+  				300: '#86efac',
+  				400: '#3ecf8e',
+  				500: '#30a46c',
+  				600: '#249163',
+  				700: '#1a7f4f',
+  				800: '#166534',
+  				900: '#14532d',
+  				950: '#052e16',
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -73,7 +73,7 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))',
   				'6': 'hsl(var(--chart-6))',
-  				blue: '#3B82F6',
+  				blue: '#30a46c',
   				green: '#10B981',
   				yellow: '#F59E0B',
   				red: '#EF4444',
@@ -134,8 +134,8 @@ const config: Config = {
   				'red-dim': 'rgba(239, 68, 68, 0.2)',
   			},
   			'info-cyan': {
-  				DEFAULT: '#06B6D4',
-  				dim: 'rgba(6, 182, 212, 0.2)',
+  				DEFAULT: '#249163',
+  				dim: 'rgba(36, 145, 99, 0.25)',
   			},
   			mrp: {
   				'text-primary': '#F4F4F5',
@@ -144,7 +144,7 @@ const config: Config = {
   				'text-disabled': '#52525B',
   				'border': '#3D4450',
   				'border-light': '#52525B',
-  				'border-focus': '#06B6D4',
+  				'border-focus': '#249163',
   			},
 
   			// Semantic colors (extended)
@@ -219,7 +219,7 @@ const config: Config = {
 
   		// Extended Typography (Industrial Precision)
   		fontFamily: {
-  			sans: ['var(--font-ibm-plex-sans)', 'var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+  			sans: ['var(--font-be-vietnam-pro)', 'var(--font-ibm-plex-sans)', 'var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
   			mono: ['var(--font-ibm-plex-mono)', 'var(--font-jetbrains-mono)', 'Fira Code', 'Consolas', 'Monaco', 'monospace'],
   			display: ['var(--font-jetbrains-mono)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
   		},
@@ -252,17 +252,17 @@ const config: Config = {
   			'22': '5.5rem',
   		},
 
-  		// Extended Border Radius - Industrial Precision: SHARP EDGES
+  		// Extended Border Radius - Prismy Rounded
   		borderRadius: {
   			none: '0',
-  			sm: '0',        // Force sharp
-  			DEFAULT: '0',   // Force sharp
-  			md: '0',        // Force sharp
-  			lg: '0',        // Force sharp
-  			xl: '0',        // Force sharp
-  			'2xl': '0',     // Force sharp
-  			'3xl': '0',     // Force sharp
-  			full: '9999px', // Keep for avatars/badges
+  			sm: '4px',
+  			DEFAULT: '6px',
+  			md: '8px',
+  			lg: '12px',
+  			xl: '16px',
+  			'2xl': '20px',
+  			'3xl': '24px',
+  			full: '9999px',
   		},
 
   		// Extended Shadows
@@ -270,7 +270,7 @@ const config: Config = {
   			'xs': '0 1px 2px 0 rgb(0 0 0 / 0.08)',
   			'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.08)',
   			'card-hover': '0 10px 20px -3px rgb(0 0 0 / 0.15), 0 4px 8px -2px rgb(0 0 0 / 0.1)',
-  			'primary': '0 4px 14px 0 rgb(37 99 235 / 0.4)',
+  			'primary': '0 4px 14px 0 rgb(48 164 108 / 0.4)',
   			'success': '0 4px 14px 0 rgb(5 150 105 / 0.4)',
   			'warning': '0 4px 14px 0 rgb(217 119 6 / 0.4)',
   			'danger': '0 4px 14px 0 rgb(220 38 38 / 0.4)',
@@ -447,11 +447,11 @@ const config: Config = {
 
   		// Layout
   		width: {
-  			'sidebar': '240px',
-  			'sidebar-collapsed': '64px',
+  			'sidebar': '220px',
+  			'sidebar-collapsed': '48px',
   		},
   		height: {
-  			'topbar': '64px',
+  			'topbar': '48px',
   		},
   		maxWidth: {
   			'content': '1440px',
@@ -459,7 +459,7 @@ const config: Config = {
   			'9xl': '96rem',
   		},
   		minHeight: {
-  			'screen-content': 'calc(100vh - 64px)',
+  			'screen-content': 'calc(100vh - 48px)',
   		},
 
   		// Safe area insets for mobile devices (notch, home indicator)

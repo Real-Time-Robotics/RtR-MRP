@@ -1,16 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const notificationBodySchema = z.object({
+  type: z.string(),
+  title: z.string(),
+  message: z.string(),
+  priority: z.string().optional(),
+  link: z.string().optional(),
+  metadata: z.any().optional(),
+});
+
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10") || 10, 100);
 
     const notifications = await prisma.notification.findMany({
       where: { userId: session.user.id },
@@ -24,23 +36,29 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
-    console.error("Failed to fetch notifications:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications' });
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const rawBody = await request.json();
+    const parseResult = notificationBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
-
-    const body = await request.json();
-    const { type, title, message, priority, link, metadata } = body;
+    const { type, title, message, priority, link, metadata } = parseResult.data;
 
     const notification = await prisma.notification.create({
       data: {
@@ -56,10 +74,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(notification);
   } catch (error) {
-    console.error("Failed to create notification:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/notifications' });
     return NextResponse.json(
       { error: "Failed to create notification" },
       { status: 500 }
     );
   }
-}
+});

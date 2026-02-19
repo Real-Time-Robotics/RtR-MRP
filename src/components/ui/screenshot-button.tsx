@@ -127,7 +127,7 @@ export function ScreenshotButton({ className, language = 'vi' }: ScreenshotButto
           }}
           disabled={isCapturing}
           className={cn(
-            "h-8 w-8 flex items-center justify-center transition-colors",
+            "h-7 w-7 flex items-center justify-center transition-colors",
             "text-gray-500 dark:text-mrp-text-muted",
             "hover:bg-gray-100 dark:hover:bg-gunmetal",
             "hover:text-info-cyan",
@@ -137,9 +137,9 @@ export function ScreenshotButton({ className, language = 'vi' }: ScreenshotButto
           title={labels.title}
         >
           {isCapturing ? (
-            <Loader2 className="w-4 h-4 animate-spin text-info-cyan" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-info-cyan" />
           ) : (
-            <Camera className="w-4 h-4" />
+            <Camera className="w-3.5 h-3.5" />
           )}
         </button>
 

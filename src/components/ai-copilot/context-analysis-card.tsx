@@ -13,7 +13,7 @@ interface ContextAnalysisCardProps {
     partNumber?: string;
 
     // Generic support
-    selectedItem?: any;
+    selectedItem?: Record<string, unknown>;
     type?: 'part' | 'supplier' | 'customer' | 'order' | 'production' | 'general';
     onClose?: () => void;
 }
@@ -122,28 +122,31 @@ function PartAnalysisView({ partId, partName, partNumber }: { partId: string, pa
 export function ContextAnalysisCard({ partId, partName, partNumber, selectedItem, type, onClose }: ContextAnalysisCardProps) {
     // If explicit type is provided, use it
     if (type === 'supplier' && selectedItem) {
-        return <SupplierAnalysisCard supplier={selectedItem} />;
+        return <SupplierAnalysisCard supplier={selectedItem as unknown as { id: string; name: string; code: string; status?: string }} />;
     }
 
     if (type === 'customer' && selectedItem) {
-        return <CustomerAnalysisCard customer={selectedItem} />;
+        return <CustomerAnalysisCard customer={selectedItem as unknown as { id: string; name: string; code: string; type?: string; creditLimit?: number }} />;
     }
 
     if (type === 'order' && selectedItem) {
+        const orderItem = selectedItem as Record<string, unknown>;
+        const customer = orderItem.customer as { name?: string } | undefined;
+        const lines = orderItem.lines as Array<{ quantity: number; unitPrice: number }> | undefined;
         return (
             <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-neutral-950 shadow-sm overflow-hidden font-mono text-sm">
                 <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 flex justify-between items-center">
-                    <span className="font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">{selectedItem.orderNumber}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">{selectedItem.status}</span>
+                    <span className="font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">{String(orderItem.orderNumber ?? '')}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-200">{String(orderItem.status ?? '')}</span>
                 </div>
                 <div className="p-3">
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-xs text-neutral-500">Customer</span>
-                        <span className="text-xs font-bold">{selectedItem.customer?.name}</span>
+                        <span className="text-xs font-bold">{customer?.name ?? ''}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-neutral-500">Total</span>
-                        <span className="text-sm font-bold">${selectedItem.lines?.reduce((sum: number, line: any) => sum + (line.quantity * line.unitPrice), 0).toFixed(2)}</span>
+                        <span className="text-sm font-bold">${lines?.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0).toFixed(2) ?? '0.00'}</span>
                     </div>
                 </div>
             </div>
@@ -153,32 +156,33 @@ export function ContextAnalysisCard({ partId, partName, partNumber, selectedItem
     // Default fallbacks for Parts (Legacy + New)
     // Heuristic: If it has partNumber or is marked as 'part'
     if (type === 'part' || partId || (selectedItem && selectedItem.partNumber)) {
-        const id = partId || selectedItem?.id;
-        const number = partNumber || selectedItem?.partNumber;
-        const name = partName || selectedItem?.name;
+        const id = partId || (selectedItem?.id as string | undefined);
+        const number = partNumber || (selectedItem?.partNumber as string | undefined);
+        const name = partName || (selectedItem?.name as string | undefined);
 
         if (id) {
-            return <PartAnalysisView partId={id} partNumber={number} partName={name} />;
+            return <PartAnalysisView partId={id} partNumber={number ?? ''} partName={name ?? ''} />;
         }
     }
 
     // Fallback for unknown selection
     // Generic/production fallback
     if (type === 'production' && selectedItem) {
+        const prodItem = selectedItem as Record<string, unknown>;
         return (
             <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-neutral-950 shadow-sm overflow-hidden font-mono text-sm">
                 <div className="px-3 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-purple-50 dark:bg-purple-900/20 flex justify-between items-center">
                     <span className="font-bold text-purple-900 dark:text-purple-100 tracking-tight">Work Order</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-white dark:bg-black">{selectedItem.woNumber || 'ID: ' + selectedItem.id?.substring(0, 6)}</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border bg-white dark:bg-black">{String(prodItem.woNumber ?? '') || 'ID: ' + String(prodItem.id ?? '').substring(0, 6)}</span>
                 </div>
                 <div className="p-3">
                     <div className="flex justify-between items-center mb-2">
                         <span className="text-xs text-neutral-500">Status</span>
-                        <span className="text-xs font-bold">{selectedItem.status}</span>
+                        <span className="text-xs font-bold">{String(prodItem.status ?? '')}</span>
                     </div>
                     <div className="flex justify-between items-center">
                         <span className="text-xs text-neutral-500">Qty</span>
-                        <span className="text-sm font-bold">{selectedItem.quantity}</span>
+                        <span className="text-sm font-bold">{String(prodItem.quantity ?? '')}</span>
                     </div>
                 </div>
             </div>
@@ -190,7 +194,7 @@ export function ContextAnalysisCard({ partId, partName, partNumber, selectedItem
             <div className="p-3 border border-dashed border-neutral-300 rounded-lg text-center">
                 <p className="text-xs text-neutral-500">Analysis Not Available</p>
                 <p className="text-[10px] text-neutral-400 mt-1 font-mono">Type: {type || 'Unknown'}</p>
-                <p className="text-[10px] text-neutral-400 font-mono">ID: {selectedItem.id}</p>
+                <p className="text-[10px] text-neutral-400 font-mono">ID: {String(selectedItem.id ?? '')}</p>
             </div>
         );
     }

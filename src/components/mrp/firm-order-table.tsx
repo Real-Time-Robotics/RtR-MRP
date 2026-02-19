@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -120,13 +119,13 @@ export function FirmOrderTable({
       key: 'orderType',
       header: 'Type',
       width: '80px',
-      render: (value) => <Badge variant="outline">{value}</Badge>,
+      cellClassName: () => 'bg-slate-50 dark:bg-slate-900/30',
+      render: (value) => value,
     },
     {
       key: 'quantity',
       header: 'Quantity',
       width: '80px',
-      align: 'right',
       sortable: true,
     },
     {
@@ -140,25 +139,19 @@ export function FirmOrderTable({
       key: 'status',
       header: 'Status',
       width: '90px',
-      render: (value) => (
-        <Badge
-          className={
-            value === "PLANNED"
-              ? "bg-blue-100 text-blue-800"
-              : value === "FIRM"
-              ? "bg-amber-100 text-amber-800"
-              : "bg-gray-100 text-gray-800"
-          }
-        >
-          {value}
-        </Badge>
-      ),
+      cellClassName: (row) => {
+        switch (row.status) {
+          case "PLANNED": return "bg-blue-50 text-blue-800";
+          case "FIRM": return "bg-amber-50 text-amber-800";
+          default: return "bg-gray-50 text-gray-800";
+        }
+      },
+      render: (value) => value,
     },
     {
       key: 'isFirm',
       header: 'Firm',
       width: '60px',
-      align: 'center',
       render: (value, row) => (
         onFirm ? (
           <Button

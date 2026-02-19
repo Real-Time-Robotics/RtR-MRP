@@ -4,8 +4,12 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { logger } from '@/lib/logger';
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 
 // =============================================================================
 // CONFIGURATION
@@ -135,23 +139,37 @@ const DEMO_CUSTOMERS = [
 const DEMO_WAREHOUSES = [
   {
     code: 'WH-MAIN',
-    name: 'Kho chính',
+    name: 'Main Warehouse',
     location: 'TP.HCM',
-    type: 'main',
+    type: 'MAIN',
     status: 'active',
   },
   {
-    code: 'WH-RAW',
-    name: 'Kho nguyên liệu',
-    location: 'Bình Dương',
-    type: 'raw_material',
+    code: 'WH-RECEIVING',
+    name: 'Receiving Area',
+    location: 'Khu nhận hàng - Chờ kiểm tra QC',
+    type: 'RECEIVING',
     status: 'active',
   },
   {
-    code: 'WH-FG',
-    name: 'Kho thành phẩm',
-    location: 'TP.HCM',
-    type: 'finished_goods',
+    code: 'WH-HOLD',
+    name: 'Hold Area',
+    location: 'Khu chờ xử lý - Hàng conditional',
+    type: 'HOLD',
+    status: 'active',
+  },
+  {
+    code: 'WH-QUARANTINE',
+    name: 'Quarantine',
+    location: 'Khu cách ly - Hàng lỗi chờ xử lý',
+    type: 'QUARANTINE',
+    status: 'active',
+  },
+  {
+    code: 'WH-SCRAP',
+    name: 'Scrap Area',
+    location: 'Khu phế liệu - Hàng hủy chờ xử lý',
+    type: 'SCRAP',
     status: 'active',
   },
 ];
@@ -494,7 +512,7 @@ async function seedInventory(): Promise<SeedResult> {
       entity: 'Inventory',
       action: 'error',
       count: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Failed to seed inventory data',
     };
   }
 
@@ -510,7 +528,11 @@ async function seedInventory(): Promise<SeedResult> {
 // API HANDLER
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
@@ -525,8 +547,20 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      const body = await request.json();
-      options = { ...options, ...body };
+      const seedBodySchema = z.object({
+        users: z.boolean().optional(),
+        suppliers: z.boolean().optional(),
+        customers: z.boolean().optional(),
+        warehouses: z.boolean().optional(),
+        parts: z.boolean().optional(),
+        inventory: z.boolean().optional(),
+      });
+
+      const rawBody = await request.json();
+      const parseResult = seedBodySchema.safeParse(rawBody);
+      if (parseResult.success) {
+        options = { ...options, ...parseResult.data };
+      }
     } catch {
       // Use default options if no body
     }
@@ -576,29 +610,28 @@ export async function POST(request: NextRequest) {
         hasErrors,
       },
       results,
-      demoCredentials: {
-        admin: { email: 'admin@demo.rtr-mrp.com', password: 'Admin@Demo2026!' },
-        manager: { email: 'manager@demo.rtr-mrp.com', password: 'Manager@Demo2026!' },
-        operator: { email: 'operator@demo.rtr-mrp.com', password: 'Operator@Demo2026!' },
-        viewer: { email: 'viewer@demo.rtr-mrp.com', password: 'Viewer@Demo2026!' },
-      },
+      demoAccounts: [
+        'admin@demo.rtr-mrp.com',
+        'manager@demo.rtr-mrp.com',
+        'operator@demo.rtr-mrp.com',
+        'viewer@demo.rtr-mrp.com',
+      ],
     });
   } catch (error) {
-    console.error('Demo seed error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/demo/seed' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to seed demo data',
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
     );
   }
-}
+});
 
-// GET method for simple trigger (no body needed)
-export async function GET() {
-  // Redirect to POST with default options
-  const response = await POST(new NextRequest('http://localhost/api/demo/seed', { method: 'POST' }));
-  return response;
-}
+// GET method for simple trigger (no body needed) - also requires auth
+export const GET = withAuth(async (request, context, session) => {
+  // Delegate to POST handler logic by calling the wrapped handler
+  return POST(request, context);
+});

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
 import { WorkCenterCard } from "@/components/production/work-center-card";
+import { clientLogger } from '@/lib/client-logger';
 
 interface WorkCenter {
   id: string;
@@ -50,7 +51,7 @@ export default function WorkCentersPage() {
         setWorkCenters(data);
       }
     } catch (error) {
-      console.error("Failed to fetch work centers:", error);
+      clientLogger.error("Failed to fetch work centers:", error);
     } finally {
       setLoading(false);
     }

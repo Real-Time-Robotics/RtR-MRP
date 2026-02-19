@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { updateWorkOrderStatus } from "@/lib/mrp-engine";
 import { withAuth, type AuthUser } from "@/lib/auth/middleware";
 import { handleError, NotFoundError, paginatedResponse, successResponse } from "@/lib/error-handler";
 import { logger } from "@/lib/logger";
 import { WorkOrderUpdateSchema, validateRequest } from "@/lib/validation/schemas";
+import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 // GET - Get work order details (requires authentication + permission)
 export const GET = withAuth(
@@ -12,6 +15,10 @@ export const GET = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
     try {
       const { id } = await params;
 
@@ -27,6 +34,7 @@ export const GET = withAuth(
           allocations: {
             include: { part: true },
           },
+          productionReceipt: true,
         },
       });
 
@@ -34,9 +42,30 @@ export const GET = withAuth(
         throw new NotFoundError("Work order", id);
       }
 
+      // Backward-compat: if no ProductionReceipt but has legacy LotTransaction PRODUCED
+      let responseData: Record<string, unknown> = { ...workOrder };
+      if (!workOrder.productionReceipt) {
+        const legacyTx = await prisma.lotTransaction.findFirst({
+          where: { transactionType: "PRODUCED", workOrderId: id },
+        });
+        if (legacyTx) {
+          responseData.productionReceipt = {
+            id: legacyTx.id,
+            receiptNumber: `LEGACY-${legacyTx.lotNumber}`,
+            quantity: legacyTx.quantity,
+            lotNumber: legacyTx.lotNumber,
+            status: "CONFIRMED",
+            requestedAt: legacyTx.createdAt,
+            confirmedAt: legacyTx.createdAt,
+            rejectedAt: null,
+            rejectedReason: null,
+          };
+        }
+      }
+
       logger.audit("read", "workOrder", id, { userId: user.id });
 
-      return successResponse(workOrder);
+      return successResponse(responseData);
     } catch (error) {
       return handleError(error);
     }
@@ -50,6 +79,10 @@ export const PATCH = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rlResult = await checkWriteEndpointLimit(request);
+    if (rlResult) return rlResult;
+
     try {
       const { id } = await params;
       const body = await request.json();
@@ -60,18 +93,24 @@ export const PATCH = withAuth(
         return validation.error;
       }
 
-      const { status, completedQty, ...updateData } = validation.data;
+      const { status, completedQty, scrapQty, plannedStart, plannedEnd, ...updateData } = validation.data;
 
       logger.info("Updating work order", { workOrderId: id, userId: user.id, status });
 
       let workOrder;
 
       if (status) {
-        workOrder = await updateWorkOrderStatus(id, status, completedQty);
+        workOrder = await updateWorkOrderStatus(id, status, completedQty, scrapQty);
       } else {
+        const data: Prisma.WorkOrderUpdateInput = { ...updateData };
+        if (completedQty !== undefined) data.completedQty = completedQty;
+        if (scrapQty !== undefined) data.scrapQty = scrapQty;
+        if (plannedStart !== undefined) data.plannedStart = plannedStart ? new Date(plannedStart) : null;
+        if (plannedEnd !== undefined) data.plannedEnd = plannedEnd ? new Date(plannedEnd) : null;
+
         workOrder = await prisma.workOrder.update({
           where: { id },
-          data: updateData,
+          data,
           include: {
             product: true,
             allocations: { include: { part: true } },
@@ -80,6 +119,13 @@ export const PATCH = withAuth(
       }
 
       logger.audit("update", "workOrder", id, { userId: user.id, status });
+
+      // Audit trail
+      if (status) {
+        auditStatusChange(request, user, "WorkOrder", id, "previous", status);
+      } else {
+        auditUpdate(request, user, "WorkOrder", id, {} as Record<string, unknown>, updateData as Record<string, unknown>);
+      }
 
       return successResponse(workOrder);
     } catch (error) {
@@ -95,6 +141,10 @@ export const DELETE = withAuth(
     request: NextRequest,
     { params, user }: { params: { id: string }; user: AuthUser }
   ) => {
+    // Rate limiting
+    const rlResult2 = await checkWriteEndpointLimit(request);
+    if (rlResult2) return rlResult2;
+
     try {
       const { id } = await params;
 
@@ -117,6 +167,7 @@ export const DELETE = withAuth(
       await prisma.workOrder.delete({ where: { id } });
 
       logger.audit("delete", "workOrder", id, { userId: user.id });
+      auditDelete(request, user, "WorkOrder", id, { woNumber: existing.woNumber });
 
       return NextResponse.json({ success: true, message: "Work order deleted" });
     } catch (error) {

@@ -33,13 +33,14 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Building2, MapPin, User, Mail, Phone, Clock, Star } from 'lucide-react';
-import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   ChangeImpactDialog,
   useChangeImpact,
   detectChanges,
 } from '@/components/change-impact';
 import { FieldChange } from '@/lib/change-impact/types';
+import { useMutation } from '@/hooks/use-mutation';
 
 // =============================================================================
 // TYPES & VALIDATION
@@ -139,26 +140,12 @@ export function SupplierForm({
   supplier,
   onSuccess,
 }: SupplierFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const isEditing = !!supplier;
 
   // Store original values for change impact detection
   const originalValuesRef = useRef<Record<string, unknown> | null>(null);
   const [pendingSubmitData, setPendingSubmitData] = useState<SupplierFormData | null>(null);
-
-  // Change Impact hook
-  const changeImpact = useChangeImpact({
-    onSuccess: () => {
-      if (pendingSubmitData) {
-        performSave(pendingSubmitData);
-      }
-    },
-    onError: () => {
-      if (pendingSubmitData) {
-        performSave(pendingSubmitData);
-      }
-    },
-  });
 
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -176,6 +163,37 @@ export function SupplierForm({
       rating: null,
       category: '',
       status: 'active',
+    },
+  });
+
+  const mutation = useMutation<SupplierFormData, Supplier>({
+    url: isEditing ? `/api/suppliers/${supplier!.id}` : '/api/suppliers',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/suppliers'],
+    successMessage: isEditing ? t('supplierForm.updateSuccess') : t('supplierForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      contactName: data.contactName || null,
+      contactEmail: data.contactEmail || null,
+      contactPhone: data.contactPhone || null,
+      address: data.address || null,
+      category: data.category || null,
+    }),
+  });
+
+  // Change Impact hook
+  const changeImpact = useChangeImpact({
+    onSuccess: () => {
+      if (pendingSubmitData) {
+        mutation.mutate(pendingSubmitData);
+      }
+    },
+    onError: () => {
+      if (pendingSubmitData) {
+        mutation.mutate(pendingSubmitData);
+      }
     },
   });
 
@@ -230,80 +248,24 @@ export function SupplierForm({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, supplier, form]);
 
-  // Perform the actual save operation
-  const performSave = async (data: SupplierFormData) => {
-    setLoading(true);
-
-    try {
-      // Clean up empty strings to null
-      const cleanData = {
-        ...data,
-        contactName: data.contactName || null,
-        contactEmail: data.contactEmail || null,
-        contactPhone: data.contactPhone || null,
-        address: data.address || null,
-        category: data.category || null,
-      };
-
-      const url = isEditing ? `/api/suppliers/${supplier!.id}` : '/api/suppliers';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          // Validation errors
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof SupplierFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      }
-
-      toast.success(isEditing ? 'Cập nhật nhà cung cấp thành công!' : 'Tạo nhà cung cấp thành công!');
-      onSuccess?.(result.data);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save supplier:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
-    } finally {
-      setLoading(false);
-      setPendingSubmitData(null);
-    }
-  };
-
   // Handle submit with change impact check
   const onSubmit = async (data: SupplierFormData) => {
-    // For new suppliers, just save directly
     if (!isEditing || !supplier?.id || !originalValuesRef.current) {
-      performSave(data);
+      mutation.mutate(data);
       return;
     }
 
-    // Detect changes in impactable fields
     const changes = detectChanges(
       originalValuesRef.current,
       data as unknown as Record<string, unknown>,
       SUPPLIER_IMPACT_FIELDS
     );
 
-    // If no impactable fields changed, save directly
     if (changes.length === 0) {
-      performSave(data);
+      mutation.mutate(data);
       return;
     }
 
-    // Store pending data and check impact
     setPendingSubmitData(data);
     await changeImpact.checkImpact('supplier', supplier.id, changes);
   };
@@ -314,12 +276,12 @@ export function SupplierForm({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
+            {isEditing ? t('supplierForm.editTitle') : t('supplierForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Cập nhật thông tin nhà cung cấp'
-              : 'Điền thông tin để tạo nhà cung cấp mới'}
+              ? t('supplierForm.editDesc')
+              : t('supplierForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -328,7 +290,7 @@ export function SupplierForm({
             {/* Basic Info Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Thông tin cơ bản
+                {t('supplierForm.basicInfo')}
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
@@ -337,7 +299,7 @@ export function SupplierForm({
                   name="code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Mã nhà cung cấp *</FormLabel>
+                      <FormLabel>{t('supplierForm.code')}</FormLabel>
                       <FormControl>
                         <Input placeholder="SUP-001" {...field} disabled={isEditing} />
                       </FormControl>
@@ -351,7 +313,7 @@ export function SupplierForm({
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Trạng thái</FormLabel>
+                      <FormLabel>{t('form.status')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -359,9 +321,9 @@ export function SupplierForm({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">Hoạt động</SelectItem>
-                          <SelectItem value="inactive">Ngưng hoạt động</SelectItem>
-                          <SelectItem value="pending">Chờ duyệt</SelectItem>
+                          <SelectItem value="active">{t('status.active')}</SelectItem>
+                          <SelectItem value="inactive">{t('status.inactiveShort')}</SelectItem>
+                          <SelectItem value="pending">{t('status.approval')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -375,7 +337,7 @@ export function SupplierForm({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tên nhà cung cấp *</FormLabel>
+                    <FormLabel>{t('supplierForm.name')}</FormLabel>
                     <FormControl>
                       <Input placeholder="Công ty TNHH ABC" {...field} />
                     </FormControl>
@@ -390,7 +352,7 @@ export function SupplierForm({
                   name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Quốc gia *</FormLabel>
+                      <FormLabel>{t('supplierForm.country')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -415,14 +377,14 @@ export function SupplierForm({
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Danh mục</FormLabel>
+                      <FormLabel>{t('supplierForm.category')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn danh mục" />
+                            <SelectValue placeholder={t('supplierForm.selectCategory')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -443,7 +405,7 @@ export function SupplierForm({
             {/* Contact Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Thông tin liên hệ
+                {t('supplierForm.contactInfo')}
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
@@ -452,7 +414,7 @@ export function SupplierForm({
                   name="contactName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Người liên hệ</FormLabel>
+                      <FormLabel>{t('supplierForm.contactName')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -469,7 +431,7 @@ export function SupplierForm({
                   name="contactPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Số điện thoại</FormLabel>
+                      <FormLabel>{t('supplierForm.contactPhone')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -487,7 +449,7 @@ export function SupplierForm({
                 name="contactEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('supplierForm.contactEmail')}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -510,7 +472,7 @@ export function SupplierForm({
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Địa chỉ</FormLabel>
+                    <FormLabel>{t('supplierForm.address')}</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="123 Đường ABC, Quận XYZ, TP.HCM"
@@ -527,7 +489,7 @@ export function SupplierForm({
             {/* Business Terms Section */}
             <div className="space-y-4">
               <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-                Điều khoản kinh doanh
+                {t('supplierForm.businessTerms')}
               </h4>
 
               <div className="grid grid-cols-3 gap-4">
@@ -536,14 +498,14 @@ export function SupplierForm({
                   name="paymentTerms"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Điều khoản thanh toán</FormLabel>
+                      <FormLabel>{t('supplierForm.paymentTerms')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value || ''}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn" />
+                            <SelectValue placeholder={t('form.selectPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -564,7 +526,7 @@ export function SupplierForm({
                   name="leadTimeDays"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lead Time (ngày)</FormLabel>
+                      <FormLabel>{t('supplierForm.leadTimeDays')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -586,7 +548,7 @@ export function SupplierForm({
                   name="rating"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Đánh giá (0-5)</FormLabel>
+                      <FormLabel>{t('supplierForm.rating')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Star className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -616,9 +578,9 @@ export function SupplierForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">NDAA Compliant</FormLabel>
+                      <FormLabel className="text-base">{t('supplierForm.ndaaCompliant')}</FormLabel>
                       <FormDescription>
-                        Nhà cung cấp tuân thủ quy định NDAA (Section 889)
+                        {t('supplierForm.ndaaDesc')}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -637,13 +599,13 @@ export function SupplierForm({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={loading || changeImpact.loading}
+                disabled={mutation.isLoading || changeImpact.loading}
               >
-                Hủy
+                {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading || changeImpact.loading}>
-                {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo nhà cung cấp'}
+              <Button type="submit" disabled={mutation.isLoading || changeImpact.loading}>
+                {(mutation.isLoading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditing ? t('form.save') : t('supplierForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -680,56 +642,36 @@ export function DeleteSupplierDialog({
   supplier,
   onSuccess,
 }: DeleteSupplierDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
-  const handleDelete = async () => {
-    if (!supplier) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/suppliers/${supplier.id}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      }
-
-      toast.success('Đã xóa nhà cung cấp thành công!');
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete supplier:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/suppliers/${supplier?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/suppliers'],
+    successMessage: t('supplierForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa nhà cung cấp{' '}
-            <strong>{supplier?.name}</strong> ({supplier?.code})? Hành động này
-            không thể hoàn tác.
+            {t('supplierForm.deleteConfirmDesc', { name: supplier?.name || '', code: supplier?.code || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={loading}
+            disabled={deleteMutation.isLoading}
           >
-            Hủy
+            {t('form.cancel')}
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+          <Button variant="destructive" onClick={() => supplier && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

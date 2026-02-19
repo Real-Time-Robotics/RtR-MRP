@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MOBILE RECEIVING PAGE
@@ -60,7 +61,7 @@ export default function MobileReceivingPage() {
           setPurchaseOrders(data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch POs:', err);
+        clientLogger.error('Failed to fetch purchase orders', err);
       } finally {
         setIsLoading(false);
       }
@@ -306,6 +307,7 @@ export default function MobileReceivingPage() {
                     type="number"
                     value={receiveQty}
                     onChange={(e) => setReceiveQty(Math.min(selectedLine.qtyRemaining, Math.max(1, parseInt(e.target.value) || 1)))}
+                    aria-label="Số lượng nhận hàng"
                     className="w-24 h-14 text-center text-2xl font-bold bg-gray-100 dark:bg-gray-700 rounded-xl border-0"
                   />
                   <button
@@ -330,6 +332,7 @@ export default function MobileReceivingPage() {
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value.toUpperCase())}
+                  aria-label="Vị trí nhập kho"
                   className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-xl border-0 font-mono"
                 />
               </div>

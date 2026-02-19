@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - PROMETHEUS METRICS
 // Application metrics for monitoring
@@ -299,21 +298,35 @@ export async function getMetricsJson(): Promise<object> {
 /**
  * Express/Next.js middleware for metrics
  */
+/** Express-style request/response types for middleware */
+interface MiddlewareRequest {
+  method: string;
+  url: string;
+  path?: string;
+  route?: { path?: string };
+  headers: Record<string, string | string[] | undefined>;
+}
+
+interface MiddlewareResponse {
+  statusCode: number;
+  on: (event: string, listener: () => void) => void;
+}
+
 export function metricsMiddleware() {
-  return async (req: any, res: any, next: any) => {
+  return async (req: MiddlewareRequest, res: MiddlewareResponse, next: () => void) => {
     const start = Date.now();
-    
+
     httpActiveConnections.inc();
-    
+
     res.on('finish', () => {
       const duration = Date.now() - start;
       const path = req.route?.path || req.path || req.url;
-      const tenant = req.headers['x-tenant-id'] || 'unknown';
-      
+      const tenant = (req.headers['x-tenant-id'] as string | undefined) || 'unknown';
+
       measureHttpRequest(req.method, path, res.statusCode, duration, tenant);
       httpActiveConnections.dec();
     });
-    
+
     next();
   };
 }

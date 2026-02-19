@@ -4,9 +4,22 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
 import { prisma } from '@/lib/prisma';
+
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+const executePostSchema = z.object({
+  queueItemId: z.string().min(1, 'queueItemId là bắt buộc'),
+  createAsDraft: z.boolean().optional().default(false),
+});
+
+const bulkExecuteSchema = z.object({
+  queueItemIds: z.array(z.string()).min(1, 'queueItemIds array is required'),
+  createAsDraft: z.boolean().optional(),
+});
 
 interface ExecutionResult {
   queueItemId: string;
@@ -16,22 +29,31 @@ interface ExecutionResult {
 }
 
 async function createPurchaseOrder(
-  suggestion: any,
+  suggestion: Record<string, any>,
   userId: string
 ): Promise<string> {
+  const supplierId = String(suggestion.supplierId || '');
+  const partId = String(suggestion.partId || '');
+  const quantity = Number(suggestion.quantity || 0);
+  const unitPrice = Number(suggestion.unitPrice || 0);
+  const totalAmount = Number(suggestion.totalAmount || 0);
+  const expectedDeliveryDate = suggestion.expectedDeliveryDate as string | undefined;
+  const partNumber = String(suggestion.partNumber || '');
+  const reason = String(suggestion.reason || '');
+
   // Create the actual Purchase Order in the database
   const po = await prisma.purchaseOrder.create({
     data: {
       poNumber: `PO-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-      supplierId: suggestion.supplierId,
+      supplierId,
       status: 'draft',
       orderDate: new Date(),
-      expectedDate: suggestion.expectedDeliveryDate
-        ? new Date(suggestion.expectedDeliveryDate)
+      expectedDate: expectedDeliveryDate
+        ? new Date(expectedDeliveryDate)
         : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
-      totalAmount: suggestion.totalAmount,
+      totalAmount,
       currency: 'VND',
-      notes: `Auto-generated PO for ${suggestion.partNumber}. ${suggestion.reason || ''}`,
+      notes: `Auto-generated PO for ${partNumber || 'unknown'}. ${reason || ''}`,
     },
   });
 
@@ -40,10 +62,10 @@ async function createPurchaseOrder(
     data: {
       poId: po.id,
       lineNumber: 1,
-      partId: suggestion.partId,
-      quantity: suggestion.quantity,
-      unitPrice: suggestion.unitPrice,
-      lineTotal: suggestion.totalAmount,
+      partId,
+      quantity,
+      unitPrice,
+      lineTotal: totalAmount,
       status: 'pending',
     },
   });
@@ -51,22 +73,33 @@ async function createPurchaseOrder(
   return po.id;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemId, createAsDraft = false } = body;
-
-    if (!queueItemId) {
+  try {
+const body = await request.json();
+    const parsed = executePostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'queueItemId is required' },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { queueItemId, createAsDraft } = parsed.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -117,7 +150,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Execute API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/execute' });
     return NextResponse.json(
       {
         error: 'Failed to execute PO suggestion',
@@ -126,28 +159,35 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { queueItemIds, createAsDraft = false } = body;
-
-    if (
-      !queueItemIds ||
-      !Array.isArray(queueItemIds) ||
-      queueItemIds.length === 0
-    ) {
+  try {
+const rawBody = await request.json();
+    const parseResult = bulkExecuteSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'queueItemIds array is required' },
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { queueItemIds, createAsDraft = false } = parseResult.data;
 
     const userId = session.user?.id || 'unknown';
     const userName = session.user?.name || 'Unknown User';
@@ -221,7 +261,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Auto-PO Bulk Execute API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/execute' });
     return NextResponse.json(
       {
         error: 'Failed to bulk execute PO suggestions',
@@ -230,4 +270,4 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

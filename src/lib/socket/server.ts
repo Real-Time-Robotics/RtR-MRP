@@ -1,5 +1,6 @@
 import { Server as HTTPServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
+import { logger } from '../logger';
 import type {
   ServerToClientEvents,
   ClientToServerEvents,
@@ -41,7 +42,7 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
   );
 
   io.on('connection', (socket: Socket<ClientToServerEvents, ServerToClientEvents, object, SocketData>) => {
-    console.log('[Socket] Client connected:', socket.id);
+    logger.info('[Socket] Client connected', { socketId: socket.id });
 
     // Get user info from auth handshake
     const userId = socket.handshake.auth.userId as string;
@@ -66,31 +67,31 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
       // Send current online users to this socket
       socket.emit('users:online', getOnlineUserIds());
 
-      console.log(`[Socket] User ${userId} is now online (${onlineUsers.get(userId)!.size} connections)`);
+      logger.info(`[Socket] User ${userId} is now online`, { connections: onlineUsers.get(userId)!.size });
     }
 
     // Room management
     socket.on('room:join', (roomId) => {
       socket.join(roomId);
-      console.log(`[Socket] ${socket.id} joined room: ${roomId}`);
+      logger.info(`[Socket] ${socket.id} joined room: ${roomId}`);
     });
 
     socket.on('room:leave', (roomId) => {
       socket.leave(roomId);
-      console.log(`[Socket] ${socket.id} left room: ${roomId}`);
+      logger.info(`[Socket] ${socket.id} left room: ${roomId}`);
     });
 
     // Thread management
     socket.on('thread:join', (threadId) => {
       const roomName = `thread:${threadId}`;
       socket.join(roomName);
-      console.log(`[Socket] ${socket.id} joined thread: ${threadId}`);
+      logger.info(`[Socket] ${socket.id} joined thread: ${threadId}`);
     });
 
     socket.on('thread:leave', (threadId) => {
       const roomName = `thread:${threadId}`;
       socket.leave(roomName);
-      console.log(`[Socket] ${socket.id} left thread: ${threadId}`);
+      logger.info(`[Socket] ${socket.id} left thread: ${threadId}`);
     });
 
     // Typing indicators
@@ -120,7 +121,7 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
 
     // Handle disconnect
     socket.on('disconnect', (reason) => {
-      console.log(`[Socket] Client disconnected: ${socket.id}, reason: ${reason}`);
+      logger.info(`[Socket] Client disconnected: ${socket.id}, reason: ${reason}`);
 
       if (socket.data.userId) {
         const userSockets = onlineUsers.get(socket.data.userId);
@@ -131,14 +132,14 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
           if (userSockets.size === 0) {
             onlineUsers.delete(socket.data.userId);
             socket.broadcast.emit('user:offline', socket.data.userId);
-            console.log(`[Socket] User ${socket.data.userId} is now offline`);
+            logger.info(`[Socket] User ${socket.data.userId} is now offline`);
           }
         }
       }
     });
   });
 
-  console.log('[Socket] Socket.io server initialized');
+  logger.info('[Socket] Socket.io server initialized');
   return io;
 }
 

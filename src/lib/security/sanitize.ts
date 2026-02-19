@@ -208,7 +208,7 @@ export function sanitizeFilename(filename: string): string {
 /**
  * Safe template literal function
  */
-export function safeTemplate(strings: TemplateStringsArray, ...values: any[]): string {
+export function safeTemplate(strings: TemplateStringsArray, ...values: unknown[]): string {
   return strings.reduce((result, str, i) => {
     const value = values[i - 1];
     const sanitizedValue = typeof value === 'string' ? escapeHtml(value) : value;

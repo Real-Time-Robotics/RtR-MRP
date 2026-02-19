@@ -14,7 +14,10 @@ import { calculateSupplierImpact } from '@/lib/change-impact/calculators/supplie
 import { calculatePurchaseOrderImpact } from '@/lib/change-impact/calculators/purchase-order-impact';
 import { calculateSalesOrderImpact } from '@/lib/change-impact/calculators/sales-order-impact';
 import { calculateCustomerImpact } from '@/lib/change-impact/calculators/customer-impact';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Request validation schema
 const fieldChangeSchema = z.object({
   field: z.string(),
@@ -42,7 +45,11 @@ const changeImpactRequestSchema = z.object({
   changes: z.array(fieldChangeSchema).min(1),
 });
 
-export async function POST(request: NextRequest): Promise<NextResponse<ChangeImpactResponse>> {
+export const POST = withAuth(async (request: NextRequest, context, session): Promise<Response> => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const body = await request.json();
 
@@ -100,13 +107,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ChangeImp
       data: result,
     });
   } catch (error) {
-    console.error('Change impact calculation error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/change-impact' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to calculate change impact',
+        error: 'Failed to calculate change impact',
       },
       { status: 500 }
     );
   }
-}
+});

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Card,
   CardContent,
@@ -42,6 +43,50 @@ import {
 // TYPES
 // =============================================================================
 
+interface RiskFactor {
+  name: string;
+  impact: string;
+  description: string;
+}
+
+interface RiskFactorCategory {
+  score: number;
+  weight: number;
+  factors: RiskFactor[];
+}
+
+interface ScorecardMetric {
+  name: string;
+  value: number;
+  unit: string;
+  status: string;
+}
+
+interface ScorecardDimension {
+  score: number;
+  grade: string;
+  trend: string;
+  metrics: ScorecardMetric[];
+}
+
+interface RiskRecommendation {
+  priority: string;
+  category: string;
+  action: string;
+  expectedImpact: string;
+  estimatedCost: string;
+  deadline: string;
+}
+
+interface EarlyWarningSignal {
+  severity: string;
+  type: string;
+  description: string;
+  confidence: number;
+  indicators: string[];
+  timeframe: string;
+}
+
 interface SupplierData {
   supplierId: string;
   supplierCode: string;
@@ -52,10 +97,10 @@ interface SupplierData {
     overallRiskScore: number;
     riskLevel: string;
     riskFactors: {
-      performance: { score: number; weight: number; factors: any[] };
-      dependency: { score: number; weight: number; factors: any[] };
-      external: { score: number; weight: number; factors: any[] };
-      financial: { score: number; weight: number; factors: any[] };
+      performance: RiskFactorCategory;
+      dependency: RiskFactorCategory;
+      external: RiskFactorCategory;
+      financial: RiskFactorCategory;
     };
     trend: { direction: string; changePercent: number; previousScore: number | null };
     historicalRisk: { period: string; riskScore: number; riskLevel: string }[];
@@ -65,16 +110,16 @@ interface SupplierData {
       hasLongTermContract: boolean;
       mitigationScore: number;
     };
-    recommendations: any[];
+    recommendations: RiskRecommendation[];
   };
   scorecard?: {
     overallScore: number;
     overallGrade: string;
     dimensions: {
-      delivery: { score: number; grade: string; trend: string; metrics: any[] };
-      quality: { score: number; grade: string; trend: string; metrics: any[] };
-      cost: { score: number; grade: string; trend: string; metrics: any[] };
-      responsiveness: { score: number; grade: string; trend: string; metrics: any[] };
+      delivery: ScorecardDimension;
+      quality: ScorecardDimension;
+      cost: ScorecardDimension;
+      responsiveness: ScorecardDimension;
     };
     trend: { direction: string; changePercent: number };
     benchmarkComparison: {
@@ -87,7 +132,7 @@ interface SupplierData {
     weaknesses: string[];
   };
   warnings?: {
-    earlyWarningSignals: any[];
+    earlyWarningSignals: EarlyWarningSignal[];
     dependencyInfo: {
       totalPartsSupplied: number;
       criticalPartsSupplied: number;
@@ -98,11 +143,25 @@ interface SupplierData {
   };
 }
 
+interface StrategicRecommendation {
+  priority: string;
+  title: string;
+  description: string;
+  rationale?: string;
+}
+
+interface DevelopmentPlan {
+  goals: string[];
+  actions: string[];
+  timeline: string;
+  expectedOutcome: string;
+}
+
 interface AIInsight {
   executiveSummary: string;
   performanceAnalysis: string;
   riskAssessment: string;
-  strategicRecommendations: any[];
+  strategicRecommendations: StrategicRecommendation[];
   predictedPerformance: {
     nextQuarterScore: number;
     trend: string;
@@ -110,7 +169,7 @@ interface AIInsight {
     risks: string[];
     opportunities: string[];
   };
-  developmentPlan: any;
+  developmentPlan: DevelopmentPlan;
   confidenceLevel: string;
 }
 
@@ -128,7 +187,9 @@ const getRiskColor = (level: string) => {
   }
 };
 
-const getRiskBadgeVariant = (level: string) => {
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+const getRiskBadgeVariant = (level: string): BadgeVariant => {
   switch (level?.toLowerCase()) {
     case 'low': return 'default';
     case 'medium': return 'secondary';
@@ -219,7 +280,7 @@ export default function SupplierRiskDetail({
         setAIInsight(result.data);
       }
     } catch (err) {
-      console.error('Failed to fetch AI insight:', err);
+      clientLogger.error('Failed to fetch AI insight for supplier', err);
     } finally {
       setInsightLoading(false);
     }
@@ -312,7 +373,7 @@ export default function SupplierRiskDetail({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.riskAssessment.overallRiskScore}</div>
-            <Badge variant={getRiskBadgeVariant(data.riskAssessment.riskLevel) as any} className="mt-1">
+            <Badge variant={getRiskBadgeVariant(data.riskAssessment.riskLevel)} className="mt-1">
               {data.riskAssessment.riskLevel.toUpperCase()}
             </Badge>
             <div className="flex items-center gap-2 mt-2">
@@ -484,7 +545,7 @@ export default function SupplierRiskDetail({
                     </div>
                     <Progress value={dim.score} className="h-2 mb-4" />
                     <div className="space-y-2">
-                      {dim.metrics.slice(0, 3).map((metric: any, i: number) => (
+                      {dim.metrics.slice(0, 3).map((metric: ScorecardMetric, i: number) => (
                         <div key={i} className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">{metric.name}</span>
                           <span className={`font-medium ${getMetricStatusColor(metric.status)}`}>
@@ -579,14 +640,14 @@ export default function SupplierRiskDetail({
                 <CardContent>
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-3xl font-bold">{factor.score}</div>
-                    <Badge variant={getRiskBadgeVariant(factor.score > 50 ? 'high' : factor.score > 25 ? 'medium' : 'low') as any}>
+                    <Badge variant={getRiskBadgeVariant(factor.score > 50 ? 'high' : factor.score > 25 ? 'medium' : 'low')}>
                       {factor.score > 50 ? 'High' : factor.score > 25 ? 'Medium' : 'Low'}
                     </Badge>
                   </div>
                   <Progress value={100 - factor.score} className="h-2 mb-4" />
                   {factor.factors.length > 0 && (
                     <div className="space-y-2">
-                      {factor.factors.map((f: any, i: number) => (
+                      {factor.factors.map((f: RiskFactor, i: number) => (
                         <div key={i} className="p-2 bg-muted rounded text-sm">
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{f.name}</span>
@@ -634,12 +695,12 @@ export default function SupplierRiskDetail({
             <CardContent>
               {data.warnings?.earlyWarningSignals && data.warnings.earlyWarningSignals.length > 0 ? (
                 <div className="space-y-4">
-                  {data.warnings.earlyWarningSignals.map((signal: any, i: number) => (
+                  {data.warnings.earlyWarningSignals.map((signal: EarlyWarningSignal, i: number) => (
                     <div key={i} className="p-4 border rounded-lg">
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getRiskBadgeVariant(signal.severity) as any}>
+                            <Badge variant={getRiskBadgeVariant(signal.severity)}>
                               {signal.severity}
                             </Badge>
                             <span className="font-medium">{signal.type}</span>
@@ -685,7 +746,7 @@ export default function SupplierRiskDetail({
             <CardContent>
               {data.riskAssessment.recommendations.length > 0 ? (
                 <div className="space-y-4">
-                  {data.riskAssessment.recommendations.map((rec: any, i: number) => (
+                  {data.riskAssessment.recommendations.map((rec: RiskRecommendation, i: number) => (
                     <div key={i} className="p-4 border rounded-lg">
                       <div className="flex items-start justify-between">
                         <div>

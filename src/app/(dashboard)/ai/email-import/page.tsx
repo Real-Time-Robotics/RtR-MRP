@@ -41,11 +41,31 @@ interface ExtractedLineItem {
   confidence: number;
 }
 
+interface ExtractedCustomerPO {
+  poNumber?: string;
+  customerName?: string;
+  customerCode?: string;
+  deliveryDate?: string;
+  total?: number;
+  currency?: string;
+  items?: ExtractedLineItem[];
+}
+
+interface ExtractedSupplierQuote {
+  quoteNumber?: string;
+  supplierName?: string;
+  supplierCode?: string;
+  validUntil?: string;
+  total?: number;
+  currency?: string;
+  items?: ExtractedLineItem[];
+}
+
 interface ExtractedData {
   emailType: string;
   confidence: number;
-  customerPO?: any;
-  supplierQuote?: any;
+  customerPO?: ExtractedCustomerPO;
+  supplierQuote?: ExtractedSupplierQuote;
   fieldConfidence: Record<string, number>;
   warnings: string[];
 }
@@ -53,7 +73,7 @@ interface ExtractedData {
 interface DraftOrder {
   type: string;
   status: string;
-  data: any;
+  data: Record<string, unknown>;
   confidence: number;
   requiresReview: boolean;
   reviewNotes: string[];
@@ -67,7 +87,16 @@ export default function EmailImportPage() {
   const [draftOrder, setDraftOrder] = useState<DraftOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  const [createdOrder, setCreatedOrder] = useState<any>(null);
+  const [createdOrder, setCreatedOrder] = useState<{
+    id: string;
+    type: string;
+    orderNumber?: string;
+    poNumber?: string;
+    customer?: string;
+    supplier?: string;
+    itemCount?: number;
+    totalAmount?: number;
+  } | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [showRawData, setShowRawData] = useState(false);
 
@@ -174,9 +203,9 @@ export default function EmailImportPage() {
 
   // Get confidence color
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.9) return 'text-green-600 bg-green-100 dark:bg-green-900/30';
-    if (confidence >= 0.7) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30';
-    return 'text-red-600 bg-red-100 dark:bg-red-900/30';
+    if (confidence >= 0.9) return 'text-success-600 bg-success-100 dark:bg-success-900/30';
+    if (confidence >= 0.7) return 'text-warning-600 bg-warning-100 dark:bg-warning-900/30';
+    return 'text-danger-600 bg-danger-100 dark:bg-danger-900/30';
   };
 
   const getConfidenceLabel = (confidence: number) => {
@@ -203,7 +232,7 @@ export default function EmailImportPage() {
             {(extractedData || error) && (
               <button
                 onClick={handleReset}
-                className="h-7 px-3 text-[11px] bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 flex items-center gap-1.5"
+                className="h-9 px-3 text-xs bg-gray-100 dark:bg-gunmetal text-gray-700 dark:text-gray-300 hover:bg-gray-200 flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Làm mới
@@ -216,31 +245,31 @@ export default function EmailImportPage() {
       <div className="py-4 space-y-4">
         {/* Created Order Success */}
         {createdOrder && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+          <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 p-4 rounded-lg">
             <div className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-success-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-green-800 dark:text-green-400">
+                <p className="font-semibold text-success-800 dark:text-success-400">
                   Đã tạo {createdOrder.type === 'sales_order' ? 'Sales Order' : 'Purchase Order'} thành công!
                 </p>
-                <p className="text-sm text-green-700 dark:text-green-500 mt-1">
+                <p className="text-sm text-success-700 dark:text-success-500 mt-1">
                   {createdOrder.type === 'sales_order'
                     ? `${createdOrder.orderNumber} - ${createdOrder.customer}`
                     : `${createdOrder.poNumber} - ${createdOrder.supplier}`}
                 </p>
-                <p className="text-sm text-green-600 mt-1">
+                <p className="text-sm text-success-600 mt-1">
                   {createdOrder.itemCount} items • {new Intl.NumberFormat('vi-VN').format(createdOrder.totalAmount || 0)} VND
                 </p>
                 <div className="mt-3 flex gap-2">
                   <a
                     href={createdOrder.type === 'sales_order' ? `/orders/sales/${createdOrder.id}` : `/purchasing/${createdOrder.id}`}
-                    className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700"
+                    className="px-3 py-1.5 bg-success-600 text-white text-xs font-medium rounded hover:bg-success-700"
                   >
                     Xem đơn hàng
                   </a>
                   <button
                     onClick={handleReset}
-                    className="px-3 py-1.5 bg-white text-green-700 text-xs font-medium rounded border border-green-300 hover:bg-green-50"
+                    className="px-3 py-1.5 bg-white text-success-700 text-xs font-medium rounded border border-success-300 hover:bg-success-50"
                   >
                     Nhập email khác
                   </button>
@@ -252,12 +281,12 @@ export default function EmailImportPage() {
 
         {/* Error */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+          <div className="bg-danger-50 dark:bg-danger-900/20 border border-danger-200 dark:border-danger-800 p-4 rounded-lg">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-5 h-5 text-danger-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-red-800 dark:text-red-400">Lỗi</p>
-                <p className="text-sm text-red-700 dark:text-red-500 mt-1">{error}</p>
+                <p className="font-medium text-danger-800 dark:text-danger-400">Lỗi</p>
+                <p className="text-sm text-danger-700 dark:text-danger-500 mt-1">{error}</p>
               </div>
             </div>
           </div>
@@ -276,6 +305,7 @@ export default function EmailImportPage() {
                 <textarea
                   value={emailContent}
                   onChange={(e) => setEmailContent(e.target.value)}
+                  aria-label="Nội dung Email"
                   placeholder={`Paste nội dung email ở đây...
 
 Ví dụ:
@@ -293,7 +323,7 @@ Delivery: 15 Jan 2026
 
 Best regards,
 John`}
-                  className="w-full h-64 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full h-64 px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                   disabled={processing}
                 />
               </div>
@@ -315,7 +345,7 @@ John`}
                 />
                 <label
                   htmlFor="attachment-input"
-                  className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer hover:border-blue-500 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded cursor-pointer hover:border-primary-500 transition-colors"
                 >
                   <Upload className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -333,7 +363,7 @@ John`}
                         {file.name}
                         <button
                           onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))}
-                          className="text-red-500 hover:text-red-600"
+                          className="text-danger-500 hover:text-danger-600"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -347,7 +377,7 @@ John`}
               <button
                 onClick={handleParse}
                 disabled={processing || !emailContent.trim()}
-                className="w-full py-3 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-primary-600 text-white font-medium rounded hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {processing ? (
                   <>
@@ -373,12 +403,12 @@ John`}
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         {extractedData.emailType === 'customer_po' ? (
                           <>
-                            <ShoppingCart className="w-4 h-4 text-green-600" />
+                            <ShoppingCart className="w-4 h-4 text-success-600" />
                             Customer PO
                           </>
                         ) : extractedData.emailType === 'supplier_quote' ? (
                           <>
-                            <Building2 className="w-4 h-4 text-blue-600" />
+                            <Building2 className="w-4 h-4 text-primary-600" />
                             Supplier Quote
                           </>
                         ) : (
@@ -395,10 +425,10 @@ John`}
 
                     {/* Warnings */}
                     {extractedData.warnings.length > 0 && (
-                      <div className="mb-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                      <div className="mb-3 p-2 bg-warning-50 dark:bg-warning-900/20 rounded">
                         <div className="flex items-start gap-2">
-                          <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-xs text-yellow-700 dark:text-yellow-500">
+                          <AlertTriangle className="w-4 h-4 text-warning-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-xs text-warning-700 dark:text-warning-500">
                             {extractedData.warnings.map((w, i) => (
                               <p key={i}>• {w}</p>
                             ))}
@@ -526,7 +556,7 @@ John`}
                       <button
                         onClick={handleCreateOrder}
                         disabled={creating}
-                        className="flex-1 py-3 bg-green-600 text-white font-medium rounded hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-success-600 text-white font-medium rounded hover:bg-success-700 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {creating ? (
                           <>
@@ -560,7 +590,7 @@ John`}
                   </button>
 
                   {showRawData && (
-                    <pre className="bg-gray-900 text-green-400 p-3 rounded text-[10px] overflow-auto max-h-[300px]">
+                    <pre className="bg-gray-900 text-success-400 p-3 rounded text-[10px] overflow-auto max-h-[300px]">
                       {JSON.stringify(extractedData, null, 2)}
                     </pre>
                   )}
@@ -582,25 +612,25 @@ John`}
         )}
 
         {/* How it works */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 border border-blue-200 dark:border-blue-800 rounded">
-          <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-400 mb-2">
+        <div className="bg-primary-50 dark:bg-primary-900/20 p-4 border border-primary-200 dark:border-primary-800 rounded">
+          <h3 className="text-sm font-semibold text-primary-800 dark:text-primary-400 mb-2">
             Cách hoạt động
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] text-blue-700 dark:text-blue-500">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px] text-primary-700 dark:text-primary-500">
             <div className="flex items-start gap-2">
-              <span className="w-5 h-5 flex items-center justify-center bg-blue-200 dark:bg-blue-800 rounded-full text-blue-800 dark:text-blue-200 font-bold">1</span>
+              <span className="w-5 h-5 flex items-center justify-center bg-primary-200 dark:bg-primary-800 rounded-full text-primary-800 dark:text-primary-200 font-bold">1</span>
               <span>Paste email hoặc upload file đính kèm (PDF, hình ảnh)</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-5 h-5 flex items-center justify-center bg-blue-200 dark:bg-blue-800 rounded-full text-blue-800 dark:text-blue-200 font-bold">2</span>
+              <span className="w-5 h-5 flex items-center justify-center bg-primary-200 dark:bg-primary-800 rounded-full text-primary-800 dark:text-primary-200 font-bold">2</span>
               <span>AI phân tích và trích xuất thông tin đơn hàng</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-5 h-5 flex items-center justify-center bg-blue-200 dark:bg-blue-800 rounded-full text-blue-800 dark:text-blue-200 font-bold">3</span>
+              <span className="w-5 h-5 flex items-center justify-center bg-primary-200 dark:bg-primary-800 rounded-full text-primary-800 dark:text-primary-200 font-bold">3</span>
               <span>Review và chỉnh sửa dữ liệu nếu cần</span>
             </div>
             <div className="flex items-start gap-2">
-              <span className="w-5 h-5 flex items-center justify-center bg-blue-200 dark:bg-blue-800 rounded-full text-blue-800 dark:text-blue-200 font-bold">4</span>
+              <span className="w-5 h-5 flex items-center justify-center bg-primary-200 dark:bg-primary-800 rounded-full text-primary-800 dark:text-primary-200 font-bold">4</span>
               <span>Xác nhận để tạo Sales Order / Purchase Order</span>
             </div>
           </div>
@@ -621,16 +651,16 @@ function DataField({
   code,
   confidence,
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | undefined;
   code?: string;
   confidence?: number;
 }) {
   const getConfidenceColor = (conf: number) => {
-    if (conf >= 0.9) return 'text-green-600';
-    if (conf >= 0.7) return 'text-yellow-600';
-    return 'text-red-600';
+    if (conf >= 0.9) return 'text-success-600';
+    if (conf >= 0.7) return 'text-warning-600';
+    return 'text-danger-600';
   };
 
   return (
@@ -642,7 +672,7 @@ function DataField({
           {value || '-'}
         </span>
         {code && (
-          <span className="text-xs text-blue-600 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+          <span className="text-xs text-primary-600 bg-primary-100 dark:bg-primary-900/30 px-1.5 py-0.5 rounded">
             {code}
           </span>
         )}

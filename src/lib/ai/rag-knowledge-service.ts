@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '../prisma';
+import { logger } from '@/lib/logger';
 import { getEmbeddingService, EmbeddingVector, SemanticSearchResult } from './embedding-service';
 
 // =============================================================================
@@ -610,26 +611,26 @@ export class RAGKnowledgeService {
     orders: number;
     compliance: number;
   }> {
-    console.log('[RAG] Starting full knowledge index...');
+    logger.info('[RAG] Starting full knowledge index...');
     this.store.clear();
 
     const parts = await this.indexParts();
-    console.log(`[RAG] Indexed ${parts} parts`);
+    logger.info(`[RAG] Indexed ${parts} parts`);
 
     const suppliers = await this.indexSuppliers();
-    console.log(`[RAG] Indexed ${suppliers} suppliers`);
+    logger.info(`[RAG] Indexed ${suppliers} suppliers`);
 
     const customers = await this.indexCustomers();
-    console.log(`[RAG] Indexed ${customers} customers`);
+    logger.info(`[RAG] Indexed ${customers} customers`);
 
     const boms = await this.indexBOMs();
-    console.log(`[RAG] Indexed ${boms} BOMs`);
+    logger.info(`[RAG] Indexed ${boms} BOMs`);
 
     const orders = await this.indexOrders();
-    console.log(`[RAG] Indexed ${orders} orders`);
+    logger.info(`[RAG] Indexed ${orders} orders`);
 
     const compliance = await this.indexComplianceKnowledge();
-    console.log(`[RAG] Indexed ${compliance} compliance docs`);
+    logger.info(`[RAG] Indexed ${compliance} compliance docs`);
 
     this.lastIndexTime = new Date();
 

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Camera, Loader2, X, Check, RotateCcw } from 'lucide-react';
+import { clientLogger } from '@/lib/client-logger';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -86,7 +87,7 @@ export function ScreenshotCapture({ onCapture, disabled, className }: Screenshot
       setContext(currentContext);
       setShowPreview(true);
     } catch (error) {
-      console.error('Screenshot capture failed:', error);
+      clientLogger.error('Screenshot capture failed', error);
     } finally {
       setIsCapturing(false);
     }
@@ -151,6 +152,7 @@ export function ScreenshotCapture({ onCapture, disabled, className }: Screenshot
             onClick={captureScreen}
             disabled={disabled || isCapturing}
             className={cn('h-8 w-8', className)}
+            aria-label="Chụp màn hình"
           >
             {isCapturing ? (
               <Loader2 className="h-4 w-4 animate-spin" />

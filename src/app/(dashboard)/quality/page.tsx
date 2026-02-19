@@ -21,6 +21,7 @@ import { QualityDashboardCards } from "@/components/quality/quality-dashboard-ca
 import { PassFailBadge } from "@/components/quality/pass-fail-badge";
 import { InspectionTypeBadge } from "@/components/quality/inspection-type-badge";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { clientLogger } from '@/lib/client-logger';
 
 interface QualityStats {
   pendingReceiving: number;
@@ -73,7 +74,7 @@ export default function QualityDashboardPage() {
         setPendingInspections(inspectionsData.slice(0, 10));
       }
     } catch (error) {
-      console.error("Failed to fetch quality data:", error);
+      clientLogger.error("Failed to fetch quality data:", error);
     } finally {
       setLoading(false);
     }
@@ -112,37 +113,37 @@ export default function QualityDashboardPage() {
         <CardContent className="px-3 py-2">
           {/* COMPACT: gap-3 → gap-1.5, smaller buttons */}
           <div className="flex flex-wrap gap-1.5">
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/receiving/new">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newReceivingInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/in-process">
                 <Cog className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newInProcessInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/final">
                 <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.newFinalInspection")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/ncr/new">
                 <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.createNCR")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/traceability">
                 <Search className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.lotLookup")}
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="h-7 text-[11px]">
+            <Button asChild variant="outline" size="sm" className="text-xs">
               <Link href="/quality/certificates">
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                 {t("quality.generateCoC")}
@@ -214,8 +215,8 @@ export default function QualityDashboardPage() {
                 className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Download className="h-3.5 w-3.5 text-blue-600" />
+                  <div className="h-7 w-7 bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                    <Download className="h-3.5 w-3.5 text-primary-600" />
                   </div>
                   <div>
                     <p className="text-[11px] font-medium">{t("quality.receivingInspection")}</p>
@@ -256,8 +257,8 @@ export default function QualityDashboardPage() {
                 className="flex items-center justify-between p-2 border border-gray-200 dark:border-mrp-border hover:bg-gray-50 dark:hover:bg-gunmetal transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <CheckSquare className="h-3.5 w-3.5 text-green-600" />
+                  <div className="h-7 w-7 bg-success-100 dark:bg-success-900/30 flex items-center justify-center">
+                    <CheckSquare className="h-3.5 w-3.5 text-success-600" />
                   </div>
                   <div>
                     <p className="text-[11px] font-medium">{t("quality.finalInspection")}</p>
@@ -281,7 +282,7 @@ export default function QualityDashboardPage() {
         <Card className="border-gray-200 dark:border-mrp-border">
           <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
             <CardTitle className="text-[11px] font-semibold font-mono uppercase tracking-wider flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+              <AlertTriangle className="h-3.5 w-3.5 text-warning-600" />
               {t("quality.ncrReports")}
             </CardTitle>
             <Button asChild variant="ghost" size="sm" className="h-6 text-[10px]">
@@ -290,7 +291,7 @@ export default function QualityDashboardPage() {
           </CardHeader>
           <CardContent className="px-3 py-2">
             <div className="text-center py-2">
-              <p className="text-2xl font-semibold font-mono text-amber-600">
+              <p className="text-2xl font-semibold font-mono text-warning-600">
                 {stats?.openNCRs || 0}
               </p>
               <p className="text-[10px] text-muted-foreground">{t("quality.openNCRs")}</p>

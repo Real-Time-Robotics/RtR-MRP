@@ -2,11 +2,55 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { mlClient } from "@/lib/ml-client";
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
-export async function POST(request: NextRequest) {
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   try {
-    const body = await request.json();
+const bodySchema = z.object({
+      type: z.string().optional(),
+      partId: z.string().optional(),
+      serviceLevel: z.number().optional(),
+      leadTimeDays: z.number().optional(),
+      method: z.enum(['standard', 'king', 'dynamic']).optional(),
+      orderCost: z.number().optional(),
+      holdingCostRate: z.number().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { type } = body;
+
+    if (!body.partId) {
+      return NextResponse.json(
+        { success: false, error: 'partId is required' },
+        { status: 400 }
+      );
+    }
 
     let result;
 
@@ -21,6 +65,12 @@ export async function POST(request: NextRequest) {
         break;
 
       case "eoq":
+        if (body.orderCost == null) {
+          return NextResponse.json(
+            { success: false, error: 'orderCost is required for EOQ calculation' },
+            { status: 400 }
+          );
+        }
         result = await mlClient.calculateEOQ({
           partId: body.partId,
           orderCost: body.orderCost,
@@ -41,9 +91,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { route: 'ml/optimization' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Optimization failed" },
+      { error: "Failed to perform optimization" },
       { status: 500 }
     );
   }
-}
+});

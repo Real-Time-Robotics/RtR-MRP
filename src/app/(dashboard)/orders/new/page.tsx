@@ -24,8 +24,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
 import { format } from "date-fns";
+import { z } from "zod";
+import { clientLogger } from '@/lib/client-logger';
+
+const orderItemSchema = z.object({
+  productId: z.string().min(1, "Vui lòng chọn sản phẩm"),
+  quantity: z.number().int().min(1, "Số lượng phải >= 1"),
+  unitPrice: z.number().min(0, "Đơn giá không được âm"),
+});
+
+const orderFormSchema = z.object({
+  customerId: z.string().min(1, "Vui lòng chọn khách hàng"),
+  requiredDate: z.string().min(1, "Ngày yêu cầu giao là bắt buộc"),
+  items: z.array(orderItemSchema).min(1, "Vui lòng thêm ít nhất một sản phẩm"),
+});
 
 interface Customer {
   id: string;
@@ -37,7 +52,7 @@ interface Product {
   id: string;
   sku: string;
   name: string;
-  unitPrice: number;
+  basePrice: number | null;
 }
 
 interface OrderLine {
@@ -57,6 +72,7 @@ export default function NewSalesOrderPage() {
     notes: "",
   });
   const [items, setItems] = useState<OrderLine[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchCustomers();
@@ -71,19 +87,22 @@ export default function NewSalesOrderPage() {
         setCustomers(result.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch customers:", error);
+      clientLogger.error("Failed to fetch customers:", error);
     }
   };
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("/api/products?limit=100");
+      const res = await fetch("/api/products?pageSize=100");
       if (res.ok) {
         const result = await res.json();
-        setProducts(result.data || result.products || []);
+        const items = result.data || result.products || [];
+        setProducts(items);
+      } else {
+        clientLogger.error("[fetchProducts] API error:", res.status);
       }
     } catch (error) {
-      console.error("Failed to fetch products:", error);
+      clientLogger.error("Failed to fetch products:", error);
     }
   };
 
@@ -101,7 +120,7 @@ export default function NewSalesOrderPage() {
       newItems[index].productId = value as string;
       const product = products.find((p) => p.id === value);
       if (product) {
-        newItems[index].unitPrice = product.unitPrice || 0;
+        newItems[index].unitPrice = product.basePrice || 0;
       }
     } else if (field === "quantity") {
       newItems[index].quantity = parseInt(value as string) || 0;
@@ -118,21 +137,27 @@ export default function NewSalesOrderPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.customerId) {
-      alert("Vui lòng chọn khách hàng");
+    const result = orderFormSchema.safeParse({
+      customerId: formData.customerId,
+      requiredDate: formData.requiredDate,
+      items,
+    });
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path.join(".");
+        if (!errors[key]) {
+          errors[key] = issue.message;
+        }
+      }
+      // Map nested item errors to a single key for display
+      if (!errors.items && Object.keys(errors).some((k) => k.startsWith("items."))) {
+        errors.items = "Vui lòng điền đầy đủ thông tin cho tất cả sản phẩm";
+      }
+      setFieldErrors(errors);
       return;
     }
-
-    if (items.length === 0) {
-      alert("Vui lòng thêm ít nhất một sản phẩm");
-      return;
-    }
-
-    const invalidItems = items.filter((item) => !item.productId || item.quantity <= 0);
-    if (invalidItems.length > 0) {
-      alert("Vui lòng điền đầy đủ thông tin cho tất cả sản phẩm");
-      return;
-    }
+    setFieldErrors({});
 
     setLoading(true);
 
@@ -157,11 +182,11 @@ export default function NewSalesOrderPage() {
         router.push(`/orders/${order.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Không thể tạo đơn hàng");
+        toast.error(error.error || "Không thể tạo đơn hàng");
       }
     } catch (error) {
-      console.error("Failed to create order:", error);
-      alert("Không thể tạo đơn hàng");
+      clientLogger.error("Failed to create order:", error);
+      toast.error("Không thể tạo đơn hàng");
     } finally {
       setLoading(false);
     }
@@ -203,6 +228,9 @@ export default function NewSalesOrderPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {fieldErrors.customerId && (
+                    <p className="text-sm text-red-500">{fieldErrors.customerId}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -216,6 +244,9 @@ export default function NewSalesOrderPage() {
                     }
                     required
                   />
+                  {fieldErrors.requiredDate && (
+                    <p className="text-sm text-red-500">{fieldErrors.requiredDate}</p>
+                  )}
                 </div>
               </div>
 
@@ -246,6 +277,9 @@ export default function NewSalesOrderPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {fieldErrors.items && (
+                <p className="text-sm text-red-500 mb-2">{fieldErrors.items}</p>
+              )}
               {items.length > 0 ? (
                 <Table>
                   <TableHeader>
@@ -262,18 +296,22 @@ export default function NewSalesOrderPage() {
                       <TableRow key={index}>
                         <TableCell>
                           <Select
-                            value={item.productId}
+                            value={item.productId || undefined}
                             onValueChange={(value) => updateItem(index, "productId", value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Chọn sản phẩm" />
                             </SelectTrigger>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.sku} - {product.name}
-                                </SelectItem>
-                              ))}
+                            <SelectContent position="popper" className="max-h-[300px]">
+                              {products.length === 0 ? (
+                                <div className="px-3 py-2 text-sm text-muted-foreground">Không có sản phẩm</div>
+                              ) : (
+                                products.map((product) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.sku} - {product.name}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -303,8 +341,9 @@ export default function NewSalesOrderPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeItem(index)}
+                            aria-label="Xóa dòng"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-danger-500" />
                           </Button>
                         </TableCell>
                       </TableRow>

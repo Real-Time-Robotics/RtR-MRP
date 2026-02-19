@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { clientLogger } from '@/lib/client-logger';
 
 interface FinanceStats {
   totalAR: number;
@@ -67,7 +68,7 @@ export default function FinanceDashboardPage() {
         grossMargin: 0,
       });
     } catch (error) {
-      console.error("Failed to fetch finance data:", error);
+      clientLogger.error("Failed to fetch finance data:", error);
       setStats({
         totalAR: 0,
         totalAP: 0,
@@ -112,14 +113,14 @@ export default function FinanceDashboardPage() {
                 <p className="text-sm text-muted-foreground">Accounts Receivable</p>
                 <p className="text-2xl font-bold">{formatCurrency(stats?.totalAR || 0)}</p>
                 {(stats?.arOverdue || 0) > 0 && (
-                  <p className="text-xs text-red-500 flex items-center mt-1">
+                  <p className="text-xs text-danger-500 flex items-center mt-1">
                     <ArrowUpRight className="h-3 w-3" />
                     {formatCurrency(stats?.arOverdue || 0)} overdue
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="h-12 w-12 rounded-lg bg-success-100 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-success-600" />
               </div>
             </div>
           </CardContent>
@@ -132,14 +133,14 @@ export default function FinanceDashboardPage() {
                 <p className="text-sm text-muted-foreground">Accounts Payable</p>
                 <p className="text-2xl font-bold">{formatCurrency(stats?.totalAP || 0)}</p>
                 {(stats?.apOverdue || 0) > 0 && (
-                  <p className="text-xs text-red-500 flex items-center mt-1">
+                  <p className="text-xs text-danger-500 flex items-center mt-1">
                     <ArrowDownRight className="h-3 w-3" />
                     {formatCurrency(stats?.apOverdue || 0)} overdue
                   </p>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
-                <TrendingDown className="h-6 w-6 text-red-600" />
+              <div className="h-12 w-12 rounded-lg bg-danger-100 flex items-center justify-center">
+                <TrendingDown className="h-6 w-6 text-danger-600" />
               </div>
             </div>
           </CardContent>
@@ -155,8 +156,8 @@ export default function FinanceDashboardPage() {
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">AR - AP</p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-lg bg-primary-100 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-primary-600" />
               </div>
             </div>
           </CardContent>
@@ -236,8 +237,8 @@ export default function FinanceDashboardPage() {
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <Calculator className="h-5 w-5 text-blue-600" />
+                  <div className="h-10 w-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                    <Calculator className="h-5 w-5 text-primary-600" />
                   </div>
                   <div>
                     <p className="font-medium">Standard Costing</p>
@@ -285,8 +286,8 @@ export default function FinanceDashboardPage() {
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <Receipt className="h-5 w-5 text-green-600" />
+                  <div className="h-10 w-10 rounded-lg bg-success-100 flex items-center justify-center">
+                    <Receipt className="h-5 w-5 text-success-600" />
                   </div>
                   <div>
                     <p className="font-medium">Sales Invoices (AR)</p>
@@ -295,7 +296,7 @@ export default function FinanceDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <Badge className="bg-green-100 text-green-800">
+                <Badge className="bg-success-100 text-success-800">
                   {formatCurrency(stats?.totalAR || 0)}
                 </Badge>
               </Link>
@@ -305,8 +306,8 @@ export default function FinanceDashboardPage() {
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-red-600" />
+                  <div className="h-10 w-10 rounded-lg bg-danger-100 flex items-center justify-center">
+                    <CreditCard className="h-5 w-5 text-danger-600" />
                   </div>
                   <div>
                     <p className="font-medium">Purchase Invoices (AP)</p>
@@ -315,7 +316,7 @@ export default function FinanceDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <Badge className="bg-red-100 text-red-800">
+                <Badge className="bg-danger-100 text-danger-800">
                   {formatCurrency(stats?.totalAP || 0)}
                 </Badge>
               </Link>
@@ -338,8 +339,8 @@ export default function FinanceDashboardPage() {
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                    <BookOpen className="h-5 w-5 text-amber-600" />
+                  <div className="h-10 w-10 rounded-lg bg-warning-100 flex items-center justify-center">
+                    <BookOpen className="h-5 w-5 text-warning-600" />
                   </div>
                   <div>
                     <p className="font-medium">Chart of Accounts</p>
@@ -405,8 +406,8 @@ export default function FinanceDashboardPage() {
                 className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  <div className="h-10 w-10 rounded-lg bg-success-100 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-success-600" />
                   </div>
                   <div>
                     <p className="font-medium">Margin Analysis</p>

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     const limit = parseInt(searchParams.get('limit') || '8');
@@ -20,8 +21,6 @@ export async function GET(request: NextRequest) {
           { name: { contains: query, mode: 'insensitive' } },
           { email: { contains: query, mode: 'insensitive' } },
         ],
-        // Optionally exclude current user
-        // id: { not: session.user.id },
       },
       select: {
         id: true,
@@ -38,10 +37,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Failed to search users:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/users/search' });
     return NextResponse.json(
       { error: 'Failed to search users' },
       { status: 500 }
     );
   }
-}
+});

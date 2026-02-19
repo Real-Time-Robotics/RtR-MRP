@@ -1,10 +1,11 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - HEALTH CHECK UTILITIES
 // Liveness, Readiness, and Dependency Health Checks
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import * as os from 'os';
+import * as fs from 'fs';
 
 // =============================================================================
 // TYPES
@@ -23,7 +24,7 @@ export interface HealthCheck {
   status: 'pass' | 'fail' | 'warn';
   message?: string;
   duration?: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // =============================================================================
@@ -55,11 +56,11 @@ export async function checkDatabase(): Promise<HealthCheck> {
       message: 'PostgreSQL is reachable',
       duration: Date.now() - start,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       name: 'database',
       status: 'fail',
-      message: error.message || 'Database connection failed',
+      message: error instanceof Error ? error.message : 'Database connection failed',
       duration: Date.now() - start,
     };
   }
@@ -109,11 +110,11 @@ export async function checkStorage(): Promise<HealthCheck> {
       message: 'S3 check skipped (SDK not installed)',
       duration: Date.now() - start,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       name: 'storage',
       status: 'warn',
-      message: error.message || 'S3 connection failed',
+      message: error instanceof Error ? error.message : 'S3 connection failed',
       duration: Date.now() - start,
     };
   }
@@ -149,8 +150,8 @@ export function checkMemory(): HealthCheck {
  * Check CPU usage (simplified)
  */
 export function checkCPU(): HealthCheck {
-  const cpus = require('os').cpus();
-  const loadAvg = require('os').loadavg();
+  const cpus = os.cpus();
+  const loadAvg = os.loadavg();
   const numCPUs = cpus.length;
   
   // Normalize load average by number of CPUs
@@ -174,9 +175,6 @@ export function checkCPU(): HealthCheck {
  */
 export function checkDisk(): HealthCheck {
   try {
-    const fs = require('fs');
-    const path = require('path');
-    
     // Check temp directory
     const tempDir = process.env.TEMP || '/tmp';
     const stats = fs.statfsSync(tempDir);

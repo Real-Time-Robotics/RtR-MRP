@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { clientLogger } from '@/lib/client-logger';
 import {
   Card,
   CardContent,
@@ -110,19 +111,21 @@ interface DashboardData {
 const getRiskColor = (level: string) => {
   switch (level.toLowerCase()) {
     case 'low':
-      return 'bg-green-500';
+      return 'bg-success-500';
     case 'medium':
-      return 'bg-yellow-500';
+      return 'bg-warning-500';
     case 'high':
       return 'bg-orange-500';
     case 'critical':
-      return 'bg-red-500';
+      return 'bg-danger-500';
     default:
       return 'bg-gray-500';
   }
 };
 
-const getRiskBadgeVariant = (level: string) => {
+type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+const getRiskBadgeVariant = (level: string): BadgeVariant => {
   switch (level.toLowerCase()) {
     case 'low':
       return 'default';
@@ -140,15 +143,15 @@ const getRiskBadgeVariant = (level: string) => {
 const getGradeColor = (grade: string) => {
   switch (grade) {
     case 'A':
-      return 'text-green-600 bg-green-100';
+      return 'text-success-600 bg-success-100';
     case 'B':
-      return 'text-blue-600 bg-blue-100';
+      return 'text-primary-600 bg-primary-100';
     case 'C':
-      return 'text-yellow-600 bg-yellow-100';
+      return 'text-warning-600 bg-warning-100';
     case 'D':
       return 'text-orange-600 bg-orange-100';
     case 'F':
-      return 'text-red-600 bg-red-100';
+      return 'text-danger-600 bg-danger-100';
     default:
       return 'text-gray-600 bg-gray-100';
   }
@@ -157,9 +160,9 @@ const getGradeColor = (grade: string) => {
 const getTrendIcon = (trend: string) => {
   switch (trend) {
     case 'improving':
-      return <TrendingUp className="h-4 w-4 text-green-500" />;
+      return <TrendingUp className="h-4 w-4 text-success-500" />;
     case 'declining':
-      return <TrendingDown className="h-4 w-4 text-red-500" />;
+      return <TrendingDown className="h-4 w-4 text-danger-500" />;
     default:
       return <Minus className="h-4 w-4 text-gray-500" />;
   }
@@ -169,11 +172,11 @@ const getSeverityIcon = (severity: string) => {
   switch (severity) {
     case 'critical':
     case 'emergency':
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
+      return <AlertCircle className="h-4 w-4 text-danger-500" />;
     case 'warning':
-      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      return <AlertTriangle className="h-4 w-4 text-warning-500" />;
     default:
-      return <Bell className="h-4 w-4 text-blue-500" />;
+      return <Bell className="h-4 w-4 text-primary-500" />;
   }
 };
 
@@ -263,7 +266,7 @@ export default function SupplierRiskDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{data.riskProfile.overallRiskScore}</div>
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant={getRiskBadgeVariant(data.riskProfile.overallRiskLevel) as any}>
+              <Badge variant={getRiskBadgeVariant(data.riskProfile.overallRiskLevel)}>
                 {data.riskProfile.overallRiskLevel.toUpperCase()}
               </Badge>
               <span className="text-xs text-muted-foreground">risk level</span>
@@ -283,7 +286,7 @@ export default function SupplierRiskDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{data.riskProfile.metrics.totalActiveSuppliers}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-red-500 font-medium">{data.riskProfile.metrics.suppliersAtRisk}</span> at elevated risk
+              <span className="text-danger-500 font-medium">{data.riskProfile.metrics.suppliersAtRisk}</span> at elevated risk
             </p>
             <div className="flex items-center gap-2 mt-3">
               <span className="text-xs">Avg Score:</span>
@@ -376,13 +379,13 @@ export default function SupplierRiskDashboard() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-success-600">
                   {data.riskProfile.metrics.overallResilienceScore}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Resilience Score</p>
               </div>
               <div className="text-center p-4 bg-muted rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-3xl font-bold text-primary-600">
                   {data.riskProfile.metrics.geographicDiversityScore}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Geographic Diversity</p>
@@ -392,10 +395,10 @@ export default function SupplierRiskDashboard() {
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Dependency Risk Levels</h4>
               <div className="flex gap-2">
-                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.concentrationRiskLevel || 'medium') as any}>
+                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.concentrationRiskLevel || 'medium')}>
                   Concentration: {data.dependencySummary?.concentrationRiskLevel || 'N/A'}
                 </Badge>
-                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.geographicRiskLevel || 'medium') as any}>
+                <Badge variant={getRiskBadgeVariant(data.dependencySummary?.geographicRiskLevel || 'medium')}>
                   Geographic: {data.dependencySummary?.geographicRiskLevel || 'N/A'}
                 </Badge>
               </div>
@@ -496,7 +499,7 @@ export default function SupplierRiskDashboard() {
                   {data.riskProfile.criticalSuppliers.map((supplier) => (
                     <div
                       key={supplier.supplierId}
-                      className="p-4 border rounded-lg border-red-200 bg-red-50/50"
+                      className="p-4 border rounded-lg border-danger-200 bg-danger-50/50"
                     >
                       <div className="flex items-start justify-between">
                         <div>
@@ -507,7 +510,7 @@ export default function SupplierRiskDashboard() {
                             {supplier.supplierName}
                           </Link>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={getRiskBadgeVariant(supplier.riskLevel) as any}>
+                            <Badge variant={getRiskBadgeVariant(supplier.riskLevel)}>
                               {supplier.riskLevel.toUpperCase()}
                             </Badge>
                             <span className="text-xs text-muted-foreground">
@@ -516,7 +519,7 @@ export default function SupplierRiskDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold text-red-600">
+                          <div className="text-lg font-bold text-danger-600">
                             {supplier.riskScore}
                           </div>
                           <div className="text-xs text-muted-foreground">risk score</div>
@@ -542,7 +545,7 @@ export default function SupplierRiskDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-success-500" />
                   <p>No critical suppliers detected</p>
                 </div>
               )}
@@ -569,7 +572,7 @@ export default function SupplierRiskDashboard() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium">{risk.title}</h4>
-                            <Badge variant={getRiskBadgeVariant(risk.riskLevel) as any}>
+                            <Badge variant={getRiskBadgeVariant(risk.riskLevel)}>
                               {risk.riskLevel.toUpperCase()}
                             </Badge>
                           </div>
@@ -589,7 +592,7 @@ export default function SupplierRiskDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Shield className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <Shield className="h-8 w-8 mx-auto mb-2 text-success-500" />
                   <p>No significant risks identified</p>
                 </div>
               )}
@@ -622,7 +625,7 @@ export default function SupplierRiskDashboard() {
                             {supplier.supplierName}
                           </Link>
                           <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={getRiskBadgeVariant(supplier.highestSeverity) as any}>
+                            <Badge variant={getRiskBadgeVariant(supplier.highestSeverity)}>
                               {supplier.highestSeverity}
                             </Badge>
                           </div>
@@ -644,7 +647,7 @@ export default function SupplierRiskDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-success-500" />
                   <p>No active alerts</p>
                 </div>
               )}
@@ -691,7 +694,7 @@ export default function SupplierRiskDashboard() {
                   });
                   fetchData();
                 } catch (e) {
-                  console.error('Scan failed:', e);
+                  clientLogger.error('Supplier risk scan failed', e);
                 }
               }}
             >

@@ -118,13 +118,14 @@ export async function getAuthUser(request?: NextRequest): Promise<AuthResult> {
       };
     }
 
+    const sessionUser = session.user as { id?: string; email?: string; name?: string; role?: string; department?: string };
     const user: AuthUser = {
-      id: (session.user as any).id || session.user.email || '',
-      email: session.user.email || '',
-      name: session.user.name || '',
-      role: ((session.user as any).role as UserRole) || 'viewer',
-      department: (session.user as any).department,
-      permissions: ROLE_PERMISSIONS[((session.user as any).role as UserRole) || 'viewer'],
+      id: sessionUser.id || sessionUser.email || '',
+      email: sessionUser.email || '',
+      name: sessionUser.name || '',
+      role: (sessionUser.role as UserRole) || 'viewer',
+      department: sessionUser.department,
+      permissions: ROLE_PERMISSIONS[(sessionUser.role as UserRole) || 'viewer'],
     };
 
     return {
@@ -255,10 +256,10 @@ export async function requireOwnership(resourceOwnerId: string): Promise<AuthRes
 // API ROUTE WRAPPER
 // =============================================================================
 
-type ApiHandler = (
+type ApiHandler<P = Record<string, string | string[]>> = (
   request: NextRequest,
-  context: { params: any; user: AuthUser }
-) => Promise<NextResponse>;
+  context: { params: P; user: AuthUser }
+) => Promise<Response>;
 
 interface ProtectedRouteOptions {
   permission?: string;
@@ -269,11 +270,11 @@ interface ProtectedRouteOptions {
 /**
  * Wrap API route with authentication
  */
-export function withAuth(
-  handler: ApiHandler,
+export function withAuth<P = Record<string, string | string[]>>(
+  handler: ApiHandler<P>,
   options: ProtectedRouteOptions = {}
 ) {
-  return async (request: NextRequest, context: { params: any }) => {
+  return async (request: NextRequest, context: { params: P }) => {
     // Allow public access if specified
     if (options.allowPublic) {
       const auth = await getAuthUser();

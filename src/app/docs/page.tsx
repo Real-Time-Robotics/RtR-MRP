@@ -3,9 +3,16 @@
 // Premium Vietnamese UI with modern minimalist aesthetics
 // =============================================================================
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import fs from 'fs';
 import path from 'path';
+import { logger } from '@/lib/logger';
+
+export const metadata: Metadata = {
+  title: 'Tài liệu',
+  description: 'Tài liệu hướng dẫn sử dụng hệ thống RTR MRP',
+};
 import {
   ChevronLeft,
   BookOpen,
@@ -46,7 +53,8 @@ async function getDocsContent() {
     const filePath = path.join(docsPath, doc.file);
     try {
       contents[doc.id] = fs.readFileSync(filePath, 'utf-8');
-    } catch {
+    } catch (error) {
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'docs-page', file: doc.file });
       contents[doc.id] = `# ${doc.title}\n\nTài liệu đang được cập nhật...`;
     }
   }
@@ -92,6 +100,7 @@ function DocsHeader() {
               <input
                 type="text"
                 placeholder="Tìm kiếm tài liệu..."
+                aria-label="Tìm kiếm tài liệu"
                 className="w-full pl-10 pr-4 py-2 text-[14px] bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 focus:bg-white transition-all"
               />
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 bg-white px-1.5 py-0.5 rounded border border-gray-200">
@@ -113,7 +122,7 @@ function DocsHeader() {
             </a>
             <Link
               href="/login"
-              className="px-4 py-2 text-[14px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all"
+              className="px-4 py-2 text-[14px] font-medium text-white bg-gray-900 dark:bg-white dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               Bắt đầu
             </Link>
@@ -365,8 +374,8 @@ export default async function DocsPage() {
       <footer className="border-t border-gray-200 py-8 px-6 bg-white">
         <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gray-900 rounded flex items-center justify-center">
-              <span className="text-[8px] font-bold text-white tracking-tight">RTR</span>
+            <div className="w-6 h-6 bg-black dark:bg-white rounded flex items-center justify-center">
+              <span className="text-[8px] font-bold text-white dark:text-gray-900 tracking-tight">RTR</span>
             </div>
             <span className="text-[13px] text-gray-600">© 2024 RTR MRP. Đã đăng ký bản quyền.</span>
           </div>

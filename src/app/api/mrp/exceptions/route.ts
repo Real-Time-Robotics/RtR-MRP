@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import {
   detectExceptions,
   getExceptionSummary,
@@ -8,18 +9,36 @@ import {
   ignoreException,
   clearOldExceptions,
 } from "@/lib/mrp";
+import { logger } from "@/lib/logger";
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+
+const exceptionBodySchema = z.object({
+  action: z.enum(["detect", "resolve", "acknowledge", "ignore", "clear"]),
+  exceptionId: z.string().optional(),
+  userId: z.string().optional(),
+  resolution: z.string().optional(),
+  reason: z.string().optional(),
+  mrpRunId: z.string().optional(),
+  daysOld: z.number().optional(),
+});
 
 // GET /api/mrp/exceptions - Get exceptions
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const summary = searchParams.get("summary") === "true";
     const status = searchParams.get("status") || undefined;
     const severity = searchParams.get("severity") || undefined;
     const exceptionType = searchParams.get("type") || undefined;
     const partId = searchParams.get("partId") || undefined;
     const siteId = searchParams.get("siteId") || undefined;
-    const limit = parseInt(searchParams.get("limit") || "100");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100") || 100, 100);
 
     if (summary) {
       const summaryData = await getExceptionSummary(siteId);
@@ -37,18 +56,30 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(exceptions);
   } catch (error) {
-    console.error("Exceptions GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/exceptions' });
     return NextResponse.json(
       { error: "Failed to get exceptions" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/exceptions - Detect exceptions or take action
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+const rawBody = await request.json();
+    const parseResult = exceptionBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, exceptionId, userId, resolution, reason, mrpRunId } = body;
 
     if (action === "detect") {
@@ -104,10 +135,10 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Exceptions POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/exceptions' });
     return NextResponse.json(
       { error: "Failed to process exception action" },
       { status: 500 }
     );
   }
-}
+});

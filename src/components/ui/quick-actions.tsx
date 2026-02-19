@@ -211,6 +211,7 @@ export function QuickActionGrid({
             action.bgColor
           )}
           title={action.descriptionKey ? t(action.descriptionKey) : t(action.labelKey)}
+          aria-label={t(action.labelKey)}
         >
           {action.badge && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -316,6 +317,7 @@ export function FloatingActionButton({
           'transition-all duration-300',
           isOpen && 'rotate-45'
         )}
+        aria-label={isOpen ? 'Close actions menu' : 'Open actions menu'}
       >
         <Plus className="w-6 h-6" />
       </button>

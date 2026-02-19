@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { clientLogger } from '@/lib/client-logger';
 import { z } from 'zod';
 import {
   Dialog,
@@ -42,6 +43,7 @@ import {
 import { Loader2, Truck, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useLanguage } from '@/lib/i18n/language-context';
 import {
   ChangeImpactDialog,
   useChangeImpact,
@@ -124,6 +126,7 @@ const PO_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange['
 // =============================================================================
 
 export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSuccess }: PurchaseOrderFormProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -186,7 +189,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         setSuppliers(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch suppliers:', error);
+      clientLogger.error('Failed to fetch suppliers', error);
     }
   };
 
@@ -204,7 +207,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         setParts(result.data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch parts:', error);
+      clientLogger.error('Failed to fetch parts', error);
     }
   };
 
@@ -276,15 +279,15 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
           });
           return;
         }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(isEditing ? 'Cập nhật PO thành công!' : 'Tạo PO thành công!');
+      toast.success(isEditing ? t('poForm.updateSuccess') : t('poForm.createSuccess'));
       onSuccess?.(result.data || result);
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to save PO:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      clientLogger.error('Failed to save PO', error);
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
       setPendingSubmitData(null);
@@ -327,10 +330,10 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa PO' : 'Tạo PO mới'}
+            {isEditing ? t('poForm.editTitle') : t('poForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin đơn mua hàng' : 'Điền thông tin để tạo đơn mua hàng mới'}
+            {isEditing ? t('poForm.editDesc') : t('poForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -343,7 +346,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="poNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số PO *</FormLabel>
+                    <FormLabel>{t('poForm.poNumber')}</FormLabel>
                     <FormControl>
                       <Input placeholder="Tự động (PO-2026-001)" {...field} disabled={isEditing} />
                     </FormControl>
@@ -357,11 +360,11 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="supplierId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nhà cung cấp *</FormLabel>
+                    <FormLabel>{t('poForm.supplier')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn nhà cung cấp" />
+                          <SelectValue placeholder={t('poForm.selectSupplier')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -384,7 +387,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="orderDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày đặt *</FormLabel>
+                    <FormLabel>{t('poForm.orderDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -398,7 +401,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="expectedDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ngày dự kiến *</FormLabel>
+                    <FormLabel>{t('poForm.expectedDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -412,7 +415,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Trạng thái</FormLabel>
+                    <FormLabel>{t('form.status')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -420,12 +423,12 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="draft">Nháp</SelectItem>
-                        <SelectItem value="pending">Chờ xử lý</SelectItem>
-                        <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                        <SelectItem value="in_progress">Đang thực hiện</SelectItem>
-                        <SelectItem value="received">Đã nhận</SelectItem>
-                        <SelectItem value="cancelled">Đã hủy</SelectItem>
+                        <SelectItem value="draft">{t('status.draft')}</SelectItem>
+                        <SelectItem value="pending">{t('status.pending')}</SelectItem>
+                        <SelectItem value="confirmed">{t('status.confirmed')}</SelectItem>
+                        <SelectItem value="in_progress">{t('status.inProgress')}</SelectItem>
+                        <SelectItem value="received">{t('status.received')}</SelectItem>
+                        <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -438,7 +441,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tiền tệ</FormLabel>
+                    <FormLabel>{t('poForm.currency')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -462,9 +465,9 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Ghi chú</FormLabel>
+                  <FormLabel>{t('form.notes')}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Ghi chú cho PO..." {...field} value={field.value || ''} />
+                    <Textarea placeholder={t('poForm.notesPlaceholder')} {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -474,10 +477,10 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
             {/* PO Lines */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">Chi tiết PO</h4>
+                <h4 className="font-medium">{t('poForm.poDetails')}</h4>
                 <Button type="button" variant="outline" size="sm" onClick={addLine}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Thêm dòng
+                  {t('form.addLine')}
                 </Button>
               </div>
 
@@ -485,10 +488,10 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40%]">Part</TableHead>
-                      <TableHead className="w-[20%]">Số lượng</TableHead>
-                      <TableHead className="w-[20%]">Đơn giá</TableHead>
-                      <TableHead className="w-[15%] text-right">Thành tiền</TableHead>
+                      <TableHead className="w-[40%]">{t('poForm.part')}</TableHead>
+                      <TableHead className="w-[20%]">{t('poForm.quantity')}</TableHead>
+                      <TableHead className="w-[20%]">{t('poForm.unitPrice')}</TableHead>
+                      <TableHead className="w-[15%] text-right">{t('poForm.lineTotal')}</TableHead>
                       <TableHead className="w-[5%]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -516,7 +519,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                                   value={field.value}
                                 >
                                   <SelectTrigger>
-                                    <SelectValue placeholder="Chọn part" />
+                                    <SelectValue placeholder={t('poForm.selectPart')} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {parts.map((p) => (
@@ -567,6 +570,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                               variant="ghost"
                               size="icon"
                               onClick={() => remove(index)}
+                              aria-label="Xóa dòng"
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
@@ -576,7 +580,7 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                     })}
                     <TableRow>
                       <TableCell colSpan={3} className="text-right font-medium">
-                        Tổng cộng:
+                        {t('form.total')}
                       </TableCell>
                       <TableCell className="text-right font-mono font-bold">
                         ${calculateTotal().toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -587,18 +591,18 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
                 </Table>
               ) : (
                 <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                  Chưa có item nào. Nhấn "Thêm dòng" để thêm parts.
+                  {t('poForm.noItems')}
                 </div>
               )}
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading || changeImpact.loading}>
-                Hủy
+                {t('form.cancel')}
               </Button>
               <Button type="submit" disabled={loading || changeImpact.loading}>
                 {(loading || changeImpact.loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo PO'}
+                {isEditing ? t('form.save') : t('poForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -630,6 +634,7 @@ interface DeletePurchaseOrderDialogProps {
 }
 
 export function DeletePurchaseOrderDialog({ open, onOpenChange, order, onSuccess }: DeletePurchaseOrderDialogProps) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -641,15 +646,15 @@ export function DeletePurchaseOrderDialog({ open, onOpenChange, order, onSuccess
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
+        throw new Error(result.message || result.error || t('form.error'));
       }
 
-      toast.success(result.deleted ? 'Đã xóa PO!' : 'Đã hủy PO!');
+      toast.success(result.deleted ? t('poForm.deleteSuccess') : t('poForm.cancelSuccess'));
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to delete PO:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      clientLogger.error('Failed to delete PO', error);
+      toast.error(error instanceof Error ? error.message : t('form.error'));
     } finally {
       setLoading(false);
     }
@@ -659,22 +664,20 @@ export function DeletePurchaseOrderDialog({ open, onOpenChange, order, onSuccess
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa/hủy</DialogTitle>
+          <DialogTitle>{t('form.confirmDeleteCancel')}</DialogTitle>
           <DialogDescription>
-            {order?.status === 'draft' ? (
-              <>Bạn có chắc chắn muốn <strong>xóa</strong> PO <strong>{order?.poNumber}</strong>?</>
-            ) : (
-              <>Bạn có chắc chắn muốn <strong>hủy</strong> PO <strong>{order?.poNumber}</strong>?</>
-            )}
+            {order?.status === 'draft'
+              ? t('poForm.deleteConfirmDraft', { poNumber: order?.poNumber || '' })
+              : t('poForm.cancelConfirm', { poNumber: order?.poNumber || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Không
+            {t('form.no')}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {order?.status === 'draft' ? 'Xóa' : 'Hủy PO'}
+            {order?.status === 'draft' ? t('form.delete') : t('poForm.cancelBtn')}
           </Button>
         </DialogFooter>
       </DialogContent>

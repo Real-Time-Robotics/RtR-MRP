@@ -140,6 +140,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
         <button
           onClick={handleRemove}
           className="flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+          aria-label="Đóng"
         >
           <X className="w-4 h-4 text-gray-400" />
         </button>

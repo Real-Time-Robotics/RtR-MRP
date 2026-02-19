@@ -1,20 +1,21 @@
 // Mobile API - Locations (Warehouses)
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const query = searchParams.get("q");
     const code = searchParams.get("code");
     const id = searchParams.get("id");
-    const limit = parseInt(searchParams.get("limit") || "100");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100") || 100, 100);
 
     // Get single warehouse by ID or code
     if (id || code) {
@@ -82,10 +83,10 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Mobile locations API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/locations' });
     return NextResponse.json(
       { error: "Failed to fetch locations" },
       { status: 500 }
     );
   }
-}
+});

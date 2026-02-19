@@ -159,7 +159,7 @@ export default function AutoPODetailPage() {
   const handleApprove = async () => {
     setActionLoading(true);
     try {
-      const body: any = { queueItemId: suggestionId };
+      const body: Record<string, unknown> = { queueItemId: suggestionId };
       if (isEditing) {
         body.modifications = {
           quantity: modifications.quantity,
@@ -334,7 +334,7 @@ export default function AutoPODetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Quay lại">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

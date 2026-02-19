@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -9,17 +11,39 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const scheduleBodySchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  equipmentId: z.string(),
+  type: z.string(),
+  frequency: z.string(),
+  intervalValue: z.number(),
+  intervalUnit: z.string().optional(),
+  estimatedDuration: z.number(),
+  requiredSkills: z.any().optional(),
+  checklistItems: z.any().optional(),
+  instructions: z.string().optional(),
+  safetyNotes: z.string().optional(),
+  partsRequired: z.any().optional(),
+  advanceNoticeDays: z.number().optional(),
+  estimatedCost: z.number().optional(),
+  laborCostPerHour: z.number().optional(),
+  priority: z.string().optional(),
+});
+
 // GET - List maintenance schedules
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const params = parsePaginationParams(request);
+const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const equipmentId = searchParams.get("equipmentId");
     const dueSoon = searchParams.get("dueSoon") === "true";
@@ -64,20 +88,26 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(schedules, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Maintenance schedules API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/schedules' });
     return paginatedError("Failed to fetch maintenance schedules", 500);
   }
-}
+});
 
 // POST - Create maintenance schedule
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const rawBody = await request.json();
+    const parseResult = scheduleBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       code,
       name,
@@ -97,15 +127,7 @@ export async function POST(request: NextRequest) {
       estimatedCost,
       laborCostPerHour,
       priority,
-    } = body;
-
-    // Validate required fields
-    if (!code || !name || !equipmentId || !type || !frequency || !intervalValue || !estimatedDuration) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     // Calculate next due date
     const nextDueDate = new Date();
@@ -147,10 +169,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(schedule, { status: 201 });
   } catch (error) {
-    console.error("Create maintenance schedule error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/maintenance/schedules' });
     return NextResponse.json(
       { error: "Failed to create maintenance schedule" },
       { status: 500 }
     );
   }
-}
+});

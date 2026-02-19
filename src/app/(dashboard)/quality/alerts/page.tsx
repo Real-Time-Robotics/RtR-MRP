@@ -22,10 +22,19 @@ import {
   Calendar
 } from 'lucide-react';
 import { QualityAlert, SPCEngine } from '@/lib/spc';
+import { clientLogger } from '@/lib/client-logger';
 
 export default function QualityAlertsPage() {
   const [alerts, setAlerts] = useState<QualityAlert[]>([]);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<{
+    total: number;
+    new: number;
+    acknowledged: number;
+    investigating: number;
+    resolved: number;
+    critical: number;
+    warning: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState<QualityAlert | null>(null);
   const [showResolveModal, setShowResolveModal] = useState(false);
@@ -55,7 +64,7 @@ export default function QualityAlertsPage() {
         setSummary(data.data.summary);
       }
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      clientLogger.error('Failed to fetch alerts:', error);
     } finally {
       setLoading(false);
     }
@@ -78,7 +87,7 @@ export default function QualityAlertsPage() {
         fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to acknowledge alert:', error);
+      clientLogger.error('Failed to acknowledge alert:', error);
     }
   };
 
@@ -105,7 +114,7 @@ export default function QualityAlertsPage() {
         fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to resolve alert:', error);
+      clientLogger.error('Failed to resolve alert:', error);
     }
   };
 
@@ -127,7 +136,7 @@ export default function QualityAlertsPage() {
         fetchAlerts();
       }
     } catch (error) {
-      console.error('Failed to dismiss alert:', error);
+      clientLogger.error('Failed to dismiss alert:', error);
     }
   };
 
@@ -241,6 +250,7 @@ export default function QualityAlertsPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm cảnh báo..."
+                aria-label="Tìm kiếm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -251,6 +261,7 @@ export default function QualityAlertsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Bộ lọc trạng thái"
             className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
             <option value="">Tất cả trạng thái</option>
@@ -264,6 +275,7 @@ export default function QualityAlertsPage() {
           <select
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value)}
+            aria-label="Bộ lọc mức độ"
             className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           >
             <option value="">Tất cả mức độ</option>
@@ -407,6 +419,7 @@ export default function QualityAlertsPage() {
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
                 rows={4}
+                aria-label="Giải pháp đã thực hiện"
                 className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="Mô tả các hành động đã thực hiện để giải quyết vấn đề..."
               />

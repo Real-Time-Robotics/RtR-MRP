@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   ChangeImpactDialog,
   useChangeImpact,
@@ -18,79 +17,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { Form } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Package } from 'lucide-react';
-import { toast } from 'sonner';
+import { useLanguage } from '@/lib/i18n/language-context';
+import { useMutation } from '@/hooks/use-mutation';
+
+import { partSchema, PartFormData } from './part-form/types';
+import { PartFormBasicTab } from './part-form/part-form-basic';
+import { PartFormPhysicalTab } from './part-form/part-form-physical';
+import { PartFormProcurementTab } from './part-form/part-form-procurement';
+import { PartFormComplianceTab } from './part-form/part-form-compliance';
 
 // =============================================================================
-// TYPES & VALIDATION
+// TYPES
 // =============================================================================
-
-const partSchema = z.object({
-  partNumber: z.string().min(1, 'Mã part là bắt buộc').max(50),
-  name: z.string().min(1, 'Tên part là bắt buộc').max(200),
-  description: z.string().max(1000).optional().nullable(),
-  category: z.string().min(1, 'Danh mục là bắt buộc'),
-  unit: z.string().min(1, 'Đơn vị là bắt buộc'),
-  unitCost: z.number().min(0, 'Giá phải >= 0'),
-
-  // Physical
-  weightKg: z.number().min(0).optional().nullable(),
-  lengthMm: z.number().min(0).optional().nullable(),
-  widthMm: z.number().min(0).optional().nullable(),
-  heightMm: z.number().min(0).optional().nullable(),
-  material: z.string().max(100).optional().nullable(),
-  color: z.string().max(50).optional().nullable(),
-
-  // Procurement
-  makeOrBuy: z.enum(['MAKE', 'BUY', 'BOTH']),
-  procurementType: z.string().optional().nullable(),
-  leadTimeDays: z.number().int().min(0),
-  moq: z.number().int().min(1),
-  orderMultiple: z.number().int().min(1).optional().nullable(),
-
-  // Inventory
-  minStockLevel: z.number().int().min(0),
-  reorderPoint: z.number().int().min(0),
-  maxStock: z.number().int().min(0).optional().nullable(),
-  safetyStock: z.number().int().min(0).optional().nullable(),
-  isCritical: z.boolean(),
-
-  // Compliance
-  countryOfOrigin: z.string().max(50).optional().nullable(),
-  ndaaCompliant: z.boolean(),
-  itarControlled: z.boolean(),
-  rohsCompliant: z.boolean(),
-  reachCompliant: z.boolean(),
-
-  // Engineering
-  revision: z.string().max(20),
-  manufacturer: z.string().max(100).optional().nullable(),
-  manufacturerPn: z.string().max(100).optional().nullable(),
-  lifecycleStatus: z.enum(['DEVELOPMENT', 'PROTOTYPE', 'ACTIVE', 'PHASE_OUT', 'OBSOLETE', 'EOL']),
-});
-
-type PartFormData = z.infer<typeof partSchema>;
 
 export interface Part {
   id: string;
@@ -108,6 +50,8 @@ export interface Part {
   color?: string | null;
   makeOrBuy: string;
   procurementType?: string | null;
+  manufacturingStrategy?: string | null;
+  pickingStrategy?: string | null;
   leadTimeDays: number;
   moq: number;
   orderMultiple?: number | null;
@@ -136,20 +80,6 @@ interface PartFormProps {
   onSuccess?: (part: Part) => void;
 }
 
-const CATEGORIES = [
-  'Finished Goods',
-  'Component',
-  'Raw Material',
-  'Packaging',
-  'Consumable',
-  'Service',
-  'Other',
-];
-
-const UNITS = ['EA', 'PCS', 'KG', 'G', 'M', 'CM', 'L', 'ML', 'BOX', 'SET', 'ROLL', 'SHEET'];
-
-const COUNTRIES = ['Việt Nam', 'USA', 'China', 'Japan', 'South Korea', 'Taiwan', 'Germany', 'UK', 'Singapore', 'Other'];
-
 // =============================================================================
 // CHANGE IMPACT CONFIGURATION
 // =============================================================================
@@ -169,7 +99,7 @@ const PART_IMPACT_FIELDS: Record<string, { label: string; valueType: FieldChange
 // =============================================================================
 
 export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const isEditing = !!part;
 
   // Change Impact state
@@ -218,6 +148,8 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           color: part.color || '',
           makeOrBuy: part.makeOrBuy as 'MAKE' | 'BUY' | 'BOTH',
           procurementType: part.procurementType || '',
+          manufacturingStrategy: (part.manufacturingStrategy as 'MTS' | 'MTO' | 'ATO') || null,
+          pickingStrategy: (part.pickingStrategy as 'FIFO' | 'FEFO' | 'ANY') || null,
           leadTimeDays: part.leadTimeDays,
           moq: part.moq,
           orderMultiple: part.orderMultiple,
@@ -273,75 +205,44 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
     }
   }, [open, part, form]);
 
+  const mutation = useMutation<PartFormData, Part>({
+    url: isEditing ? `/api/parts/${part!.id}` : '/api/parts',
+    method: isEditing ? 'PUT' : 'POST',
+    setError: form.setError,
+    revalidateKeys: ['/api/parts'],
+    successMessage: isEditing ? t('partForm.updateSuccess') : t('partForm.createSuccess'),
+    onSuccess: (data) => { onSuccess?.(data); onOpenChange(false); },
+    transformData: (data) => ({
+      ...data,
+      description: data.description || null,
+      material: data.material || null,
+      color: data.color || null,
+      procurementType: data.procurementType || null,
+      manufacturingStrategy: data.manufacturingStrategy || null,
+      pickingStrategy: data.pickingStrategy || null,
+      countryOfOrigin: data.countryOfOrigin || null,
+      manufacturer: data.manufacturer || null,
+      manufacturerPn: data.manufacturerPn || null,
+    }),
+  });
+
   // Change Impact hook
   const changeImpact = useChangeImpact({
     onSuccess: () => {
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
     onError: () => {
-      // Even on error, proceed with save (impact check is informational)
       if (pendingSubmitData) {
-        performSave(pendingSubmitData);
+        mutation.mutate(pendingSubmitData);
         setPendingSubmitData(null);
       }
     },
   });
 
-  const performSave = async (data: PartFormData) => {
-    setLoading(true);
-
-    try {
-      const cleanData = {
-        ...data,
-        description: data.description || null,
-        material: data.material || null,
-        color: data.color || null,
-        procurementType: data.procurementType || null,
-        countryOfOrigin: data.countryOfOrigin || null,
-        manufacturer: data.manufacturer || null,
-        manufacturerPn: data.manufacturerPn || null,
-      };
-
-      const url = isEditing ? `/api/parts/${part.id}` : '/api/parts';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors) {
-          Object.entries(result.errors).forEach(([field, messages]) => {
-            form.setError(field as keyof PartFormData, {
-              type: 'server',
-              message: (messages as string[]).join(', '),
-            });
-          });
-          return;
-        }
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      }
-
-      toast.success(isEditing ? 'Cập nhật part thành công!' : 'Tạo part thành công!');
-      onSuccess?.(result.data || result);
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to save part:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const onSubmit = async (data: PartFormData) => {
-    // Only check impact when editing and there are tracked changes
     if (isEditing && part && originalValuesRef.current) {
       const newValues = {
         unitCost: data.unitCost,
@@ -366,9 +267,10 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
       }
     }
 
-    // No tracked changes or new record - save directly
-    performSave(data);
+    mutation.mutate(data);
   };
+
+  const tabProps = { form, isEditing, t };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -376,10 +278,10 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            {isEditing ? 'Chỉnh sửa Part' : 'Thêm Part mới'}
+            {isEditing ? t('partForm.editTitle') : t('partForm.addTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing ? 'Cập nhật thông tin part' : 'Điền thông tin để tạo part mới'}
+            {isEditing ? t('partForm.editDesc') : t('partForm.addDesc')}
           </DialogDescription>
         </DialogHeader>
 
@@ -387,577 +289,40 @@ export function PartForm({ open, onOpenChange, part, onSuccess }: PartFormProps)
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid grid-cols-4 w-full">
-                <TabsTrigger value="basic">Cơ bản</TabsTrigger>
-                <TabsTrigger value="physical">Vật lý</TabsTrigger>
-                <TabsTrigger value="procurement">Procurement</TabsTrigger>
-                <TabsTrigger value="compliance">Compliance</TabsTrigger>
+                <TabsTrigger value="basic">{t('partForm.tabBasic')}</TabsTrigger>
+                <TabsTrigger value="physical">{t('partForm.tabPhysical')}</TabsTrigger>
+                <TabsTrigger value="procurement">{t('partForm.tabProcurement')}</TabsTrigger>
+                <TabsTrigger value="compliance">{t('partForm.tabCompliance')}</TabsTrigger>
               </TabsList>
 
               {/* Basic Tab */}
               <TabsContent value="basic" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="partNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mã Part *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="PART-001" {...field} disabled={isEditing} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="lifecycleStatus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Trạng thái</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="DEVELOPMENT">Development</SelectItem>
-                            <SelectItem value="PROTOTYPE">Prototype</SelectItem>
-                            <SelectItem value="ACTIVE">Active</SelectItem>
-                            <SelectItem value="PHASE_OUT">Phase Out</SelectItem>
-                            <SelectItem value="OBSOLETE">Obsolete</SelectItem>
-                            <SelectItem value="EOL">End of Life</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tên Part *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Tên sản phẩm" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mô tả</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Mô tả chi tiết..." {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="category"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Danh mục *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {CATEGORIES.map((cat) => (
-                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Đơn vị *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {UNITS.map((u) => (
-                              <SelectItem key={u} value={u}>{u}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="unitCost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Giá (USD) *</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} step={0.01} {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="manufacturer"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nhà sản xuất</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Manufacturer" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="manufacturerPn"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>MPN</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Manufacturer Part Number" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="isCritical"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel>Critical Part</FormLabel>
-                        <FormDescription>Đánh dấu là part quan trọng</FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                <PartFormBasicTab {...tabProps} />
               </TabsContent>
 
               {/* Physical Tab */}
               <TabsContent value="physical" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="weightKg"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Trọng lượng (kg)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} step={0.001} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="material"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chất liệu</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Aluminum, Steel, Plastic..." {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="lengthMm"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dài (mm)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="widthMm"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Rộng (mm)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="heightMm"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cao (mm)</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="color"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Màu sắc</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Black, White, Silver..." {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <PartFormPhysicalTab {...tabProps} />
               </TabsContent>
 
               {/* Procurement Tab */}
               <TabsContent value="procurement" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="makeOrBuy"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Make/Buy</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="MAKE">Make</SelectItem>
-                            <SelectItem value="BUY">Buy</SelectItem>
-                            <SelectItem value="BOTH">Both</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="leadTimeDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lead Time (ngày)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
-                            }}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="moq"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>MOQ</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val === '' ? 1 : parseInt(val, 10) || 1);
-                            }}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormDescription>Số lượng đặt hàng tối thiểu</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="orderMultiple"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Order Multiple</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={1} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="minStockLevel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Min Stock Level</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
-                            }}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="reorderPoint"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Reorder Point</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
-                            value={field.value ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              field.onChange(val === '' ? 0 : parseInt(val, 10) || 0);
-                            }}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="safetyStock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Safety Stock</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="maxStock"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Max Stock</FormLabel>
-                        <FormControl>
-                          <Input type="number" min={0} {...field} value={field.value ?? ''} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <PartFormProcurementTab {...tabProps} />
               </TabsContent>
 
               {/* Compliance Tab */}
               <TabsContent value="compliance" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="countryOfOrigin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Xuất xứ</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn quốc gia" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {COUNTRIES.map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="revision"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Revision</FormLabel>
-                        <FormControl>
-                          <Input placeholder="A" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <FormField
-                    control={form.control}
-                    name="ndaaCompliant"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>NDAA Compliant</FormLabel>
-                          <FormDescription>Section 889 compliant</FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="itarControlled"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>ITAR Controlled</FormLabel>
-                          <FormDescription>Export controlled item</FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="rohsCompliant"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>RoHS Compliant</FormLabel>
-                          <FormDescription>Restriction of Hazardous Substances</FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="reachCompliant"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                        <div className="space-y-0.5">
-                          <FormLabel>REACH Compliant</FormLabel>
-                          <FormDescription>EU chemical regulations</FormDescription>
-                        </div>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <PartFormComplianceTab {...tabProps} />
               </TabsContent>
             </Tabs>
 
             <DialogFooter className="mt-6">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                Hủy
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isLoading}>
+                {t('form.cancel')}
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Lưu thay đổi' : 'Tạo Part'}
+              <Button type="submit" disabled={mutation.isLoading}>
+                {mutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditing ? t('form.save') : t('partForm.createBtn')}
               </Button>
             </DialogFooter>
           </form>
@@ -992,48 +357,32 @@ interface DeletePartDialogProps {
 }
 
 export function DeletePartDialog({ open, onOpenChange, part, onSuccess }: DeletePartDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
 
-  const handleDelete = async () => {
-    if (!part) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/parts/${part.id}`, { method: 'DELETE' });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || result.error || 'Có lỗi xảy ra');
-      }
-
-      toast.success('Đã xóa part thành công!');
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Failed to delete part:', error);
-      toast.error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    url: `/api/parts/${part?.id}`,
+    method: 'DELETE',
+    revalidateKeys: ['/api/parts'],
+    successMessage: t('partForm.deleteSuccess'),
+    onSuccess: () => { onSuccess?.(); onOpenChange(false); },
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Xác nhận xóa</DialogTitle>
+          <DialogTitle>{t('form.confirmDelete')}</DialogTitle>
           <DialogDescription>
-            Bạn có chắc chắn muốn xóa part <strong>{part?.name}</strong> ({part?.partNumber})?
-            Hành động này không thể hoàn tác.
+            {t('partForm.deleteConfirmDesc', { name: part?.name || '', code: part?.partNumber || '' })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Hủy
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={deleteMutation.isLoading}>
+            {t('form.cancel')}
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Xóa
+          <Button variant="destructive" onClick={() => part && deleteMutation.mutate()} disabled={deleteMutation.isLoading}>
+            {deleteMutation.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('form.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -14,6 +14,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MOBILE PICKING PAGE
@@ -61,7 +62,7 @@ export default function MobilePickingPage() {
           setPickLists(data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch picks:', err);
+        clientLogger.error('Failed to fetch picks', err);
       } finally {
         setIsLoading(false);
       }
@@ -339,6 +340,7 @@ export default function MobilePickingPage() {
                       const max = Math.min(selectedItem.qtyToPick - selectedItem.qtyPicked, selectedItem.binQty);
                       setPickQty(Math.min(max, Math.max(1, parseInt(e.target.value) || 1)));
                     }}
+                    aria-label="Số lượng lấy hàng"
                     className="w-24 h-14 text-center text-2xl font-bold bg-gray-100 dark:bg-gray-700 rounded-xl border-0"
                   />
                   <button

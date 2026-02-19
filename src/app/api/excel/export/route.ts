@@ -1,8 +1,10 @@
 // src/app/api/excel/export/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
+import { prisma } from "@/lib/prisma";import { logger } from '@/lib/logger';
+
 import {
   exportToExcelBuffer,
   exportToCSVBuffer,
@@ -10,21 +12,37 @@ import {
   type ExportColumn,
 } from "@/lib/excel";
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // POST - Create export job and generate file
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+const bodySchema = z.object({
+      type: z.string(),
+      format: z.string().default("xlsx"),
+      filters: z.record(z.string(), z.unknown()).default({}),
+      columns: z.array(z.record(z.string(), z.unknown())).optional(),
+      options: z.record(z.string(), z.unknown()).default({}),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const {
       type,
-      format = "xlsx",
-      filters = {},
+      format,
+      filters,
       columns,
-      options = {},
+      options,
     } = body;
 
     if (!type) {
@@ -45,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get column definitions
-    const columnDefs: ExportColumn[] = columns || defaultColumnDefinitions[type] || [];
+    const columnDefs: ExportColumn[] = (columns as unknown as ExportColumn[]) || defaultColumnDefinitions[type] || [];
 
     // Generate export
     const result =
@@ -98,23 +116,22 @@ export async function POST(request: NextRequest) {
     const responseBody = new Uint8Array(result.buffer);
     return new NextResponse(responseBody, { headers });
   } catch (error) {
-    console.error("Export error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/export' });
     return NextResponse.json(
       { error: "Export failed" },
       { status: 500 }
     );
   }
-}
+});
 
 // GET - Get export history
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const jobId = searchParams.get("jobId");
 
     if (jobId) {
@@ -141,13 +158,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ jobs });
   } catch (error) {
-    console.error("Export history error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/excel/export' });
     return NextResponse.json(
       { error: "Failed to get export history" },
       { status: 500 }
     );
   }
-}
+});
 
 // Fetch data for export based on type
 async function fetchExportData(
@@ -161,24 +178,28 @@ async function fetchExportData(
       return prisma.part.findMany({
         where,
         orderBy: { partNumber: "asc" },
+        take: 10000,
       });
 
     case "suppliers":
       return prisma.supplier.findMany({
         where,
         orderBy: { code: "asc" },
+        take: 10000,
       });
 
     case "products":
       return prisma.product.findMany({
         where,
         orderBy: { sku: "asc" },
+        take: 10000,
       });
 
     case "customers":
       return prisma.customer.findMany({
         where,
         orderBy: { code: "asc" },
+        take: 10000,
       });
 
     case "inventory":
@@ -189,6 +210,7 @@ async function fetchExportData(
           warehouse: { select: { code: true, name: true } },
         },
         orderBy: { partId: "asc" },
+        take: 10000,
       });
 
     case "salesOrders":
@@ -199,6 +221,7 @@ async function fetchExportData(
           lines: { include: { product: true } },
         },
         orderBy: { orderDate: "desc" },
+        take: 10000,
       });
 
     case "purchaseOrders":
@@ -209,6 +232,7 @@ async function fetchExportData(
           lines: { include: { part: true } },
         },
         orderBy: { orderDate: "desc" },
+        take: 10000,
       });
 
     case "workOrders":
@@ -218,6 +242,7 @@ async function fetchExportData(
           product: { select: { sku: true, name: true } },
         },
         orderBy: { createdAt: "desc" },
+        take: 10000,
       });
 
     default:
@@ -244,13 +269,14 @@ function buildWhereClause(filters: Record<string, unknown>): Record<string, unkn
   }
 
   if (filters.fromDate || filters.toDate) {
-    where.createdAt = {};
+    const createdAt: Record<string, unknown> = {};
     if (filters.fromDate) {
-      (where.createdAt as Record<string, unknown>).gte = new Date(String(filters.fromDate));
+      createdAt.gte = new Date(String(filters.fromDate));
     }
     if (filters.toDate) {
-      (where.createdAt as Record<string, unknown>).lte = new Date(String(filters.toDate));
+      createdAt.lte = new Date(String(filters.toDate));
     }
+    where.createdAt = createdAt;
   }
 
   return where;

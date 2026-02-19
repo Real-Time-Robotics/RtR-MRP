@@ -1,21 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { BomType } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
+const bomLinePostSchema = z.object({
+  id: z.string().optional(),
+  partId: z.string().min(1, 'partId là bắt buộc'),
+  quantity: z.number().positive('Số lượng phải lớn hơn 0'),
+  unit: z.string().optional().default("EA"),
+  lineNumber: z.number().int().optional(),
+  moduleCode: z.string().optional(),
+  moduleName: z.string().optional(),
+  isCritical: z.boolean().optional().default(false),
+  notes: z.string().optional(),
+  findNumber: z.number().optional(),
+  referenceDesignator: z.string().optional(),
+  positionX: z.number().optional(),
+  positionY: z.number().optional(),
+  positionZ: z.number().optional(),
+  scrapRate: z.number().min(0).max(1).optional(),
+  scrapPercent: z.number().min(0).max(100).optional(),
+  operationSeq: z.number().int().optional(),
+  revision: z.string().optional().default("A"),
+  effectivityDate: z.string().optional(),
+  obsoleteDate: z.string().optional(),
+  alternateGroup: z.string().optional(),
+  isPrimary: z.boolean().optional().default(true),
+  bomType: z.string().optional().default("MANUFACTURING"),
+  subAssembly: z.boolean().optional().default(false),
+  phantom: z.boolean().optional().default(false),
+  extendedCost: z.number().optional(),
+  sequence: z.number().int().optional().default(0),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 // GET - Get all lines for a BOM
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
 
     const lines = await prisma.bomLine.findMany({
       where: { bomId: id },
@@ -31,24 +63,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(lines);
   } catch (error) {
-    console.error("Failed to fetch BOM lines:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to fetch BOM lines" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Add new line to BOM
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
-    const data = await request.json();
+  try {
+const { id } = await context.params;
+    const body = await request.json();
+    const parsed = bomLinePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
 
     // Verify BOM header exists
     const bomHeader = await prisma.bomHeader.findUnique({
@@ -108,7 +147,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         isPrimary: data.isPrimary ?? true,
 
         // BOM Type & Structure
-        bomType: data.bomType || "MANUFACTURING",
+        bomType: (data.bomType || "MANUFACTURING") as BomType,
         subAssembly: data.subAssembly ?? false,
         phantom: data.phantom ?? false,
 
@@ -125,23 +164,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(line, { status: 201 });
   } catch (error) {
-    console.error("Failed to create BOM line:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to create BOM line" },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Update multiple lines (batch update)
-export async function PUT(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+const { id } = await context.params;
     const data = await request.json();
 
     if (!Array.isArray(data.lines)) {
@@ -152,7 +190,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const results = await Promise.all(
-      data.lines.map(async (lineData: Record<string, unknown>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.lines.map(async (lineData: Record<string, any>) => {
         return prisma.bomLine.update({
           where: { id: lineData.id as string },
           data: {
@@ -187,23 +226,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(results);
   } catch (error) {
-    console.error("Failed to update BOM lines:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to update BOM lines" },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Delete a line from BOM (by line ID in body)
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const data = await request.json();
+  try {
+const data = await request.json();
 
     if (!data.lineId) {
       return NextResponse.json(
@@ -218,10 +256,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: "Line deleted successfully" });
   } catch (error) {
-    console.error("Failed to delete BOM line:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/bom/[id]/lines' });
     return NextResponse.json(
       { error: "Failed to delete BOM line" },
       { status: 500 }
     );
   }
-}
+});

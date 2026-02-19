@@ -196,8 +196,14 @@ export const WorkOrderCreateSchema = z.object({
 
 export const WorkOrderUpdateSchema = z.object({
   id: z.string().min(1).max(50),
-  status: z.enum(['DRAFT', 'RELEASED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CLOSED', 'CANCELLED']).optional(),
+  status: z.preprocess(
+    (v) => (typeof v === 'string' ? v.toUpperCase() : v),
+    z.enum(['DRAFT', 'RELEASED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CLOSED', 'CANCELLED'])
+  ).optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  quantity: z.number().int().min(1).optional(),
+  plannedStart: z.string().or(z.date()).optional().nullable(),
+  plannedEnd: z.string().or(z.date()).optional().nullable(),
   completedQty: z.number().min(0).optional(),
   scrapQty: z.number().min(0).optional(),
   notes: z.string().max(5000).optional(),

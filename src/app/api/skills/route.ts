@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import prisma from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from '@/lib/logger';
+
 import {
   parsePaginationParams,
   buildOffsetPaginationQuery,
@@ -11,18 +14,33 @@ import {
   paginatedError,
 } from "@/lib/pagination";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const skillBodySchema = z.object({
+  code: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.string(),
+  workCenterType: z.string().optional(),
+  trainingRequired: z.boolean().optional(),
+  certificationRequired: z.boolean().optional(),
+  recertificationDays: z.number().optional(),
+  hasLevels: z.boolean().optional(),
+  maxLevel: z.number().optional(),
+});
+
 const ALLOWED_FILTERS = ["category", "workCenterType", "isActive"];
 const SEARCH_FIELDS = ["code", "name"];
 
 // GET - List skills (skill matrix)
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -79,20 +97,27 @@ export async function GET(request: NextRequest) {
     const response = buildPaginatedResponse(skills, totalCount, params, startTime);
     return paginatedSuccess(response);
   } catch (error) {
-    console.error("Skills API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills' });
     return paginatedError("Failed to fetch skills", 500);
   }
-}
+});
 
 // POST - Create skill
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const body = await request.json();
+  try {
+
+    const rawBody = await request.json();
+    const parseResult = skillBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     const {
       code,
       name,
@@ -104,15 +129,7 @@ export async function POST(request: NextRequest) {
       recertificationDays,
       hasLevels,
       maxLevel,
-    } = body;
-
-    // Validate required fields
-    if (!code || !name || !category) {
-      return NextResponse.json(
-        { error: "Missing required fields: code, name, category" },
-        { status: 400 }
-      );
-    }
+    } = parseResult.data;
 
     const skill = await prisma.skill.create({
       data: {
@@ -132,10 +149,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(skill, { status: 201 });
   } catch (error) {
-    console.error("Create skill error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/skills' });
     return NextResponse.json(
       { error: "Failed to create skill" },
       { status: 500 }
     );
   }
-}
+});

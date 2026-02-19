@@ -4,6 +4,43 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+
+// =============================================================================
+// PRISMA RESULT TYPES
+// =============================================================================
+
+/** PurchaseOrder with lines and parts (from Prisma query) */
+type PurchaseOrderWithLines = Prisma.PurchaseOrderGetPayload<{
+  include: {
+    lines: {
+      include: { part: true };
+    };
+  };
+}>;
+
+/** PurchaseOrder base (without includes) */
+type PurchaseOrderBase = Prisma.PurchaseOrderGetPayload<{}>;
+
+/** PartSupplier with part (from Prisma query) */
+type PartSupplierWithPart = Prisma.PartSupplierGetPayload<{
+  include: { part: true };
+}>;
+
+/** NCR with part (from Prisma query) */
+type NCRWithPart = Prisma.NCRGetPayload<{
+  include: { part: true };
+}>;
+
+/** Inspection with part (from Prisma query) */
+type InspectionWithPart = Prisma.InspectionGetPayload<{
+  include: { part: true };
+}>;
+
+/** PurchaseOrderLine with part */
+type PurchaseOrderLineWithPart = Prisma.PurchaseOrderLineGetPayload<{
+  include: { part: true };
+}>;
 
 // =============================================================================
 // TYPES
@@ -1123,7 +1160,7 @@ export class SupplierDataExtractor {
   // HELPER METHODS
   // =============================================================================
 
-  private calculateDeliveryTrend(orders: any[], months: number): DeliveryTrendPoint[] {
+  private calculateDeliveryTrend(orders: PurchaseOrderBase[], months: number): DeliveryTrendPoint[] {
     const trend: DeliveryTrendPoint[] = [];
     const now = new Date();
 
@@ -1172,7 +1209,7 @@ export class SupplierDataExtractor {
     return trend;
   }
 
-  private calculateAverageLeadTime(orders: any[]): number {
+  private calculateAverageLeadTime(orders: PurchaseOrderBase[]): number {
     if (orders.length === 0) return 0;
 
     const leadTimes = orders.map((o) =>
@@ -1211,7 +1248,7 @@ export class SupplierDataExtractor {
     };
   }
 
-  private calculateDefectBreakdown(ncrs: any[]): DefectCategoryData[] {
+  private calculateDefectBreakdown(ncrs: NCRWithPart[]): DefectCategoryData[] {
     const categoryMap = new Map<string, { count: number; totalQty: number }>();
 
     ncrs.forEach((ncr) => {
@@ -1235,8 +1272,8 @@ export class SupplierDataExtractor {
   }
 
   private calculateQualityTrend(
-    inspections: any[],
-    ncrs: any[],
+    inspections: InspectionWithPart[],
+    ncrs: NCRWithPart[],
     months: number
   ): QualityTrendPoint[] {
     const trend: QualityTrendPoint[] = [];
@@ -1294,7 +1331,7 @@ export class SupplierDataExtractor {
     return Math.sqrt(variance);
   }
 
-  private calculatePriceChangePercent(orders: any[]): number {
+  private calculatePriceChangePercent(orders: PurchaseOrderWithLines[]): number {
     if (orders.length < 2) return 0;
 
     // Compare first 3 months vs last 3 months average
@@ -1315,7 +1352,7 @@ export class SupplierDataExtractor {
     return ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
   }
 
-  private calculateAvgOrderPrice(orders: any[]): number {
+  private calculateAvgOrderPrice(orders: PurchaseOrderWithLines[]): number {
     const allLines = orders.flatMap((o) => o.lines || []);
     if (allLines.length === 0) return 0;
     return allLines.reduce((sum, l) => sum + (l.unitPrice || 0), 0) / allLines.length;
@@ -1327,7 +1364,7 @@ export class SupplierDataExtractor {
     return Math.min(100, stabilityScore);
   }
 
-  private calculatePriceHistory(orders: any[], months: number): PriceHistoryPoint[] {
+  private calculatePriceHistory(orders: PurchaseOrderWithLines[], months: number): PriceHistoryPoint[] {
     const history: PriceHistoryPoint[] = [];
     const now = new Date();
 
@@ -1359,13 +1396,13 @@ export class SupplierDataExtractor {
     return history;
   }
 
-  private calculatePartPricing(partSuppliers: any[], orders: any[]): PartPricingData[] {
+  private calculatePartPricing(partSuppliers: PartSupplierWithPart[], orders: PurchaseOrderWithLines[]): PartPricingData[] {
     return partSuppliers.map((ps) => {
       const partLines = orders.flatMap((o) =>
-        (o.lines || []).filter((l: any) => l.partId === ps.partId)
+        (o.lines || []).filter((l: PurchaseOrderLineWithPart) => l.partId === ps.partId)
       );
 
-      const prices = partLines.map((l: any) => l.unitPrice);
+      const prices = partLines.map((l: PurchaseOrderLineWithPart) => l.unitPrice);
       const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
       const priceStability = 100 - this.calculateStdDev(prices) * 10;
 
@@ -1396,13 +1433,13 @@ export class SupplierDataExtractor {
     });
   }
 
-  private detectPriceChanges(orders: any[]): PriceChangeEvent[] {
+  private detectPriceChanges(orders: PurchaseOrderWithLines[]): PriceChangeEvent[] {
     const changes: PriceChangeEvent[] = [];
     const partPriceHistory = new Map<string, { date: Date; price: number; partSku: string }[]>();
 
     // Build price history per part
     orders.forEach((order) => {
-      (order.lines || []).forEach((line: any) => {
+      (order.lines || []).forEach((line: PurchaseOrderLineWithPart) => {
         const history = partPriceHistory.get(line.partId) || [];
         history.push({
           date: new Date(order.orderDate),
@@ -1438,7 +1475,7 @@ export class SupplierDataExtractor {
     return changes.sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
-  private calculateOrderFrequency(orders: any[]): number {
+  private calculateOrderFrequency(orders: PurchaseOrderWithLines[]): number {
     if (orders.length < 2) return 0;
 
     const sortedOrders = [...orders].sort(
@@ -1458,7 +1495,7 @@ export class SupplierDataExtractor {
     return totalDays / (sortedOrders.length - 1);
   }
 
-  private calculatePartOrderDistribution(orders: any[]): PartOrderData[] {
+  private calculatePartOrderDistribution(orders: PurchaseOrderWithLines[]): PartOrderData[] {
     const partData = new Map<
       string,
       {
@@ -1471,7 +1508,7 @@ export class SupplierDataExtractor {
     >();
 
     orders.forEach((order) => {
-      (order.lines || []).forEach((line: any) => {
+      (order.lines || []).forEach((line: PurchaseOrderLineWithPart) => {
         const existing = partData.get(line.partId) || {
           partSku: line.part?.partNumber || 'Unknown',
           orderCount: 0,
@@ -1504,7 +1541,7 @@ export class SupplierDataExtractor {
       .sort((a, b) => b.orderCount - a.orderCount);
   }
 
-  private calculateOrderTrend(orders: any[], months: number): OrderTrendPoint[] {
+  private calculateOrderTrend(orders: PurchaseOrderWithLines[], months: number): OrderTrendPoint[] {
     const trend: OrderTrendPoint[] = [];
     const now = new Date();
 
@@ -1526,11 +1563,11 @@ export class SupplierDataExtractor {
         ['received', 'completed'].includes(o.status)
       );
       const totalOrdered = completedOrders.reduce(
-        (sum, o) => sum + (o.lines || []).reduce((s: number, l: any) => s + l.quantity, 0),
+        (sum, o) => sum + (o.lines || []).reduce((s: number, l: PurchaseOrderLineWithPart) => s + l.quantity, 0),
         0
       );
       const totalReceived = completedOrders.reduce(
-        (sum, o) => sum + (o.lines || []).reduce((s: number, l: any) => s + l.receivedQty, 0),
+        (sum, o) => sum + (o.lines || []).reduce((s: number, l: PurchaseOrderLineWithPart) => s + l.receivedQty, 0),
         0
       );
       const fulfillmentRate = totalOrdered > 0 ? (totalReceived / totalOrdered) * 100 : 100;
@@ -1563,10 +1600,10 @@ export class SupplierDataExtractor {
     return secondHalfVariance < firstHalfVariance;
   }
 
-  private calculatePartLeadTimes(partSuppliers: any[], orders: any[]): PartLeadTimeData[] {
+  private calculatePartLeadTimes(partSuppliers: PartSupplierWithPart[], orders: PurchaseOrderWithLines[]): PartLeadTimeData[] {
     return partSuppliers.map((ps) => {
       const partOrders = orders.filter((o) =>
-        (o.lines || []).some((l: any) => l.partId === ps.partId)
+        (o.lines || []).some((l: PurchaseOrderLineWithPart) => l.partId === ps.partId)
       );
 
       const actualLeadTimes = partOrders.map((o) =>

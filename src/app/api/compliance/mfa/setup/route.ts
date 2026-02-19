@@ -1,17 +1,35 @@
 // src/app/api/compliance/mfa/setup/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { z } from 'zod';
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { setupMFA, verifyMFASetup } from "@/lib/compliance";
+import { logger } from "@/lib/logger";
 
-export async function POST(request: NextRequest) {
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+export const POST = withRoleAuth(['admin'], async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.string(),
+      deviceName: z.string().optional(),
+      code: z.string().optional(),
+      deviceId: z.string().optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, deviceName, code, deviceId } = body;
 
     if (action === "setup") {
@@ -48,10 +66,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error("MFA setup error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/compliance/mfa/setup' });
     return NextResponse.json(
       { error: "MFA setup failed" },
       { status: 500 }
     );
   }
-}
+});

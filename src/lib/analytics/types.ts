@@ -75,7 +75,7 @@ export interface KPICalculationParams {
   dateFrom?: Date;
   dateTo?: Date;
   period?: TrendPeriod;
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   includeTrend?: boolean;
   trendPeriods?: number;
 }
@@ -121,7 +121,7 @@ export interface WidgetQueryConfig {
 export interface QueryFilter {
   field: string;
   operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'notIn' | 'contains' | 'between';
-  value: any;
+  value: unknown;
 }
 
 export interface QueryOrderBy {
@@ -186,7 +186,7 @@ export interface DashboardWidget {
 
 export interface WidgetData {
   widgetId: string;
-  data: any;
+  data: unknown;
   metadata?: {
     total?: number;
     lastUpdated?: Date;
@@ -263,6 +263,8 @@ export interface ReportRecipient {
   email: string;
   name?: string;
   type: 'to' | 'cc' | 'bcc';
+  userId?: string;
+  attachReport?: boolean;
 }
 
 export interface ReportSchedule {
@@ -276,7 +278,7 @@ export interface ReportSchedule {
   timezone: string;
   recipients: ReportRecipient[];
   outputFormat: ReportFormat;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   emailSubject?: string;
   emailBody?: string;
   isActive: boolean;
@@ -296,7 +298,7 @@ export interface ReportScheduleCreateInput {
   timezone?: string;
   recipients: ReportRecipient[];
   outputFormat?: ReportFormat;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   emailSubject?: string;
   emailBody?: string;
 }
@@ -307,7 +309,7 @@ export interface ReportInstance {
   reportId: string;
   generatedAt: Date;
   generatedBy: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   format: ReportFormat;
   fileUrl?: string;
   fileName?: string;
@@ -323,9 +325,11 @@ export interface ReportInstance {
 export interface ReportGenerateInput {
   reportId: string;
   format: ReportFormat;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   recipients?: ReportRecipient[];
   sendEmail?: boolean;
+  /** ID of the user generating this report. Falls back to 'system' when not provided. */
+  generatedBy?: string;
 }
 
 // =============================================================================
@@ -353,7 +357,7 @@ export interface AggregatedResult {
   dimension?: string;
   value: number;
   count?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // =============================================================================

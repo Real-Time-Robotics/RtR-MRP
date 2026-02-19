@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Sans, IBM_Plex_Mono, JetBrains_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Sans, IBM_Plex_Mono, JetBrains_Mono, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/pwa";
+import { WebVitals } from "@/components/web-vitals";
 
 // Primary body font (Industrial Precision)
 const ibmPlexSans = IBM_Plex_Sans({
@@ -30,6 +31,14 @@ const jetBrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// Vietnamese-optimized font
+const beVietnamPro = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-be-vietnam-pro",
+  display: "swap",
+});
+
 // Fallback font
 const inter = Inter({
   subsets: ["latin"],
@@ -37,8 +46,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RTR MRP System",
-  description: "AI-First Material Requirements Planning for Drone Manufacturing",
+  title: {
+    template: '%s | RTR MRP',
+    default: 'RTR MRP - Hệ thống quản lý sản xuất',
+  },
+  description: 'Hệ thống hoạch định nguồn lực sản xuất RTR MRP - AI-First Material Requirements Planning',
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -48,10 +60,12 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  keywords: ['MRP', 'sản xuất', 'quản lý', 'vật tư', 'tồn kho', 'RTR'],
+  authors: [{ name: 'RTR MRP Team' }],
 };
 
 export const viewport: Viewport = {
-  themeColor: "#3b82f6",
+  themeColor: "#30a46c",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -71,8 +85,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetBrainsMono.variable} ${inter.variable} font-sans antialiased`}>
+      <body className={`${beVietnamPro.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} ${jetBrainsMono.variable} ${inter.variable} font-sans antialiased`}>
         <Providers>
+          <WebVitals />
           <PWAProvider>
             {children}
           </PWAProvider>

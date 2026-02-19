@@ -1,7 +1,7 @@
 // src/app/api/finance/gl/journals/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withRoleAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
 import {
   createJournalEntry,
@@ -9,14 +9,41 @@ import {
   voidJournalEntry,
   reverseJournalEntry,
 } from "@/lib/finance";
+import { logger } from "@/lib/logger";
+import { z } from "zod";
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
+const JournalLineSchema = z.object({
+  accountId: z.string().min(1, "Account ID is required"),
+  debitAmount: z.number().min(0).default(0),
+  creditAmount: z.number().min(0).default(0),
+  description: z.string().optional(),
+  departmentId: z.string().optional(),
+  projectId: z.string().optional(),
+  costCenterId: z.string().optional(),
+});
+
+const JournalCreateSchema = z.object({
+  entryDate: z.string().min(1, "Entry date is required"),
+  description: z.string().min(1, "Description is required"),
+  reference: z.string().optional(),
+  lines: z.array(JournalLineSchema).min(1, "At least one journal line is required"),
+  autoPost: z.boolean().optional().default(false),
+});
+
+const JournalActionSchema = z.object({
+  journalId: z.string().min(1, "Journal ID is required"),
+  action: z.enum(["post", "void", "reverse"]),
+});
 
 // GET - Get journal entries
-export async function GET(request: NextRequest) {
+export const GET = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+  // Rate limiting
+  const readRateLimitResult = await checkReadEndpointLimit(request);
+  if (readRateLimitResult) return readRateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const { searchParams } = new URL(request.url);
     const journalId = searchParams.get("id");
@@ -77,44 +104,46 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ journals });
   } catch (error) {
-    console.error("GL journals GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/finance/gl/journals' });
     return NextResponse.json(
       { error: "Failed to get journal entries" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST - Create journal entry
-export async function POST(request: NextRequest) {
+export const POST = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
-    const { entryDate, description, reference, lines, autoPost } = body;
 
-    if (!entryDate || !description || !lines?.length) {
+    const validation = JournalCreateSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Validation failed", details: validation.error.issues },
         { status: 400 }
       );
     }
 
+    const data = validation.data;
+
     const result = await createJournalEntry(
       {
-        entryDate: new Date(entryDate),
-        description,
-        reference,
-        lines,
+        entryDate: new Date(data.entryDate),
+        description: data.description,
+        reference: data.reference,
+        lines: data.lines,
       },
       session.user.id
     );
 
     // Auto-post if requested
-    if (autoPost && result.entryId) {
+    if (data.autoPost && result.entryId) {
       await postJournalEntry(result.entryId, session.user.id);
     }
 
@@ -123,32 +152,34 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error("GL journals POST error:", error);
-    const message = error instanceof Error ? error.message : "Failed to create journal entry";
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/finance/gl/journals' });
     return NextResponse.json(
-      { error: message },
+      { error: "Failed to create journal entry" },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT - Post, void, or reverse journal entry
-export async function PUT(request: NextRequest) {
+export const PUT = withRoleAuth(['admin', 'manager'], async (request, context, session) => {
+  // Rate limiting
+  const putRateLimitResult = await checkWriteEndpointLimit(request);
+  if (putRateLimitResult) return putRateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+// Role-based access control: Finance routes require ADMIN or MANAGER
 
     const body = await request.json();
-    const { journalId, action } = body;
 
-    if (!journalId || !action) {
+    const validation = JournalActionSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "journalId and action are required" },
+        { error: "Validation failed", details: validation.error.issues },
         { status: 400 }
       );
     }
+
+    const { journalId, action } = validation.data;
 
     switch (action) {
       case "post":
@@ -174,11 +205,10 @@ export async function PUT(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("GL journals PUT error:", error);
-    const message = error instanceof Error ? error.message : "Failed to update journal entry";
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/finance/gl/journals' });
     return NextResponse.json(
-      { error: message },
+      { error: "Failed to update journal entry" },
       { status: 500 }
     );
   }
-}
+});

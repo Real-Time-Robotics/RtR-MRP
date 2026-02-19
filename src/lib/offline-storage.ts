@@ -367,7 +367,7 @@ export async function syncPendingActions(): Promise<{ success: number; failed: n
 export function registerBackgroundSync(): void {
   if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
     navigator.serviceWorker.ready.then((registration) => {
-      (registration as any).sync.register('sync-pending-actions');
+      (registration as unknown as { sync: { register: (tag: string) => Promise<void> } }).sync.register('sync-pending-actions');
     });
   }
 }

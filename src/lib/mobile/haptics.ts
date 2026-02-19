@@ -1,4 +1,5 @@
 // Haptic feedback utilities for mobile devices
+import { clientLogger } from '@/lib/client-logger';
 
 export type HapticPattern =
   | "light"
@@ -132,7 +133,7 @@ export function playBeep(options: BeepOptions = {}): void {
     oscillator.start();
     oscillator.stop(ctx.currentTime + duration / 1000);
   } catch (error) {
-    console.warn("Failed to play beep:", error);
+    clientLogger.warn("Failed to play beep", error);
   }
 }
 

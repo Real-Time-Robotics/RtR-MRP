@@ -226,6 +226,7 @@ export function ColumnMapper({
                       onChange={(e) =>
                         handleMappingChange(column, e.target.value)
                       }
+                      aria-label={`Ánh xạ cột ${column}`}
                       className={cn(
                         "w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
                         isMapped

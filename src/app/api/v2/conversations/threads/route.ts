@@ -1,8 +1,10 @@
+import { logger } from '@/lib/logger';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { withAuth } from '@/lib/api/with-auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // ═══════════════════════════════════════════════════════════════
 // GET /api/v2/conversations/threads
 // List threads (by context or all)
@@ -16,12 +18,12 @@ const listQuerySchema = z.object({
   cursor: z.string().optional(),
 })
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const { searchParams } = new URL(request.url)
     const query = listQuerySchema.parse({
@@ -91,13 +93,13 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error listing threads:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads' })
     return NextResponse.json(
       { error: 'Failed to list threads' },
       { status: 500 }
     )
   }
-}
+});
 
 // ═══════════════════════════════════════════════════════════════
 // POST /api/v2/conversations/threads
@@ -119,12 +121,12 @@ const createThreadSchema = z.object({
   mentionRoles: z.array(z.string()).optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const body = await request.json()
     const data = createThreadSchema.parse(body)
@@ -219,7 +221,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(completeThread, { status: 201 })
 
   } catch (error) {
-    console.error('Error creating thread:', error)
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/conversations/threads' })
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },
@@ -231,4 +233,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+});

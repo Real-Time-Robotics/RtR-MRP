@@ -122,6 +122,7 @@ export function ResponsiveModal({
               <button
                 onClick={onClose}
                 className="sm:hidden flex items-center justify-center w-10 h-10 -ml-2 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal rounded-lg transition-colors touch-manipulation"
+                aria-label="Quay lại"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
@@ -144,6 +145,7 @@ export function ResponsiveModal({
                 <button
                   onClick={onClose}
                   className="hidden sm:flex items-center justify-center w-8 h-8 text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal rounded-lg transition-colors"
+                  aria-label="Đóng"
                 >
                   <X className="w-5 h-5" />
                 </button>

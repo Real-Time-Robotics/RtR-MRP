@@ -1,16 +1,44 @@
 // Mobile API - Inventory Adjustment
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from "@/lib/prisma";
+import { logger } from '@/lib/logger';
+import { z } from "zod";
 
-export async function POST(request: NextRequest) {
+import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+const MobileInventoryAdjustSchema = z.object({
+  partId: z.string().optional(),
+  partSku: z.string().optional(),
+  warehouseId: z.string().optional(),
+  warehouseCode: z.string().optional(),
+  quantity: z.number({ error: "Quantity is required" }),
+  reason: z.string().optional(),
+  lotNumber: z.string().optional(),
+  offlineOperationId: z.string().optional(),
+}).refine(
+  (data) => data.partId || data.partSku,
+  { message: "Either partId or partSku is required", path: ["partId"] }
+).refine(
+  (data) => data.warehouseId || data.warehouseCode,
+  { message: "Either warehouseId or warehouseCode is required", path: ["warehouseId"] }
+);
+
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+const body = await request.json();
+
+    const validation = MobileInventoryAdjustSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.issues },
+        { status: 400 }
+      );
     }
 
-    const body = await request.json();
     const {
       partId,
       partSku,
@@ -20,7 +48,7 @@ export async function POST(request: NextRequest) {
       reason,
       lotNumber,
       offlineOperationId,
-    } = body;
+    } = validation.data;
 
     // Resolve part
     let resolvedPartId = partId;
@@ -44,9 +72,9 @@ export async function POST(request: NextRequest) {
       resolvedWarehouseId = warehouse.id;
     }
 
-    if (!resolvedPartId || !resolvedWarehouseId || quantity === undefined) {
+    if (!resolvedPartId || !resolvedWarehouseId) {
       return NextResponse.json(
-        { error: "partId/partSku, warehouseId/warehouseCode, and quantity are required" },
+        { error: "Could not resolve part or warehouse" },
         { status: 400 }
       );
     }
@@ -112,10 +140,10 @@ export async function POST(request: NextRequest) {
       inventory: result.inventory,
     });
   } catch (error) {
-    console.error("Mobile inventory adjust API error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/inventory/adjust' });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to adjust inventory" },
+      { error: "Failed to adjust inventory" },
       { status: 500 }
     );
   }
-}
+});

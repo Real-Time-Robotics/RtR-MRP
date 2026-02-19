@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 import {
   parsePaginationParams,
@@ -14,8 +16,11 @@ import {
   successResponse,
   errorResponse,
   validationErrorResponse,
+  AuthUser,
 } from "@/lib/api/with-permission";
+import { triggerPurchaseOrderWorkflow } from "@/lib/workflow/workflow-triggers";
 
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // VALIDATION
 // =============================================================================
@@ -39,22 +44,21 @@ const createPOSchema = z.object({
 // GET - List purchase orders
 // =============================================================================
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   const startTime = Date.now();
 
   try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const params = parsePaginationParams(request);
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const status = searchParams.get("status");
     const supplierId = searchParams.get("supplierId");
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.PurchaseOrderWhereInput = {};
     if (status) where.status = status;
     if (supplierId) where.supplierId = supplierId;
     if (search) {
@@ -84,10 +88,10 @@ export async function GET(request: NextRequest) {
       buildPaginatedResponse(orders, totalCount, params, startTime)
     );
   } catch (error) {
-    console.error("Failed to fetch purchase orders:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/purchase-orders' });
     return paginatedError("Failed to fetch purchase orders", 500);
   }
-}
+});
 
 // =============================================================================
 // POST - Create purchase order
@@ -95,7 +99,7 @@ export async function GET(request: NextRequest) {
 
 async function postHandler(
   request: NextRequest,
-  { user }: { params?: Record<string, string>; user: any }
+  { user }: { params?: Record<string, string>; user: AuthUser }
 ) {
   let body;
   try {
@@ -170,6 +174,21 @@ async function postHandler(
       lines: { include: { part: true } },
     },
   });
+
+  // Trigger approval workflow (non-blocking — errors are logged, not thrown)
+  try {
+    await triggerPurchaseOrderWorkflow(order.id, user.id, {
+      totalAmount,
+      supplierId: validation.data.supplierId,
+      supplierName: supplier.name,
+      lineCount: lines?.length ?? 0,
+    });
+  } catch (err) {
+    logger.logError(
+      err instanceof Error ? err : new Error(String(err)),
+      { context: 'PO workflow trigger' }
+    );
+  }
 
   return successResponse(order, 201);
 }

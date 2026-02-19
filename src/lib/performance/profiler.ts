@@ -1,4 +1,3 @@
-// @ts-nocheck
 // =============================================================================
 // RTR MRP - PERFORMANCE MONITORING
 // Query profiling, slow query detection, and performance metrics
@@ -8,13 +7,15 @@
 // TYPES
 // =============================================================================
 
+import { logger } from '@/lib/logger';
+
 export interface QueryProfile {
   query: string;
   model: string;
   operation: string;
   duration: number;
   timestamp: Date;
-  params?: any;
+  params?: Record<string, unknown>;
   result?: {
     rowCount?: number;
     cached?: boolean;
@@ -202,15 +203,15 @@ export function createTimer(): { stop: () => number } {
  */
 export function Timed(label?: string) {
   return function (
-    target: any,
+    target: { constructor: { name: string } },
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: unknown, ...args: unknown[]) {
       const methodLabel = label || `${target.constructor.name}.${propertyKey}`;
-      const { result, duration } = await measureTime(
+      const { result } = await measureTime(
         () => originalMethod.apply(this, args),
         methodLabel
       );
@@ -229,8 +230,14 @@ export function Timed(label?: string) {
 /**
  * Prisma middleware for query profiling
  */
+interface PrismaMiddlewareParams {
+  model?: string;
+  action: string;
+  args?: Record<string, unknown>;
+}
+
 export function prismaProfilingMiddleware() {
-  return async (params: any, next: any) => {
+  return async (params: PrismaMiddlewareParams, next: (params: PrismaMiddlewareParams) => Promise<unknown>) => {
     const start = performance.now();
     const result = await next(params);
     const duration = performance.now() - start;
@@ -249,10 +256,7 @@ export function prismaProfilingMiddleware() {
 
     // Log slow queries
     if (duration > config.slowQueryThreshold) {
-      console.warn(
-        `[SLOW QUERY] ${params.model}.${params.action}: ${duration.toFixed(2)}ms`,
-        config.enableProfiling ? params.args : ''
-      );
+      logger.warn(`[SLOW QUERY] ${params.model}.${params.action}: ${duration.toFixed(2)}ms`, { context: 'profiler', args: config.enableProfiling ? params.args : undefined });
     }
 
     return result;
@@ -414,8 +418,8 @@ function generateRecommendations(
     );
   }
 
-  // Index recommendations
-  if (slowQueries.some(q => q.operation === 'findMany')) {
+  // Index recommendations - query field is formatted as "model:operation"
+  if (slowQueries.some(q => q.query.includes('findMany'))) {
     recommendations.push('Consider adding database indexes for frequently filtered columns.');
   }
 

@@ -6,6 +6,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { withAuth } from '@/lib/api/with-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import {
   getForecastEngine,
@@ -15,6 +18,13 @@ import {
   ForecastConfig,
 } from '@/lib/ai/forecast';
 
+const forecastPutSchema = z.object({
+  config: z.record(z.string(), z.unknown()).optional().default({}),
+  enhance: z.boolean().optional().default(false),
+  periodType: z.enum(['weekly', 'monthly']).optional().default('monthly'),
+});
+
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -27,7 +37,7 @@ interface RouteParams {
 
 interface ForecastResponse {
   success: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: string;
   latency?: number;
 }
@@ -36,14 +46,27 @@ interface ForecastResponse {
 // GET - Get Product Forecast
 // =============================================================================
 
-export async function GET(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse<ForecastResponse>> {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { productId } = await params;
+const { productId } = await context.params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'latest';
     const periodType = (searchParams.get('periodType') || 'monthly') as 'weekly' | 'monthly';
@@ -73,7 +96,8 @@ export async function GET(
     const accuracyTracker = getAccuracyTrackerService();
     const dataExtractor = getDataExtractorService();
 
-    let result: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: Record<string, any>;
 
     switch (action) {
       case 'latest': {
@@ -201,36 +225,52 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to fetch product forecast',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // PUT - Update/Regenerate Forecast
 // =============================================================================
 
-export async function PUT(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse<ForecastResponse>> {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { productId } = await params;
+const { productId } = await context.params;
     const body = await request.json();
-    const {
-      config = {},
-      enhance = false,
-      periodType = 'monthly',
-    } = body;
+    const parsed = forecastPutSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+    const { config, enhance, periodType } = parsed.data;
 
     // Validate productId
     const product = await prisma.part.findUnique({
@@ -262,7 +302,8 @@ export async function PUT(
     }
 
     // Enhance with AI if requested
-    let finalForecast: any = forecast;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let finalForecast: Record<string, any> = forecast as Record<string, any>;
     if (enhance) {
       finalForecast = await aiEnhancer.enhanceForecast(forecast);
     }
@@ -282,30 +323,43 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to update forecast',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // DELETE - Delete Forecast Records
 // =============================================================================
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: RouteParams
-): Promise<NextResponse<ForecastResponse>> {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
+    }
+
   const startTime = Date.now();
 
   try {
-    const { productId } = await params;
+const { productId } = await context.params;
     const { searchParams } = new URL(request.url);
     const scope = searchParams.get('scope') || 'old';
     const keepDays = parseInt(searchParams.get('keepDays') || '30', 10);
@@ -369,14 +423,14 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('[AI Forecast] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/ai/forecast/[productId]' });
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to delete forecast records',
         latency: Date.now() - startTime,
       },
       { status: 500 }
     );
   }
-}
+});

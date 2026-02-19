@@ -7,6 +7,8 @@
 // TYPES
 // =============================================================================
 
+import { logger } from '@/lib/logger';
+
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 
 export interface CircuitBreakerOptions {
@@ -30,7 +32,7 @@ export interface RetryOptions {
 
 export interface TimeoutOptions {
   timeout: number;
-  fallback?: () => any;
+  fallback?: () => unknown;
   onTimeout?: () => void;
 }
 
@@ -220,13 +222,13 @@ export async function withRetry<T>(
  */
 export function Retry(options: RetryOptions = {}) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: unknown,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return withRetry(() => originalMethod.apply(this, args), options);
     };
 
@@ -248,7 +250,7 @@ export async function withTimeout<T>(
     const timer = setTimeout(() => {
       onTimeout?.();
       if (fallback) {
-        resolve(fallback());
+        resolve(fallback() as T);
       } else {
         reject(new TimeoutError(`Operation timed out after ${timeout}ms`));
       }
@@ -278,13 +280,13 @@ export class TimeoutError extends Error {
  */
 export function Timeout(ms: number) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: unknown,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       return withTimeout(() => originalMethod.apply(this, args), { timeout: ms });
     };
 
@@ -305,7 +307,7 @@ export async function withFallback<T>(
     return await operation();
   } catch (error) {
     if (options.logError) {
-      console.error('Operation failed, using fallback:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'resilience', operation: 'withFallback' });
     }
     return typeof fallback === 'function' ? (fallback as () => T | Promise<T>)() : fallback;
   }
@@ -455,7 +457,7 @@ export class CacheWithFallback<T> {
     } catch (error) {
       // Return stale cache if available
       if (cached) {
-        console.warn(`Using stale cache for ${key} due to error:`, error);
+        logger.warn(`Using stale cache for ${key} due to error`, { context: 'resilience', error: String(error) });
         return cached.value;
       }
       

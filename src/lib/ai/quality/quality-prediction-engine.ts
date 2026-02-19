@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
-import { getQualityDataExtractor } from './quality-data-extractor';
+import { getQualityDataExtractor, PartQualitySummary, QualityTrendData } from './quality-data-extractor';
 import { getQualityMetricsCalculator } from './quality-metrics-calculator';
 import { getQualityPatternRecognition } from './pattern-recognition';
 import { getQualityAnomalyDetector } from './anomaly-detector';
@@ -453,7 +453,7 @@ export class QualityPredictionEngine {
     limit: number = 100
   ): Promise<BatchRiskAssessment> {
     // Get parts to assess
-    const whereClause: any = { status: 'ACTIVE' };
+    const whereClause: Record<string, unknown> = { status: 'ACTIVE' };
     if (partType) whereClause.type = partType;
 
     const parts = await prisma.part.findMany({
@@ -536,7 +536,7 @@ export class QualityPredictionEngine {
   // PRIVATE HELPER METHODS
   // =============================================================================
 
-  private calculateHistoricalRisk(qualitySummary: any): RiskFactor {
+  private calculateHistoricalRisk(qualitySummary: PartQualitySummary | null): RiskFactor {
     if (!qualitySummary) {
       return {
         name: 'Historical Performance',
@@ -567,8 +567,8 @@ export class QualityPredictionEngine {
     const trend = qualitySummary.qualityTrend || [];
     let trendDirection: 'improving' | 'stable' | 'worsening' = 'stable';
     if (trend.length >= 3) {
-      const recent = trend.slice(-3).reduce((s: number, t: any) => s + t.firstPassYield, 0) / 3;
-      const older = trend.slice(0, 3).reduce((s: number, t: any) => s + t.firstPassYield, 0) / 3;
+      const recent = trend.slice(-3).reduce((s: number, t: QualityTrendData) => s + t.firstPassYield, 0) / 3;
+      const older = trend.slice(0, 3).reduce((s: number, t: QualityTrendData) => s + t.firstPassYield, 0) / 3;
       if (recent > older + 2) trendDirection = 'improving';
       else if (recent < older - 2) trendDirection = 'worsening';
     }
@@ -736,7 +736,7 @@ export class QualityPredictionEngine {
     }
   }
 
-  private predictFPY(trend: any[]): number {
+  private predictFPY(trend: QualityTrendData[]): number {
     if (trend.length < 2) return 95;
 
     // Simple linear extrapolation

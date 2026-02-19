@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { clientLogger } from '@/lib/client-logger'
 import { MessageList } from './MessageList'
 import { MessageComposer } from './MessageComposer'
 import { ThreadStatusBadge, ThreadPriorityBadge } from './ThreadStatusBadge'
@@ -69,7 +70,7 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
       const data = await res.json()
       setThread(data)
     } catch (error) {
-      console.error('Failed to fetch thread:', error)
+      clientLogger.error('Failed to fetch thread', error)
     }
   }, [threadId])
 
@@ -79,7 +80,7 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
       const data = await res.json()
       setMessages(data.data || [])
     } catch (error) {
-      console.error('Failed to fetch messages:', error)
+      clientLogger.error('Failed to fetch messages', error)
     } finally {
       setLoading(false)
     }
@@ -114,7 +115,7 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
         fetchMessages()
       }
     } catch (error) {
-      console.error('Failed to update status:', error)
+      clientLogger.error('Failed to update status', error)
     } finally {
       setUpdatingStatus(false)
     }
@@ -137,6 +138,7 @@ export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
             <button
               onClick={onBack}
               className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-mrp-text-muted hover:bg-gray-200 dark:hover:bg-slate transition-colors"
+              aria-label="Quay lại"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>

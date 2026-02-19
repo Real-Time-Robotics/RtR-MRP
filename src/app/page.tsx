@@ -3,7 +3,13 @@
 // Premium Vietnamese UI with modern minimalist aesthetics
 // =============================================================================
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'RTR MRP - Hệ thống quản lý sản xuất drone chuyên nghiệp',
+  description: 'Nền tảng MRP hàng đầu cho sản xuất UAV công nghiệp. Quản lý BOM đa cấp, theo dõi linh kiện và tuân thủ NDAA.',
+};
 import Image from 'next/image';
 import {
   ArrowRight,
@@ -579,7 +585,7 @@ function PlatformSection() {
                   <g>
                     {/* Center plate - top view */}
                     <rect x="260" y="130" width="80" height="60" rx="4" fill="white" stroke="#1e40af" strokeWidth="1.5"/>
-                    <rect x="270" y="140" width="60" height="40" rx="2" fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="3 3"/>
+                    <rect x="270" y="140" width="60" height="40" rx="2" fill="none" stroke="#30a46c" strokeWidth="1" strokeDasharray="3 3"/>
 
                     {/* Arms - 8 directions */}
                     {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
@@ -598,7 +604,7 @@ function PlatformSection() {
                           <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#1e40af" strokeWidth="2"/>
                           {/* Motor position */}
                           <circle cx={x2} cy={y2} r="18" fill="white" stroke="#1e40af" strokeWidth="1.5"/>
-                          <circle cx={x2} cy={y2} r="8" fill="none" stroke="#3b82f6" strokeWidth="1"/>
+                          <circle cx={x2} cy={y2} r="8" fill="none" stroke="#30a46c" strokeWidth="1"/>
                           <circle cx={x2} cy={y2} r="3" fill="#1e40af"/>
                           {/* Prop arc indicator */}
                           <circle cx={x2} cy={y2} r="28" fill="none" stroke="#93c5fd" strokeWidth="1" strokeDasharray="6 6"/>
@@ -755,7 +761,7 @@ function FrameworkSection() {
               <svg viewBox="0 0 400 300" className="w-full h-auto relative z-10">
                 {/* Center Body */}
                 <ellipse cx="200" cy="150" rx="45" ry="25" fill="white" stroke="#1e40af" strokeWidth="2" />
-                <ellipse cx="200" cy="150" rx="35" ry="18" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" />
+                <ellipse cx="200" cy="150" rx="35" ry="18" fill="none" stroke="#30a46c" strokeWidth="1.5" strokeDasharray="4 4" />
 
                 {/* Arms - 8 arms for octocopter */}
                 {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
@@ -980,6 +986,7 @@ function Footer() {
               <input
                 type="email"
                 placeholder="Email của bạn"
+                aria-label="Email đăng ký bản tin"
                 className="flex-1 px-3 py-2 text-[14px] border border-gray-200 dark:border-gray-700 rounded-l-lg focus:outline-none focus:border-gray-300 dark:focus:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400"
               />
               <button className="px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-200 border border-l-0 border-gray-200 dark:border-gray-700 rounded-r-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors whitespace-nowrap">

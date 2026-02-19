@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from 'sonner';
 import { ConversationPanel } from '@/components/conversations';
+import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
 
 interface SupplierDetail {
     id: string;
@@ -67,8 +68,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
             }
             const data = await res.json();
             setSupplier(data.data || data);
-        } catch (error: any) {
-            toast.error(error.message);
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'An error occurred');
         } finally {
             setLoading(false);
         }
@@ -101,8 +102,8 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" className="h-9 w-9 p-0" onClick={() => router.back()}>
-                    <ArrowLeft className="h-5 w-5" />
+                <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
+                    <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -110,11 +111,11 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                         <Badge variant="outline" className="font-mono text-base">{supplier.code}</Badge>
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
-                        <Badge className={supplier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'}>
+                        <Badge className={supplier.status === 'active' ? 'bg-success-100 text-success-800' : 'bg-slate-100 text-slate-800'}>
                             {supplier.status.toUpperCase()}
                         </Badge>
                         {supplier.rating && (
-                            <div className="flex items-center text-yellow-500 text-sm font-medium">
+                            <div className="flex items-center text-warning-500 text-sm font-medium">
                                 <Star className="h-4 w-4 fill-current mr-1" />
                                 {supplier.rating}/5
                             </div>
@@ -177,13 +178,14 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                 {/* Right Column: Tabs (Products, Orders) */}
                 <div className="space-y-6 col-span-2">
                     <Tabs defaultValue="products">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="products">
                                 Products ({supplier._count.partSuppliers})
                             </TabsTrigger>
                             <TabsTrigger value="orders">
                                 Orders ({supplier._count.purchaseOrders})
                             </TabsTrigger>
+                            <TabsTrigger value="history">Lịch sử</TabsTrigger>
                             <TabsTrigger value="discussions">
                                 <MessageSquare className="h-4 w-4 mr-1" />
                                 Discussions
@@ -246,6 +248,10 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                     </Table>
                                 </CardContent>
                             </Card>
+                        </TabsContent>
+
+                        <TabsContent value="history" className="mt-4">
+                            <EntityAuditHistory entityType="Supplier" entityId={supplier.id} title="Lịch sử thay đổi" />
                         </TabsContent>
 
                         <TabsContent value="discussions" className="mt-4">

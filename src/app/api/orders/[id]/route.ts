@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { auditUpdate, auditStatusChange, auditDelete } from "@/lib/audit/route-audit";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for order item
 const OrderItemSchema = z.object({
   productId: z.string().min(1, "Product ID là bắt buộc"),
@@ -17,20 +21,16 @@ const OrderUpdateSchema = z.object({
   items: z.array(OrderItemSchema).optional(),
   notes: z.string().max(2000).optional().nullable(),
   priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
-  status: z.enum(["draft", "pending", "confirmed", "in_production", "shipped", "delivered", "cancelled"]).optional(),
+  status: z.enum(["draft", "pending", "confirmed", "in_production", "partially_shipped", "shipped", "delivered", "cancelled"]).optional(),
 });
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         const order = await prisma.salesOrder.findUnique({
             where: { id },
@@ -42,6 +42,15 @@ export async function GET(
                     },
                     orderBy: { lineNumber: 'asc' }
                 },
+                shipments: {
+                    include: {
+                        lines: {
+                            include: { product: true },
+                            orderBy: { lineNumber: 'asc' },
+                        },
+                    },
+                    orderBy: { createdAt: 'asc' },
+                },
             },
         });
 
@@ -51,26 +60,22 @@ export async function GET(
 
         return NextResponse.json(order);
     } catch (error) {
-        console.error("Failed to fetch order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to fetch order details" },
             { status: 500 }
         );
     }
-}
+});
 
 // PUT - Update sales order
-export async function PUT(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         // Check if order exists
         const existing = await prisma.salesOrder.findUnique({
@@ -115,7 +120,7 @@ export async function PUT(
         }
 
         // Build update data
-        const updateData: Record<string, unknown> = { ...headerData };
+        const updateData: Prisma.SalesOrderUpdateInput = { ...headerData };
         if (headerData.requiredDate) {
             updateData.requiredDate = new Date(headerData.requiredDate);
         }
@@ -186,28 +191,31 @@ export async function PUT(
             });
         });
 
+        // Audit trail: log changes
+        if (validationResult.data.status && validationResult.data.status !== existing.status) {
+            auditStatusChange(request, session.user, "SalesOrder", id, existing.status, validationResult.data.status);
+        } else {
+            auditUpdate(request, session.user, "SalesOrder", id, existing as unknown as Record<string, unknown>, headerData as Record<string, unknown>);
+        }
+
         return NextResponse.json(order);
     } catch (error) {
-        console.error("Failed to update order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to update order" },
             { status: 500 }
         );
     }
-}
+});
 
 // DELETE - Cancel/Delete sales order
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const session = await auth();
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-        const { id } = params;
+    try {
+        const { id } = await context.params;
 
         const existing = await prisma.salesOrder.findUnique({
             where: { id },
@@ -219,11 +227,12 @@ export async function DELETE(
         // If draft, delete completely
         if (existing.status === "draft") {
             await prisma.salesOrder.delete({ where: { id } });
+            auditDelete(request, session.user, "SalesOrder", id, { orderNumber: existing.orderNumber });
             return NextResponse.json({ deleted: true, id });
         }
 
         // Cannot cancel already shipped/delivered/cancelled orders
-        if (["shipped", "delivered", "cancelled"].includes(existing.status)) {
+        if (["partially_shipped", "shipped", "delivered", "cancelled"].includes(existing.status)) {
             return NextResponse.json(
                 { error: "Không thể hủy đơn hàng đã giao hoặc đã hủy" },
                 { status: 400 }
@@ -236,12 +245,14 @@ export async function DELETE(
             data: { status: "cancelled" },
         });
 
+        auditStatusChange(request, session.user, "SalesOrder", id, existing.status, "cancelled");
+
         return NextResponse.json({ cancelled: true, id });
     } catch (error) {
-        console.error("Failed to delete/cancel order:", error);
+        logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/orders/[id]' });
         return NextResponse.json(
             { error: "Failed to delete order" },
             { status: 500 }
         );
     }
-}
+});

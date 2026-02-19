@@ -70,7 +70,7 @@ function getRequiredRoles(pathname: string): string[] | null {
   return null;
 }
 
-import { hasPermission } from './lib/roles';
+import { hasPermission, type UserRole } from './lib/roles';
 
 // ...
 
@@ -86,7 +86,7 @@ function hasRole(userRole: string, requiredRoles: string[]): boolean {
   // Or is it "Allows [admin, planner]" means "Planner OR Admin"? Yes.
   // So we just need to satisfy one of them.
 
-  return requiredRoles.some(role => hasPermission(userRole, role as any));
+  return requiredRoles.some(role => hasPermission(userRole, role as UserRole));
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -98,20 +98,21 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   // Content Security Policy
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-        "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: https:",
-        "font-src 'self'",
-        "connect-src 'self' https://api.anthropic.com",
-        "frame-ancestors 'none'",
-      ].join('; ')
-    );
-  }
+  const isDev = process.env.NODE_ENV === 'development';
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      isDev
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+        : "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self'",
+      "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  );
 
   // HSTS (only in production with HTTPS)
   if (process.env.NODE_ENV === 'production') {
@@ -131,7 +132,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 100; // requests per window
+const RATE_LIMIT_MAX = 500; // requests per window
 
 // Check if running in test environment
 function isTestEnvironment(): boolean {
@@ -187,6 +188,29 @@ export async function middleware(request: NextRequest) {
 
   // Generate or preserve request ID (Gate 5.3 requirement)
   const requestId = request.headers.get('x-request-id') ?? uuidv4();
+
+  // SSO: Detect Supabase auth cookie and redirect to SSO callback if no NextAuth session
+  if (process.env.ENABLE_SUPABASE_SSO === 'true' && !isPublicRoute(pathname) && pathname !== '/api/auth/sso-callback') {
+    const hasSupabaseCookie = Array.from(request.cookies.getAll()).some(c =>
+      c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+    );
+    const isProduction = process.env.NODE_ENV === 'production';
+    const nextAuthCookie = request.cookies.get(
+      isProduction ? '__Secure-authjs.session-token' : 'authjs.session-token'
+    );
+
+    if (hasSupabaseCookie && !nextAuthCookie) {
+      // Find the Supabase auth cookie value
+      const sbCookie = Array.from(request.cookies.getAll()).find(c =>
+        c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
+      );
+      if (sbCookie) {
+        const callbackUrl = new URL('/api/auth/sso-callback', request.url);
+        callbackUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(callbackUrl);
+      }
+    }
+  }
 
   // Create new headers with requestId
   const requestHeaders = new Headers(request.headers);

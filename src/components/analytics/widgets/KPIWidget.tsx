@@ -263,7 +263,18 @@ export function KPIWidget({
         className
       )}
     >
-      <div className="h-full flex flex-col" onClick={handleDrillDown}>
+      <div
+        className="h-full flex flex-col"
+        role="button"
+        tabIndex={0}
+        onClick={handleDrillDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleDrillDown();
+          }
+        }}
+      >
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div

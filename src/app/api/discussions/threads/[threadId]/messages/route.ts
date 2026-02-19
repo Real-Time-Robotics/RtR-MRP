@@ -5,23 +5,26 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { auth } from '@/lib/auth';
+import { withAuth } from '@/lib/api/with-auth';
 import { notifyMentions, notifyReply } from '@/lib/notifications';
 import { broadcastNewMessage } from '@/lib/socket/emit';
+import { AttachmentType, LinkedEntityType } from '@prisma/client';
+import { logger } from '@/lib/logger';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 interface RouteContext {
   params: Promise<{ threadId: string }>;
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { threadId } = await context.params;
+  try {
+const { threadId } = await context.params;
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const cursor = searchParams.get('cursor');
@@ -80,24 +83,60 @@ export async function GET(request: NextRequest, context: RouteContext) {
       nextCursor: messages.length === limit ? messages[messages.length - 1]?.id : null,
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]/messages' });
     return NextResponse.json(
       { error: 'Failed to fetch messages' },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const { threadId } = await context.params;
+    const bodySchema = z.object({
+      content: z.string().optional(),
+      attachments: z.array(z.object({
+        type: z.nativeEnum(AttachmentType),
+        filename: z.string(),
+        fileUrl: z.string(),
+        fileSize: z.number().optional(),
+        mimeType: z.string().optional(),
+        width: z.number().optional(),
+        height: z.number().optional(),
+        thumbnailUrl: z.string().optional(),
+        capturedContext: z.record(z.string(), z.unknown()).optional(),
+      })).default([]),
+      entityLinks: z.array(z.object({
+        entityType: z.nativeEnum(LinkedEntityType),
+        entityId: z.string(),
+        entityTitle: z.string().optional(),
+        entitySubtitle: z.string().optional(),
+        entityIcon: z.string().optional(),
+        entityStatus: z.string().optional(),
+      })).default([]),
+      mentions: z.array(z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        startIndex: z.number().optional(),
+        endIndex: z.number().optional(),
+      })).default([]),
+    });
 
-    const { threadId } = await context.params;
-    const body = await request.json();
-    const { content, attachments = [], entityLinks = [], mentions = [] } = body;
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
+    const { content, attachments, entityLinks, mentions } = body;
 
     // Validate input
     if (!content?.trim() && attachments.length === 0 && entityLinks.length === 0) {
@@ -130,12 +169,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
         senderId: session.user.id,
         content: content?.trim() || '',
         attachments: {
-          create: attachments.map((att: any) => ({
+          create: attachments.map((att) => ({
             type: att.type,
             filename: att.filename,
             fileUrl: att.fileUrl,
-            fileSize: att.fileSize,
-            mimeType: att.mimeType,
+            fileSize: att.fileSize ?? 0,
+            mimeType: att.mimeType ?? 'application/octet-stream',
             width: att.width,
             height: att.height,
             thumbnailUrl: att.thumbnailUrl,
@@ -146,10 +185,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
           })),
         },
         entityLinks: {
-          create: entityLinks.map((link: any) => ({
+          create: entityLinks.map((link) => ({
             entityType: link.entityType,
             entityId: link.entityId,
-            entityTitle: link.entityTitle,
+            entityTitle: link.entityTitle ?? '',
             entitySubtitle: link.entitySubtitle,
             entityIcon: link.entityIcon,
             entityStatus: link.entityStatus,
@@ -199,10 +238,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       notifyMentions({
         messageId: message.id,
         threadId,
-        mentionedUsers: mentions,
+        mentionedUsers: mentions as unknown as { id: string; name: string; startIndex: number; endIndex: number }[],
         mentionedById: session.user.id,
         mentionedByName: senderName,
-      }).catch((err) => console.error('Failed to notify mentions:', err));
+      }).catch((err) => logger.error('Failed to notify mentions:', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) }));
     }
 
     // Notify other participants about the reply (excluding mentioned users to avoid duplicates)
@@ -212,30 +251,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
       senderId: session.user.id,
       senderName,
       excludeUserIds: mentionedUserIds,
-    }).catch((err) => console.error('Failed to notify reply:', err));
+    }).catch((err) => logger.error('Failed to notify reply:', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) }));
 
     // Broadcast new message via Socket.io
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const messageWithRelations = message as any;
     try {
       broadcastNewMessage(threadId, {
         id: message.id,
         threadId,
         content: message.content,
         senderId: message.senderId,
-        sender: message.sender,
-        attachments: message.attachments,
-        entityLinks: message.entityLinks,
+        sender: messageWithRelations.sender,
+        attachments: messageWithRelations.attachments,
+        entityLinks: messageWithRelations.entityLinks,
         createdAt: message.createdAt.toISOString(),
       });
     } catch (err) {
-      console.error('Failed to broadcast message:', err);
+      logger.error('Failed to broadcast message', { context: '/api/discussions/threads/[threadId]/messages', details: err instanceof Error ? err.message : String(err) });
     }
 
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
-    console.error('Error creating message:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/discussions/threads/[threadId]/messages' });
     return NextResponse.json(
       { error: 'Failed to create message' },
       { status: 500 }
     );
   }
-}
+});

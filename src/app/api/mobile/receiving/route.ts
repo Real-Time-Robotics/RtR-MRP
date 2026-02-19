@@ -4,7 +4,11 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Mock PO data
 const mockPurchaseOrders = [
   {
@@ -48,8 +52,11 @@ const mockPurchaseOrders = [
  * GET /api/mobile/receiving
  * Get open POs for receiving
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+const { searchParams } = new URL(req.url);
   const poId = searchParams.get('poId');
   const status = searchParams.get('status') || 'Open,Partial';
   
@@ -78,15 +85,37 @@ export async function GET(req: NextRequest) {
     data: results,
     summary,
   });
-}
+});
 
 /**
  * POST /api/mobile/receiving
  * Process PO receipt
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
+const bodySchema = z.object({
+      poId: z.string(),
+      lineId: z.string(),
+      qtyReceived: z.number(),
+      locationId: z.string(),
+      lotNumber: z.string().optional(),
+      notes: z.string().optional(),
+      userId: z.string().optional(),
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { poId, lineId, qtyReceived, locationId, lotNumber, notes, userId } = body;
     
     // Validate required fields
@@ -149,10 +178,10 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Receiving API error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/receiving' });
     return NextResponse.json(
       { success: false, error: 'Failed to process receipt' },
       { status: 500 }
     );
   }
-}
+});

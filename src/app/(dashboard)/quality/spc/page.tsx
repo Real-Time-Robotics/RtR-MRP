@@ -24,6 +24,7 @@ import {
 import { useSearchParams } from 'next/navigation';
 import { SPCEngine, ControlChart, ProcessCharacteristic, ChartType } from '@/lib/spc';
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { clientLogger } from '@/lib/client-logger';
 
 // Loading fallback
 function LoadingFallback() {
@@ -121,7 +122,7 @@ const ControlChartSVG: React.FC<{
           y1={yScale(v)}
           x2={padding.left + chartWidth}
           y2={yScale(v)}
-          stroke={v === ucl || v === lcl ? '#ef4444' : v === cl ? '#3b82f6' : '#e5e7eb'}
+          stroke={v === ucl || v === lcl ? '#ef4444' : v === cl ? '#30a46c' : '#e5e7eb'}
           strokeWidth={v === ucl || v === lcl || v === cl ? 2 : 1}
           strokeDasharray={v === ucl || v === lcl ? '5,5' : 'none'}
         />
@@ -155,10 +156,10 @@ const ControlChartSVG: React.FC<{
       <path
         d={linePath}
         fill="none"
-        stroke="#3b82f6"
+        stroke="#30a46c"
         strokeWidth={2}
       />
-      
+
       {/* Data points */}
       {dataPoints.map((d, i) => (
         <g key={d.id}>
@@ -166,7 +167,7 @@ const ControlChartSVG: React.FC<{
             cx={xScale(i)}
             cy={yScale(d.primaryValue)}
             r={d.isOutOfControl ? 8 : 5}
-            fill={d.isOutOfControl ? '#ef4444' : d.violations.length > 0 ? '#f59e0b' : '#3b82f6'}
+            fill={d.isOutOfControl ? '#ef4444' : d.violations.length > 0 ? '#f59e0b' : '#30a46c'}
             stroke="white"
             strokeWidth={2}
           />
@@ -187,7 +188,7 @@ const ControlChartSVG: React.FC<{
       
       {/* Y-axis labels */}
       <text x={padding.left - 10} y={yScale(ucl)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">UCL</text>
-      <text x={padding.left - 10} y={yScale(cl)} textAnchor="end" fontSize="10" fill="#3b82f6" dominantBaseline="middle">CL</text>
+      <text x={padding.left - 10} y={yScale(cl)} textAnchor="end" fontSize="10" fill="#30a46c" dominantBaseline="middle">CL</text>
       <text x={padding.left - 10} y={yScale(lcl)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">LCL</text>
       
       {/* Values */}
@@ -252,7 +253,7 @@ const SecondaryChartSVG: React.FC<{
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
       {/* Control limit lines */}
       <line x1={padding.left} y1={yScale(uclSecondary)} x2={padding.left + chartWidth} y2={yScale(uclSecondary)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5,5" />
-      <line x1={padding.left} y1={yScale(clSecondary)} x2={padding.left + chartWidth} y2={yScale(clSecondary)} stroke="#3b82f6" strokeWidth={2} />
+      <line x1={padding.left} y1={yScale(clSecondary)} x2={padding.left + chartWidth} y2={yScale(clSecondary)} stroke="#30a46c" strokeWidth={2} />
       {lclSecondary > 0 && (
         <line x1={padding.left} y1={yScale(lclSecondary)} x2={padding.left + chartWidth} y2={yScale(lclSecondary)} stroke="#ef4444" strokeWidth={2} strokeDasharray="5,5" />
       )}
@@ -275,7 +276,7 @@ const SecondaryChartSVG: React.FC<{
       
       {/* Labels */}
       <text x={padding.left - 10} y={yScale(uclSecondary)} textAnchor="end" fontSize="10" fill="#ef4444" dominantBaseline="middle">UCL</text>
-      <text x={padding.left - 10} y={yScale(clSecondary)} textAnchor="end" fontSize="10" fill="#3b82f6" dominantBaseline="middle">CL</text>
+      <text x={padding.left - 10} y={yScale(clSecondary)} textAnchor="end" fontSize="10" fill="#30a46c" dominantBaseline="middle">CL</text>
       
       <text x={width - padding.right + 5} y={yScale(uclSecondary)} textAnchor="start" fontSize="9" fill="#666" dominantBaseline="middle">{uclSecondary.toFixed(3)}</text>
       <text x={width - padding.right + 5} y={yScale(clSecondary)} textAnchor="start" fontSize="9" fill="#666" dominantBaseline="middle">{clSecondary.toFixed(3)}</text>
@@ -337,7 +338,7 @@ function SPCControlChartsPageContent() {
         }
       }
     } catch (error) {
-      console.error('Failed to fetch characteristics:', error);
+      clientLogger.error('Failed to fetch characteristics:', error);
     } finally {
       setLoading(false);
     }
@@ -352,7 +353,7 @@ function SPCControlChartsPageContent() {
         setChart(data.data.chart);
       }
     } catch (error) {
-      console.error('Failed to fetch chart:', error);
+      clientLogger.error('Failed to fetch chart:', error);
     } finally {
       setChartLoading(false);
     }
@@ -402,7 +403,6 @@ function SPCControlChartsPageContent() {
       key: 'primaryValue',
       header: 'X̄',
       width: '100px',
-      align: 'right',
       sortable: true,
       render: (value, row) => (
         <span className={`font-mono ${
@@ -418,7 +418,6 @@ function SPCControlChartsPageContent() {
       key: 'secondaryValue',
       header: chart?.chartType === 'XBAR_S' ? 'S' : 'R',
       width: '90px',
-      align: 'right',
       render: (value) => <span className="font-mono">{value.toFixed(3)}</span>,
     },
     {
@@ -435,13 +434,17 @@ function SPCControlChartsPageContent() {
       key: 'isOutOfControl',
       header: 'Trạng thái',
       width: '90px',
-      align: 'center',
+      cellClassName: (value, row) => {
+        if (value) return 'bg-red-50 dark:bg-red-950/30';
+        if (row.violations.length > 0) return 'bg-yellow-50 dark:bg-yellow-950/30';
+        return 'bg-green-50 dark:bg-green-950/30';
+      },
       render: (value, row) => value ? (
-        <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">OOC</span>
+        <span className="text-red-700 dark:text-red-300 text-xs font-medium">OOC</span>
       ) : row.violations.length > 0 ? (
-        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Warning</span>
+        <span className="text-yellow-700 dark:text-yellow-300 text-xs font-medium">Warning</span>
       ) : (
-        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">OK</span>
+        <span className="text-green-700 dark:text-green-300 text-xs font-medium">OK</span>
       ),
     },
   ], [chart]);

@@ -57,12 +57,14 @@ export function ExcelFooter({
           <button
             className="p-0.5 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Previous sheets"
+            aria-label="Previous sheets"
           >
             <ChevronLeft className="h-3 w-3 text-slate-400" />
           </button>
           <button
             className="p-0.5 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Next sheets"
+            aria-label="Next sheets"
           >
             <ChevronRight className="h-3 w-3 text-slate-400" />
           </button>
@@ -92,6 +94,7 @@ export function ExcelFooter({
             onClick={onAddSheet}
             className="p-1 hover:bg-slate-200 dark:hover:bg-gunmetal-light rounded"
             title="Add sheet"
+            aria-label="Add sheet"
           >
             <Plus className="h-3 w-3 text-slate-400" />
           </button>

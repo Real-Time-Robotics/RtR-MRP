@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   Alert,
   AlertActionType,
@@ -559,7 +560,7 @@ export class AlertActionExecutor {
         },
       });
     } catch (error) {
-      console.error('[AlertActionExecutor] Failed to log action:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'alert-action-executor', operation: 'logAction' });
     }
   }
 

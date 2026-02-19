@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 
 // =============================================================================
 // HEALTH CHECK API - Gate 5.4 Compliant
@@ -24,7 +25,7 @@ export async function GET() {
     dbStatus = 'connected';
   } catch (error) {
     dbElapsedMs = Date.now() - start;
-    console.error('[Health] DB check failed:', error);
+    logger.error('DB check failed', { context: 'GET /api/health', details: error instanceof Error ? error.message : String(error) });
   }
 
   // Determine overall status

@@ -4,7 +4,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   unifiedAlertService,
   AlertFilter,
@@ -15,18 +17,39 @@ import {
   AlertType,
 } from '@/lib/ai/alerts';
 
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const alertActionSchema = z.object({
+  action: z.enum(['execute', 'markAsRead', 'dismiss', 'bulkMarkAsRead', 'bulkDismiss', 'bulkSnooze', 'refresh']),
+  alertId: z.string().optional(),
+  alertIds: z.array(z.string()).optional(),
+  actionId: z.string().optional(),
+  reason: z.string().optional(),
+  durationHours: z.number().optional(),
+});
 // =============================================================================
 // GET: List alerts with filters
 // =============================================================================
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
 
     // Build filter from query params
     const filter: AlertFilter = {};
@@ -123,27 +146,45 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Alerts API] GET error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/alerts' });
     return NextResponse.json(
-      { error: 'Failed to fetch alerts', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to fetch alerts' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST: Execute actions on alerts
 // =============================================================================
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
-    const { action, alertId, alertIds, actionId, reason, durationHours } = body;
+  try {
+const rawBody = await request.json();
+    const parseResult = alertActionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { action, alertId, alertIds, actionId, reason, durationHours } = parseResult.data;
 
     switch (action) {
       case 'execute': {
@@ -237,10 +278,10 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Alerts API] POST error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/alerts' });
     return NextResponse.json(
-      { error: 'Failed to process action', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to process action' },
       { status: 500 }
     );
   }
-}
+});

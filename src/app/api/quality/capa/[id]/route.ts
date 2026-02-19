@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/api/with-auth";
 import { transitionCAPA } from "@/lib/quality/capa-workflow";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Validation schema for CAPA update
 const CAPAUpdateSchema = z.object({
   action: z.string().optional(), // Workflow transition action
@@ -25,6 +27,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { id } = await params;
 
@@ -49,22 +55,18 @@ export async function GET(
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Lỗi tải CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/quality/capa/[id]' });
     return NextResponse.json({ error: "Lỗi tải CAPA" }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
-    }
+export const PATCH = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    const { id } = await params;
+  try {
+    const { id } = await context.params;
 
     // Check if CAPA exists
     const existing = await prisma.cAPA.findUnique({ where: { id } });
@@ -117,7 +119,7 @@ export async function PATCH(
 
     return NextResponse.json(capa);
   } catch (error) {
-    console.error("Lỗi cập nhật CAPA:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PATCH /api/quality/capa/[id]' });
     return NextResponse.json({ error: "Lỗi cập nhật CAPA" }, { status: 500 });
   }
-}
+});

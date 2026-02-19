@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { clientLogger } from "@/lib/client-logger";
 import { ArrowLeft, MoreVertical, Wifi, WifiOff, CloudOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { isOnline, getPendingOperations } from "@/lib/mobile";
@@ -59,7 +60,7 @@ export function MobileHeader({
         const pending = await getPendingOperations();
         setPendingCount(pending.length);
       } catch (error) {
-        console.error("Failed to get pending operations:", error);
+        clientLogger.error("Failed to get pending operations", error);
       }
     };
     checkPending();
@@ -97,6 +98,7 @@ export function MobileHeader({
             size="icon"
             onClick={handleBack}
             className="shrink-0 text-white hover:bg-white/10"
+            aria-label="Quay lại"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -141,6 +143,7 @@ export function MobileHeader({
                 variant="ghost"
                 size="icon"
                 className="shrink-0 text-white hover:bg-white/10"
+                aria-label="Menu"
               >
                 <MoreVertical className="h-5 w-5" />
               </Button>

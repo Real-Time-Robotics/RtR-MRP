@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { clientLogger } from '@/lib/client-logger';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,7 +14,7 @@ interface EditableCellProps {
     type?: 'text' | 'number';
     onSave: (value: string | number) => Promise<void>;
     className?: string;
-    format?: (value: any) => string;
+    format?: (value: string | number) => string;
 }
 
 import { useSmartGridStore } from './smart-grid';
@@ -109,7 +110,7 @@ export function EditableCell({
             setFocusedCell({ rowId, colId: columnId }); // Keep focus
             // Value update will come from props via parent refresh or optimistic update matches
         } catch (error) {
-            console.error('Failed to save cell:', error);
+            clientLogger.error('Failed to save cell', error);
             toast.error('Không thể lưu thay đổi');
             setValue(initialValue); // Revert on error
             setEditingCell(null);

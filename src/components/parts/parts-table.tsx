@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Package,
@@ -18,25 +18,8 @@ import {
   ShoppingCart,
   Warehouse,
   Calendar,
-  type LucideIcon,
 } from 'lucide-react';
-
-// =============================================================================
-// CLIENT-ONLY ICON WRAPPER (prevents hydration mismatch)
-// =============================================================================
-function SafeIcon({ icon: Icon, className, size = 16, style }: {
-  icon: LucideIcon;
-  className?: string;
-  size?: number;
-  style?: React.CSSProperties;
-}) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return <span className={className} style={{ ...style, display: 'inline-block', width: size, height: size }} />;
-  return <Icon className={className} size={size} style={style} />;
-}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
   Tooltip,
@@ -46,14 +29,79 @@ import {
 } from '@/components/ui/tooltip';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown, ActionDropdownItem } from '@/components/ui/action-dropdown';
-import { DeletePartDialog, Part } from '@/components/forms/part-form';
-import { PartFormDialog } from '@/components/parts/part-form-dialog';
+import { Part } from '@/components/forms/part-form';
+import dynamic from 'next/dynamic';
+
+const PartFormDialog = dynamic(
+  () => import('@/components/parts/part-form-dialog').then(m => ({ default: m.PartFormDialog })),
+  { ssr: false, loading: () => null }
+);
+const DeletePartDialog = dynamic(
+  () => import('@/components/forms/part-form').then(m => ({ default: m.DeletePartDialog })),
+  { ssr: false, loading: () => null }
+);
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ImportWizard } from '@/components/excel/import-wizard';
 import { useDataExport } from '@/hooks/use-data-export';
+
+// Lazy-load ImportWizard (~858 lines, imports xlsx library) - only needed when import dialog opens
+const ImportWizard = dynamic(
+  () => import('@/components/excel/import-wizard').then(mod => mod.ImportWizard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted h-96 rounded-lg" />,
+  }
+);
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { useApiData } from '@/hooks/use-api-data';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+/** Raw part data from API with nested relations */
+interface PartApiResponse extends Partial<Part> {
+  id: string;
+  partNumber: string;
+  name: string;
+  category: string;
+  unit: string;
+  costs?: { unitCost?: number };
+  planning?: {
+    makeOrBuy?: string;
+    leadTimeDays?: number;
+    moq?: number;
+    orderMultiple?: number;
+    minStockLevel?: number;
+    reorderPoint?: number;
+    safetyStock?: number;
+    maxStock?: number | null;
+  };
+  specs?: {
+    weightKg?: number | null;
+    lengthMm?: number | null;
+    widthMm?: number | null;
+    heightMm?: number | null;
+    material?: string;
+    color?: string;
+    manufacturer?: string;
+    manufacturerPn?: string;
+    drawingNumber?: string;
+  };
+  compliance?: {
+    countryOfOrigin?: string;
+    ndaaCompliant?: boolean;
+    itarControlled?: boolean;
+    rohsCompliant?: boolean;
+    reachCompliant?: boolean;
+  };
+  partSuppliers?: Array<{
+    isPreferred?: boolean;
+    supplier?: { name?: string };
+  }>;
+}
 
 // =============================================================================
 // CONSTANTS
@@ -108,6 +156,7 @@ function formatDimensions(length: number | null, width: number | null, height: n
 // =============================================================================
 
 function StatsCards({ parts }: { parts: Part[] }) {
+  const { t } = useLanguage();
   const stats = {
     total: parts.length,
     active: parts.filter((p) => p.lifecycleStatus === 'ACTIVE').length,
@@ -124,8 +173,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
         {/* COMPACT: pt-4 → p-3 */}
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Tổng số</span>
+            <Package className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.totalCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono">{stats.total}</p>
         </CardContent>
@@ -133,8 +182,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={CheckCircle} className="h-3.5 w-3.5 text-green-500" />
-            <span className="text-[10px] text-muted-foreground">Hoạt động</span>
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.activeCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-green-600">{stats.active}</p>
         </CardContent>
@@ -142,8 +191,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={Shield} className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-[10px] text-muted-foreground">NDAA</span>
+            <Shield className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.ndaaCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-blue-600">{stats.ndaaCompliant}</p>
         </CardContent>
@@ -151,8 +200,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={AlertTriangle} className="h-3.5 w-3.5 text-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Quan trọng</span>
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.criticalCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.critical}</p>
         </CardContent>
@@ -160,8 +209,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="text-[10px] text-muted-foreground">Tự sản xuất</span>
+            <Package className="h-3.5 w-3.5 text-indigo-500" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.makeCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-indigo-600">{stats.make}</p>
         </CardContent>
@@ -169,8 +218,8 @@ function StatsCards({ parts }: { parts: Part[] }) {
       <Card className="border-gray-200 dark:border-mrp-border">
         <CardContent className="p-3">
           <div className="flex items-center gap-1.5">
-            <SafeIcon icon={Package} className="h-3.5 w-3.5 text-orange-500" />
-            <span className="text-[10px] text-muted-foreground">Mua</span>
+            <Package className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-[10px] text-muted-foreground">{t('parts.buyCount')}</span>
           </div>
           <p className="text-lg font-semibold font-mono text-orange-600">{stats.buy}</p>
         </CardContent>
@@ -184,8 +233,7 @@ function StatsCards({ parts }: { parts: Part[] }) {
 // =============================================================================
 
 export function PartsTable() {
-  const [parts, setParts] = useState<Part[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -207,77 +255,60 @@ export function PartsTable() {
     makeOrBuy: 'all',
   });
 
-  // Fetch parts
-  const fetchParts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.category !== 'all') params.set('category', filters.category);
-      if (filters.lifecycle !== 'all') params.set('lifecycleStatus', filters.lifecycle);
-      if (filters.makeOrBuy !== 'all') params.set('makeOrBuy', filters.makeOrBuy);
-      // Include relations for full column data (planning, costs, specs)
-      params.set('includeRelations', 'true');
+  // Transform: flatten nested relations (planning, costs, specs, compliance) for display
+  const transformParts = useCallback((raw: { data?: PartApiResponse[] | { data?: PartApiResponse[] } }): Part[] => {
+    const rawData = raw.data;
+    const partsArray = Array.isArray(rawData) ? rawData : ((rawData as { data?: PartApiResponse[] })?.data || []);
+    return partsArray.map((p: PartApiResponse): Part => ({
+      id: p.id,
+      partNumber: p.partNumber,
+      name: p.name,
+      description: p.description ?? null,
+      category: p.category,
+      unit: p.unit,
+      revision: p.revision ?? 'A',
+      revisionDate: p.revisionDate ?? null,
+      unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
+      isCritical: p.isCritical ?? false,
+      makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+      lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+      weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+      lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+      widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+      heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+      material: p.specs?.material ?? p.material ?? '',
+      color: p.specs?.color ?? p.color ?? '',
+      manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+      manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+      drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+      leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+      moq: p.planning?.moq ?? p.moq ?? 1,
+      orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+      minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+      reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+      safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+      maxStock: p.planning?.maxStock ?? null,
+      countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+      ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? false,
+      itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+      rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? false,
+      reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? false,
+    }));
+  }, []);
 
-      const response = await fetch(`/api/parts?${params.toString()}`);
-      const result = await response.json();
+  // SWR-based data fetching with debounced search
+  const { data: parts, loading, refresh } = useApiData<Part>(
+    '/api/parts',
+    {
+      search,
+      category: filters.category,
+      lifecycleStatus: filters.lifecycle,
+      makeOrBuy: filters.makeOrBuy,
+      includeRelations: 'true',
+    },
+    { debounce: search ? 300 : 0, transform: transformParts }
+  );
 
-      if (response.ok) {
-        // Ensure we have an array and each part has required fields with defaults
-        // Flatten nested relations (planning, costs, specs, compliance) for display
-        const partsArray = Array.isArray(result.data) ? result.data : (result.data || []);
-        const normalizedParts = partsArray.map((p: any) => ({
-          ...p,
-          // Basic
-          unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
-          isCritical: p.isCritical ?? false,
-          // Engineering
-          makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
-          lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
-          // Physical (from specs)
-          weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
-          lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
-          widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
-          heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
-          material: p.specs?.material ?? p.material ?? '',
-          color: p.specs?.color ?? p.color ?? '',
-          manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
-          manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
-          drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
-          // Procurement (from planning)
-          leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
-          moq: p.planning?.moq ?? p.moq ?? 1,
-          orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
-          minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
-          reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
-          safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
-          maxStock: p.planning?.maxStock ?? null,
-          // Compliance
-          countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
-          ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? false,
-          itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
-          rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? false,
-          reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? false,
-        }));
-        setParts(normalizedParts);
-      } else {
-        setParts([]);
-        toast.error('Không thể tải danh sách parts');
-      }
-    } catch (error) {
-      console.error('Failed to fetch parts:', error);
-      toast.error('Không thể tải danh sách parts');
-      setParts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filters]);
-
-  useEffect(() => {
-    fetchParts();
-  }, [fetchParts]);
-
-  // Filtered parts (client-side additional filtering)
   const filteredParts = parts;
 
   // Handlers
@@ -297,46 +328,42 @@ export function PartsTable() {
   };
 
   const handleFormSuccess = () => {
-    fetchParts();
+    refresh();
   };
 
   const handleDeleteSuccess = () => {
-    fetchParts();
+    refresh();
     setSelectedIds(new Set());
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} parts?`)) {
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: t('parts.pageTitle') }))) {
       return;
     }
 
     try {
-      // Optimistic delete for bulk (harder to revert, but we can try)
-      // For safety on delete, we usually wait. 
-      // But let's speed up the UI feedback.
-      const idsToDelete = new Set(selectedIds);
-      setParts(prev => prev.filter(p => !idsToDelete.has(p.id)));
+      const idsToDelete = Array.from(selectedIds);
       setSelectedIds(new Set());
-      toast.info(`Đang xóa ${idsToDelete.size} parts...`);
+      toast.info(t('table.bulkDeleting', { count: String(idsToDelete.length), itemType: t('parts.pageTitle') }));
 
       const results = await Promise.all(
-        Array.from(idsToDelete).map((id) =>
+        idsToDelete.map((id) =>
           fetch(`/api/parts/${id}`, { method: 'DELETE' })
         )
       );
 
       const failedCount = results.filter((r) => !r.ok).length;
       if (failedCount > 0) {
-        toast.error(`Không thể xóa ${failedCount} parts (Đã hoàn tác)`);
-        fetchParts(); // Revert/Refresh
+        toast.error(t('table.bulkDeleteError', { count: String(failedCount), itemType: t('parts.pageTitle') }));
       } else {
-        toast.success(`Đã xóa ${idsToDelete.size} parts`);
+        toast.success(t('table.bulkDeleteSuccess', { count: String(idsToDelete.length), itemType: t('parts.pageTitle') }));
       }
+      refresh();
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi xóa');
-      fetchParts();
+      toast.error(t('table.deleteError'));
+      refresh();
     }
   };
 
@@ -354,11 +381,9 @@ export function PartsTable() {
     try {
       const newCost = parseFloat(editingCostValue);
       if (isNaN(newCost)) {
-        toast.error('Giá trị không hợp lệ');
+        toast.error(t('parts.invalidValue'));
         return;
       }
-
-      setParts(prev => prev.map(p => p.id === part.id ? { ...p, unitCost: newCost } : p));
 
       const res = await fetch(`/api/parts/${part.id}`, {
         method: 'PATCH',
@@ -368,11 +393,12 @@ export function PartsTable() {
 
       if (!res.ok) throw new Error('Failed to update');
 
-      toast.success('Đã cập nhật đơn giá');
+      toast.success(t('parts.costUpdated'));
       setEditingCostId(null);
+      refresh();
     } catch (error) {
-      toast.error('Không thể cập nhật đơn giá');
-      fetchParts();
+      toast.error(t('parts.costUpdateFailed'));
+      refresh();
     }
   };
 
@@ -386,51 +412,63 @@ export function PartsTable() {
 
   const handleExport = () => {
     if (!parts || parts.length === 0) {
-      toast.warning('Không có dữ liệu để export');
+      toast.warning(t('table.noDataToExport'));
       return;
     }
 
-    // Flatten nested relations (planning, costs, specs, compliance) for export
-    const flattenedParts = parts.map((p: any) => ({
-      partNumber: p.partNumber,
-      name: p.name,
-      description: p.description,
-      category: p.category,
-      unit: p.unit,
-      unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
-      makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
-      leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
-      moq: p.planning?.moq ?? p.moq ?? 1,
-      orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
-      minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
-      maxStock: p.planning?.maxStock ?? null,
-      safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
-      reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
-      weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
-      lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
-      widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
-      heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
-      material: p.specs?.material ?? p.material ?? '',
-      color: p.specs?.color ?? p.color ?? '',
-      manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
-      manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
-      drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
-      countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
-      ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? true,
-      itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
-      rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? true,
-      reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? true,
-      lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
-      revision: p.revision ?? 'A',
-      isCritical: p.isCritical ?? false,
-    }));
+    // Flatten nested relations (planning, costs, specs, compliance, suppliers) for export
+    const flattenedParts = parts.map((p: Part & Partial<PartApiResponse>) => {
+      // Get primary and secondary suppliers
+      const primarySupplier = p.partSuppliers?.find((ps) => ps.isPreferred)?.supplier;
+      const secondarySuppliers = p.partSuppliers
+        ?.filter((ps) => !ps.isPreferred)
+        ?.map((ps) => ps.supplier?.name)
+        ?.filter(Boolean)
+        ?.join(', ') || '';
+
+      return {
+        partNumber: p.partNumber,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        unit: p.unit,
+        unitCost: p.costs?.unitCost ?? p.unitCost ?? 0,
+        makeOrBuy: p.planning?.makeOrBuy ?? p.makeOrBuy ?? 'BUY',
+        primarySupplier: primarySupplier?.name ?? '',
+        secondarySuppliers: secondarySuppliers,
+        leadTimeDays: p.planning?.leadTimeDays ?? p.leadTimeDays ?? 0,
+        moq: p.planning?.moq ?? p.moq ?? 1,
+        orderMultiple: p.planning?.orderMultiple ?? p.orderMultiple ?? 1,
+        minStockLevel: p.planning?.minStockLevel ?? p.minStockLevel ?? 0,
+        maxStock: p.planning?.maxStock ?? null,
+        safetyStock: p.planning?.safetyStock ?? p.safetyStock ?? 0,
+        reorderPoint: p.planning?.reorderPoint ?? p.reorderPoint ?? 0,
+        weightKg: p.specs?.weightKg ?? p.weightKg ?? null,
+        lengthMm: p.specs?.lengthMm ?? p.lengthMm ?? null,
+        widthMm: p.specs?.widthMm ?? p.widthMm ?? null,
+        heightMm: p.specs?.heightMm ?? p.heightMm ?? null,
+        material: p.specs?.material ?? p.material ?? '',
+        color: p.specs?.color ?? p.color ?? '',
+        manufacturer: p.specs?.manufacturer ?? p.manufacturer ?? '',
+        manufacturerPn: p.specs?.manufacturerPn ?? p.manufacturerPn ?? '',
+        drawingNumber: p.specs?.drawingNumber ?? p.drawingNumber ?? '',
+        countryOfOrigin: p.compliance?.countryOfOrigin ?? p.countryOfOrigin ?? '',
+        ndaaCompliant: p.compliance?.ndaaCompliant ?? p.ndaaCompliant ?? true,
+        itarControlled: p.compliance?.itarControlled ?? p.itarControlled ?? false,
+        rohsCompliant: p.compliance?.rohsCompliant ?? p.rohsCompliant ?? true,
+        reachCompliant: p.compliance?.reachCompliant ?? p.reachCompliant ?? true,
+        lifecycleStatus: p.lifecycleStatus ?? 'ACTIVE',
+        revision: p.revision ?? 'A',
+        isCritical: p.isCritical ?? false,
+      };
+    });
 
     exportToExcel(flattenedParts, {
       fileName: 'Parts_List',
       sheetName: 'Parts Master'
     });
 
-    toast.success('Đã xuất file Excel');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
@@ -439,8 +477,8 @@ export function PartsTable() {
 
   const handleImportSuccess = () => {
     setImportDialogOpen(false);
-    fetchParts();
-    toast.success('Import thành công!');
+    refresh();
+    toast.success(t('parts.importSuccess'));
   };
 
   // Get unique categories
@@ -449,16 +487,16 @@ export function PartsTable() {
   // Create action items for each row
   const createPartActions = (part: Part): ActionDropdownItem[] => [
     {
-      label: 'Xem chi tiết',
+      label: t('table.viewDetails'),
       href: `/parts/${part.id}`,
     },
     {
-      label: 'Chỉnh sửa',
+      label: t('common.edit'),
       onClick: () => handleEdit(part),
       permission: 'orders:edit',
     },
     {
-      label: 'Xóa',
+      label: t('common.delete'),
       onClick: () => handleDelete(part),
       permission: 'orders:delete',
       variant: 'destructive',
@@ -470,7 +508,7 @@ export function PartsTable() {
     // ===== TAB CƠ BẢN (Basic) =====
     {
       key: 'partNumber',
-      header: 'Mã Part',
+      header: t('parts.partNumber'),
       width: '130px',
       sortable: true,
       sticky: 'left',
@@ -479,43 +517,42 @@ export function PartsTable() {
           <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline">
             {value}
           </Link>
-          {row.isCritical && <SafeIcon icon={AlertTriangle} className="h-3 w-3 text-orange-500" />}
+          {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
         </div>
       ),
     },
     {
       key: 'name',
-      header: 'Tên Part',
+      header: t('parts.partName'),
       width: '180px',
       sortable: true,
       render: (value) => <div className="truncate max-w-[160px]">{value || '-'}</div>,
     },
     {
       key: 'description',
-      header: 'Mô tả',
+      header: t('parts.descriptionCol'),
       width: '200px',
       hidden: true,
       render: (value) => <div className="truncate max-w-[180px] text-muted-foreground">{value || '-'}</div>,
     },
     {
       key: 'category',
-      header: 'Danh mục',
+      header: t('column.category'),
       width: '100px',
       sortable: true,
-      render: (value) => <Badge variant="outline" className="text-[10px] px-1 py-0">{value || '-'}</Badge>,
+      cellClassName: (value) => value ? 'bg-slate-50 dark:bg-slate-900/30' : '',
+      render: (value) => value || '-',
     },
     {
       key: 'unit',
-      header: 'Đơn vị',
+      header: t('column.unit'),
       width: '70px',
-      align: 'center',
       render: (value) => <span className="text-xs">{value || 'EA'}</span>,
     },
     {
       key: 'unitCost',
-      header: 'Đơn giá',
+      header: t('column.unitCost'),
       width: '100px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value, row) => (
@@ -541,43 +578,37 @@ export function PartsTable() {
     },
     {
       key: 'isCritical',
-      header: 'Quan trọng',
-      width: '80px',
-      align: 'center',
-      render: (value) => value ? (
-        <Badge className="bg-orange-100 text-orange-800 text-[10px] px-1 py-0">
-          <SafeIcon icon={AlertTriangle} className="h-3 w-3 mr-1" />
-          Critical
-        </Badge>
-      ) : <span className="text-muted-foreground">-</span>,
+      header: t('parts.critical'),
+      width: '90px',
+      cellClassName: (value) => value ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : '',
+      render: (value) => value ? 'Critical' : <span className="text-muted-foreground">-</span>,
     },
 
     // ===== TAB VẬT LÝ (Physical) =====
     {
       key: 'weightKg',
-      header: 'Trọng lượng',
+      header: t('parts.weight'),
       width: '90px',
-      align: 'right',
       hidden: true,
       render: (value) => value ? `${formatNumber(value, 3)} kg` : '-',
     },
     {
       key: 'dimensions',
-      header: 'Kích thước',
+      header: t('parts.dimensions'),
       width: '140px',
       hidden: true,
-      render: (_, row: any) => formatDimensions(row.lengthMm, row.widthMm, row.heightMm),
+      render: (_, row) => formatDimensions(row.lengthMm ?? null, row.widthMm ?? null, row.heightMm ?? null),
     },
     {
       key: 'material',
-      header: 'Vật liệu',
+      header: t('parts.material'),
       width: '100px',
       hidden: true,
       render: (value) => <span className="truncate">{value || '-'}</span>,
     },
     {
       key: 'color',
-      header: 'Màu sắc',
+      header: t('parts.color'),
       width: '80px',
       hidden: true,
       render: (value) => value || '-',
@@ -586,86 +617,93 @@ export function PartsTable() {
     // ===== TAB KỸ THUẬT (Engineering) =====
     {
       key: 'makeOrBuy',
-      header: 'Make/Buy',
+      header: t('parts.makeOrBuyFilter'),
       width: '85px',
-      align: 'center',
       sortable: true,
-      render: (value) => (
-        <Badge className={cn(MAKE_BUY_COLORS[value] || '', 'text-[10px] px-1 py-0')}>
-          {value || 'BUY'}
-        </Badge>
-      ),
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          MAKE: 'bg-indigo-100 dark:bg-indigo-900/30',
+          BUY: 'bg-orange-100 dark:bg-orange-900/30',
+          BOTH: 'bg-teal-100 dark:bg-teal-900/30',
+        };
+        return map[value] || '';
+      },
+      render: (value) => <span className="text-xs font-medium">{value || 'BUY'}</span>,
     },
     {
       key: 'revision',
-      header: 'Rev',
+      header: t('parts.revision'),
       width: '55px',
-      align: 'center',
-      render: (value) => <Badge variant="secondary" className="text-[10px] px-1 py-0">{value || 'A'}</Badge>,
+      cellClassName: () => 'bg-slate-50 dark:bg-slate-900/30',
+      render: (value) => value || 'A',
     },
     {
       key: 'revisionDate',
-      header: 'Ngày Rev',
+      header: t('parts.revisionDate'),
       width: '100px',
       hidden: true,
       render: (value) => formatDate(value),
     },
     {
       key: 'drawingNumber',
-      header: 'Số bản vẽ',
+      header: t('parts.drawingNumber'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
     },
     {
       key: 'manufacturer',
-      header: 'Nhà SX',
+      header: t('parts.manufacturer'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="truncate">{value || '-'}</span>,
     },
     {
       key: 'manufacturerPn',
-      header: 'MPN',
+      header: t('parts.mpn'),
       width: '120px',
       hidden: true,
       render: (value) => <span className="font-mono text-xs">{value || '-'}</span>,
     },
     {
       key: 'lifecycleStatus',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '100px',
       sortable: true,
-      render: (value) => (
-        <Badge className={cn(LIFECYCLE_COLORS[value] || LIFECYCLE_COLORS['ACTIVE'], 'text-[10px] px-1 py-0')}>
-          {value || 'ACTIVE'}
-        </Badge>
-      ),
+      cellClassName: (value) => {
+        const map: Record<string, string> = {
+          DEVELOPMENT: 'bg-purple-100 dark:bg-purple-900/30',
+          PROTOTYPE: 'bg-blue-100 dark:bg-blue-900/30',
+          ACTIVE: 'bg-green-100 dark:bg-green-900/30',
+          PHASE_OUT: 'bg-yellow-100 dark:bg-yellow-900/30',
+          OBSOLETE: 'bg-red-100 dark:bg-red-900/30',
+          EOL: 'bg-gray-100 dark:bg-gray-800',
+        };
+        return map[value] || '';
+      },
+      render: (value) => <span className="text-xs font-medium">{value || 'ACTIVE'}</span>,
     },
 
     // ===== TAB MUA HÀNG (Procurement) =====
     {
       key: 'leadTimeDays',
-      header: 'Lead Time',
+      header: t('parts.leadTime'),
       width: '85px',
-      align: 'right',
       sortable: true,
       render: (value) => value ? (
-        <span className="font-mono">{value} <span className="text-muted-foreground text-[10px]">ngày</span></span>
+        <span className="font-mono">{value} <span className="text-muted-foreground text-[10px]">{t('parts.daysUnit')}</span></span>
       ) : '-',
     },
     {
       key: 'moq',
-      header: 'MOQ',
+      header: t('parts.moq'),
       width: '70px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
     },
     {
       key: 'orderMultiple',
-      header: 'Bội số đặt',
+      header: t('parts.orderMultiple'),
       width: '80px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{formatNumber(value) || '-'}</span>,
     },
@@ -673,21 +711,18 @@ export function PartsTable() {
       key: 'minStockLevel',
       header: 'Min Stock',
       width: '85px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
     {
       key: 'reorderPoint',
       header: 'ROP',
       width: '70px',
-      align: 'right',
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
     {
       key: 'safetyStock',
       header: 'Safety Stock',
       width: '90px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{formatNumber(value) || '0'}</span>,
     },
@@ -695,7 +730,6 @@ export function PartsTable() {
       key: 'maxStock',
       header: 'Max Stock',
       width: '85px',
-      align: 'right',
       hidden: true,
       render: (value) => <span className="font-mono">{value ? formatNumber(value) : '-'}</span>,
     },
@@ -703,12 +737,12 @@ export function PartsTable() {
     // ===== TAB TUÂN THỦ (Compliance) =====
     {
       key: 'countryOfOrigin',
-      header: 'Xuất xứ',
+      header: t('parts.origin'),
       width: '100px',
       hidden: true,
       render: (value) => (
         <div className="flex items-center gap-1">
-          <SafeIcon icon={Globe} className="h-3 w-3 text-muted-foreground" />
+          <Globe className="h-3 w-3 text-muted-foreground" />
           <span className="truncate">{value || '-'}</span>
         </div>
       ),
@@ -717,20 +751,18 @@ export function PartsTable() {
       key: 'ndaaCompliant',
       header: 'NDAA',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <SafeIcon icon={CheckCircle} className="h-4 w-4 text-green-500 mx-auto" />
+        <CheckCircle className="h-4 w-4 text-green-500 " />
       ) : (
-        <SafeIcon icon={XCircle} className="h-4 w-4 text-red-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-red-500 " />
       ),
     },
     {
       key: 'itarControlled',
       header: 'ITAR',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <SafeIcon icon={Shield} className="h-4 w-4 text-red-500 mx-auto" />
+        <Shield className="h-4 w-4 text-red-500 " />
       ) : (
         <span className="text-muted-foreground">-</span>
       ),
@@ -739,30 +771,28 @@ export function PartsTable() {
       key: 'rohsCompliant',
       header: 'RoHS',
       width: '65px',
-      align: 'center',
       render: (value) => value ? (
-        <SafeIcon icon={Leaf} className="h-4 w-4 text-green-500 mx-auto" />
+        <Leaf className="h-4 w-4 text-green-500 " />
       ) : (
-        <SafeIcon icon={XCircle} className="h-4 w-4 text-yellow-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-yellow-500 " />
       ),
     },
     {
       key: 'reachCompliant',
       header: 'REACH',
       width: '70px',
-      align: 'center',
       hidden: true,
       render: (value) => value ? (
-        <SafeIcon icon={CheckCircle} className="h-4 w-4 text-green-500 mx-auto" />
+        <CheckCircle className="h-4 w-4 text-green-500 " />
       ) : (
-        <SafeIcon icon={XCircle} className="h-4 w-4 text-yellow-500 mx-auto" />
+        <XCircle className="h-4 w-4 text-yellow-500 " />
       ),
     },
 
     // ===== SYSTEM FIELDS =====
     {
       key: 'createdAt',
-      header: 'Ngày tạo',
+      header: t('parts.createdAt'),
       width: '100px',
       hidden: true,
       sortable: true,
@@ -770,7 +800,7 @@ export function PartsTable() {
     },
     {
       key: 'updatedAt',
-      header: 'Cập nhật',
+      header: t('parts.updatedAt'),
       width: '100px',
       hidden: true,
       sortable: true,
@@ -785,68 +815,68 @@ export function PartsTable() {
       sticky: 'right',
       render: (_, row) => <ActionDropdown items={createPartActions(row)} />,
     },
-  ], [editingCostId, editingCostValue]);
+  ], [editingCostId, editingCostValue, t]);
 
   return (
     <TooltipProvider>
-      {/* COMPACT: space-y-6 → space-y-3 */}
-      <div className="space-y-3">
+      {/* Fill viewport: flex column with overflow containment */}
+      <div className="h-full flex flex-col gap-3">
         {/* Header - COMPACT */}
         <div>
           <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
-            <SafeIcon icon={Package} className="h-4 w-4" />
-            Parts Master
+            <Package className="h-4 w-4" />
+            {t('parts.pageTitle')}
           </h1>
           <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
-            Quản lý danh sách parts với AS9100/ITAR compliance
+            {t('parts.pageDesc')}
           </p>
         </div>
 
         {/* Stats */}
         <StatsCards parts={parts} />
 
-        {/* Table Card - COMPACT */}
-        <Card className="border-gray-200 dark:border-mrp-border">
-          <CardHeader className="px-3 py-2">
+        {/* Table Card - fill remaining height */}
+        <Card className="border-gray-200 dark:border-mrp-border flex-1 flex flex-col min-h-0 overflow-hidden">
+          <CardHeader className="px-3 py-2 shrink-0">
             <DataTableToolbar
               searchValue={search}
               onSearchChange={setSearch}
-              searchPlaceholder="Tìm kiếm part number, tên, manufacturer..."
+              searchPlaceholder={t('parts.searchPlaceholder')}
               onAdd={handleAdd}
               onImport={handleImport}
               onExport={handleExport}
               onBulkDelete={handleBulkDelete}
-              onRefresh={fetchParts}
+              onRefresh={refresh}
               addPermission="parts:create"
               deletePermission="parts:delete"
-              addLabel="Thêm Part"
+              addLabel={t('parts.addPart')}
               selectedCount={selectedIds.size}
               isLoading={loading}
               filters={[
                 {
                   key: 'category',
-                  label: 'Danh mục',
+                  label: t('parts.categoryFilter'),
                   options: categories.map((c) => ({ value: c, label: c })),
                 },
                 {
                   key: 'lifecycle',
-                  label: 'Vòng đời',
+                  label: t('parts.lifecycleFilter'),
                   options: [
-                    { value: 'DEVELOPMENT', label: 'Phát triển' },
-                    { value: 'PROTOTYPE', label: 'Mẫu thử' },
-                    { value: 'ACTIVE', label: 'Hoạt động' },
-                    { value: 'PHASE_OUT', label: 'Ngừng dần' },
-                    { value: 'OBSOLETE', label: 'Lỗi thời' },
-                    { value: 'EOL', label: 'Hết vòng đời' },
+                    { value: 'DEVELOPMENT', label: t('lifecycle.development') },
+                    { value: 'PROTOTYPE', label: t('lifecycle.prototype') },
+                    { value: 'ACTIVE', label: t('lifecycle.active') },
+                    { value: 'PHASE_OUT', label: t('lifecycle.phaseOut') },
+                    { value: 'OBSOLETE', label: t('lifecycle.obsolete') },
+                    { value: 'EOL', label: t('lifecycle.eol') },
                   ],
                 },
                 {
                   key: 'makeOrBuy',
-                  label: 'Sản xuất/Mua',
+                  label: t('parts.makeOrBuyFilter'),
                   options: [
-                    { value: 'MAKE', label: 'Tự sản xuất' },
-                    { value: 'BUY', label: 'Mua' },
-                    { value: 'BOTH', label: 'Cả hai' },
+                    { value: 'MAKE', label: t('makeOrBuy.make') },
+                    { value: 'BUY', label: t('makeOrBuy.buy') },
+                    { value: 'BOTH', label: t('makeOrBuy.both') },
                   ],
                 },
               ]}
@@ -859,21 +889,23 @@ export function PartsTable() {
               }
             />
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
             <DataTable
               data={filteredParts}
               columns={columns}
               keyField="id"
               loading={loading}
-              emptyMessage="Không tìm thấy parts"
+              emptyMessage={t('parts.emptyMessage')}
               selectable
               selectedKeys={selectedIds}
               onSelectionChange={setSelectedIds}
               pagination
-              pageSize={20}
+              pageSize={50}
               searchable={false}
               stickyHeader
               columnToggle
+              virtualize
+              virtualRowHeight={36}
               excelMode={{
                 enabled: true,
                 showRowNumbers: true,
@@ -906,7 +938,7 @@ export function PartsTable() {
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Import Parts từ Excel</DialogTitle>
+              <DialogTitle>{t('parts.importFromExcel')}</DialogTitle>
             </DialogHeader>
             <ImportWizard
               defaultEntityType="parts"

@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WOStatusBadge } from "@/components/production/wo-status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDateMedium } from "@/lib/date";
 import { useLanguage } from "@/lib/i18n/language-context";
@@ -130,7 +129,6 @@ export default function ProductionPage() {
       key: 'quantity',
       header: 'Qty',
       width: '70px',
-      align: 'right',
       sortable: true,
     },
     {
@@ -157,21 +155,21 @@ export default function ProductionPage() {
       key: 'allocations',
       header: 'Materials',
       width: '100px',
-      align: 'center',
       render: (value) => {
         const readiness = getMaterialReadiness(value);
-        return (
-          <Badge variant={readiness === 100 ? "default" : "secondary"}>
-            {readiness}% ready
-          </Badge>
-        );
+        return `${readiness}% ready`;
+      },
+      cellClassName: (value) => {
+        const readiness = getMaterialReadiness(value);
+        return readiness === 100
+          ? 'bg-green-50 dark:bg-green-950/30'
+          : 'bg-yellow-50 dark:bg-yellow-950/30';
       },
     },
     {
       key: 'status',
       header: 'Status',
       width: '100px',
-      align: 'center',
       sortable: true,
       render: (value) => <WOStatusBadge status={value} />,
     },
@@ -179,7 +177,6 @@ export default function ProductionPage() {
       key: 'actions',
       header: '',
       width: '70px',
-      align: 'right',
       render: (_, row) => (
         <Button
           variant="ghost"
@@ -204,11 +201,11 @@ export default function ProductionPage() {
         {/* COMPACT: gap-2 → gap-1.5, smaller buttons */}
         <div className="flex gap-1.5">
           <WOExportButton workOrders={workOrders} variant="outline" size="sm" />
-          <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/schedule")}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => router.push("/production/schedule")}>
             <Calendar className="h-3.5 w-3.5 mr-1.5" />
             {t("nav.production.schedule")}
           </Button>
-          <Button size="sm" className="h-7 text-[11px]" onClick={() => router.push("/production/new")}>
+          <Button size="sm" className="text-xs" onClick={() => router.push("/production/new")}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
             {t("production.workOrders")}
           </Button>
@@ -261,12 +258,12 @@ export default function ProductionPage() {
                   placeholder="Search WO number..."
                   value={searchInput}
                   onChange={handleSearchChange}
-                  className="pl-7 h-7 text-[11px] w-full sm:w-[160px]"
+                  className="pl-7 h-9 text-xs w-full sm:w-[160px]"
                 />
               </div>
               {/* Status Filter - COMPACT */}
               <Select value={statusFilter} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full sm:w-[140px] h-7 text-[11px]">
+                <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>

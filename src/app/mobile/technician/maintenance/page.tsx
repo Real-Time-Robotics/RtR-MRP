@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -16,12 +16,15 @@ import {
   Play,
   User,
   Activity,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MAINTENANCE LIST PAGE
-// Danh sách lệnh bảo trì cho technician
+// Danh sách lệnh bảo trì cho technician - Connected to real database
 // =============================================================================
 
 interface MaintenanceTask {
@@ -35,98 +38,68 @@ interface MaintenanceTask {
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
   description: string;
   dueTime: string;
+  dueDate: string | null;
   estimatedMinutes: number;
   createdAt: string;
+  assignedTo?: string;
 }
 
-const mockTasks: MaintenanceTask[] = [
-  {
-    id: '1',
-    workOrderNumber: 'MO-2026-001',
-    equipmentCode: 'CNC-001',
-    equipmentName: 'CNC Mill #1',
-    location: 'Bay A1',
-    type: 'PM',
-    priority: 'HIGH',
-    status: 'IN_PROGRESS',
-    description: 'Bảo trì định kỳ - thay dầu, kiểm tra spindle',
-    dueTime: '10:00',
-    estimatedMinutes: 60,
-    createdAt: '2026-01-04T06:00:00',
-  },
-  {
-    id: '2',
-    workOrderNumber: 'MO-2026-002',
-    equipmentCode: 'ROBOT-001',
-    equipmentName: 'Welding Robot',
-    location: 'Bay B2',
-    type: 'Emergency',
-    priority: 'URGENT',
-    status: 'PENDING',
-    description: 'Lỗi servo motor arm #2 - cần xử lý gấp',
-    dueTime: '11:00',
-    estimatedMinutes: 45,
-    createdAt: '2026-01-04T08:30:00',
-  },
-  {
-    id: '3',
-    workOrderNumber: 'MO-2026-003',
-    equipmentCode: 'PACK-001',
-    equipmentName: 'Packaging Line',
-    location: 'Bay C1',
-    type: 'Inspection',
-    priority: 'NORMAL',
-    status: 'PENDING',
-    description: 'Kiểm tra an toàn định kỳ hàng tháng',
-    dueTime: '14:00',
-    estimatedMinutes: 30,
-    createdAt: '2026-01-03T15:00:00',
-  },
-  {
-    id: '4',
-    workOrderNumber: 'MO-2026-004',
-    equipmentCode: 'CONV-002',
-    equipmentName: 'Conveyor Belt #2',
-    location: 'Bay A3',
-    type: 'CM',
-    priority: 'HIGH',
-    status: 'PENDING',
-    description: 'Thay thế belt bị mòn',
-    dueTime: '16:00',
-    estimatedMinutes: 90,
-    createdAt: '2026-01-04T07:00:00',
-  },
-  {
-    id: '5',
-    workOrderNumber: 'MO-2025-098',
-    equipmentCode: 'LASER-001',
-    equipmentName: 'Laser Cutter',
-    location: 'Bay D1',
-    type: 'PM',
-    priority: 'NORMAL',
-    status: 'COMPLETED',
-    description: 'Vệ sinh lens, căn chỉnh beam',
-    dueTime: '08:00',
-    estimatedMinutes: 45,
-    createdAt: '2026-01-04T05:00:00',
-  },
-];
+interface MaintenanceSummary {
+  total: number;
+  pending: number;
+  inProgress: number;
+  completed: number;
+  urgent: number;
+}
 
 type FilterStatus = 'all' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
 export default function MaintenanceListPage() {
-  const [tasks] = useState<MaintenanceTask[]>(mockTasks);
+  const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
+  const [summary, setSummary] = useState<MaintenanceSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.equipmentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.equipmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // Fetch maintenance tasks from API
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const params = new URLSearchParams();
+        if (filterStatus !== 'all') {
+          params.set('status', filterStatus.toLowerCase());
+        } else {
+          params.set('status', 'all');
+        }
+        if (searchQuery) {
+          params.set('search', searchQuery);
+        }
+
+        const response = await fetch(`/api/mobile/maintenance?${params.toString()}`);
+        const result = await response.json();
+
+        if (result.success) {
+          setTasks(result.data);
+          setSummary(result.summary);
+        } else {
+          setError(result.error || 'Failed to fetch maintenance tasks');
+        }
+      } catch (err) {
+        setError('Network error - please try again');
+        clientLogger.error('Maintenance fetch error', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Debounce search
+    const timeoutId = setTimeout(fetchTasks, 300);
+    return () => clearTimeout(timeoutId);
+  }, [filterStatus, searchQuery]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -197,6 +170,7 @@ export default function MaintenanceListPage() {
             <input
               type="text"
               placeholder="Tìm theo mã thiết bị, tên..."
+              aria-label="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-xl text-sm focus:ring-2 focus:ring-blue-500"
@@ -225,13 +199,29 @@ export default function MaintenanceListPage() {
 
       {/* Task List */}
       <div className="p-4 space-y-3">
-        {filteredTasks.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 mx-auto text-blue-500 animate-spin mb-3" />
+            <p className="text-gray-500">Đang tải dữ liệu...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <AlertTriangle className="w-12 h-12 mx-auto text-red-400 mb-3" />
+            <p className="text-red-500">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"
+            >
+              Thử lại
+            </button>
+          </div>
+        ) : tasks.length === 0 ? (
           <div className="text-center py-12">
             <Wrench className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
             <p className="text-gray-500">Không có lệnh bảo trì</p>
           </div>
         ) : (
-          filteredTasks.map((task) => (
+          tasks.map((task) => (
             <Link
               key={task.id}
               href={`/mobile/technician/maintenance/${task.id}`}

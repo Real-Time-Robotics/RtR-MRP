@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { EnhancedPOSuggestion } from './ai-po-analyzer';
 import { QueueItem, POModification } from './approval-queue-service';
 
@@ -226,7 +227,7 @@ class POExecutorService {
 
       return result;
     } catch (error) {
-      console.error('PO execution failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'po-executor', operation: 'execute' });
 
       await this.logExecution({
         queueItemId: request.queueItemId,
@@ -386,8 +387,8 @@ class POExecutorService {
     });
 
     for (const log of logs) {
-      const details = log.metadata as any || {};
-      if (details.executionTime) {
+      const details = (log.metadata ?? {}) as Record<string, unknown>;
+      if (typeof details.executionTime === 'number') {
         totalExecutionTime += details.executionTime;
       }
     }
@@ -474,8 +475,7 @@ class POExecutorService {
       where: { partId: suggestion.partId }
     });
 
-    const reorderReason = suggestion.reorderReason as any;
-    const currentStockFromSuggestion = reorderReason?.currentStock ?? 0;
+    const currentStockFromSuggestion = suggestion.reorderReason?.currentStock ?? 0;
 
     if (inventory) {
       const currentQty = inventory.quantity ?? 0;
@@ -511,23 +511,23 @@ class POExecutorService {
       return suggestion;
     }
 
-    const modified = { ...suggestion } as any;
+    const modified: EnhancedPOSuggestion = { ...suggestion };
 
     for (const mod of modifications) {
       switch (mod.field) {
         case 'quantity':
-          modified.quantity = mod.newValue;
-          modified.totalAmount = mod.newValue * modified.unitPrice;
+          modified.quantity = mod.newValue as number;
+          modified.totalAmount = (mod.newValue as number) * modified.unitPrice;
           break;
         case 'unitPrice':
-          modified.unitPrice = mod.newValue;
-          modified.totalAmount = modified.quantity * mod.newValue;
+          modified.unitPrice = mod.newValue as number;
+          modified.totalAmount = modified.quantity * (mod.newValue as number);
           break;
         case 'orderDate':
-          modified.expectedDeliveryDate = new Date(mod.newValue);
+          modified.expectedDeliveryDate = new Date(mod.newValue as string | number);
           break;
         case 'expectedDeliveryDate':
-          modified.expectedDeliveryDate = new Date(mod.newValue);
+          modified.expectedDeliveryDate = new Date(mod.newValue as string | number);
           break;
       }
     }
@@ -689,7 +689,7 @@ class POExecutorService {
   ): Promise<void> {
     // Store delivery schedule in PO metadata or separate table
     // For now, just log it
-    console.log(`Created delivery schedule for PO ${purchaseOrderId}:`, deliveries);
+    logger.info(`Created delivery schedule for PO ${purchaseOrderId}`, { deliveryCount: deliveries.length });
   }
 
   private async updateInventoryPendingPO(
@@ -706,10 +706,10 @@ class POExecutorService {
       if (inventory) {
         // We could add a field for pending orders
         // For now, just log
-        console.log(`Updated inventory ${inventory.id} with pending PO ${purchaseOrderId}`);
+        logger.info(`Updated inventory ${inventory.id} with pending PO ${purchaseOrderId}`);
       }
     } catch (error) {
-      console.error('Failed to update inventory pending PO:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'po-executor', operation: 'updateInventoryPendingPO' });
     }
   }
 
@@ -724,10 +724,10 @@ class POExecutorService {
       for (const email of options.notifyEmails) {
         try {
           // Mock email sending
-          console.log(`Sending notification to ${email} for PO ${purchaseOrder.poNumber}`);
+          logger.info(`Sending notification to ${email} for PO ${purchaseOrder.poNumber}`);
           sentTo.push(email);
         } catch (error) {
-          console.error(`Failed to send notification to ${email}:`, error);
+          logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'po-executor', operation: 'sendNotification', email });
         }
       }
     }
@@ -738,7 +738,7 @@ class POExecutorService {
   private async submitToSupplier(purchaseOrder: { id: string; poNumber: string }): Promise<void> {
     // In a real implementation, this would integrate with supplier systems
     // Could be EDI, API, or email-based submission
-    console.log(`Auto-submitted PO ${purchaseOrder.poNumber} to supplier`);
+    logger.info(`Auto-submitted PO ${purchaseOrder.poNumber} to supplier`);
 
     await prisma.purchaseOrder.update({
       where: { id: purchaseOrder.id },
@@ -825,7 +825,7 @@ class POExecutorService {
         }
       });
     } catch (error) {
-      console.error('Failed to log execution:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'po-executor', operation: 'logExecution' });
     }
   }
 }

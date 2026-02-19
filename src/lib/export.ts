@@ -12,14 +12,14 @@ import { formatDate } from './date';
 // TYPES
 // =============================================================================
 
-export interface ExportColumn {
+export interface ExportColumn<T = Record<string, unknown>> {
   key: string;
   header: string;
   width?: number; // Excel column width
   pdfWidth?: number; // PDF column width
   type?: 'text' | 'number' | 'currency' | 'date' | 'boolean';
   align?: 'left' | 'center' | 'right';
-  format?: (value: any, row: any) => string;
+  format?: (value: unknown, row: T) => string;
 }
 
 export interface ExportConfig {
@@ -36,7 +36,7 @@ export interface ExportConfig {
 
 export async function exportToExcel<T extends Record<string, any>>(
   data: T[],
-  columns: ExportColumn[],
+  columns: ExportColumn<T>[],
   config: ExportConfig,
   infoRows?: string[][]
 ): Promise<void> {
@@ -102,7 +102,7 @@ export async function exportToExcel<T extends Record<string, any>>(
 
 export async function exportToPDF<T extends Record<string, any>>(
   data: T[],
-  columns: ExportColumn[],
+  columns: ExportColumn<T>[],
   config: ExportConfig
 ): Promise<void> {
   // Dynamically import jspdf and autoTable only when needed

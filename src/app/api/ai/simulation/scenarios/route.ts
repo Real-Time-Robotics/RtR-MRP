@@ -3,7 +3,8 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import {
   getScenarioBuilder,
   SCENARIO_TEMPLATES,
@@ -12,16 +13,52 @@ import {
   SupplyScenarioConfig,
   CapacityScenarioConfig,
   CustomScenarioConfig,
+  type Scenario,
 } from '@/lib/ai/simulation';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const body = await request.json();
+  try {
+const bodySchema = z.object({
+      action: z.enum(['create', 'createFromTemplate', 'clone', 'update', 'delete', 'validate']),
+      name: z.string().optional(),
+      type: z.string().optional(),
+      config: z.record(z.string(), z.unknown()).optional(),
+      description: z.string().optional(),
+      horizonDays: z.number().optional(),
+      tags: z.array(z.string()).optional(),
+      templateId: z.string().optional(),
+      parameterOverrides: z.record(z.string(), z.unknown()).optional(),
+      scenarioId: z.string().optional(),
+      newName: z.string().optional(),
+      updates: z.record(z.string(), z.unknown()).optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action, ...params } = body;
 
     const builder = getScenarioBuilder();
@@ -155,7 +192,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const updated = builder.updateScenario(scenarioId, updates);
+        const updated = builder.updateScenario(scenarioId, updates as Partial<Scenario>);
 
         if (!updated) {
           return NextResponse.json(
@@ -224,22 +261,33 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('[Scenarios API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/simulation/scenarios' });
     return NextResponse.json(
       { error: 'Failed to process request', details: (error as Error).message },
       { status: 500 }
     );
   }
-}
+});
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkHeavyEndpointLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining),
+          },
+        }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
+  try {
+const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const type = searchParams.get('type');
     const category = searchParams.get('category');
@@ -292,10 +340,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[Scenarios API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/ai/simulation/scenarios' });
     return NextResponse.json(
       { error: 'Failed to fetch scenarios' },
       { status: 500 }
     );
   }
-}
+});

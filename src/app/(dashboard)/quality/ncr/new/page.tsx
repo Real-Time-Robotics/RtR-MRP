@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/layout/page-header";
+import { toast } from "sonner";
 import Link from "next/link";
+import { clientLogger } from '@/lib/client-logger';
 
 interface Part {
   id: string;
@@ -25,12 +27,11 @@ interface Part {
 }
 
 const SOURCE_OPTIONS = [
-  { value: "RECEIVING", label: "Kiểm tra nhận hàng" },
-  { value: "IN_PROCESS", label: "Kiểm tra trong SX" },
-  { value: "FINAL", label: "Kiểm tra cuối cùng" },
-  { value: "CUSTOMER", label: "Khiếu nại khách hàng" },
-  { value: "INTERNAL", label: "Kiểm toán nội bộ" },
-  { value: "SUPPLIER", label: "Lỗi nhà cung cấp" },
+  { value: "receiving", label: "Kiểm tra nhận hàng" },
+  { value: "in_process", label: "Kiểm tra trong SX" },
+  { value: "final", label: "Kiểm tra cuối cùng" },
+  { value: "customer_complaint", label: "Khiếu nại khách hàng" },
+  { value: "supplier", label: "Lỗi nhà cung cấp" },
 ];
 
 const PRIORITY_OPTIONS = [
@@ -78,7 +79,7 @@ export default function NewNCRPage() {
         setParts(data.parts || data.data || []);
       }
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      clientLogger.error("Failed to fetch parts:", error);
     }
   };
 
@@ -102,11 +103,11 @@ export default function NewNCRPage() {
         router.push(`/quality/ncr/${ncr.id}`);
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create NCR");
+        toast.error(error.error || "Failed to create NCR");
       }
     } catch (error) {
-      console.error("Failed to create NCR:", error);
-      alert("Failed to create NCR");
+      clientLogger.error("Failed to create NCR:", error);
+      toast.error("Failed to create NCR");
     } finally {
       setLoading(false);
     }

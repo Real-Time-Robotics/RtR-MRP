@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import {
   getOEEDashboard,
   calculateOEE,
   getOEETrend,
 } from "@/lib/production/oee-calculator";
 
-export async function GET(request: NextRequest) {
+import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const workCenterId = searchParams.get("workCenterId");
@@ -39,10 +46,10 @@ export async function GET(request: NextRequest) {
     const dashboard = await getOEEDashboard();
     return NextResponse.json(dashboard);
   } catch (error) {
-    console.error("Failed to fetch OEE data:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/oee' });
     return NextResponse.json(
       { error: "Failed to fetch OEE data" },
       { status: 500 }
     );
   }
-}
+});

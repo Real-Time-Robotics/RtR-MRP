@@ -95,6 +95,7 @@ export function WidgetContainer({
                 className="h-7 w-7"
                 onClick={handleRefresh}
                 disabled={isLoading || isRefreshing}
+                aria-label="Làm mới"
               >
                 <RefreshCw
                   className={cn(
@@ -107,7 +108,7 @@ export function WidgetContainer({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Menu">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

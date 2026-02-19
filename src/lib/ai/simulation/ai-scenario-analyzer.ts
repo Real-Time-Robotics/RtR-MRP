@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { getAIProvider, AIProviderService, createSystemMessage, createUserMessage } from '@/lib/ai/provider';
+import { logger } from '@/lib/logger';
 import { Scenario, ScenarioType } from './scenario-builder';
 import { SimulationResult, Bottleneck } from './simulation-engine';
 import { MonteCarloResult } from './monte-carlo';
@@ -125,7 +126,7 @@ export class AIScenarioAnalyzer {
         confidenceLevel: this.determineConfidenceLevel(result, monteCarloResult),
       };
     } catch (error) {
-      console.error('[AI Scenario Analyzer] Error generating insight:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-scenario-analyzer', operation: 'generateInsight' });
       return this.generateFallbackInsight(scenario, result, impactAnalysis);
     }
   }
@@ -149,7 +150,7 @@ export class AIScenarioAnalyzer {
         ...parsed,
       };
     } catch (error) {
-      console.error('[AI Scenario Analyzer] Error generating comparison:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-scenario-analyzer', operation: 'generateComparison' });
       return {
         generatedAt: new Date(),
         ...this.generateFallbackComparison(comparison),
@@ -349,7 +350,7 @@ Format as JSON with keys: overallAnalysis, scenarioRankings (array), bestScenari
         };
       }
     } catch (e) {
-      console.error('[AI Scenario Analyzer] Parse error:', e);
+      logger.logError(e instanceof Error ? e : new Error(String(e)), { context: 'ai-scenario-analyzer', operation: 'parseResponse' });
     }
 
     // Fallback: use response as summary
@@ -374,7 +375,7 @@ Format as JSON with keys: overallAnalysis, scenarioRankings (array), bestScenari
     };
   }
 
-  private parseRecommendations(raw: any[]): AIRecommendation[] {
+  private parseRecommendations(raw: Partial<AIRecommendation>[]): AIRecommendation[] {
     if (!Array.isArray(raw)) return [];
     return raw.slice(0, 5).map((r) => ({
       priority: r.priority || 'medium',
@@ -389,7 +390,7 @@ Format as JSON with keys: overallAnalysis, scenarioRankings (array), bestScenari
     }));
   }
 
-  private parseRiskAnalysis(raw: any): AIRiskAnalysis {
+  private parseRiskAnalysis(raw: Partial<AIRiskAnalysis> | null | undefined): AIRiskAnalysis {
     if (!raw) {
       return {
         overallRiskLevel: 'medium',
@@ -406,7 +407,7 @@ Format as JSON with keys: overallAnalysis, scenarioRankings (array), bestScenari
     };
   }
 
-  private parseActionPlan(raw: any): AIActionPlan {
+  private parseActionPlan(raw: Partial<AIActionPlan> | null | undefined): AIActionPlan {
     if (!raw) {
       return {
         immediate: [],
@@ -448,13 +449,13 @@ Format as JSON with keys: overallAnalysis, scenarioRankings (array), bestScenari
         };
       }
     } catch (e) {
-      console.error('[AI Scenario Analyzer] Parse error:', e);
+      logger.logError(e instanceof Error ? e : new Error(String(e)), { context: 'ai-scenario-analyzer', operation: 'parseResponse' });
     }
 
     return this.generateFallbackComparison(comparison);
   }
 
-  private parseScenarioRankings(raw: any[], comparison: ComparisonResult): AIScenarioRanking[] {
+  private parseScenarioRankings(raw: Partial<AIScenarioRanking>[] | null | undefined, comparison: ComparisonResult): AIScenarioRanking[] {
     if (!Array.isArray(raw)) {
       return comparison.scenarios.map((s) => ({
         scenarioId: s.scenarioId,
@@ -619,7 +620,7 @@ Recommended actions focus on ${insight.strategicRecommendations[0]?.title || 'op
       });
       return response.content;
     } catch (error) {
-      console.error('[AI Scenario Analyzer] AI call failed:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'ai-scenario-analyzer', operation: 'callAI' });
       throw error;
     }
   }

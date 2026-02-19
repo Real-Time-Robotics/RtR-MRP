@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
+import { z } from 'zod';
+
 import {
   Alert,
   AlertStatus,
@@ -12,6 +15,7 @@ import {
   STATUS_CONFIG,
 } from '@/lib/alerts/alert-engine';
 
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 // In-memory storage for demo (replace with database in production)
 let alertsStore: Alert[] = generateMockAlerts();
 
@@ -25,7 +29,11 @@ let alertsStore: Alert[] = generateMockAlerts();
 //   - limit: number (default: 50)
 //   - offset: number (default: 0)
 // =============================================================================
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const view = searchParams.get('view') || 'list';
@@ -98,13 +106,13 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching alerts:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/alerts' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch alerts' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // POST /api/v2/alerts
@@ -116,9 +124,34 @@ export async function GET(request: NextRequest) {
 //   - action: 'acknowledge_all' - Acknowledge all active alerts
 //   - action: 'resolve_all' - Resolve all acknowledged alerts
 // =============================================================================
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      action: z.enum(['create', 'acknowledge', 'resolve', 'dismiss', 'acknowledge_all', 'resolve_all']),
+      type: z.string().optional(),
+      title: z.string().optional(),
+      message: z.string().optional(),
+      severity: z.string().optional(),
+      entityType: z.string().optional(),
+      entityId: z.string().optional(),
+      entityCode: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+      alertIds: z.array(z.string()).optional(),
+      userId: z.string().optional(),
+    });
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
 
     switch (action) {
@@ -133,10 +166,10 @@ export async function POST(request: NextRequest) {
         }
 
         const newAlert = createAlert({
-          type,
+          type: type as AlertType,
           title,
           message,
-          severity,
+          severity: severity as AlertSeverity | undefined,
           entityType,
           entityId,
           entityCode,
@@ -298,10 +331,10 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Error processing alert action:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/alerts' });
     return NextResponse.json(
       { success: false, error: 'Failed to process alert action' },
       { status: 500 }
     );
   }
-}
+});

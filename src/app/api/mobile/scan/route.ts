@@ -4,8 +4,12 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { parseScanBarcode as parseBarcode, getAvailableActions, ScannerEntityType as EntityType } from '@/lib/mobile';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // Mock data for demonstration - replace with Prisma queries in production
 const MOCK_PARTS: Record<string, { id: string; partNumber: string; description: string; category: string; onHand: number; reserved: number; reorderPoint: number; uom: string; unitCost: number }> = {
   'RTR-MOTOR-001': { id: '1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor 2205', category: 'Motors', onHand: 150, reserved: 20, reorderPoint: 50, uom: 'EA', unitCost: 45.00 },
@@ -35,10 +39,27 @@ const MOCK_PURCHASE_ORDERS: Record<string, { id: string; poNumber: string; suppl
  * POST /api/mobile/scan
  * Process a barcode scan and resolve to entity
  */
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await req.json();
-    const { barcode, context = 'general' } = body;
+const bodySchema = z.object({
+      barcode: z.string(),
+      context: z.string().default('general'),
+    });
+
+    const rawBody = await req.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
+    const { barcode, context } = body;
     
     if (!barcode) {
       return NextResponse.json(
@@ -125,20 +146,23 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error) {
-    console.error('Scan error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scan' });
     return NextResponse.json(
       { success: false, error: 'Failed to process scan' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/mobile/scan/history
  * Get recent scan history
  */
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export const GET = withAuth(async (req, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(req);
+    if (rateLimitResult) return rateLimitResult;
+const { searchParams } = new URL(req.url);
   const limit = parseInt(searchParams.get('limit') || '20');
   
   // In production, fetch from database
@@ -148,4 +172,4 @@ export async function GET(req: NextRequest) {
     history: [],
     limit,
   });
-}
+});

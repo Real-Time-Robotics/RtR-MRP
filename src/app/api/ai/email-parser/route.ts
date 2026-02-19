@@ -4,7 +4,9 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 import { prisma } from '@/lib/prisma';
 import {
   getEmailParserService,
@@ -12,6 +14,15 @@ import {
   ExtractedOrderData,
   DraftOrder,
 } from '@/lib/ai/email-parser-service';
+import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
+
+const emailParserBodySchema = z.object({
+  action: z.enum(['parse', 'create_order']),
+  emailContent: z.string().optional(),
+  attachments: z.array(z.any()).optional(),
+  draftOrder: z.any().optional(),
+  approved: z.boolean().optional(),
+});
 
 // =============================================================================
 // TYPES
@@ -31,14 +42,26 @@ interface CreateOrderRequest {
 // POST: Parse email or create order
 // =============================================================================
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, context, session) => {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+// Rate limiting (heavy endpoint)
+    const rateLimit = await checkHeavyEndpointLimit(request, session.user.id);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter || 60) } }
+      );
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parseResult = emailParserBodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { action } = body;
     const emailParser = getEmailParserService();
     const userId = session.user.id || 'system';
@@ -66,7 +89,7 @@ export async function POST(request: NextRequest) {
         try {
           draftOrder = await emailParser.createDraftOrder(extractedData);
         } catch (err) {
-          console.warn('[EmailParser API] Could not create draft:', err);
+          logger.warn('Could not create draft', { context: 'POST /api/ai/email-parser', error: String(err) });
         }
       }
 
@@ -116,7 +139,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      let createdOrder: any = null;
+      let createdOrder: Record<string, unknown> | null = null;
 
       if (draftOrder.type === 'sales_order') {
         // Find or validate customer
@@ -172,10 +195,10 @@ export async function POST(request: NextRequest) {
             notes: `Tạo từ email. PO khách hàng: ${draftOrder.data.customerPO || 'N/A'}. ${draftOrder.data.notes || ''}`,
             lines: {
               create: draftOrder.data.items
-                .filter((item: any) => productIds.has(item.partNumber))
-                .map((item: any, idx: number) => ({
+                .filter((item) => item.partNumber && productIds.has(item.partNumber))
+                .map((item, idx) => ({
                   lineNumber: idx + 1,
-                  productId: productIds.get(item.partNumber)!,
+                  productId: productIds.get(item.partNumber!)!,
                   quantity: item.quantity,
                   unitPrice: item.unitPrice || 0,
                   lineTotal: item.totalPrice || (item.quantity * (item.unitPrice || 0)),
@@ -261,10 +284,10 @@ export async function POST(request: NextRequest) {
             notes: `Tạo từ báo giá. Ref: ${draftOrder.data.quoteReference || 'N/A'}. ${draftOrder.data.notes || ''}`,
             lines: {
               create: draftOrder.data.items
-                .filter((item: any) => partIds.has(item.partNumber))
-                .map((item: any, idx: number) => ({
+                .filter((item) => item.partNumber && partIds.has(item.partNumber))
+                .map((item, idx) => ({
                   lineNumber: idx + 1,
-                  partId: partIds.get(item.partNumber)!,
+                  partId: partIds.get(item.partNumber!)!,
                   quantity: item.quantity,
                   unitPrice: item.unitPrice || 0,
                   lineTotal: item.totalPrice || (item.quantity * (item.unitPrice || 0)),
@@ -316,16 +339,15 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('[EmailParser API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/email-parser' });
     return NextResponse.json(
       {
         error: 'Failed to process request',
-        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET: Get parsing status/info

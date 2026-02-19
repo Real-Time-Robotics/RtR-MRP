@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import { format } from "date-fns";
+import { clientLogger } from '@/lib/client-logger';
 
 interface ScheduledOperation {
   id: string;
@@ -42,7 +44,7 @@ export default function SchedulerPage() {
         setSchedule(data);
       }
     } catch (error) {
-      console.error("Failed to fetch schedule:", error);
+      clientLogger.error("Failed to fetch schedule:", error);
     } finally {
       setLoading(false);
     }
@@ -59,13 +61,13 @@ export default function SchedulerPage() {
 
       if (res.ok) {
         const result = await res.json();
-        alert(
+        toast.info(
           `Scheduled ${result.scheduled} work orders. ${result.failed} failed.`
         );
         fetchSchedule();
       }
     } catch (error) {
-      console.error("Failed to auto-schedule:", error);
+      clientLogger.error("Failed to auto-schedule:", error);
     } finally {
       setAutoScheduling(false);
     }

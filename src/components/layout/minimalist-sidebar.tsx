@@ -23,7 +23,15 @@ import {
   Building2,
   PanelLeftClose,
   PanelLeft,
-  MessageSquare
+  MessageSquare,
+  Warehouse,
+  PackageMinus,
+  FileSpreadsheet,
+  BarChart3,
+  PackageX,
+  Truck,
+  ClipboardList,
+  Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,9 +66,17 @@ const toolItems: SidebarItem[] = [
   { id: 'parts', label: 'PARTS', labelVi: 'VẬT TƯ', icon: <Package className="w-3.5 h-3.5" />, href: '/parts' },
   { id: 'bom', label: 'BOM', labelVi: 'BOM', icon: <Layers className="w-3.5 h-3.5" />, href: '/bom' },
   { id: 'suppliers', label: 'SUPPLIERS', labelVi: 'NCC', icon: <Building2 className="w-3.5 h-3.5" />, href: '/suppliers' },
+  { id: 'warehouses', label: 'WAREHOUSES', labelVi: 'KHO', icon: <Warehouse className="w-3.5 h-3.5" />, href: '/warehouses' },
+  { id: 'issue', label: 'ISSUE', labelVi: 'XUẤT KHO', icon: <PackageMinus className="w-3.5 h-3.5" />, href: '/inventory/issue' },
+  { id: 'finance', label: 'FINANCE', labelVi: 'KẾ TOÁN', icon: <FileSpreadsheet className="w-3.5 h-3.5" />, href: '/finance/misa-export' },
+  { id: 'reports', label: 'REPORTS', labelVi: 'BÁO CÁO', icon: <BarChart3 className="w-3.5 h-3.5" />, href: '/reports' },
 ];
 
 const utilityItems: SidebarItem[] = [
+  { id: 'backorders', label: 'BACKORDERS', labelVi: 'GIAO THIẾU', icon: <PackageX className="w-3.5 h-3.5" />, href: '/orders/backorders' },
+  { id: 'subcontracting', label: 'SUBCONTRACT', labelVi: 'GIA CÔNG', icon: <Truck className="w-3.5 h-3.5" />, href: '/production/subcontracting' },
+  { id: 'cycle-count', label: 'CYCLE COUNT', labelVi: 'KIỂM KÊ', icon: <ClipboardList className="w-3.5 h-3.5" />, href: '/inventory/cycle-count' },
+  { id: 'expiry', label: 'EXPIRY', labelVi: 'HẾT HẠN', icon: <Clock className="w-3.5 h-3.5" />, href: '/inventory/expiry-alerts' },
   { id: 'discussions', label: 'DISCUSS', labelVi: 'THẢO LUẬN', icon: <MessageSquare className="w-3.5 h-3.5" />, href: '/discussions' },
   { id: 'mobile', label: 'MOBILE', labelVi: 'MOBILE', icon: <Smartphone className="w-3.5 h-3.5" />, href: '/mobile' },
   { id: 'alerts', label: 'ALERTS', labelVi: 'CẢNH BÁO', icon: <AlertTriangle className="w-3.5 h-3.5" />, href: '/alerts' },
@@ -85,14 +101,18 @@ function NavItem({
     <Link
       href={item.href}
       className={cn(
-        // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
-        'group flex items-center gap-2 px-2.5 py-1.5 transition-all relative',
-        'border-l-2',
-        collapsed ? 'justify-center' : '',
+        'group flex items-center transition-all relative',
+        collapsed
+          ? 'justify-center py-1.5'
+          : 'gap-2 px-2.5 py-1.5 border-l-2',
         // Active state
-        isActive
-          ? 'bg-gray-100 dark:bg-gunmetal border-l-info-cyan text-info-cyan'
-          : 'border-l-transparent text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-50 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary hover:border-l-gray-300 dark:hover:border-l-mrp-border'
+        collapsed
+          ? isActive
+            ? 'bg-gray-100 dark:bg-gunmetal text-info-cyan'
+            : 'text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-50 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary'
+          : isActive
+            ? 'bg-gray-100 dark:bg-gunmetal border-l-info-cyan text-info-cyan'
+            : 'border-l-transparent text-gray-600 dark:text-mrp-text-secondary hover:bg-gray-50 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary hover:border-l-gray-300 dark:hover:border-l-mrp-border'
       )}
       title={collapsed ? (language === 'vi' ? item.labelVi : item.label) : undefined}
     >
@@ -179,10 +199,10 @@ export function MinimalistSidebar({
   return (
     <aside
       className={cn(
-        // COMPACT: w-56 → w-48 (224px → 192px)
+        // Prismy: sidebar width 220px expanded, 48px collapsed
         'flex flex-col h-full transition-all duration-200',
         'bg-white dark:bg-steel-dark border-r border-gray-200 dark:border-mrp-border',
-        collapsed ? 'w-12' : 'w-48'
+        collapsed ? 'w-12' : 'w-[220px]'
       )}
     >
       {/* Header - Product Name & Toggle */}
@@ -190,7 +210,6 @@ export function MinimalistSidebar({
         "flex items-center h-12 px-3 border-b border-gray-200 dark:border-mrp-border",
         collapsed ? "justify-center" : "justify-between"
       )}>
-        {/* Product Name */}
         {!collapsed && (
           <div className="flex items-baseline gap-0.5">
             <span className="font-bold text-sm font-mono text-gray-900 dark:text-mrp-text-primary tracking-tight">
@@ -200,14 +219,9 @@ export function MinimalistSidebar({
             <span className="w-1.5 h-1.5 bg-production-green ml-1 animate-pulse" />
           </div>
         )}
-
-        {/* Toggle Button */}
         <button
           onClick={onToggle}
-          className={cn(
-            "p-1.5 transition-colors",
-            "text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal"
-          )}
+          className="p-1.5 transition-colors text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal"
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           {collapsed ? (
@@ -275,11 +289,10 @@ export function MinimalistSidebar({
         <Link
           href="/ai/insights"
           className={cn(
-            // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
-            'flex items-center gap-2 px-2.5 py-1.5 transition-all',
+            'flex items-center py-1.5 transition-all',
             'bg-info-cyan/10 dark:bg-info-cyan-dim border border-info-cyan/30',
             'hover:bg-info-cyan/20 hover:border-info-cyan/50',
-            collapsed ? 'justify-center' : ''
+            collapsed ? 'justify-center' : 'gap-2 px-2.5'
           )}
           title={collapsed ? 'AI Insights' : undefined}
         >
@@ -295,10 +308,9 @@ export function MinimalistSidebar({
         <Link
           href="/settings"
           className={cn(
-            // COMPACT: gap-3 → gap-2, px-3 py-2.5 → px-2.5 py-1.5
-            'flex items-center gap-2 px-2.5 py-1.5 transition-all',
+            'flex items-center py-1.5 transition-all',
             'text-gray-500 dark:text-mrp-text-muted hover:bg-gray-100 dark:hover:bg-gunmetal hover:text-gray-900 dark:hover:text-mrp-text-primary',
-            collapsed ? 'justify-center' : ''
+            collapsed ? 'justify-center' : 'gap-2 px-2.5'
           )}
           title={collapsed ? 'Settings' : undefined}
         >

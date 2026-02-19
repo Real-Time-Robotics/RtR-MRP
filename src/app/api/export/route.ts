@@ -4,16 +4,39 @@
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { exportData, type ExportFormat, type ExportEntity } from '@/lib/export/export-service';
+import { logger } from '@/lib/logger';
+import { withAuth } from '@/lib/api/with-auth';
 
+import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
 // =============================================================================
 // POST /api/export
 // Export data in specified format
 // =============================================================================
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export const POST = withAuth(async (request: NextRequest, context, session): Promise<Response> => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+    const bodySchema = z.object({
+      format: z.enum(['xlsx', 'csv', 'pdf'] as const),
+      entity: z.enum(['sales-orders', 'parts', 'inventory', 'suppliers', 'customers', 'work-orders', 'quality-records', 'mrp-results'] as const),
+      title: z.string().optional(),
+      filters: z.record(z.string(), z.unknown()).optional(),
+    });
+
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
     const { format, entity, title, filters } = body;
 
     // Validate required fields
@@ -58,20 +81,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       data: result,
     });
   } catch (error) {
-    console.error('[Export API] Error:', error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/export' });
     return NextResponse.json(
       { success: false, error: 'Export failed' },
       { status: 500 }
     );
   }
-}
+});
 
 // =============================================================================
 // GET /api/export
 // Get available export options
 // =============================================================================
 
-export async function GET(): Promise<NextResponse> {
+export const GET = withAuth(async (request: NextRequest, context, session): Promise<Response> => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   return NextResponse.json({
     success: true,
     data: {
@@ -91,4 +118,4 @@ export async function GET(): Promise<NextResponse> {
       ],
     },
   });
-}
+});

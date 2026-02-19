@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
 // MOBILE QUALITY PAGE
@@ -46,7 +47,7 @@ export default function MobileQualityPage() {
           setInspections(data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch:', err);
+        clientLogger.error('Failed to fetch quality inspections', err);
       } finally {
         setIsLoading(false);
       }
@@ -80,7 +81,7 @@ export default function MobileQualityPage() {
         }
       }
     } catch (err) {
-      console.error('Failed:', err);
+      clientLogger.error('Failed to submit inspection', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -170,7 +171,7 @@ export default function MobileQualityPage() {
                 </div>
                 <div className="flex items-center justify-center gap-4">
                   <button onClick={() => setQtyPassed(Math.max(0, qtyPassed - 1))} className="w-12 h-12 bg-green-100 rounded-full text-xl font-bold">-</button>
-                  <input type="number" value={qtyPassed} onChange={(e) => setQtyPassed(parseInt(e.target.value) || 0)} className="w-20 h-12 text-center text-xl font-bold bg-white rounded-lg" />
+                  <input type="number" value={qtyPassed} onChange={(e) => setQtyPassed(parseInt(e.target.value) || 0)} aria-label="Số lượng đạt" className="w-20 h-12 text-center text-xl font-bold bg-white rounded-lg" />
                   <button onClick={() => setQtyPassed(qtyPassed + 1)} className="w-12 h-12 bg-green-600 text-white rounded-full text-xl font-bold">+</button>
                 </div>
               </div>
@@ -184,7 +185,7 @@ export default function MobileQualityPage() {
                 </div>
                 <div className="flex items-center justify-center gap-4">
                   <button onClick={() => setQtyFailed(Math.max(0, qtyFailed - 1))} className="w-12 h-12 bg-red-100 rounded-full text-xl font-bold">-</button>
-                  <input type="number" value={qtyFailed} onChange={(e) => setQtyFailed(parseInt(e.target.value) || 0)} className="w-20 h-12 text-center text-xl font-bold bg-white rounded-lg" />
+                  <input type="number" value={qtyFailed} onChange={(e) => setQtyFailed(parseInt(e.target.value) || 0)} aria-label="Số lượng không đạt" className="w-20 h-12 text-center text-xl font-bold bg-white rounded-lg" />
                   <button onClick={() => setQtyFailed(qtyFailed + 1)} className="w-12 h-12 bg-red-600 text-white rounded-full text-xl font-bold">+</button>
                 </div>
               </div>
@@ -194,7 +195,14 @@ export default function MobileQualityPage() {
                 disabled={isSubmitting || (qtyPassed + qtyFailed <= 0)}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Ghi nhận kết quả'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Đang xử lý...
+                  </>
+                ) : (
+                  'Ghi nhận kết quả'
+                )}
               </button>
             </div>
           </div>

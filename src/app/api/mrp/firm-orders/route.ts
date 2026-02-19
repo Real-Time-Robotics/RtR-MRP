@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { logger } from "@/lib/logger";
 
+const firmOrderPostSchema = z.object({
+  partId: z.string().min(1, 'partId là bắt buộc'),
+  siteId: z.string().optional(),
+  quantity: z.number().positive('Số lượng phải lớn hơn 0'),
+  dueDate: z.string().min(1, 'Ngày đến hạn là bắt buộc'),
+  orderType: z.string().optional().default('PURCHASE'),
+  isFirm: z.boolean().optional().default(false),
+});
+
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api/with-auth';
 // GET /api/mrp/firm-orders - Get planned orders (firm and non-firm)
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkReadEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const firmOnly = searchParams.get("firmOnly") === "true";
     const partId = searchParams.get("partId") || undefined;
     const siteId = searchParams.get("siteId") || undefined;
@@ -28,26 +45,30 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(orders);
   } catch (error) {
-    console.error("Firm orders GET error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to get planned orders" },
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/mrp/firm-orders - Create a planned order
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { partId, siteId, quantity, dueDate, orderType, isFirm } = body;
+export const POST = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
 
-    if (!partId || !quantity || !dueDate) {
+  try {
+const body = await request.json();
+    const parsed = firmOrderPostSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "partId, quantity, and dueDate are required" },
+        { success: false, error: 'Dữ liệu không hợp lệ', errors: parsed.error.issues },
         { status: 400 }
       );
     }
+    const { partId, siteId, quantity, dueDate, orderType, isFirm } = parsed.data;
 
     // Generate order number
     const count = await prisma.plannedOrder.count();
@@ -80,18 +101,22 @@ export async function POST(request: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error("Firm orders POST error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to create planned order" },
       { status: 500 }
     );
   }
-}
+});
 
 // PUT /api/mrp/firm-orders - Update (firm/unfirm) a planned order
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const body = await request.json();
+const body = await request.json();
     const { orderId, isFirm, quantity, dueDate, status } = body;
 
     if (!orderId) {
@@ -123,18 +148,22 @@ export async function PUT(request: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error("Firm orders PUT error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to update planned order" },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/mrp/firm-orders - Delete a planned order
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, context, session) => {
+    // Rate limiting
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
   try {
-    const searchParams = request.nextUrl.searchParams;
+const searchParams = request.nextUrl.searchParams;
     const orderId = searchParams.get("id");
 
     if (!orderId) {
@@ -150,10 +179,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Firm orders DELETE error:", error);
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/mrp/firm-orders' });
     return NextResponse.json(
       { error: "Failed to delete planned order" },
       { status: 500 }
     );
   }
-}
+});

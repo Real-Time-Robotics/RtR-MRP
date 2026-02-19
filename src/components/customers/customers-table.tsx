@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Users, Mail, Eye, Edit2, Trash2, Phone, MapPin, CreditCard, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { DataTableToolbar } from '@/components/ui/data-table-toolbar';
 import { ActionDropdown } from '@/components/ui/action-dropdown';
 import { CustomerFormDialog } from '@/components/customers/customer-form-dialog';
@@ -11,13 +10,16 @@ import { DeleteCustomerDialog, Customer } from '@/components/forms/customer-form
 import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
+import { useApiData } from '@/hooks/use-api-data';
 
 // =============================================================================
 // STATS
 // =============================================================================
 
 function StatsCards({ customers }: { customers: Customer[] }) {
+  const { t } = useLanguage();
   const active = customers.filter((c) => c.status === 'active').length;
   const enterprise = customers.filter((c) => c.type === 'Enterprise').length;
   const totalCredit = customers.reduce((sum, c) => sum + (c.creditLimit || 0), 0);
@@ -27,25 +29,25 @@ function StatsCards({ customers }: { customers: Customer[] }) {
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold">{customers.length}</div>
-          <p className="text-xs text-muted-foreground">Tổng khách hàng</p>
+          <p className="text-xs text-muted-foreground">{t('customers.totalCustomers')}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold text-green-600">{active}</div>
-          <p className="text-xs text-muted-foreground">Đang hoạt động</p>
+          <p className="text-xs text-muted-foreground">{t('customers.activeCount')}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold text-blue-600">{enterprise}</div>
-          <p className="text-xs text-muted-foreground">Doanh nghiệp</p>
+          <p className="text-xs text-muted-foreground">{t('customers.enterprise')}</p>
         </CardContent>
       </Card>
       <Card>
         <CardContent className="pt-4">
           <div className="text-2xl font-bold">${(totalCredit / 1000).toFixed(0)}K</div>
-          <p className="text-xs text-muted-foreground">Tổng hạn mức</p>
+          <p className="text-xs text-muted-foreground">{t('customers.totalCreditLimit')}</p>
         </CardContent>
       </Card>
     </div>
@@ -61,8 +63,7 @@ interface CustomersTableProps {
 }
 
 export function CustomersTable({ initialData = [] }: CustomersTableProps) {
-  const [customers, setCustomers] = useState<Customer[]>(initialData);
-  const [loading, setLoading] = useState(false);
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState<Record<string, string>>({ status: 'all', type: 'all' });
@@ -72,27 +73,12 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
 
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (filters.status !== 'all') params.set('status', filters.status);
-      if (filters.type !== 'all') params.set('type', filters.type);
-
-      const response = await fetch(`/api/customers?${params.toString()}`);
-      const result = await response.json();
-      if (response.ok) setCustomers(result.data || []);
-    } catch (error) {
-      console.error('Failed to fetch customers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, filters]);
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  // SWR-based data fetching with debounced search
+  const { data: customers, loading, refresh } = useApiData<Customer>(
+    '/api/customers',
+    { search, status: filters.status, type: filters.type },
+    { debounce: search ? 300 : 0 }
+  );
 
   const handleAdd = () => { setEditingCustomer(null); setFormOpen(true); };
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setFormOpen(true); };
@@ -100,20 +86,20 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} khách hàng?`)) return;
+    if (!confirm(t('table.bulkDeleteConfirm', { count: String(selectedIds.size), itemType: t('customers.pageTitle') }))) return;
     try {
       await Promise.all(Array.from(selectedIds).map((id) => fetch(`/api/customers/${id}`, { method: 'DELETE' })));
-      toast.success(`Đã xóa ${selectedIds.size} khách hàng`);
-      fetchCustomers();
+      toast.success(t('table.bulkDeleteSuccess', { count: String(selectedIds.size), itemType: t('customers.pageTitle') }));
+      refresh();
       setSelectedIds(new Set());
-    } catch { toast.error('Có lỗi xảy ra khi xóa'); }
+    } catch { toast.error(t('table.deleteError')); }
   };
 
   const { exportToExcel } = useDataExport();
 
   const handleExport = () => {
     if (!customers || customers.length === 0) {
-      toast.warning('Không có dữ liệu để export');
+      toast.warning(t('table.noDataToExport'));
       return;
     }
 
@@ -122,11 +108,11 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
       sheetName: 'Customers'
     });
 
-    toast.success('Đã xuất file Excel');
+    toast.success(t('success.exported'));
   };
 
   const handleImport = () => {
-    toast.info('Tính năng import đang được phát triển');
+    toast.info(t('table.importInDev'));
   };
 
   // Column definitions for DataTable - SONG ÁNH 1:1 với Form
@@ -134,7 +120,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     // ===== BASIC INFO SECTION =====
     {
       key: 'code',
-      header: 'Mã KH',
+      header: t('customers.code'),
       width: '100px',
       sortable: true,
       sticky: 'left',
@@ -142,45 +128,46 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     },
     {
       key: 'name',
-      header: 'Tên khách hàng',
+      header: t('customers.customerName'),
       width: '200px',
       sortable: true,
       render: (value) => <span className="font-medium">{value}</span>,
     },
     {
       key: 'status',
-      header: 'Trạng thái',
+      header: t('column.status'),
       width: '100px',
-      align: 'center',
       sortable: true,
+      cellClassName: (value) =>
+        value === 'active'
+          ? 'bg-green-50 dark:bg-green-950/30'
+          : value === 'inactive'
+            ? 'bg-gray-50 dark:bg-gray-900/30'
+            : 'bg-yellow-50 dark:bg-yellow-950/30',
       render: (value) => (
-        <Badge
-          variant={value === 'active' ? 'default' : 'secondary'}
+        <span
           className={cn(
-            value === 'active' && 'bg-green-100 text-green-700',
-            value === 'inactive' && 'bg-gray-100 text-gray-600',
-            value === 'pending' && 'bg-yellow-100 text-yellow-700',
-            'text-[10px] px-1 py-0'
+            'text-xs font-medium',
+            value === 'active' && 'text-green-700 dark:text-green-400',
+            value === 'inactive' && 'text-gray-600 dark:text-gray-400',
+            value === 'pending' && 'text-yellow-700 dark:text-yellow-400',
           )}
         >
-          {value === 'active' ? 'Hoạt động' : value === 'inactive' ? 'Ngưng' : 'Chờ duyệt'}
-        </Badge>
+          {value === 'active' ? t('status.active') : value === 'inactive' ? t('status.inactive') : t('status.approval')}
+        </span>
       ),
     },
     {
       key: 'type',
-      header: 'Loại KH',
+      header: t('customers.type'),
       width: '110px',
       sortable: true,
-      render: (value) => value ? (
-        <Badge variant="secondary" className="text-[10px] px-1 py-0">
-          {value}
-        </Badge>
-      ) : '-',
+      cellClassName: (value) => value ? 'bg-slate-50 dark:bg-slate-900/30' : '',
+      render: (value) => value || '-',
     },
     {
       key: 'country',
-      header: 'Quốc gia',
+      header: t('column.country'),
       width: '100px',
       sortable: true,
       hidden: true,
@@ -190,13 +177,13 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     // ===== CONTACT INFO SECTION =====
     {
       key: 'contactName',
-      header: 'Người liên hệ',
+      header: t('column.contactName'),
       width: '150px',
       render: (value) => value || '-',
     },
     {
       key: 'contactPhone',
-      header: 'Số điện thoại',
+      header: t('column.contactPhone'),
       width: '120px',
       hidden: true,
       render: (value) => value ? (
@@ -205,7 +192,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     },
     {
       key: 'contactEmail',
-      header: 'Email',
+      header: t('column.contactEmail'),
       width: '180px',
       render: (value) => value ? (
         <a href={`mailto:${value}`} className="text-blue-600 hover:underline text-xs">
@@ -215,7 +202,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     },
     {
       key: 'billingAddress',
-      header: 'Địa chỉ thanh toán',
+      header: t('column.billingAddress'),
       width: '200px',
       hidden: true,
       render: (value) => value ? (
@@ -226,21 +213,17 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     // ===== FINANCE SECTION =====
     {
       key: 'paymentTerms',
-      header: 'Điều khoản TT',
+      header: t('column.paymentTerms'),
       width: '110px',
       sortable: true,
       hidden: true,
-      render: (value) => value ? (
-        <Badge variant="outline" className="text-[10px] px-1 py-0">
-          {value}
-        </Badge>
-      ) : '-',
+      cellClassName: (value) => value ? 'bg-slate-50 dark:bg-slate-900/30' : '',
+      render: (value) => value || '-',
     },
     {
       key: 'creditLimit',
-      header: 'Hạn mức (USD)',
+      header: t('column.creditLimit'),
       width: '120px',
-      align: 'right',
       type: 'currency',
       sortable: true,
       render: (value) => value ? (
@@ -257,23 +240,23 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
       render: (_, row) => (
         <ActionDropdown
           items={[
-            { label: 'Xem chi tiết', icon: Eye, href: `/customers/${row.id}` },
-            { label: 'Chỉnh sửa', icon: Edit2, onClick: () => handleEdit(row), permission: 'orders:edit' },
-            { label: 'Xóa', icon: Trash2, onClick: () => handleDelete(row), variant: 'destructive', permission: 'orders:delete' },
+            { label: t('table.viewDetails'), icon: Eye, href: `/customers/${row.id}` },
+            { label: t('common.edit'), icon: Edit2, onClick: () => handleEdit(row), permission: 'orders:edit' },
+            { label: t('common.delete'), icon: Trash2, onClick: () => handleDelete(row), variant: 'destructive', permission: 'orders:delete' },
           ]}
         />
       ),
     },
-  ], []);
+  ], [t]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
-          Quản lý Khách hàng
+          {t('customers.pageTitle')}
         </h1>
-        <p className="text-muted-foreground">Quản lý danh sách khách hàng và thông tin liên hệ</p>
+        <p className="text-muted-foreground">{t('customers.pageDesc')}</p>
       </div>
 
       <StatsCards customers={customers} />
@@ -283,29 +266,29 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Tìm kiếm khách hàng..."
+            searchPlaceholder={t('customers.searchPlaceholder')}
             onAdd={handleAdd}
             onBulkDelete={handleBulkDelete}
-            onRefresh={fetchCustomers}
+            onRefresh={refresh}
             onExport={handleExport}
             onImport={handleImport}
             addPermission="orders:create"
             deletePermission="orders:delete"
-            addLabel="Thêm khách hàng"
+            addLabel={t('customers.addCustomer')}
             selectedCount={selectedIds.size}
             isLoading={loading}
             filters={[
               {
                 key: 'status',
-                label: 'Trạng thái',
+                label: t('column.status'),
                 options: [
-                  { value: 'active', label: 'Hoạt động' },
-                  { value: 'inactive', label: 'Ngưng' },
+                  { value: 'active', label: t('status.active') },
+                  { value: 'inactive', label: t('status.inactive') },
                 ],
               },
               {
                 key: 'type',
-                label: 'Loại',
+                label: t('customers.typeFilter'),
                 options: [
                   { value: 'Enterprise', label: 'Enterprise' },
                   { value: 'Government', label: 'Government' },
@@ -325,7 +308,7 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
             columns={columns}
             keyField="id"
             loading={loading}
-            emptyMessage="Chưa có khách hàng nào"
+            emptyMessage={t('customers.emptyMessage')}
             selectable
             selectedKeys={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -347,8 +330,8 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
         </CardContent>
       </Card>
 
-      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={fetchCustomers} />
-      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={fetchCustomers} />
+      <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editingCustomer} onSuccess={refresh} />
+      <DeleteCustomerDialog open={deleteOpen} onOpenChange={setDeleteOpen} customer={deletingCustomer} onSuccess={refresh} />
     </div>
   );
 }

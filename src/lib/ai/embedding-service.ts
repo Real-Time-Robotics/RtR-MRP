@@ -5,6 +5,7 @@
 // =============================================================================
 
 import { prisma } from '../prisma';
+import { logger } from '@/lib/logger';
 import fs from 'fs';
 import path from 'path';
 
@@ -59,10 +60,10 @@ class EmbeddingCache {
         parsed.forEach((item) => {
           this.cache.set(`${item.type}:${item.id}`, item);
         });
-        console.log(`[Embeddings] Loaded ${parsed.length} embeddings from cache`);
+        logger.info(`[Embeddings] Loaded ${parsed.length} embeddings from cache`);
       }
     } catch (error) {
-      console.warn('[Embeddings] Failed to load cache:', error);
+      logger.warn('[Embeddings] Failed to load cache', { context: 'embedding-service', error: String(error) });
     }
   }
 
@@ -77,9 +78,9 @@ class EmbeddingCache {
       const data = Array.from(this.cache.values());
       fs.writeFileSync(this.cacheFile, JSON.stringify(data, null, 2));
       this.isDirty = false;
-      console.log(`[Embeddings] Saved ${data.length} embeddings to cache`);
+      logger.info(`[Embeddings] Saved ${data.length} embeddings to cache`);
     } catch (error) {
-      console.error('[Embeddings] Failed to save cache:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'embedding-service', operation: 'saveCache' });
     }
   }
 
@@ -131,12 +132,12 @@ export class EmbeddingService {
 
   async generateEmbedding(text: string): Promise<number[]> {
     if (!this.apiKey) {
-      console.warn('[Embeddings] No OpenAI API key, using fallback');
+      logger.warn('[Embeddings] No OpenAI API key, using fallback', { context: 'embedding-service' });
       return this.generateFallbackEmbedding(text);
     }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
+      const response = await fetch(`${process.env.OPENAI_API_BASE_URL || 'https://api.openai.com'}/v1/embeddings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ export class EmbeddingService {
       const data = await response.json();
       return data.data[0].embedding;
     } catch (error) {
-      console.error('[Embeddings] API error, using fallback:', error);
+      logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'embedding-service', operation: 'generateEmbedding' });
       return this.generateFallbackEmbedding(text);
     }
   }
@@ -408,14 +409,14 @@ export class EmbeddingService {
   }
 
   async indexAll(): Promise<{ parts: number; suppliers: number; customers: number; products: number }> {
-    console.log('[Embeddings] Starting full index...');
+    logger.info('[Embeddings] Starting full index...');
 
     const parts = await this.indexParts();
     const suppliers = await this.indexSuppliers();
     const customers = await this.indexCustomers();
     const products = await this.indexProducts();
 
-    console.log(`[Embeddings] Indexed: ${parts} parts, ${suppliers} suppliers, ${customers} customers, ${products} products`);
+    logger.info(`[Embeddings] Indexed: ${parts} parts, ${suppliers} suppliers, ${customers} customers, ${products} products`);
 
     return { parts, suppliers, customers, products };
   }
@@ -459,7 +460,7 @@ export class EmbeddingService {
 
     // Filter by type if specified
     const filtered = types
-      ? allEmbeddings.filter((e) => types.includes(e.type as any))
+      ? allEmbeddings.filter((e) => (types as string[]).includes(e.type))
       : allEmbeddings;
 
     // Calculate similarities

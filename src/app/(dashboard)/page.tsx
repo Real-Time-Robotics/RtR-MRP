@@ -15,6 +15,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { clientLogger } from '@/lib/client-logger';
 
 interface DashboardStats {
   salesOrders: { total: number; pending: number };
@@ -38,7 +39,7 @@ export default function DashboardPage() {
           setStats(data);
         }
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        clientLogger.error('Failed to fetch dashboard stats:', error);
       } finally {
         setLoading(false);
       }
@@ -47,10 +48,10 @@ export default function DashboardPage() {
   }, []);
 
   const quickLinks = [
-    { label: 'Sales Orders', href: '/orders', icon: ShoppingCart, color: 'bg-blue-500' },
-    { label: 'Inventory', href: '/inventory', icon: Package, color: 'bg-green-500' },
-    { label: 'Production', href: '/production', icon: Factory, color: 'bg-purple-500' },
-    { label: 'MRP Planning', href: '/mrp', icon: TrendingUp, color: 'bg-orange-500' },
+    { label: 'Sales Orders', href: '/orders', icon: ShoppingCart, color: 'bg-primary-500' },
+    { label: 'Inventory', href: '/inventory', icon: Package, color: 'bg-success-500' },
+    { label: 'Production', href: '/production', icon: Factory, color: 'bg-chart-purple' },
+    { label: 'MRP Planning', href: '/mrp', icon: TrendingUp, color: 'bg-warning-500' },
   ];
 
   if (loading) {
@@ -81,8 +82,8 @@ export default function DashboardPage() {
                   {stats?.salesOrders.pending || 0} pending
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                <ShoppingCart className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="h-12 w-12 rounded-lg bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
+                <ShoppingCart className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               </div>
             </div>
           </CardContent>
@@ -98,8 +99,8 @@ export default function DashboardPage() {
                   {stats?.inventory.lowStock || 0} low stock
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-12 w-12 rounded-lg bg-success-100 dark:bg-success-900/50 flex items-center justify-center">
+                <Package className="h-6 w-6 text-success-600 dark:text-success-400" />
               </div>
             </div>
           </CardContent>
@@ -116,7 +117,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-                <Factory className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <Factory className="h-6 w-6 text-chart-purple dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -132,8 +133,8 @@ export default function DashboardPage() {
                   {stats?.quality.pending || 0} pending review
                 </p>
               </div>
-              <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/50 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="h-12 w-12 rounded-lg bg-danger-100 dark:bg-danger-900/50 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
               </div>
             </div>
           </CardContent>

@@ -1,19 +1,27 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import {
-  BarChart3, TrendingUp, TrendingDown, Package, Users, ShoppingCart,
-  DollarSign, AlertTriangle, CheckCircle, Clock, Truck, Factory,
-  PieChart, Activity, Calendar, Filter, Download, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Minus, Box, Layers, Target,
-  Zap, Award, AlertCircle, FileText, Wrench, Globe
+  BarChart3, Package, ShoppingCart, Factory, Activity,
+  Download, RefreshCw, Award, Loader2,
 } from 'lucide-react';
-import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPie, Pie,
-  Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ComposedChart, RadialBarChart, RadialBar
-} from 'recharts';
-import { DataTable, Column } from "@/components/ui-v2/data-table";
+
+// Lazy-load the chart-heavy content (recharts ~500KB)
+const AnalyticsChartsContent = dynamic(
+  () => import('./analytics-charts'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-neutral-800 rounded-xl animate-pulse">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-300 mx-auto mb-2" />
+          <p className="text-sm text-gray-400">Loading charts...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 // Types
 interface DashboardMetrics {
@@ -90,8 +98,6 @@ const COLORS = {
   orange: '#dd6b20',
 };
 
-const PIE_COLORS = ['#1e3a5f', '#2c5282', '#38a169', '#d69e2e', '#e53e3e', '#805ad5'];
-
 // Mock data generator (will be replaced with API call)
 const generateMockData = (): { metrics: DashboardMetrics; charts: ChartData } => {
   return {
@@ -161,10 +167,10 @@ const generateMockData = (): { metrics: DashboardMetrics; charts: ChartData } =>
         { category: 'Sensors', value: 120000, quantity: 380 },
       ],
       ordersByStatus: [
-        { status: 'Hoàn thành', count: 144, color: COLORS.success },
-        { status: 'Đang xử lý', count: 8, color: COLORS.info },
-        { status: 'Chờ xác nhận', count: 4, color: COLORS.warning },
-        { status: 'Hủy', count: 2, color: COLORS.danger },
+        { status: 'Hoan thanh', count: 144, color: COLORS.success },
+        { status: 'Dang xu ly', count: 8, color: COLORS.info },
+        { status: 'Cho xac nhan', count: 4, color: COLORS.warning },
+        { status: 'Huy', count: 2, color: COLORS.danger },
       ],
       productionTrend: [
         { week: 'W1', planned: 6, actual: 5, efficiency: 83 },
@@ -205,69 +211,6 @@ const generateMockData = (): { metrics: DashboardMetrics; charts: ChartData } =>
   };
 };
 
-// Components
-const MetricCard = ({
-  title, value, subtitle, icon: Icon, color, trend, trendValue
-}: {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: React.ElementType;
-  color: string;
-  trend?: 'up' | 'down' | 'neutral';
-  trendValue?: string;
-}) => (
-  <div className="bg-white dark:bg-neutral-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-neutral-700 hover:shadow-md transition-shadow">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-sm text-gray-500 dark:text-neutral-400 mb-1">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-        {subtitle && <p className="text-xs text-gray-400 dark:text-neutral-500 mt-1">{subtitle}</p>}
-        {trend && trendValue && (
-          <div className={`flex items-center mt-2 text-sm ${
-            trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-500'
-          }`}>
-            {trend === 'up' ? <ArrowUpRight className="h-4 w-4" /> :
-             trend === 'down' ? <ArrowDownRight className="h-4 w-4" /> :
-             <Minus className="h-4 w-4" />}
-            <span className="ml-1">{trendValue}</span>
-          </div>
-        )}
-      </div>
-      <div className={`p-3 rounded-lg`} style={{ backgroundColor: `${color}15` }}>
-        <Icon className="h-6 w-6" style={{ color }} />
-      </div>
-    </div>
-  </div>
-);
-
-const ChartCard = ({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) => (
-  <div className="bg-white dark:bg-neutral-800 rounded-xl p-5 shadow-sm border border-gray-100 dark:border-neutral-700">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-      {action}
-    </div>
-    {children}
-  </div>
-);
-
-// Custom tooltip for charts
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ color: string; name: string; value: number | string }>; label?: string }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-white dark:bg-neutral-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-neutral-700">
-        <p className="font-medium text-gray-900 dark:text-white">{label}</p>
-        {payload.map((entry, index) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-};
-
 // Main Dashboard Component
 export default function AnalyticsDashboard() {
   const [dateRange, setDateRange] = useState('6m');
@@ -284,181 +227,17 @@ export default function AnalyticsDashboard() {
     }, 1000);
   }, [dateRange]);
 
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
-    return `$${value}`;
-  };
-
-  const formatNumber = (value: number) => {
-    return value.toLocaleString();
-  };
-
-  // Column definitions for tables - MUST be before any early returns to satisfy Rules of Hooks
-  const topProductsColumns: Column<{ name: string; quantity: number; revenue: number }>[] = useMemo(() => [
-    {
-      key: 'rank',
-      header: '#',
-      width: '50px',
-      align: 'center',
-      render: (_, row, index) => (
-        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-          index === 0 ? 'bg-yellow-100 text-yellow-700' :
-          index === 1 ? 'bg-gray-100 text-gray-700' :
-          index === 2 ? 'bg-orange-100 text-orange-700' :
-          'bg-gray-50 text-gray-500'
-        }`}>
-          {(index || 0) + 1}
-        </span>
-      ),
-    },
-    {
-      key: 'name',
-      header: 'Sản phẩm',
-      width: '150px',
-      sortable: true,
-      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
-    },
-    {
-      key: 'quantity',
-      header: 'SL',
-      width: '70px',
-      align: 'right',
-      sortable: true,
-    },
-    {
-      key: 'revenue',
-      header: 'Doanh thu',
-      width: '100px',
-      align: 'right',
-      sortable: true,
-      render: (value) => <span className="font-medium text-green-600">{formatCurrency(value)}</span>,
-    },
-  ], []);
-
-  const supplierPerformanceColumns: Column<{ name: string; onTime: number; quality: number; score: number }>[] = useMemo(() => [
-    {
-      key: 'name',
-      header: 'Nhà cung cấp',
-      width: '120px',
-      sortable: true,
-      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
-    },
-    {
-      key: 'onTime',
-      header: 'Đúng hạn',
-      width: '90px',
-      align: 'center',
-      sortable: true,
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          value >= 95 ? 'bg-green-100 text-green-700' :
-          value >= 90 ? 'bg-yellow-100 text-yellow-700' :
-          'bg-red-100 text-red-700'
-        }`}>
-          {value}%
-        </span>
-      ),
-    },
-    {
-      key: 'quality',
-      header: 'Chất lượng',
-      width: '90px',
-      align: 'center',
-      sortable: true,
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs ${
-          value >= 98 ? 'bg-green-100 text-green-700' :
-          value >= 95 ? 'bg-yellow-100 text-yellow-700' :
-          'bg-red-100 text-red-700'
-        }`}>
-          {value}%
-        </span>
-      ),
-    },
-    {
-      key: 'score',
-      header: 'Điểm',
-      width: '120px',
-      align: 'right',
-      sortable: true,
-      render: (value) => (
-        <div className="flex items-center justify-end">
-          <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
-            <div className="h-full rounded-full bg-blue-600" style={{ width: `${value}%` }} />
-          </div>
-          <span className="text-sm font-medium">{value}</span>
-        </div>
-      ),
-    },
-  ], []);
-
-  // Use optional chaining for metrics since data might be null during loading
-  const inventoryTotalValue = data?.metrics?.inventory?.totalValue || 1;
-
-  const topPartsColumns: Column<{ name: string; quantity: number; value: number }>[] = useMemo(() => [
-    {
-      key: 'rank',
-      header: '#',
-      width: '50px',
-      align: 'center',
-      render: (_, row, index) => <span className="text-sm font-medium text-gray-500">{(index || 0) + 1}</span>,
-    },
-    {
-      key: 'name',
-      header: 'Linh kiện',
-      width: '180px',
-      sortable: true,
-      render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
-    },
-    {
-      key: 'quantity',
-      header: 'Số lượng',
-      width: '80px',
-      align: 'right',
-      sortable: true,
-      render: (value) => <span className="text-gray-600 dark:text-neutral-400">{formatNumber(value)}</span>,
-    },
-    {
-      key: 'value',
-      header: 'Giá trị',
-      width: '100px',
-      align: 'right',
-      sortable: true,
-      render: (value) => <span className="font-medium text-blue-600">{formatCurrency(value)}</span>,
-    },
-    {
-      key: 'percent',
-      header: '% Tổng',
-      width: '120px',
-      align: 'right',
-      render: (_, row) => {
-        const percent = (row.value / inventoryTotalValue) * 100;
-        return (
-          <div className="flex items-center justify-end">
-            <div className="w-16 h-2 bg-gray-200 dark:bg-neutral-700 rounded-full mr-2">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
-            </div>
-            <span className="text-sm text-gray-600 dark:text-neutral-400">{percent.toFixed(1)}%</span>
-          </div>
-        );
-      },
-    },
-  ], [inventoryTotalValue]);
-
-  // Early return for loading state - MUST be after all hooks
+  // Early return for loading state
   if (isLoading || !data) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
+          <RefreshCw className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-neutral-400">Dang tai du lieu...</p>
         </div>
       </div>
     );
   }
-
-  const { metrics, charts } = data;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900">
@@ -467,7 +246,7 @@ export default function AnalyticsDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+              <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -481,20 +260,21 @@ export default function AnalyticsDashboard() {
               <select
                 value={dateRange}
                 onChange={(e) => setDateRange(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                aria-label="Chọn khoảng thời gian"
+                className="px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm bg-white dark:bg-neutral-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500"
               >
-                <option value="1m">1 tháng</option>
-                <option value="3m">3 tháng</option>
-                <option value="6m">6 tháng</option>
-                <option value="1y">1 năm</option>
-                <option value="all">Tất cả</option>
+                <option value="1m">1 thang</option>
+                <option value="3m">3 thang</option>
+                <option value="6m">6 thang</option>
+                <option value="1y">1 nam</option>
+                <option value="all">Tat ca</option>
               </select>
 
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
+              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg" aria-label="Lam moi">
                 <RefreshCw className="h-5 w-5" />
               </button>
 
-              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </button>
@@ -504,18 +284,18 @@ export default function AnalyticsDashboard() {
           {/* Tabs */}
           <div className="flex space-x-1 pb-2">
             {[
-              { key: 'overview', label: 'Tổng quan', icon: Activity },
-              { key: 'inventory', label: 'Tồn kho', icon: Package },
-              { key: 'sales', label: 'Bán hàng', icon: ShoppingCart },
-              { key: 'production', label: 'Sản xuất', icon: Factory },
-              { key: 'quality', label: 'Chất lượng', icon: Award },
+              { key: 'overview', label: 'Tong quan', icon: Activity },
+              { key: 'inventory', label: 'Ton kho', icon: Package },
+              { key: 'sales', label: 'Ban hang', icon: ShoppingCart },
+              { key: 'production', label: 'San xuat', icon: Factory },
+              { key: 'quality', label: 'Chat luong', icon: Award },
             ].map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as 'overview' | 'inventory' | 'sales' | 'production' | 'quality')}
                 className={`flex items-center px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
                   activeTab === tab.key
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-b-2 border-blue-600'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 border-b-2 border-primary-600'
                     : 'text-gray-500 dark:text-neutral-400 hover:text-gray-700 dark:hover:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-700'
                 }`}
               >
@@ -527,557 +307,9 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Dynamically loaded charts */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* KPI Cards Row 1 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MetricCard
-                title="Doanh thu tháng này"
-                value={formatCurrency(metrics.sales.totalRevenue)}
-                subtitle={`${metrics.sales.totalOrders} đơn hàng`}
-                icon={DollarSign}
-                color={COLORS.success}
-                trend="up"
-                trendValue={`+${metrics.sales.changePercent}%`}
-              />
-              <MetricCard
-                title="Giá trị tồn kho"
-                value={formatCurrency(metrics.inventory.totalValue)}
-                subtitle={`${formatNumber(metrics.inventory.totalParts)} linh kiện`}
-                icon={Package}
-                color={COLORS.info}
-                trend="up"
-                trendValue={`+${metrics.inventory.changePercent}%`}
-              />
-              <MetricCard
-                title="Work Orders Active"
-                value={metrics.production.activeWorkOrders}
-                subtitle={`${metrics.production.completedThisMonth} hoàn thành tháng này`}
-                icon={Factory}
-                color={COLORS.purple}
-                trend="up"
-                trendValue={`+${metrics.production.changePercent}%`}
-              />
-              <MetricCard
-                title="First Pass Yield"
-                value={`${metrics.quality.firstPassYield}%`}
-                subtitle={`${metrics.quality.openNCRs} NCR đang mở`}
-                icon={Award}
-                color={COLORS.warning}
-                trend={metrics.quality.changePercent < 0 ? 'down' : 'up'}
-                trendValue={`${metrics.quality.changePercent}%`}
-              />
-            </div>
-
-            {/* Charts Row 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Revenue Chart */}
-              <ChartCard title="Doanh thu & Lợi nhuận" action={
-                <span className="text-sm text-gray-500">6 tháng gần nhất</span>
-              }>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <ComposedChart data={charts.revenueByMonth}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v/1000}K`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar dataKey="revenue" name="Doanh thu" fill={COLORS.info} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="cost" name="Chi phí" fill={COLORS.secondary} radius={[4, 4, 0, 0]} />
-                      <Line type="monotone" dataKey="profit" name="Lợi nhuận" stroke={COLORS.success} strokeWidth={2} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-
-              {/* Orders by Status */}
-              <ChartCard title="Đơn hàng theo trạng thái">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <RechartsPie>
-                      <Pie
-                        data={charts.ordersByStatus}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={5}
-                        dataKey="count"
-                        label={({ name, percent }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {charts.ordersByStatus.map((entry, index) => (
-                          <Cell key={index} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RechartsPie>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-wrap justify-center gap-3 mt-2">
-                  {charts.ordersByStatus.map((item, index) => (
-                    <div key={index} className="flex items-center text-sm">
-                      <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }} />
-                      <span className="text-gray-600">{item.status}: {item.count}</span>
-                    </div>
-                  ))}
-                </div>
-              </ChartCard>
-
-              {/* Compliance Overview */}
-              <ChartCard title="Compliance Status">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center">
-                      <Globe className="h-5 w-5 text-green-600 mr-3" />
-                      <span className="font-medium">NDAA Compliant</span>
-                    </div>
-                    <span className="text-lg font-bold text-green-600">
-                      {((metrics.compliance.ndaaCompliantParts / metrics.inventory.totalParts) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center">
-                      <FileText className="h-5 w-5 text-blue-600 mr-3" />
-                      <span className="font-medium">RoHS Compliant</span>
-                    </div>
-                    <span className="text-lg font-bold text-blue-600">
-                      {((metrics.compliance.rohsCompliantParts / metrics.inventory.totalParts) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                    <div className="flex items-center">
-                      <AlertCircle className="h-5 w-5 text-purple-600 mr-3" />
-                      <span className="font-medium">ITAR Controlled</span>
-                    </div>
-                    <span className="text-lg font-bold text-purple-600">
-                      {metrics.compliance.itarControlledParts}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center">
-                      <Clock className="h-5 w-5 text-yellow-600 mr-3" />
-                      <span className="font-medium">Certs Expiring Soon</span>
-                    </div>
-                    <span className="text-lg font-bold text-yellow-600">
-                      {metrics.compliance.expiringSoonCerts}
-                    </span>
-                  </div>
-                </div>
-              </ChartCard>
-            </div>
-
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Production Trend */}
-              <ChartCard title="Tiến độ sản xuất (Tháng này)">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={charts.productionTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar dataKey="planned" name="Kế hoạch" fill={COLORS.secondary} radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="actual" name="Thực tế" fill={COLORS.success} radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-
-              {/* Quality Trend */}
-              <ChartCard title="Xu hướng chất lượng">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <ComposedChart data={charts.qualityTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} domain={[95, 100]} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar yAxisId="left" dataKey="ncr" name="NCR" fill={COLORS.danger} radius={[4, 4, 0, 0]} />
-                      <Bar yAxisId="left" dataKey="capa" name="CAPA" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="fpy" name="FPY %" stroke={COLORS.success} strokeWidth={2} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-            </div>
-
-            {/* Tables Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top Products */}
-              <ChartCard title="Top 5 Sản phẩm bán chạy">
-                <DataTable
-                  data={charts.topProducts}
-                  columns={topProductsColumns}
-                  keyField="name"
-                  emptyMessage="No product data"
-                  searchable={false}
-                  excelMode={{
-                    enabled: true,
-                    showRowNumbers: false,
-                    columnHeaderStyle: 'field-names',
-                    gridBorders: true,
-                    showFooter: true,
-                    sheetName: 'Top Products',
-                    compactMode: true,
-                  }}
-                />
-              </ChartCard>
-
-              {/* Supplier Performance */}
-              <ChartCard title="Hiệu suất nhà cung cấp">
-                <DataTable
-                  data={charts.supplierPerformance}
-                  columns={supplierPerformanceColumns}
-                  keyField="name"
-                  emptyMessage="No supplier data"
-                  searchable={false}
-                  excelMode={{
-                    enabled: true,
-                    showRowNumbers: false,
-                    columnHeaderStyle: 'field-names',
-                    gridBorders: true,
-                    showFooter: true,
-                    sheetName: 'Supplier Performance',
-                    compactMode: true,
-                  }}
-                />
-              </ChartCard>
-            </div>
-
-            {/* Alerts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Low Stock Alert */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <div className="flex items-start">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-yellow-800">Cảnh báo tồn kho thấp</h4>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      {metrics.inventory.lowStockItems} linh kiện dưới mức tồn tối thiểu
-                    </p>
-                    <button className="text-sm text-yellow-700 underline mt-2">Xem chi tiết →</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Out of Stock */}
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-red-600 mr-3 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-red-800">Hết hàng</h4>
-                    <p className="text-sm text-red-700 mt-1">
-                      {metrics.inventory.outOfStockItems} linh kiện đang hết hàng
-                    </p>
-                    <button className="text-sm text-red-700 underline mt-2">Tạo PO ngay →</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Pending Work Orders */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div className="flex items-start">
-                  <Clock className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold text-blue-800">Chờ vật tư</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      {metrics.production.pendingMaterials} Work Orders đang chờ vật tư
-                    </p>
-                    <button className="text-sm text-blue-700 underline mt-2">Kiểm tra →</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Inventory Tab */}
-        {activeTab === 'inventory' && (
-          <div className="space-y-6">
-            {/* Inventory KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard
-                title="Tổng linh kiện"
-                value={formatNumber(metrics.inventory.totalParts)}
-                icon={Package}
-                color={COLORS.info}
-              />
-              <MetricCard
-                title="Giá trị tồn kho"
-                value={formatCurrency(metrics.inventory.totalValue)}
-                icon={DollarSign}
-                color={COLORS.success}
-              />
-              <MetricCard
-                title="Tồn kho thấp"
-                value={metrics.inventory.lowStockItems}
-                icon={AlertTriangle}
-                color={COLORS.warning}
-              />
-              <MetricCard
-                title="Hết hàng"
-                value={metrics.inventory.outOfStockItems}
-                icon={AlertCircle}
-                color={COLORS.danger}
-              />
-              <MetricCard
-                title="Inventory Turnover"
-                value={`${metrics.inventory.turnoverRate}x`}
-                icon={RefreshCw}
-                color={COLORS.purple}
-              />
-            </div>
-
-            {/* Inventory by Category */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="Giá trị tồn kho theo danh mục">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={charts.inventoryByCategory} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v/1000}K`} />
-                      <YAxis type="category" dataKey="category" tick={{ fontSize: 12 }} width={100} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="value" name="Giá trị" fill={COLORS.info} radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-
-              <ChartCard title="Số lượng theo danh mục">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <RechartsPie>
-                      <Pie
-                        data={charts.inventoryByCategory}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        dataKey="quantity"
-                        label={({ name, percent }) => `${name || ''} ${((percent || 0) * 100).toFixed(0)}%`}
-                      >
-                        {charts.inventoryByCategory.map((entry, index) => (
-                          <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </RechartsPie>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-            </div>
-
-            {/* Top Parts by Value */}
-            <ChartCard title="Top 5 Linh kiện theo giá trị tồn kho">
-              <DataTable
-                data={charts.topParts}
-                columns={topPartsColumns}
-                keyField="name"
-                emptyMessage="No parts data"
-                searchable={false}
-                excelMode={{
-                  enabled: true,
-                  showRowNumbers: false,
-                  columnHeaderStyle: 'field-names',
-                  gridBorders: true,
-                  showFooter: true,
-                  sheetName: 'Top Parts',
-                  compactMode: true,
-                }}
-              />
-            </ChartCard>
-          </div>
-        )}
-
-        {/* Sales Tab */}
-        {activeTab === 'sales' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard
-                title="Tổng đơn hàng"
-                value={metrics.sales.totalOrders}
-                icon={ShoppingCart}
-                color={COLORS.info}
-                trend="up"
-                trendValue={`+${metrics.sales.changePercent}%`}
-              />
-              <MetricCard
-                title="Doanh thu"
-                value={formatCurrency(metrics.sales.totalRevenue)}
-                icon={DollarSign}
-                color={COLORS.success}
-              />
-              <MetricCard
-                title="Đơn chờ xử lý"
-                value={metrics.sales.pendingOrders}
-                icon={Clock}
-                color={COLORS.warning}
-              />
-              <MetricCard
-                title="Hoàn thành"
-                value={metrics.sales.completedOrders}
-                icon={CheckCircle}
-                color={COLORS.success}
-              />
-              <MetricCard
-                title="Giá trị TB/đơn"
-                value={formatCurrency(metrics.sales.avgOrderValue)}
-                icon={Target}
-                color={COLORS.purple}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="Doanh thu theo tháng">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <AreaChart data={charts.revenueByMonth}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v/1000}K`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="revenue" name="Doanh thu" fill={COLORS.info} fillOpacity={0.3} stroke={COLORS.info} strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-
-              <ChartCard title="Top sản phẩm bán chạy">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={charts.topProducts} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis type="number" tick={{ fontSize: 12 }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="quantity" name="Số lượng" fill={COLORS.success} radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </ChartCard>
-            </div>
-          </div>
-        )}
-
-        {/* Production Tab */}
-        {activeTab === 'production' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard
-                title="WO Đang chạy"
-                value={metrics.production.activeWorkOrders}
-                icon={Factory}
-                color={COLORS.info}
-              />
-              <MetricCard
-                title="Hoàn thành tháng này"
-                value={metrics.production.completedThisMonth}
-                icon={CheckCircle}
-                color={COLORS.success}
-              />
-              <MetricCard
-                title="Đúng hạn"
-                value={`${metrics.production.onTimeDelivery}%`}
-                icon={Clock}
-                color={COLORS.success}
-              />
-              <MetricCard
-                title="Hiệu suất"
-                value={`${metrics.production.efficiency}%`}
-                icon={Zap}
-                color={COLORS.warning}
-              />
-              <MetricCard
-                title="Chờ vật tư"
-                value={metrics.production.pendingMaterials}
-                icon={Package}
-                color={COLORS.danger}
-              />
-            </div>
-
-            <ChartCard title="Tiến độ sản xuất theo tuần">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height={280}>
-                  <ComposedChart data={charts.productionTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} domain={[0, 100]} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="planned" name="Kế hoạch" fill={COLORS.secondary} radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="actual" name="Thực tế" fill={COLORS.success} radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="efficiency" name="Hiệu suất %" stroke={COLORS.warning} strokeWidth={2} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-          </div>
-        )}
-
-        {/* Quality Tab */}
-        {activeTab === 'quality' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <MetricCard
-                title="Tổng NCR"
-                value={metrics.quality.totalNCRs}
-                icon={FileText}
-                color={COLORS.info}
-              />
-              <MetricCard
-                title="NCR Đang mở"
-                value={metrics.quality.openNCRs}
-                icon={AlertCircle}
-                color={COLORS.danger}
-              />
-              <MetricCard
-                title="CAPA Đang mở"
-                value={metrics.quality.openCAPAs}
-                icon={Wrench}
-                color={COLORS.warning}
-              />
-              <MetricCard
-                title="Tỷ lệ lỗi"
-                value={`${metrics.quality.defectRate}%`}
-                icon={AlertTriangle}
-                color={COLORS.danger}
-              />
-              <MetricCard
-                title="First Pass Yield"
-                value={`${metrics.quality.firstPassYield}%`}
-                icon={Award}
-                color={COLORS.success}
-              />
-            </div>
-
-            <ChartCard title="Xu hướng chất lượng theo tháng">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height={280}>
-                  <ComposedChart data={charts.qualityTrend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} domain={[95, 100]} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="ncr" name="NCR" fill={COLORS.danger} radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="capa" name="CAPA" fill={COLORS.warning} radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="fpy" name="FPY %" stroke={COLORS.success} strokeWidth={3} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            </ChartCard>
-          </div>
-        )}
+        <AnalyticsChartsContent data={data} activeTab={activeTab} />
       </div>
     </div>
   );
