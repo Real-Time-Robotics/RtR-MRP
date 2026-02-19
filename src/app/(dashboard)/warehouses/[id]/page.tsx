@@ -298,11 +298,11 @@ export default function WarehouseDetailPage() {
       render: (value: string) => <span className="font-medium">{value}</span>,
     },
     {
-      key: "lotNumber",
+      key: "poReference",
       header: "PO",
       width: "110px",
       sortable: true,
-      render: (_: string | undefined, row: InventoryItem) => {
+      render: (_: unknown, row: InventoryItem) => {
         const po = extractPO(row.lotNumber);
         return po ? (
           <span className="font-mono text-sm text-primary-600 dark:text-primary-400">{po}</span>
