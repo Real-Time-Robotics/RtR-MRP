@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
@@ -129,12 +128,6 @@ function DataTable<T extends Record<string, any>>({
   // Virtualization
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const virtualData = virtualize ? sortedData : paginatedData;
-  const rowVirtualizer = useVirtualizer({
-    count: virtualize ? virtualData.length : 0,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => virtualRowHeight,
-    overscan: 10,
-  });
 
   // Keyboard Navigation
   const handleArrowNav = useCallback((direction: 'up' | 'down') => {
@@ -302,7 +295,8 @@ function DataTable<T extends Record<string, any>>({
             onRowClick={onRowClick}
             onSelectRow={handleSelectRow}
             getCellValue={getCellValue}
-            rowVirtualizer={rowVirtualizer}
+            scrollContainerRef={scrollContainerRef}
+            virtualRowHeight={virtualRowHeight}
             t={t}
           />
         </table>

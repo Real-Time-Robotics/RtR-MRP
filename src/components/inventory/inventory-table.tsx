@@ -432,13 +432,6 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       sortable: true,
       render: (val) => formatCurrency(val)
     },
-    {
-      key: 'warehouseName',
-      header: t('inv.warehouse'),
-      width: '120px',
-      hidden: true,
-      render: (value) => value || t('inv.defaultWarehouse'),
-    },
   ], [displayInventory, t]);
 
   return (

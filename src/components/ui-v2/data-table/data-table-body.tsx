@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Column } from './data-table-types';
 import type { ExcelModeConfig } from '../excel';
-import type { Virtualizer } from '@tanstack/react-virtual';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface DataTableBodyProps<T extends Record<string, any>> {
@@ -30,7 +30,8 @@ export interface DataTableBodyProps<T extends Record<string, any>> {
   onRowClick?: (row: T, index: number) => void;
   onSelectRow: (row: T) => void;
   getCellValue: (row: T, column: Column<T>) => unknown;
-  rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  virtualRowHeight: number;
   t: (key: string, params?: Record<string, string>) => string;
 }
 
@@ -57,9 +58,16 @@ export function DataTableBody<T extends Record<string, any>>({
   onRowClick,
   onSelectRow,
   getCellValue,
-  rowVirtualizer,
+  scrollContainerRef,
+  virtualRowHeight,
   t,
 }: DataTableBodyProps<T>) {
+  const rowVirtualizer = useVirtualizer({
+    count: virtualize ? virtualData.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => virtualRowHeight,
+    overscan: 10,
+  });
   const totalColSpan = activeColumns.length + (selectable ? 1 : 0) + (isExcelMode && excelConfig?.showRowNumbers ? 1 : 0);
 
   const renderRow = (row: T, rowIndex: number, isVirtual: boolean, virtualRef?: (node: Element | null) => void, virtualIndex?: number) => {
