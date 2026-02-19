@@ -102,8 +102,8 @@ export default function WarehousesPage() {
       try {
         // 1. Fetch all warehouses
         const whRes = await fetch("/api/warehouses");
+        if (!whRes.ok) throw new Error("Failed to fetch warehouses");
         const whJson = await whRes.json();
-        if (!whJson.success) throw new Error("Failed to fetch warehouses");
 
         const warehouseList: WarehouseData[] = whJson.data;
 

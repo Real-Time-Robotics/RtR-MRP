@@ -201,8 +201,8 @@ export default function WarehouseDetailPage() {
       const invJson = await invRes.json();
       const receiptsJson = await receiptsRes.json();
 
-      if (!whJson.success) throw new Error("Failed to fetch warehouse");
-      if (!invJson.success) throw new Error("Failed to fetch inventory");
+      if (!whRes.ok) throw new Error("Failed to fetch warehouse");
+      if (!invRes.ok) throw new Error("Failed to fetch inventory");
 
       const wh = (whJson.data as WarehouseData[]).find(
         (w) => w.id === warehouseId
