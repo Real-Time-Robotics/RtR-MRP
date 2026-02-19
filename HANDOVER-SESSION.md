@@ -1,16 +1,16 @@
 # HANDOVER - RTR-MRP Development Session
-> **Last Updated:** 2026-02-16 (Vietnam Time)
-> **Session:** Sprint 4 Complete + i18n + Design System + Quality Workflows
-> **Latest Commit:** `ac29200` - feat: darker Prismy green in light theme + fix table layout with SmartLayout
-> **Branch:** `feature/prismy-design-alignment` (working branch, uncommitted SWR/API hooks)
+> **Last Updated:** 2026-02-19 (Vietnam Time)
+> **Session:** Sprint 28 — Runtime Bug Fixes (Webpack, React Warnings, API Contracts, Rate Limiting)
+> **Latest Commit:** `970623a` - fix: resolve duplicate lotNumber column key in warehouse detail page
+> **Branch:** `main`
 > **Deploy:** Render LIVE
-> **Total Commits:** 247
+> **Total Commits:** 252
 
 ---
 
 ## TONG QUAN TINH TRANG DU AN — 16/02/2026
 
-### Tinh trang hien tai: SPRINT 4 NEAR-COMPLETE + Design System Alignment
+### Tinh trang hien tai: Runtime Bug Fixes Complete
 
 Du an RTR-MRP da hoan thanh cac moc chinh sau:
 
@@ -41,10 +41,12 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | AI Smart Import v2 + Scheduled Reports + Gantt Chart | **DONE** | 02/15/2026 |
 | Prismy Design System (CSS tokens, theme alignment) | **DONE** | 02/16/2026 |
 | Loading Pages (skeleton states) | **DONE** | 02/15/2026 |
+| Sprints 19-27: Security, Tests, Perf, Code Quality | **DONE** | 02/17-18/2026 |
+| Sprint 28: Runtime Bug Fixes (Webpack, React, API) | **DONE** | 02/19/2026 |
 | **Sprint 5: SWR/API hooks migration** | IN PROGRESS | — |
 | **Sprint 5: Approval Workflows (PO, WO)** | TODO | — |
 
-### So lieu du an (Verified 02/16)
+### So lieu du an (Verified 02/19)
 
 | Metric | Value |
 |--------|-------|
@@ -52,11 +54,11 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 | **Models** | 154 |
 | **Enums** | 27 |
 | **API Routes** | 273 route.ts files |
-| **Total Commits** | 247 |
+| **Total Commits** | 252 |
 | **Lines of Code** | 310K+ |
 | **Database** | 59 parts, 33 inventory, 5 warehouses |
 | **Production** | https://rtr-mrp.onrender.com |
-| **Git Status** | Branch `feature/prismy-design-alignment` — uncommitted SWR changes |
+| **Git Status** | Branch `main` — clean |
 
 ### Cong viec da lam tu 21/01 den 16/02 (63 commits)
 
@@ -176,7 +178,7 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 - **Internal Auth** (`src/lib/api/internal-auth.ts`) — server-to-server auth
 - **Login page dark theme** + heading color fix on dark backgrounds
 
-#### 02/16 — Prismy Design System (IN PROGRESS)
+#### 02/16 — Prismy Design System
 - **Prismy Design Tokens** (`src/styles/prismy-tokens.css`) — CSS custom properties
   - Darker green for light theme (brand alignment)
   - Updated `theme.css` and `globals.css` with new color system
@@ -184,11 +186,68 @@ Du an RTR-MRP da hoan thanh cac moc chinh sau:
 - **SmartLayout** — table layout fixes for Parts, Orders pages
 - **Customer Portal** — updated with Prismy theme colors
 - **Charts** — updated color references across all chart components
-- **Uncommitted work** (branch `feature/prismy-design-alignment`):
-  - SWR Provider (`src/providers/swr-provider.tsx`) — data fetching layer
-  - Web Vitals component (`src/components/web-vitals.tsx`)
-  - `use-api-data.ts` + `use-mutation.ts` — reusable API hooks
-  - Multiple form/table improvements
+
+#### 02/17–02/18 — Sprints 19-27: Comprehensive Quality Improvements
+- **Security**: withAuth HOC migration, Zod validation on all API routes, sanitized error messages, rate limiting
+- **Testing**: Added tests for 30+ API route groups (core business, AI, discussions, auth, etc.)
+- **Performance**: DB query optimizations, aria-labels for accessibility
+- **Code Quality**: Removed console.log, fixed `any` types, split large components (part-form, header, mobile-ui-kit, etc.)
+- **SEO**: Added metadata to all dashboard pages
+
+#### 02/19 — Sprint 28: Runtime Bug Fixes (5 commits)
+- **Webpack module resolution fix**: File/directory naming conflict (`data-table.tsx` vs `data-table/` directory) — deleted conflicting parent files for 3 components
+- **React setState-during-render fix**: Moved `useVirtualizer` from DataTable parent into DataTableBody child component
+- **Duplicate column key fixes**: Removed duplicate `warehouseName` in inventory-table, renamed duplicate `lotNumber` to `poReference` in warehouse detail
+- **API response contract fix**: Pages checked `json.success` but `paginatedSuccess()` never returns a `success` field — changed to `res.ok` check
+- **Rate limit fix**: Raised in-memory rate limit from 100 to 500 req/min (local dev shares single IP `unknown`)
+- **SWR fetcher hardening**: All 3 SWR fetchers (discussions page, thread-panel, use-part-analysis) now throw on non-ok responses instead of silently parsing error bodies as valid data
+
+---
+
+## HANDOVER CHECKPOINT - 19/02/2026
+
+### Completed 02/19 — Sprint 28: Runtime Bug Fixes (5 commits)
+
+| Commit | Description |
+|--------|-------------|
+| `3b7899d` | fix: resolve webpack module resolution conflict between file and directory names |
+| `6fe0875` | fix: resolve React warnings for setState-during-render and duplicate keys |
+| `2fe1e74` | fix: warehouses pages check res.ok instead of non-existent json.success |
+| `5aef789` | fix: rate limit too low + SWR fetchers swallow API errors |
+| `970623a` | fix: resolve duplicate lotNumber column key in warehouse detail page |
+
+**Root causes identified and fixed:**
+
+1. **Webpack "Cannot read properties of undefined (reading 'call')"** — File/directory naming conflicts: `data-table.tsx` alongside `data-table/` directory caused webpack to resolve the wrong module. Deleted 3 conflicting parent files (`data-table.tsx`, `import-wizard.tsx`, `part-form-dialog.tsx`).
+
+2. **React "Cannot update component DataTable while rendering DataTableBody"** — `useVirtualizer` hook owned by parent DataTable had its state read by child DataTableBody during render, triggering cross-component state updates. Fixed by moving `useVirtualizer` into DataTableBody.
+
+3. **React "Encountered two children with same key"** — Duplicate column keys in table definitions: `warehouseName` (inventory-table.tsx) and `lotNumber` (warehouse detail page). Fixed by removing/renaming the duplicates.
+
+4. **"Failed to fetch warehouses" (always fails)** — Response contract mismatch. Page checked `whJson.success` but `paginatedSuccess()` returns `{ data, pagination, meta }` (no `success` field). Changed to check `whRes.ok` (HTTP status).
+
+5. **429 Too Many Requests flooding** — Middleware in-memory rate limit was 100 req/min. In local dev, all requests share IP `unknown`. Dashboard fires 6-7 simultaneous API calls + SWR refresh intervals. Raised to 500 req/min.
+
+6. **Discussions page crash "Cannot read properties of undefined (reading 'find')"** — SWR fetchers (`res => res.json()`) never checked `res.ok`. When API returned 429 error, the error JSON was parsed as valid data. Then `data?.threads.find()` crashed because error object has no `threads`. Fixed all 3 SWR fetchers to throw on non-ok responses.
+
+**Files modified:**
+```
+src/components/ui-v2/data-table/data-table.tsx          — Created (moved from parent)
+src/components/ui-v2/data-table/data-table-body.tsx     — Added useVirtualizer internally
+src/components/ui-v2/data-table/index.ts                — Updated exports
+src/components/ui-v2/data-table.tsx                     — DELETED (naming conflict)
+src/components/excel/import-wizard.tsx                  — DELETED (naming conflict)
+src/components/parts/part-form-dialog.tsx               — DELETED (naming conflict)
+src/components/inventory/inventory-table.tsx             — Removed duplicate warehouseName column
+src/app/(dashboard)/warehouses/page.tsx                 — Fixed res.ok check
+src/app/(dashboard)/warehouses/[id]/page.tsx            — Fixed res.ok check + duplicate lotNumber key
+src/app/(dashboard)/discussions/page.tsx                — Fixed fetcher + optional chaining
+src/middleware.ts                                       — Raised rate limit 100→500
+src/hooks/use-part-analysis.ts                          — Fixed fetcher
+src/components/discussions/thread-panel.tsx              — Fixed fetcher
+```
+
+**Codebase-wide scan result:** No remaining duplicate column keys across all 30+ table definitions.
 
 ---
 
@@ -900,11 +959,13 @@ HANDOVER-SESSION.md                     # This file
 02/13       Audit Trail (8 routes) + Partial Shipment + Toolbar h-9
 02/14       Complete i18n System (Vi/En) + Env validation fix
 02/15       Quality Workflows (Hold/Scrap/NCR) + Gantt + Smart Import v2 + Reports (MAJOR)
-02/16       Prismy Design System + SmartLayout (IN PROGRESS)
+02/16       Prismy Design System + SmartLayout
+02/17–02/18 Sprints 19-27: Security, Tests, Performance, Code Quality (MAJOR)
+02/19       Sprint 28: Runtime Bug Fixes — Webpack, React, API contracts, rate limiting
 ```
 
-**Tong ket:** Du an da Production Ready, 247 commits, 154 models, 273 API routes, 310K+ LOC.
-Sprint 4 COMPLETE — Audit Trail, i18n, Quality Workflows, Gantt, Reports da xong.
+**Tong ket:** Du an da Production Ready, 252 commits, 154 models, 273 API routes, 310K+ LOC.
+Sprint 4 COMPLETE. Sprints 19-28 COMPLETE (quality + bug fixes).
 Sprint 5 dang trien khai — SWR migration + Approval Workflows.
 
 ---
@@ -914,24 +975,21 @@ Sprint 5 dang trien khai — SWR migration + Approval Workflows.
 **Noi voi Claude:** "Doc HANDOVER-SESSION.md de tiep tuc"
 
 **Viec tiep theo nen lam (theo thu tu uu tien):**
-1. Merge branch `feature/prismy-design-alignment` → commit SWR/API hooks changes
-2. Approval Workflows (PO, WO release) - **Critical** multi-step, role-based
-3. Excel Export nang cao (BOM tree, filters) - High
-4. Barcode/QR Generation + Print labels - High
-5. Role-based Dashboards (CEO, Kho, SX, Mua hang) - High
+1. Approval Workflows (PO, WO release) - **Critical** multi-step, role-based
+2. Excel Export nang cao (BOM tree, filters) - High
+3. Barcode/QR Generation + Print labels - High
+4. Role-based Dashboards (CEO, Kho, SX, Mua hang) - High
+5. SWR/API hooks migration - Medium (partially started)
 6. Tang test coverage (target: 50%+ of 273 API routes) - Medium
 7. Data sync Local → Production (pg_dump/pg_restore) - khi can
 
 **Luu y ve branch hien tai:**
-- Branch `feature/prismy-design-alignment` co uncommitted changes:
-  - `src/providers/swr-provider.tsx` — SWR data fetching provider
-  - `src/components/web-vitals.tsx` — Performance monitoring
-  - `src/hooks/use-api-data.ts` + `use-mutation.ts` — Reusable API hooks
-  - Multiple form/table improvements (parts, customers, suppliers, orders)
-- Can review va commit/merge truoc khi tiep tuc feature moi
+- Branch `main` — clean, up to date
+- All runtime bugs from browser console fixed
+- Codebase scan confirmed: no remaining duplicate column keys
 
 ---
 
-*Cap nhat lan cuoi: 2026-02-16 VN*
+*Cap nhat lan cuoi: 2026-02-19 VN*
 *Du an: RTR-MRP - Material Requirements Planning System*
 *Handover prepared by: Claude Opus 4.6*
