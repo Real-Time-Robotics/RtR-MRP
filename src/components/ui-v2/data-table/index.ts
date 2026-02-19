@@ -1,4 +1,6 @@
-// Data Table - Sub-component barrel exports
+// Data Table - Barrel exports
+export { DataTable } from './data-table';
+export { default } from './data-table';
 export type { Column, DataTableProps, ExcelModeConfig } from './data-table-types';
 
 export { SortIndicator, ExcelTitleBar, DataTableToolbar, TableHeaderRow } from './data-table-header';

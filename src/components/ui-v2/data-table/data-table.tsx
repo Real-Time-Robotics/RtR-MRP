@@ -7,17 +7,14 @@ import { useLanguage } from '@/lib/i18n/language-context';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import {
   mergeExcelConfig
-} from './excel';
+} from '../excel';
 
 // Import sub-components
-import { ExcelTitleBar, DataTableToolbar, TableHeaderRow } from './data-table/data-table-header';
-import { DataTableBody } from './data-table/data-table-body';
-import { TablePagination, ExcelPagination } from './data-table/data-table-pagination';
+import { ExcelTitleBar, DataTableToolbar, TableHeaderRow } from './data-table-header';
+import { DataTableBody } from './data-table-body';
+import { TablePagination, ExcelPagination } from './data-table-pagination';
 
-// Re-export types and sub-components for backward compatibility
-export type { Column, DataTableProps, ExcelModeConfig } from './data-table/data-table-types';
-import type { Column, DataTableProps } from './data-table/data-table-types';
-export { TablePagination } from './data-table/data-table-pagination';
+import type { Column, DataTableProps } from './data-table-types';
 
 // =============================================================================
 // DATA TABLE COMPONENT
@@ -354,10 +351,6 @@ function DataTable<T extends Record<string, any>>({
 }
 
 DataTable.displayName = 'DataTable';
-
-// =============================================================================
-// EXPORTS
-// =============================================================================
 
 export { DataTable };
 export default DataTable;
