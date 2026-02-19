@@ -98,21 +98,20 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
   // Content Security Policy
-  const isDev = process.env.NODE_ENV === 'development';
+  // Next.js requires 'unsafe-inline' for script hydration and style injection
   response.headers.set(
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      isDev
-        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-        : "script-src 'self'",
-      isDev
-        ? "style-src 'self' 'unsafe-inline'"
-        : "style-src 'self'",
-      "img-src 'self' data: https:",
-      "font-src 'self'",
-      "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com wss:",
       "frame-ancestors 'none'",
+      "form-action 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
     ].join('; ')
   );
 

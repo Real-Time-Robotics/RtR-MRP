@@ -28,18 +28,20 @@ export const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=()",
   },
   // Content Security Policy
+  // Next.js requires 'unsafe-inline' for script hydration and style injection
   {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self'",
-      "style-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.sentry.io wss:",
+      "font-src 'self' https://fonts.gstatic.com",
+      "connect-src 'self' https://api.anthropic.com https://generativelanguage.googleapis.com wss:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      "object-src 'none'",
     ].join("; "),
   },
 ];
