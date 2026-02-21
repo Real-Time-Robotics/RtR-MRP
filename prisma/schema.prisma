@@ -580,7 +580,7 @@ model Product {
 
   // Default work center for capacity planning
   defaultWorkCenterId String?
-  defaultWorkCenter   WorkCenter? @relation("ProductDefaultWorkCenter", fields: [defaultWorkCenterId], references: [id])
+  defaultWorkCenter   WorkCenter? @relation("ProductDefaultWorkCenter", fields: [defaultWorkCenterId], references: [id], onDelete: SetNull)
 
   bomHeaders         BomHeader[]
   salesOrderLines    SalesOrderLine[]
@@ -698,7 +698,7 @@ model Warehouse {
 
   // Site relation
   siteId String?
-  site   Site?   @relation(fields: [siteId], references: [id])
+  site   Site?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
 
   inventory          Inventory[]
   pickListLines      PickListLine[]
@@ -838,7 +838,7 @@ model Shipment {
   updatedAt      DateTime  @updatedAt
 
   salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
-  customer   Customer       @relation(fields: [customerId], references: [id])
+  customer   Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   lines      ShipmentLine[]
 
   @@index([salesOrderId])
@@ -856,7 +856,7 @@ model ShipmentLine {
   createdAt  DateTime @default(now())
 
   shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([shipmentId, lineNumber])
   @@index([shipmentId])
@@ -969,7 +969,7 @@ model User {
 
   // Multi-tenancy
   tenantId String?
-  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   // Workflow Automation relations
   initiatedWorkflows    WorkflowInstance[]     @relation("WorkflowInitiator")
@@ -1061,7 +1061,7 @@ model MrpSuggestion {
 
   mrpRun   MrpRun    @relation(fields: [mrpRunId], references: [id], onDelete: Cascade)
   part     Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   @@index([mrpRunId])
   @@index([partId])
@@ -1092,12 +1092,13 @@ model WorkOrder {
   notes           String?
   completedQty    Int           @default(0)
   scrapQty        Int           @default(0)
+  dueDate         DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
-  salesOrder    SalesOrder?          @relation(fields: [salesOrderId], references: [id])
-  workCenterRef WorkCenter?          @relation("WorkOrderWorkCenter", fields: [workCenterId], references: [id])
+  salesOrder    SalesOrder?          @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
+  workCenterRef WorkCenter?          @relation("WorkOrderWorkCenter", fields: [workCenterId], references: [id], onDelete: SetNull)
   allocations   MaterialAllocation[]
   inspections   Inspection[]
   ncrs          NCR[]
@@ -1140,8 +1141,8 @@ model ProductionReceipt {
   updatedAt      DateTime  @updatedAt
 
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  product   Product   @relation(fields: [productId], references: [id])
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([warehouseId, status])
@@ -1209,7 +1210,7 @@ model LeadTimePrediction {
   lastUpdated   DateTime @default(now())
 
   supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  part     Part?    @relation(fields: [partId], references: [id])
+  part     Part?    @relation(fields: [partId], references: [id], onDelete: SetNull)
 
   @@unique([supplierId, partId])
   @@index([supplierId])
@@ -1663,9 +1664,9 @@ model InspectionPlan {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  part     Part?     @relation(fields: [partId], references: [id])
-  product  Product?  @relation(fields: [productId], references: [id])
-  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  part     Part?     @relation(fields: [partId], references: [id], onDelete: SetNull)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   characteristics InspectionCharacteristic[]
   inspections     Inspection[]
@@ -1696,10 +1697,17 @@ model InspectionCharacteristic {
   isMajor      Boolean @default(false)
   gageRequired String?
 
+  // SPC fields
+  subgroupSize       Int?
+  samplingFrequency  String?
+  chartType          String?
+  code               String?
+
   createdAt DateTime @default(now())
 
   plan    InspectionPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   results InspectionResult[]
+  qualityAlerts QualityAlert[]
 
   @@index([planId])
   @@map("inspection_characteristics")
@@ -1743,10 +1751,10 @@ model Inspection {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  plan      InspectionPlan? @relation(fields: [planId], references: [id])
-  part      Part?           @relation(fields: [partId], references: [id])
-  product   Product?        @relation(fields: [productId], references: [id])
-  workOrder WorkOrder?      @relation(fields: [workOrderId], references: [id])
+  plan      InspectionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  part      Part?           @relation(fields: [partId], references: [id], onDelete: SetNull)
+  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  workOrder WorkOrder?      @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
 
   results      InspectionResult[]
   ncrs         NCR[]
@@ -1773,11 +1781,19 @@ model InspectionResult {
   defectCode        String?
   defectDescription String?
 
+  // SPC fields
+  sampleNumber Int?
+  subgroupId   String?
+  machineId    String?
+  mean         Float?
+  range        Float?
+  stdDev       Float?
+
   inspectedBy String
   inspectedAt DateTime @default(now())
 
   inspection     Inspection               @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-  characteristic InspectionCharacteristic @relation(fields: [characteristicId], references: [id])
+  characteristic InspectionCharacteristic @relation(fields: [characteristicId], references: [id], onDelete: Cascade)
 
   @@unique([inspectionId, characteristicId])
   @@index([inspectionId])
@@ -1847,11 +1863,11 @@ model NCR {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inspection Inspection? @relation(fields: [inspectionId], references: [id])
-  part       Part?       @relation(fields: [partId], references: [id])
-  product    Product?    @relation(fields: [productId], references: [id])
-  workOrder  WorkOrder?  @relation(fields: [workOrderId], references: [id])
-  capa       CAPA?       @relation(fields: [capaId], references: [id])
+  inspection Inspection? @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  part       Part?       @relation(fields: [partId], references: [id], onDelete: SetNull)
+  product    Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  workOrder  WorkOrder?  @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  capa       CAPA?       @relation(fields: [capaId], references: [id], onDelete: SetNull)
 
   history NCRHistory[]
 
@@ -2015,8 +2031,8 @@ model LotTransaction {
   userId    String
   createdAt DateTime @default(now())
 
-  part    Part?    @relation(fields: [partId], references: [id])
-  product Product? @relation(fields: [productId], references: [id])
+  part    Part?    @relation(fields: [partId], references: [id], onDelete: SetNull)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([lotNumber])
   @@index([partId, lotNumber])
@@ -2041,7 +2057,7 @@ model SystemSetting {
 model ScrapDisposal {
   id                String   @id @default(cuid())
   partId            String
-  part              Part     @relation(fields: [partId], references: [id])
+  part              Part     @relation(fields: [partId], references: [id], onDelete: Cascade)
   lotNumber         String?
   quantity          Int
   unitCost          Float
@@ -2091,9 +2107,9 @@ model CertificateOfConformance {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  salesOrder SalesOrder  @relation(fields: [salesOrderId], references: [id])
-  product    Product     @relation(fields: [productId], references: [id])
-  inspection Inspection? @relation(fields: [inspectionId], references: [id])
+  salesOrder SalesOrder  @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inspection Inspection? @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
 
   @@index([salesOrderId])
   @@map("certificates_of_conformance")
@@ -2211,7 +2227,7 @@ model Routing {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  product    Product            @relation(fields: [productId], references: [id])
+  product    Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
   operations RoutingOperation[]
 
   @@unique([productId, version])
@@ -2263,7 +2279,7 @@ model RoutingOperation {
   updatedAt DateTime @updatedAt
 
   routing      Routing              @relation(fields: [routingId], references: [id], onDelete: Cascade)
-  workCenter   WorkCenter           @relation(fields: [workCenterId], references: [id])
+  workCenter   WorkCenter           @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
   woOperations WorkOrderOperation[]
 
   @@unique([routingId, operationNumber])
@@ -2319,9 +2335,9 @@ model WorkOrderOperation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workOrder        WorkOrder           @relation(fields: [workOrderId], references: [id])
-  routingOperation RoutingOperation?   @relation(fields: [routingOperationId], references: [id])
-  workCenter       WorkCenter          @relation(fields: [workCenterId], references: [id])
+  workOrder        WorkOrder           @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  routingOperation RoutingOperation?   @relation(fields: [routingOperationId], references: [id], onDelete: SetNull)
+  workCenter       WorkCenter          @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
   scheduledOp      ScheduledOperation?
   laborEntries     LaborEntry[]
 
@@ -2360,8 +2376,8 @@ model ScheduledOperation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workOrderOperation WorkOrderOperation @relation(fields: [workOrderOperationId], references: [id])
-  workCenter         WorkCenter         @relation(fields: [workCenterId], references: [id])
+  workOrderOperation WorkOrderOperation @relation(fields: [workOrderOperationId], references: [id], onDelete: Cascade)
+  workCenter         WorkCenter         @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
   @@index([workCenterId, scheduledStart])
   @@index([scheduledStart])
@@ -2396,7 +2412,7 @@ model CapacityRecord {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
   @@unique([workCenterId, date])
   @@index([workCenterId, date])
@@ -2436,9 +2452,9 @@ model LaborEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user               User                @relation(fields: [userId], references: [id])
-  workOrderOperation WorkOrderOperation? @relation(fields: [workOrderOperationId], references: [id])
-  workCenter         WorkCenter?         @relation(fields: [workCenterId], references: [id])
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workOrderOperation WorkOrderOperation? @relation(fields: [workOrderOperationId], references: [id], onDelete: SetNull)
+  workCenter         WorkCenter?         @relation(fields: [workCenterId], references: [id], onDelete: SetNull)
 
   @@index([userId, startTime])
   @@index([workOrderOperationId])
@@ -2475,7 +2491,7 @@ model DowntimeRecord {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  workCenter WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
   @@index([workCenterId, startTime])
   @@index([type])
@@ -2512,7 +2528,7 @@ model ElectronicSignature {
   // Timestamps
   signedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -2625,7 +2641,7 @@ model MFAChallenge {
   createdAt  DateTime  @default(now())
 
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  device MFADevice? @relation(fields: [deviceId], references: [id])
+  device MFADevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
   @@index([expiresAt])
@@ -2814,8 +2830,8 @@ model ITARAccessLog {
   // Timestamps
   accessedAt DateTime @default(now())
 
-  user           User               @relation(fields: [userId], references: [id])
-  controlledItem ITARControlledItem @relation(fields: [controlledItemId], references: [id])
+  user           User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  controlledItem ITARControlledItem @relation(fields: [controlledItemId], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([controlledItemId])
@@ -2840,7 +2856,7 @@ model GLAccount {
 
   // Hierarchy
   parentId String?
-  parent   GLAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  parent   GLAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children GLAccount[] @relation("AccountHierarchy")
 
   // Settings
@@ -2882,7 +2898,7 @@ model CostType {
 
   // GL Mapping
   glAccountId String?
-  glAccount   GLAccount? @relation(fields: [glAccountId], references: [id])
+  glAccount   GLAccount? @relation(fields: [glAccountId], references: [id], onDelete: SetNull)
 
   isActive Boolean @default(true)
 
@@ -2912,7 +2928,7 @@ model PartCostComponent {
   part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   costTypeId String
-  costType   CostType @relation(fields: [costTypeId], references: [id])
+  costType   CostType @relation(fields: [costTypeId], references: [id], onDelete: Cascade)
 
   // Cost values
   standardCost     Float
@@ -2972,7 +2988,7 @@ model WorkOrderCost {
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
 
   costTypeId String
-  costType   CostType @relation(fields: [costTypeId], references: [id])
+  costType   CostType @relation(fields: [costTypeId], references: [id], onDelete: Cascade)
 
   // Cost details
   description String?
@@ -3002,11 +3018,11 @@ model PurchaseInvoice {
 
   // Supplier
   supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Reference
   purchaseOrderId String?
-  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   vendorInvoiceNo String? // Supplier's invoice number
 
   // Dates
@@ -3064,7 +3080,7 @@ model PurchaseInvoiceLine {
 
   // Item
   partId      String?
-  part        Part?   @relation(fields: [partId], references: [id])
+  part        Part?   @relation(fields: [partId], references: [id], onDelete: SetNull)
   description String
 
   // Quantities
@@ -3092,7 +3108,7 @@ model PurchaseInvoiceLine {
 model PurchasePayment {
   id        String          @id @default(cuid())
   invoiceId String
-  invoice   PurchaseInvoice @relation(fields: [invoiceId], references: [id])
+  invoice   PurchaseInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   paymentNumber String   @unique
   paymentDate   DateTime
@@ -3122,11 +3138,11 @@ model SalesInvoice {
 
   // Customer
   customerId String
-  customer   Customer @relation(fields: [customerId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   // Reference
   salesOrderId String?
-  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id], onDelete: SetNull)
 
   // Dates
   invoiceDate DateTime
@@ -3192,9 +3208,9 @@ model SalesInvoiceLine {
 
   // Item
   partId      String?
-  part        Part?    @relation(fields: [partId], references: [id])
+  part        Part?    @relation(fields: [partId], references: [id], onDelete: SetNull)
   productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   description String
 
   // Quantities
@@ -3228,7 +3244,7 @@ model SalesInvoiceLine {
 model SalesPayment {
   id        String       @id @default(cuid())
   invoiceId String
-  invoice   SalesInvoice @relation(fields: [invoiceId], references: [id])
+  invoice   SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   paymentNumber String   @unique
   paymentDate   DateTime
@@ -3315,7 +3331,7 @@ model JournalLine {
 
   // Account
   accountId String
-  account   GLAccount @relation(fields: [accountId], references: [id])
+  account   GLAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   // Description
   description String?
@@ -3349,9 +3365,9 @@ model CostVariance {
 
   // Reference
   workOrderId String?
-  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
   partId      String?
-  part        Part?      @relation(fields: [partId], references: [id])
+  part        Part?      @relation(fields: [partId], references: [id], onDelete: SetNull)
 
   // Period
   periodYear  Int
@@ -3406,7 +3422,7 @@ model Currency {
 model ExchangeRate {
   id             String   @id @default(cuid())
   fromCurrencyId String
-  fromCurrency   Currency @relation(fields: [fromCurrencyId], references: [id])
+  fromCurrency   Currency @relation(fields: [fromCurrencyId], references: [id], onDelete: Cascade)
   toCurrencyCode String // Usually base currency
 
   rate          Float
@@ -3530,7 +3546,7 @@ model MobileDevice {
 
   // User
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Status
   lastActiveAt DateTime?
@@ -3625,11 +3641,11 @@ model PickListLine {
 
   // Item to pick
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   // Location
   warehouseId  String?
-  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id])
+  warehouse    Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   locationCode String?
 
   // Quantities
@@ -3705,10 +3721,10 @@ model InventorySite {
   id String @id @default(cuid())
 
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   siteId String
-  site   Site   @relation(fields: [siteId], references: [id])
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   // Site-specific settings
   reorderPoint Decimal? @db.Decimal(15, 4)
@@ -3741,9 +3757,9 @@ model TransferOrder {
 
   // Sites
   fromSiteId String
-  fromSite   Site   @relation("FromSite", fields: [fromSiteId], references: [id])
+  fromSite   Site   @relation("FromSite", fields: [fromSiteId], references: [id], onDelete: Cascade)
   toSiteId   String
-  toSite     Site   @relation("ToSite", fields: [toSiteId], references: [id])
+  toSite     Site   @relation("ToSite", fields: [toSiteId], references: [id], onDelete: Cascade)
 
   // Dates
   requestDate  DateTime
@@ -3781,7 +3797,7 @@ model TransferOrderLine {
   lineNumber Int
 
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   quantity    Decimal @db.Decimal(15, 4)
   shippedQty  Decimal @default(0) @db.Decimal(15, 4)
@@ -3856,13 +3872,13 @@ model PlannedOrder {
 
   // Part
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   // Site
   siteId       String?
-  supplySite   Site?   @relation("SupplySite", fields: [siteId], references: [id])
+  supplySite   Site?   @relation("SupplySite", fields: [siteId], references: [id], onDelete: SetNull)
   demandSiteId String?
-  demandSite   Site?   @relation("DemandSite", fields: [demandSiteId], references: [id])
+  demandSite   Site?   @relation("DemandSite", fields: [demandSiteId], references: [id], onDelete: SetNull)
 
   // Order details
   orderType String // PURCHASE, PRODUCTION, TRANSFER
@@ -3927,7 +3943,7 @@ model MRPException {
   entityId   String
 
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   siteId String?
 
@@ -4036,7 +4052,7 @@ model ATPRecord {
   id String @id @default(cuid())
 
   partId String
-  part   Part   @relation(fields: [partId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   siteId String?
 
@@ -4104,10 +4120,10 @@ model PartSubstitute {
   id String @id @default(cuid())
 
   primaryPartId String
-  primaryPart   Part   @relation("PrimaryPart", fields: [primaryPartId], references: [id])
+  primaryPart   Part   @relation("PrimaryPart", fields: [primaryPartId], references: [id], onDelete: Cascade)
 
   substitutePartId String
-  substitutePart   Part   @relation("SubstitutePart", fields: [substitutePartId], references: [id])
+  substitutePart   Part   @relation("SubstitutePart", fields: [substitutePartId], references: [id], onDelete: Cascade)
 
   // Priority (1 = first choice)
   priority Int @default(1)
@@ -4153,7 +4169,7 @@ model Equipment {
 
   // Location
   workCenterId String
-  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
   location     String?
 
   // Specifications
@@ -4190,6 +4206,8 @@ model Equipment {
   nextMaintenanceDate     DateTime?
   maintenanceIntervalDays Int?
   totalDowntimeHours      Float     @default(0)
+  operatingHours    Float? // Current operating hours
+  designLifeHours   Float? // Design life in hours
   mtbf                    Float? // Mean Time Between Failures (hours)
   mttr                    Float? // Mean Time To Repair (hours)
 
@@ -4214,7 +4232,7 @@ model MaintenanceSchedule {
 
   // Equipment
   equipmentId String
-  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
   // Schedule Type
   type          String // PREVENTIVE, PREDICTIVE, CALIBRATION, INSPECTION
@@ -4263,11 +4281,11 @@ model MaintenanceOrder {
 
   // Equipment
   equipmentId String
-  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
   // Schedule (if PM)
   scheduleId String?
-  schedule   MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
+  schedule   MaintenanceSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
 
   // Type
   type     String // PM (Preventive), CM (Corrective), EM (Emergency), CAL (Calibration)
@@ -4410,10 +4428,10 @@ model EmployeeSkill {
   id String @id @default(cuid())
 
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   skillId String
-  skill   Skill  @relation(fields: [skillId], references: [id])
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
   // Proficiency
   level       Int    @default(1) // 1-5 typically
@@ -4488,10 +4506,10 @@ model ShiftAssignment {
   id String @id @default(cuid())
 
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   shiftId String
-  shift   Shift  @relation(fields: [shiftId], references: [id])
+  shift   Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
 
   // Date
   date DateTime @db.Date
@@ -4536,7 +4554,7 @@ model WorkCenterCapacity {
   id String @id @default(cuid())
 
   workCenterId String
-  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter   WorkCenter @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
   date         DateTime   @db.Date
 
   // Base Capacity
@@ -4959,7 +4977,7 @@ model ConversationThread {
 
   // Creator
   createdById String
-  createdBy   User   @relation("ThreadCreator", fields: [createdById], references: [id])
+  createdBy   User   @relation("ThreadCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   // Relations
   messages     Message[]
@@ -4993,7 +5011,7 @@ model Message {
 
   // Sender
   senderId String
-  sender   User   @relation("MessageSender", fields: [senderId], references: [id])
+  sender   User   @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
   // Content
   content         String  @db.Text // Text content
@@ -5030,7 +5048,7 @@ model ThreadParticipant {
   thread   ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Participation info
   role     String? // Role khi join (QA, Planner, etc.)
@@ -5310,7 +5328,7 @@ model WorkflowStep {
 model WorkflowInstance {
   id         String             @id @default(cuid())
   workflowId String
-  workflow   WorkflowDefinition @relation(fields: [workflowId], references: [id])
+  workflow   WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Restrict)
 
   // Entity reference
   entityType WorkflowEntityType
@@ -5330,7 +5348,7 @@ model WorkflowInstance {
 
   // Initiator
   initiatedBy     String
-  initiatedByUser User?  @relation("WorkflowInitiator", fields: [initiatedBy], references: [id])
+  initiatedByUser User?  @relation("WorkflowInitiator", fields: [initiatedBy], references: [id], onDelete: SetNull)
 
   // Final outcome
   finalDecision ApprovalDecision?
@@ -5358,11 +5376,11 @@ model WorkflowApproval {
   instance   WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
 
   stepId String
-  step   WorkflowStep @relation(fields: [stepId], references: [id])
+  step   WorkflowStep @relation(fields: [stepId], references: [id], onDelete: Restrict)
 
   // Approver
   approverId String
-  approver   User   @relation("WorkflowApprover", fields: [approverId], references: [id])
+  approver   User   @relation("WorkflowApprover", fields: [approverId], references: [id], onDelete: Cascade)
 
   // Decision
   decision ApprovalDecision @default(PENDING)
@@ -5370,7 +5388,7 @@ model WorkflowApproval {
 
   // Delegation
   delegatedTo      String?
-  delegatedToUser  User?   @relation("WorkflowDelegate", fields: [delegatedTo], references: [id])
+  delegatedToUser  User?   @relation("WorkflowDelegate", fields: [delegatedTo], references: [id], onDelete: SetNull)
   delegationReason String?
 
   // Timing
@@ -5405,7 +5423,7 @@ model WorkflowHistory {
 
   // Actor
   performedBy String
-  performer   User   @relation("WorkflowHistoryActor", fields: [performedBy], references: [id])
+  performer   User   @relation("WorkflowHistoryActor", fields: [performedBy], references: [id], onDelete: Cascade)
 
   // Details
   previousStatus String?
@@ -5430,7 +5448,7 @@ model WorkflowNotification {
 
   // Recipient
   recipientId String
-  recipient   User   @relation("WorkflowNotificationRecipient", fields: [recipientId], references: [id])
+  recipient   User   @relation("WorkflowNotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
 
   // Notification content
   type    String // APPROVAL_REQUEST, REMINDER, ESCALATION, COMPLETED, REJECTED
@@ -5650,7 +5668,7 @@ model ImportSession {
   rollbackAt       DateTime?
 
   logs ImportLog[]
-  user User        @relation("ImportSessionUser", fields: [importedBy], references: [id])
+  user User        @relation("ImportSessionUser", fields: [importedBy], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5691,7 +5709,7 @@ model ImportMapping {
   lastUsedAt DateTime?
   createdBy  String
 
-  user User @relation("ImportMappingUser", fields: [createdBy], references: [id])
+  user User @relation("ImportMappingUser", fields: [createdBy], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5754,7 +5772,7 @@ model SavedView {
   isShared  Boolean @default(false) // Visible to all users
   createdBy String
 
-  user User @relation("SavedViewUser", fields: [createdBy], references: [id])
+  user User @relation("SavedViewUser", fields: [createdBy], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -5786,4 +5804,35 @@ model ReportHistory {
   @@index([status])
   @@index([createdAt])
   @@map("report_history")
+}
+
+
+// ============ SPC QUALITY ALERTS ============
+model QualityAlert {
+  id               String @id @default(cuid())
+  characteristicId String
+
+  type        String // OUT_OF_CONTROL, TREND, SHIFT, RULE_VIOLATION
+  severity    String // LOW, MEDIUM, HIGH, CRITICAL
+  status      String @default("open") // open, acknowledged, resolved, dismissed
+  title       String
+  description String?
+  violation   Json? // Details of the SPC rule violation
+
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  resolvedBy     String?
+  resolvedAt     DateTime?
+  resolution     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  characteristic InspectionCharacteristic @relation(fields: [characteristicId], references: [id], onDelete: Cascade)
+
+  @@index([characteristicId])
+  @@index([status])
+  @@index([severity])
+  @@index([type])
+  @@map("quality_alerts")
 }

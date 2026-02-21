@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 import {
   MLEngine,
@@ -19,28 +20,154 @@ import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limi
 // Provides AI-powered insights, forecasting, and predictive maintenance
 // =============================================================================
 
-// Mock items for forecasting
-const MOCK_ITEMS = [
-  { id: 'ITEM-001', code: 'RM-STEEL-01', name: 'Thép cuộn HRC', stock: 1500, avgDemand: 45, leadTime: 7 },
-  { id: 'ITEM-002', code: 'RM-ALUM-02', name: 'Nhôm tấm 6061', stock: 800, avgDemand: 25, leadTime: 10 },
-  { id: 'ITEM-003', code: 'COMP-MOTOR-01', name: 'Motor servo', stock: 50, avgDemand: 3, leadTime: 14 },
-  { id: 'ITEM-004', code: 'COMP-PCB-01', name: 'PCB controller', stock: 200, avgDemand: 12, leadTime: 21 },
-  { id: 'ITEM-005', code: 'PKG-BOX-01', name: 'Hộp carton 40x30', stock: 3000, avgDemand: 150, leadTime: 3 },
-  { id: 'ITEM-006', code: 'RM-PLASTIC-01', name: 'Nhựa ABS', stock: 500, avgDemand: 30, leadTime: 5 },
-];
+// Input shape for demand forecasting
+interface ForecastItem {
+  id: string;
+  code: string;
+  name: string;
+  stock: number;
+  avgDemand: number;
+  leadTime: number;
+}
 
-// Mock equipment for predictive maintenance
-const MOCK_EQUIPMENT = [
-  { id: 'EQ-001', code: 'CNC-001', name: 'CNC Mill Haas VF-2', opHours: 12500, lifeHours: 20000, pmInterval: 30 },
-  { id: 'EQ-002', code: 'CNC-002', name: 'CNC Lathe Mazak', opHours: 8500, lifeHours: 18000, pmInterval: 30 },
-  { id: 'EQ-003', code: 'ROBOT-001', name: 'Robot hàn Fanuc', opHours: 15000, lifeHours: 25000, pmInterval: 45 },
-  { id: 'EQ-004', code: 'PRESS-001', name: 'Máy dập 200T', opHours: 20000, lifeHours: 30000, pmInterval: 60 },
-  { id: 'EQ-005', code: 'LASER-001', name: 'Laser cắt Trumpf', opHours: 5500, lifeHours: 15000, pmInterval: 30 },
-  { id: 'EQ-006', code: 'INJECT-001', name: 'Máy ép nhựa 150T', opHours: 18000, lifeHours: 22000, pmInterval: 45 },
-];
+// Input shape for equipment health
+interface EquipmentInput {
+  id: string;
+  code: string;
+  name: string;
+  opHours: number;
+  lifeHours: number;
+  pmInterval: number;
+}
+
+// Fetch parts with aggregated inventory for demand forecasting
+async function fetchForecastItems(): Promise<ForecastItem[]> {
+  const parts = await prisma.part.findMany({
+    where: { status: 'active' },
+    select: {
+      id: true,
+      partNumber: true,
+      name: true,
+      reorderPoint: true,
+      leadTimeDays: true,
+      inventory: {
+        select: {
+          quantity: true,
+        },
+      },
+    },
+    orderBy: { partNumber: 'asc' },
+  });
+
+  return parts.map(part => {
+    const totalStock = part.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+    // Estimate average daily demand from reorder point and lead time
+    // If reorderPoint > 0 and leadTimeDays > 0, avgDemand ~ reorderPoint / leadTimeDays
+    const avgDemand = part.leadTimeDays > 0 && part.reorderPoint > 0
+      ? Math.max(1, Math.round(part.reorderPoint / part.leadTimeDays))
+      : 1;
+
+    return {
+      id: part.id,
+      code: part.partNumber,
+      name: part.name,
+      stock: totalStock,
+      avgDemand,
+      leadTime: part.leadTimeDays,
+    };
+  });
+}
+
+// Fetch a single part by ID for demand forecasting
+async function fetchForecastItemById(itemId: string): Promise<ForecastItem | null> {
+  const part = await prisma.part.findUnique({
+    where: { id: itemId },
+    select: {
+      id: true,
+      partNumber: true,
+      name: true,
+      reorderPoint: true,
+      leadTimeDays: true,
+      inventory: {
+        select: {
+          quantity: true,
+        },
+      },
+    },
+  });
+
+  if (!part) return null;
+
+  const totalStock = part.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+  const avgDemand = part.leadTimeDays > 0 && part.reorderPoint > 0
+    ? Math.max(1, Math.round(part.reorderPoint / part.leadTimeDays))
+    : 1;
+
+  return {
+    id: part.id,
+    code: part.partNumber,
+    name: part.name,
+    stock: totalStock,
+    avgDemand,
+    leadTime: part.leadTimeDays,
+  };
+}
+
+// Fetch equipment for predictive maintenance
+async function fetchEquipmentList(): Promise<EquipmentInput[]> {
+  const equipment = await prisma.equipment.findMany({
+    where: {
+      status: { not: 'retired' },
+    },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      operatingHours: true,
+      designLifeHours: true,
+      maintenanceIntervalDays: true,
+    },
+    orderBy: { code: 'asc' },
+  });
+
+  return equipment.map(eq => ({
+    id: eq.id,
+    code: eq.code,
+    name: eq.name,
+    opHours: eq.operatingHours ?? 0,
+    lifeHours: eq.designLifeHours ?? 20000,
+    pmInterval: eq.maintenanceIntervalDays ?? 30,
+  }));
+}
+
+// Fetch a single equipment by ID for predictive maintenance
+async function fetchEquipmentById(equipmentId: string): Promise<EquipmentInput | null> {
+  const eq = await prisma.equipment.findUnique({
+    where: { id: equipmentId },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      operatingHours: true,
+      designLifeHours: true,
+      maintenanceIntervalDays: true,
+    },
+  });
+
+  if (!eq) return null;
+
+  return {
+    id: eq.id,
+    code: eq.code,
+    name: eq.name,
+    opHours: eq.operatingHours ?? 0,
+    lifeHours: eq.designLifeHours ?? 20000,
+    pmInterval: eq.maintenanceIntervalDays ?? 30,
+  };
+}
 
 // Generate demand forecast for an item
-function generateDemandForecast(item: typeof MOCK_ITEMS[0]): DemandForecast {
+function generateDemandForecast(item: ForecastItem): DemandForecast {
   const historicalData = generateMockHistoricalData(30);
   const values = historicalData.map(d => d.value);
 
@@ -74,7 +201,7 @@ function generateDemandForecast(item: typeof MOCK_ITEMS[0]): DemandForecast {
 }
 
 // Generate equipment health data
-function generateEquipmentHealth(eq: typeof MOCK_EQUIPMENT[0]): EquipmentHealth {
+function generateEquipmentHealth(eq: EquipmentInput): EquipmentHealth {
   const sensorData = generateMockSensorData(eq.id);
   const maintenanceHistory = generateMockMaintenanceHistory(eq.id);
 
@@ -357,7 +484,8 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
       case 'dashboard': {
         const insights = generateAIInsights();
         const anomalies = generateAnomalies();
-        const equipmentList = MOCK_EQUIPMENT.map(eq => generateEquipmentHealth(eq));
+        const equipmentInputs = await fetchEquipmentList();
+        const equipmentList = equipmentInputs.map(eq => generateEquipmentHealth(eq));
 
         return NextResponse.json({
           success: true,
@@ -367,7 +495,9 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
               criticalInsights: insights.filter(i => i.priority === 'CRITICAL').length,
               activeAnomalies: anomalies.filter(a => a.status !== 'RESOLVED').length,
               equipmentAtRisk: equipmentList.filter(e => e.status === 'AT_RISK' || e.status === 'CRITICAL').length,
-              avgHealthScore: Math.round(equipmentList.reduce((sum, e) => sum + e.healthScore, 0) / equipmentList.length),
+              avgHealthScore: equipmentList.length > 0
+                ? Math.round(equipmentList.reduce((sum, e) => sum + e.healthScore, 0) / equipmentList.length)
+                : 0,
             },
             recentInsights: insights.slice(0, 5),
             recentAnomalies: anomalies.filter(a => a.status !== 'RESOLVED').slice(0, 5),
@@ -384,7 +514,7 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
 
       case 'forecasting': {
         if (itemId) {
-          const item = MOCK_ITEMS.find(i => i.id === itemId);
+          const item = await fetchForecastItemById(itemId);
           if (!item) {
             return NextResponse.json({ success: false, error: 'Item not found' }, { status: 404 });
           }
@@ -395,7 +525,8 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
         }
 
         // Return list of all items with forecast summary
-        const forecasts = MOCK_ITEMS.map(item => {
+        const forecastItems = await fetchForecastItems();
+        const forecasts = forecastItems.map(item => {
           const forecast = generateDemandForecast(item);
           return {
             itemId: item.id,
@@ -417,16 +548,17 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
       }
 
       case 'forecasting-list': {
-        const forecasts = MOCK_ITEMS.map(item => generateDemandForecast(item));
+        const allItems = await fetchForecastItems();
+        const forecastsList = allItems.map(item => generateDemandForecast(item));
         return NextResponse.json({
           success: true,
-          data: { forecasts },
+          data: { forecasts: forecastsList },
         });
       }
 
       case 'maintenance': {
         if (equipmentId) {
-          const eq = MOCK_EQUIPMENT.find(e => e.id === equipmentId);
+          const eq = await fetchEquipmentById(equipmentId);
           if (!eq) {
             return NextResponse.json({ success: false, error: 'Equipment not found' }, { status: 404 });
           }
@@ -437,7 +569,8 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
         }
 
         // Return list of all equipment with health summary
-        const healthList = MOCK_EQUIPMENT.map(eq => {
+        const maintenanceEquipment = await fetchEquipmentList();
+        const healthList = maintenanceEquipment.map(eq => {
           const health = generateEquipmentHealth(eq);
           return {
             equipmentId: eq.id,
@@ -459,10 +592,11 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
       }
 
       case 'maintenance-list': {
-        const healthList = MOCK_EQUIPMENT.map(eq => generateEquipmentHealth(eq));
+        const allEquipment = await fetchEquipmentList();
+        const fullHealthList = allEquipment.map(eq => generateEquipmentHealth(eq));
         return NextResponse.json({
           success: true,
-          data: { equipment: healthList },
+          data: { equipment: fullHealthList },
         });
       }
 
@@ -564,8 +698,8 @@ export const POST = withAuth(async (request: NextRequest, context, session) => {
 
     switch (action) {
       case 'generate_forecast': {
-        const { itemId } = data;
-        const item = MOCK_ITEMS.find(i => i.id === itemId);
+        const { itemId: forecastItemId } = data;
+        const item = await fetchForecastItemById(forecastItemId as string);
         if (!item) {
           return NextResponse.json({ success: false, error: 'Item not found' }, { status: 404 });
         }

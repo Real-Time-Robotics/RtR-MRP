@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
+import { prisma } from '@/lib/prisma';
+import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 const syncPostSchema = z.object({
   id: z.string().optional(),
@@ -18,65 +20,100 @@ const syncPostSchema = z.object({
   createdAt: z.string().optional(),
 });
 
-import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
-// Mock master data
-const MOCK_PARTS = [
-  { id: '1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor 2205', category: 'Motors', uom: 'EA', onHand: 150, reserved: 20, available: 130, reorderPoint: 50, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 100 }, { locationId: 'loc2', code: 'WH-01-R01-C02-S01', qty: 50 }], updatedAt: Date.now() },
-  { id: '2', partNumber: 'RTR-ESC-002', description: 'Electronic Speed Controller 30A', category: 'Electronics', uom: 'EA', onHand: 80, reserved: 15, available: 65, reorderPoint: 30, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 80 }], updatedAt: Date.now() },
-  { id: '3', partNumber: 'RTR-FRAME-003', description: 'Carbon Fiber Frame 250mm', category: 'Frames', uom: 'EA', onHand: 45, reserved: 5, available: 40, reorderPoint: 20, locations: [{ locationId: 'loc2', code: 'WH-01-R01-C02-S01', qty: 45 }], updatedAt: Date.now() },
-  { id: '4', partNumber: 'RTR-PROP-004', description: 'Propeller 5x4.5 (Set of 4)', category: 'Propellers', uom: 'SET', onHand: 500, reserved: 100, available: 400, reorderPoint: 200, locations: [{ locationId: 'loc3', code: 'WH-02-R01-C01-S01', qty: 500 }], updatedAt: Date.now() },
-  { id: '5', partNumber: 'RTR-BATT-005', description: 'LiPo Battery 4S 1500mAh', category: 'Batteries', uom: 'EA', onHand: 60, reserved: 10, available: 50, reorderPoint: 25, locations: [{ locationId: 'loc4', code: 'WH-01-R01-C03-S01', qty: 60 }], updatedAt: Date.now() },
-  { id: '6', partNumber: 'RTR-FC-006', description: 'Flight Controller F7', category: 'Electronics', uom: 'EA', onHand: 35, reserved: 5, available: 30, reorderPoint: 15, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 35 }], updatedAt: Date.now() },
-  { id: '7', partNumber: 'RTR-GPS-007', description: 'GPS Module M8N', category: 'Electronics', uom: 'EA', onHand: 40, reserved: 8, available: 32, reorderPoint: 20, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 40 }], updatedAt: Date.now() },
-  { id: '8', partNumber: 'RTR-CAM-008', description: 'FPV Camera 1200TVL', category: 'Electronics', uom: 'EA', onHand: 25, reserved: 3, available: 22, reorderPoint: 10, locations: [{ locationId: 'loc2', code: 'WH-01-R01-C02-S01', qty: 25 }], updatedAt: Date.now() },
-  { id: '9', partNumber: 'RTR-VTX-009', description: 'Video Transmitter 600mW', category: 'Electronics', uom: 'EA', onHand: 30, reserved: 5, available: 25, reorderPoint: 15, locations: [{ locationId: 'loc2', code: 'WH-01-R01-C02-S01', qty: 30 }], updatedAt: Date.now() },
-  { id: '10', partNumber: 'RTR-RX-010', description: 'Receiver FrSky XM+', category: 'Electronics', uom: 'EA', onHand: 55, reserved: 10, available: 45, reorderPoint: 25, locations: [{ locationId: 'loc1', code: 'WH-01-R01-C01-S01', qty: 55 }], updatedAt: Date.now() },
-];
-
-const MOCK_LOCATIONS = [
-  { id: 'loc1', code: 'WH-01-R01-C01-S01', name: 'Main WH - Rack 1 - Column 1 - Shelf 1', warehouseId: 'wh1', warehouseName: 'Main Warehouse', zone: 'A', aisle: '01', rack: '01', shelf: '01' },
-  { id: 'loc2', code: 'WH-01-R01-C02-S01', name: 'Main WH - Rack 1 - Column 2 - Shelf 1', warehouseId: 'wh1', warehouseName: 'Main Warehouse', zone: 'A', aisle: '01', rack: '01', shelf: '01' },
-  { id: 'loc3', code: 'WH-02-R01-C01-S01', name: 'Secondary WH - Rack 1', warehouseId: 'wh2', warehouseName: 'Secondary Warehouse', zone: 'B', aisle: '01', rack: '01', shelf: '01' },
-  { id: 'loc4', code: 'WH-01-R01-C03-S01', name: 'Main WH - Rack 1 - Column 3 - Shelf 1', warehouseId: 'wh1', warehouseName: 'Main Warehouse', zone: 'A', aisle: '01', rack: '01', shelf: '01' },
-  { id: 'loc5', code: 'WH-01-R02-C01-S01', name: 'Main WH - Rack 2 - Column 1 - Shelf 1', warehouseId: 'wh1', warehouseName: 'Main Warehouse', zone: 'A', aisle: '01', rack: '02', shelf: '01' },
-  { id: 'loc6', code: 'WH-01-R02-C01-S02', name: 'Main WH - Rack 2 - Column 1 - Shelf 2', warehouseId: 'wh1', warehouseName: 'Main Warehouse', zone: 'A', aisle: '01', rack: '02', shelf: '02' },
-  { id: 'loc7', code: 'WH-03-RECV-001', name: 'Receiving Dock 1', warehouseId: 'wh3', warehouseName: 'Receiving Area', zone: 'RECV', aisle: 'DOCK', rack: '01', shelf: '01' },
-  { id: 'loc8', code: 'WH-03-SHIP-001', name: 'Shipping Dock 1', warehouseId: 'wh3', warehouseName: 'Shipping Area', zone: 'SHIP', aisle: 'DOCK', rack: '01', shelf: '01' },
-];
-
 /**
  * GET /api/mobile/sync
  * Get sync status and download master data
  */
 export const GET = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkReadEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
-const { searchParams } = new URL(req.url);
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
+
+  const { searchParams } = new URL(req.url);
   const dataType = searchParams.get('type');
-  const since = searchParams.get('since'); // Timestamp for delta sync
-  
-  // Download specific data type
+  const since = searchParams.get('since');
+
   if (dataType === 'parts') {
-    let data = MOCK_PARTS;
-    if (since) {
-      const sinceTs = parseInt(since);
-      data = data.filter(p => p.updatedAt > sinceTs);
-    }
+    const sinceDate = since ? new Date(since) : undefined;
+
+    const parts = await prisma.part.findMany({
+      where: {
+        status: 'active',
+        ...(sinceDate && { updatedAt: { gt: sinceDate } }),
+      },
+      include: {
+        inventory: {
+          include: { warehouse: true },
+        },
+      },
+      orderBy: { partNumber: 'asc' },
+    });
+
+    const data = parts.map((part) => {
+      const onHand = part.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+      const reserved = part.inventory.reduce((sum, inv) => sum + inv.reservedQty, 0);
+
+      return {
+        id: part.id,
+        partNumber: part.partNumber,
+        description: part.name,
+        category: part.category,
+        uom: part.unit,
+        onHand,
+        reserved,
+        available: onHand - reserved,
+        reorderPoint: part.reorderPoint,
+        locations: part.inventory.map((inv) => ({
+          locationId: inv.warehouseId,
+          code: inv.warehouse.code,
+          qty: inv.quantity,
+        })),
+        updatedAt: part.updatedAt.getTime(),
+      };
+    });
+
     return NextResponse.json(data);
   }
-  
+
   if (dataType === 'locations') {
-    return NextResponse.json(MOCK_LOCATIONS);
+    const warehouses = await prisma.warehouse.findMany({
+      where: { status: 'active' },
+      orderBy: { code: 'asc' },
+    });
+
+    const data = warehouses.map((wh) => ({
+      id: wh.id,
+      code: wh.code,
+      name: wh.name,
+      warehouseId: wh.id,
+      warehouseName: wh.name,
+      location: wh.location,
+      type: wh.type,
+    }));
+
+    return NextResponse.json(data);
   }
-  
+
   // Return sync status
+  const [partCount, warehouseCount, latestPart, latestWarehouse] = await Promise.all([
+    prisma.part.count({ where: { status: 'active' } }),
+    prisma.warehouse.count({ where: { status: 'active' } }),
+    prisma.part.findFirst({ orderBy: { updatedAt: 'desc' }, select: { updatedAt: true } }),
+    prisma.warehouse.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+  ]);
+
   return NextResponse.json({
     success: true,
     serverTime: new Date().toISOString(),
     dataVersions: {
-      parts: { count: MOCK_PARTS.length, lastModified: Date.now() },
-      locations: { count: MOCK_LOCATIONS.length, lastModified: Date.now() },
+      parts: {
+        count: partCount,
+        lastModified: latestPart?.updatedAt.getTime() ?? Date.now(),
+      },
+      locations: {
+        count: warehouseCount,
+        lastModified: latestWarehouse?.createdAt.getTime() ?? Date.now(),
+      },
     },
     endpoints: {
       parts: '/api/mobile/sync?type=parts',
@@ -90,12 +127,12 @@ const { searchParams } = new URL(req.url);
  * Process offline operations
  */
 export const POST = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const operation = await req.json();
+    const operation = await req.json();
     const parsed = syncPostSchema.safeParse(operation);
     if (!parsed.success) {
       return NextResponse.json(
@@ -104,25 +141,24 @@ const operation = await req.json();
       );
     }
     const { id, type, data, createdAt } = parsed.data;
-    
-    // Process based on operation type
+
     let result;
-    
+
     switch (type) {
       case 'inventory_adjust':
-        result = await processInventoryAdjust(data);
+        result = await processInventoryAdjust(data, session.user.id);
         break;
       case 'inventory_transfer':
-        result = await processInventoryTransfer(data);
+        result = await processInventoryTransfer(data, session.user.id);
         break;
       case 'inventory_count':
-        result = await processInventoryCount(data);
+        result = await processInventoryCount(data, session.user.id);
         break;
       case 'po_receive':
-        result = await processPOReceive(data);
+        result = await processPOReceive(data, session.user.id);
         break;
       case 'so_pick':
-        result = await processSOPick(data);
+        result = await processSOPick(data, session.user.id);
         break;
       case 'wo_start':
         result = await processWOStart(data);
@@ -139,7 +175,7 @@ const operation = await req.json();
           { status: 400 }
         );
     }
-    
+
     return NextResponse.json({
       success: true,
       operationId: id,
@@ -147,7 +183,7 @@ const operation = await req.json();
       result,
       processedAt: new Date().toISOString(),
     });
-    
+
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(
@@ -157,37 +193,430 @@ const operation = await req.json();
   }
 });
 
-// Operation processors
-async function processInventoryAdjust(data: Record<string, unknown>) {
-  // In production: Create inventory transaction
-  return { transactionId: `ADJ-${Date.now()}`, status: 'completed' };
+// ═══════════════════════════════════════════════════════════════════
+//                    OPERATION PROCESSORS
+// ═══════════════════════════════════════════════════════════════════
+
+async function processInventoryAdjust(data: Record<string, unknown>, userId: string) {
+  const partId = data.partId as string;
+  const warehouseId = data.warehouseId as string;
+  const quantity = data.quantity as number;
+  const lotNumber = (data.lotNumber as string) ?? null;
+  const notes = (data.notes as string) ?? null;
+
+  if (!partId || !warehouseId || quantity == null) {
+    throw new Error('Missing required fields: partId, warehouseId, quantity');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.inventory.findFirst({
+      where: { partId, warehouseId, lotNumber },
+    });
+
+    const previousQty = existing?.quantity ?? 0;
+    const newQty = previousQty + quantity;
+
+    const inventory = await tx.inventory.upsert({
+      where: {
+        partId_warehouseId_lotNumber: {
+          partId,
+          warehouseId,
+          lotNumber: lotNumber ?? '',
+        },
+      },
+      create: {
+        partId,
+        warehouseId,
+        quantity: Math.max(newQty, 0),
+        lotNumber,
+      },
+      update: {
+        quantity: Math.max(newQty, 0),
+      },
+    });
+
+    const lotTx = await tx.lotTransaction.create({
+      data: {
+        lotNumber: lotNumber ?? `ADJ-${Date.now()}`,
+        transactionType: 'ADJUSTED',
+        partId,
+        quantity,
+        previousQty,
+        newQty: inventory.quantity,
+        toWarehouseId: warehouseId,
+        notes,
+        userId,
+      },
+    });
+
+    return {
+      transactionId: lotTx.id,
+      inventoryId: inventory.id,
+      previousQty,
+      newQty: inventory.quantity,
+      status: 'completed',
+    };
+  });
 }
 
-async function processInventoryTransfer(data: Record<string, unknown>) {
-  return { transferId: `TRF-${Date.now()}`, status: 'completed' };
+async function processInventoryTransfer(data: Record<string, unknown>, userId: string) {
+  const partId = data.partId as string;
+  const fromWarehouseId = data.fromWarehouseId as string;
+  const toWarehouseId = data.toWarehouseId as string;
+  const quantity = data.quantity as number;
+  const lotNumber = (data.lotNumber as string) ?? null;
+
+  if (!partId || !fromWarehouseId || !toWarehouseId || quantity == null || quantity <= 0) {
+    throw new Error('Missing required fields: partId, fromWarehouseId, toWarehouseId, quantity');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const sourceInv = await tx.inventory.findFirst({
+      where: { partId, warehouseId: fromWarehouseId, lotNumber },
+    });
+
+    if (!sourceInv || sourceInv.quantity < quantity) {
+      throw new Error('Insufficient inventory at source warehouse');
+    }
+
+    await tx.inventory.update({
+      where: { id: sourceInv.id },
+      data: { quantity: { decrement: quantity } },
+    });
+
+    await tx.inventory.upsert({
+      where: {
+        partId_warehouseId_lotNumber: {
+          partId,
+          warehouseId: toWarehouseId,
+          lotNumber: lotNumber ?? '',
+        },
+      },
+      create: {
+        partId,
+        warehouseId: toWarehouseId,
+        quantity,
+        lotNumber,
+      },
+      update: {
+        quantity: { increment: quantity },
+      },
+    });
+
+    const lotTx = await tx.lotTransaction.create({
+      data: {
+        lotNumber: lotNumber ?? `TRF-${Date.now()}`,
+        transactionType: 'ISSUED',
+        partId,
+        quantity,
+        fromWarehouseId,
+        toWarehouseId,
+        userId,
+      },
+    });
+
+    return { transferId: lotTx.id, status: 'completed' };
+  });
 }
 
-async function processInventoryCount(data: Record<string, unknown>) {
-  return { countId: `CNT-${Date.now()}`, status: 'completed' };
+async function processInventoryCount(data: Record<string, unknown>, userId: string) {
+  const partId = data.partId as string;
+  const warehouseId = data.warehouseId as string;
+  const countedQty = data.countedQty as number;
+  const lotNumber = (data.lotNumber as string) ?? null;
+  const notes = (data.notes as string) ?? null;
+
+  if (!partId || !warehouseId || countedQty == null) {
+    throw new Error('Missing required fields: partId, warehouseId, countedQty');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.inventory.findFirst({
+      where: { partId, warehouseId, lotNumber },
+    });
+
+    const previousQty = existing?.quantity ?? 0;
+    const variance = countedQty - previousQty;
+
+    const inventory = await tx.inventory.upsert({
+      where: {
+        partId_warehouseId_lotNumber: {
+          partId,
+          warehouseId,
+          lotNumber: lotNumber ?? '',
+        },
+      },
+      create: {
+        partId,
+        warehouseId,
+        quantity: Math.max(countedQty, 0),
+        lotNumber,
+        lastCountDate: new Date(),
+      },
+      update: {
+        quantity: Math.max(countedQty, 0),
+        lastCountDate: new Date(),
+      },
+    });
+
+    const lotTx = await tx.lotTransaction.create({
+      data: {
+        lotNumber: lotNumber ?? `CNT-${Date.now()}`,
+        transactionType: 'ADJUSTED',
+        partId,
+        quantity: variance,
+        previousQty,
+        newQty: inventory.quantity,
+        toWarehouseId: warehouseId,
+        notes: notes ?? `Cycle count adjustment. Variance: ${variance}`,
+        userId,
+      },
+    });
+
+    return {
+      countId: lotTx.id,
+      previousQty,
+      countedQty: inventory.quantity,
+      variance,
+      status: 'completed',
+    };
+  });
 }
 
-async function processPOReceive(data: Record<string, unknown>) {
-  return { receiptId: `RCV-${Date.now()}`, status: 'completed' };
+async function processPOReceive(data: Record<string, unknown>, userId: string) {
+  const poId = data.poId as string;
+  const lineId = data.lineId as string;
+  const receivedQty = data.receivedQty as number;
+  const warehouseId = data.warehouseId as string;
+  const lotNumber = (data.lotNumber as string) ?? null;
+  const notes = (data.notes as string) ?? null;
+
+  if (!poId || !lineId || receivedQty == null || receivedQty <= 0 || !warehouseId) {
+    throw new Error('Missing required fields: poId, lineId, receivedQty, warehouseId');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Find the PO line and validate
+    const poLine = await tx.purchaseOrderLine.findUnique({
+      where: { id: lineId },
+      include: { po: true },
+    });
+
+    if (!poLine) {
+      throw new Error(`PO line not found: ${lineId}`);
+    }
+
+    if (poLine.poId !== poId) {
+      throw new Error('PO line does not belong to the specified PO');
+    }
+
+    const remainingQty = poLine.quantity - poLine.receivedQty;
+    if (receivedQty > remainingQty) {
+      throw new Error(`Received qty (${receivedQty}) exceeds remaining qty (${remainingQty})`);
+    }
+
+    // Increment receivedQty on the PO line
+    const updatedLine = await tx.purchaseOrderLine.update({
+      where: { id: lineId },
+      data: {
+        receivedQty: { increment: receivedQty },
+        status: poLine.receivedQty + receivedQty >= poLine.quantity ? 'received' : 'partial',
+      },
+    });
+
+    // Upsert inventory
+    const existingInv = await tx.inventory.findFirst({
+      where: { partId: poLine.partId, warehouseId, lotNumber },
+    });
+
+    const previousQty = existingInv?.quantity ?? 0;
+
+    await tx.inventory.upsert({
+      where: {
+        partId_warehouseId_lotNumber: {
+          partId: poLine.partId,
+          warehouseId,
+          lotNumber: lotNumber ?? '',
+        },
+      },
+      create: {
+        partId: poLine.partId,
+        warehouseId,
+        quantity: receivedQty,
+        lotNumber,
+      },
+      update: {
+        quantity: { increment: receivedQty },
+      },
+    });
+
+    // Create lot transaction
+    const lotTx = await tx.lotTransaction.create({
+      data: {
+        lotNumber: lotNumber ?? `RCV-${Date.now()}`,
+        transactionType: 'RECEIVED',
+        partId: poLine.partId,
+        quantity: receivedQty,
+        previousQty,
+        newQty: previousQty + receivedQty,
+        poId,
+        poLineNumber: poLine.lineNumber,
+        toWarehouseId: warehouseId,
+        notes,
+        userId,
+      },
+    });
+
+    // Check if all lines are fully received and update PO status
+    const allLines = await tx.purchaseOrderLine.findMany({
+      where: { poId },
+    });
+
+    const allFullyReceived = allLines.every(
+      (line) => (line.id === lineId ? updatedLine.receivedQty : line.receivedQty) >= line.quantity
+    );
+    const anyReceived = allLines.some(
+      (line) => (line.id === lineId ? updatedLine.receivedQty : line.receivedQty) > 0
+    );
+
+    const newPoStatus = allFullyReceived ? 'received' : anyReceived ? 'partial' : poLine.po.status;
+
+    if (newPoStatus !== poLine.po.status) {
+      await tx.purchaseOrder.update({
+        where: { id: poId },
+        data: { status: newPoStatus },
+      });
+    }
+
+    return {
+      receiptId: lotTx.id,
+      lineId: poLine.id,
+      lineReceivedQty: updatedLine.receivedQty,
+      poStatus: newPoStatus,
+      status: 'completed',
+    };
+  });
 }
 
-async function processSOPick(data: Record<string, unknown>) {
-  return { pickId: `PICK-${Date.now()}`, status: 'completed' };
+async function processSOPick(data: Record<string, unknown>, userId: string) {
+  const partId = data.partId as string;
+  const warehouseId = data.warehouseId as string;
+  const quantity = data.quantity as number;
+  const lotNumber = (data.lotNumber as string) ?? null;
+
+  if (!partId || !warehouseId || quantity == null || quantity <= 0) {
+    throw new Error('Missing required fields: partId, warehouseId, quantity');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const inv = await tx.inventory.findFirst({
+      where: { partId, warehouseId, lotNumber },
+    });
+
+    if (!inv || inv.quantity < quantity) {
+      throw new Error('Insufficient inventory for pick');
+    }
+
+    await tx.inventory.update({
+      where: { id: inv.id },
+      data: { quantity: { decrement: quantity } },
+    });
+
+    const lotTx = await tx.lotTransaction.create({
+      data: {
+        lotNumber: lotNumber ?? `PICK-${Date.now()}`,
+        transactionType: 'ISSUED',
+        partId,
+        quantity: -quantity,
+        previousQty: inv.quantity,
+        newQty: inv.quantity - quantity,
+        fromWarehouseId: warehouseId,
+        notes: (data.notes as string) ?? null,
+        userId,
+      },
+    });
+
+    return { pickId: lotTx.id, status: 'completed' };
+  });
 }
 
 async function processWOStart(data: Record<string, unknown>) {
-  return { woId: data.woId, status: 'started' };
+  const woId = data.woId as string;
+
+  if (!woId) {
+    throw new Error('Missing required field: woId');
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: woId },
+  });
+
+  if (!workOrder) {
+    throw new Error(`Work order not found: ${woId}`);
+  }
+
+  if (workOrder.status !== 'draft' && workOrder.status !== 'planned' && workOrder.status !== 'released') {
+    throw new Error(`Cannot start work order in status: ${workOrder.status}`);
+  }
+
+  const updated = await prisma.workOrder.update({
+    where: { id: woId },
+    data: {
+      status: 'in_progress',
+      actualStart: new Date(),
+    },
+  });
+
+  return {
+    woId: updated.id,
+    woNumber: updated.woNumber,
+    status: updated.status,
+    actualStart: updated.actualStart?.toISOString(),
+  };
 }
 
 async function processWOComplete(data: Record<string, unknown>) {
-  return { woId: data.woId, status: 'completed' };
+  const woId = data.woId as string;
+  const completedQty = data.completedQty as number | undefined;
+
+  if (!woId) {
+    throw new Error('Missing required field: woId');
+  }
+
+  const workOrder = await prisma.workOrder.findUnique({
+    where: { id: woId },
+  });
+
+  if (!workOrder) {
+    throw new Error(`Work order not found: ${woId}`);
+  }
+
+  if (workOrder.status !== 'in_progress') {
+    throw new Error(`Cannot complete work order in status: ${workOrder.status}`);
+  }
+
+  const finalCompletedQty = completedQty ?? workOrder.quantity;
+
+  const updated = await prisma.workOrder.update({
+    where: { id: woId },
+    data: {
+      status: 'completed',
+      actualEnd: new Date(),
+      completedQty: finalCompletedQty,
+    },
+  });
+
+  return {
+    woId: updated.id,
+    woNumber: updated.woNumber,
+    status: updated.status,
+    completedQty: updated.completedQty,
+    actualEnd: updated.actualEnd?.toISOString(),
+  };
 }
 
 async function processQualityInspect(data: Record<string, unknown>) {
+  // Quality inspection remains a stub until the Inspection model processor is required
   return { inspectionId: `QI-${Date.now()}`, status: 'completed' };
 }
 
@@ -196,47 +625,79 @@ async function processQualityInspect(data: Record<string, unknown>) {
  * Bulk sync operations
  */
 export const PUT = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const { operations } = await req.json();
-    
+    const { operations } = await req.json();
+
     if (!Array.isArray(operations)) {
       return NextResponse.json(
         { success: false, error: 'Operations must be an array' },
         { status: 400 }
       );
     }
-    
+
     const results = [];
     let successCount = 0;
     let failedCount = 0;
-    
+
     for (const op of operations) {
       try {
-        // Process each operation
-        const response = await fetch(new URL('/api/mobile/sync', req.url), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(op),
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          results.push({ id: op.id, success: true, result });
-          successCount++;
-        } else {
-          results.push({ id: op.id, success: false, error: 'Processing failed' });
+        const parsed = syncPostSchema.safeParse(op);
+        if (!parsed.success) {
+          results.push({ id: op.id, success: false, error: 'Invalid operation data' });
           failedCount++;
+          continue;
         }
+
+        const { id, type, data } = parsed.data;
+        let result;
+
+        switch (type) {
+          case 'inventory_adjust':
+            result = await processInventoryAdjust(data, session.user.id);
+            break;
+          case 'inventory_transfer':
+            result = await processInventoryTransfer(data, session.user.id);
+            break;
+          case 'inventory_count':
+            result = await processInventoryCount(data, session.user.id);
+            break;
+          case 'po_receive':
+            result = await processPOReceive(data, session.user.id);
+            break;
+          case 'so_pick':
+            result = await processSOPick(data, session.user.id);
+            break;
+          case 'wo_start':
+            result = await processWOStart(data);
+            break;
+          case 'wo_complete':
+            result = await processWOComplete(data);
+            break;
+          case 'quality_inspect':
+            result = await processQualityInspect(data);
+            break;
+          default:
+            results.push({ id, success: false, error: `Unknown operation type: ${type}` });
+            failedCount++;
+            continue;
+        }
+
+        results.push({ id, success: true, result });
+        successCount++;
       } catch (error) {
-        results.push({ id: op.id, success: false, error: 'Processing error' });
+        results.push({
+          id: op.id,
+          success: false,
+          error: error instanceof Error ? error.message : 'Processing error',
+        });
         failedCount++;
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -247,7 +708,7 @@ const { operations } = await req.json();
       results,
       syncedAt: new Date().toISOString(),
     });
-    
+
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/sync' });
     return NextResponse.json(

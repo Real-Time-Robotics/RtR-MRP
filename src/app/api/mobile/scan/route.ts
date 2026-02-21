@@ -3,49 +3,240 @@
 //              Process barcode scans and resolve to entities
 // ═══════════════════════════════════════════════════════════════════
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseScanBarcode as parseBarcode, getAvailableActions, ScannerEntityType as EntityType } from '@/lib/mobile';
 import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
-
+import { prisma } from '@/lib/prisma';
 import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limit';
-// Mock data for demonstration - replace with Prisma queries in production
-const MOCK_PARTS: Record<string, { id: string; partNumber: string; description: string; category: string; onHand: number; reserved: number; reorderPoint: number; uom: string; unitCost: number }> = {
-  'RTR-MOTOR-001': { id: '1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor 2205', category: 'Motors', onHand: 150, reserved: 20, reorderPoint: 50, uom: 'EA', unitCost: 45.00 },
-  'RTR-ESC-002': { id: '2', partNumber: 'RTR-ESC-002', description: 'Electronic Speed Controller 30A', category: 'Electronics', onHand: 80, reserved: 15, reorderPoint: 30, uom: 'EA', unitCost: 25.00 },
-  'RTR-FRAME-003': { id: '3', partNumber: 'RTR-FRAME-003', description: 'Carbon Fiber Frame 250mm', category: 'Frames', onHand: 45, reserved: 5, reorderPoint: 20, uom: 'EA', unitCost: 120.00 },
-  'RTR-PROP-004': { id: '4', partNumber: 'RTR-PROP-004', description: 'Propeller 5x4.5 (Set of 4)', category: 'Propellers', onHand: 500, reserved: 100, reorderPoint: 200, uom: 'SET', unitCost: 8.00 },
-  'RTR-BATT-005': { id: '5', partNumber: 'RTR-BATT-005', description: 'LiPo Battery 4S 1500mAh', category: 'Batteries', onHand: 60, reserved: 10, reorderPoint: 25, uom: 'EA', unitCost: 35.00 },
-};
 
-const MOCK_LOCATIONS: Record<string, { id: string; code: string; name: string; warehouse: string; contents: { partId: string; qty: number }[] }> = {
-  'WH-01-R01-C01-S01': { id: 'loc1', code: 'WH-01-R01-C01-S01', name: 'Main Warehouse - Rack 1', warehouse: 'Main Warehouse', contents: [{ partId: '1', qty: 50 }, { partId: '2', qty: 30 }] },
-  'WH-01-R01-C02-S01': { id: 'loc2', code: 'WH-01-R01-C02-S01', name: 'Main Warehouse - Rack 2', warehouse: 'Main Warehouse', contents: [{ partId: '3', qty: 20 }] },
-  'WH-02-R01-C01-S01': { id: 'loc3', code: 'WH-02-R01-C01-S01', name: 'Secondary Warehouse', warehouse: 'Secondary Warehouse', contents: [{ partId: '4', qty: 200 }] },
-};
+// ────────────────────────────────────────────────────────────
+// Lookup helpers
+// ────────────────────────────────────────────────────────────
 
-const MOCK_WORK_ORDERS: Record<string, { id: string; woNumber: string; partNumber: string; description: string; qty: number; status: string; startDate: string; dueDate: string }> = {
-  'WO-2024-00001': { id: 'wo1', woNumber: 'WO-2024-00001', partNumber: 'RTR-DRONE-HERA', description: 'HERA X4 Pro Assembly', qty: 50, status: 'In Progress', startDate: '2024-01-15', dueDate: '2024-01-20' },
-  'WO-2024-00002': { id: 'wo2', woNumber: 'WO-2024-00002', partNumber: 'RTR-DRONE-ZEUS', description: 'ZEUS H6 Heavy Assembly', qty: 25, status: 'Pending', startDate: '2024-01-18', dueDate: '2024-01-25' },
-};
+async function lookupPart(partNumber: string): Promise<Record<string, unknown> | null> {
+  const part = await prisma.part.findFirst({
+    where: { partNumber },
+    select: {
+      id: true,
+      partNumber: true,
+      name: true,
+      category: true,
+      unit: true,
+      unitCost: true,
+      reorderPoint: true,
+      status: true,
+      inventory: {
+        select: {
+          quantity: true,
+          reservedQty: true,
+        },
+      },
+    },
+  });
 
-const MOCK_PURCHASE_ORDERS: Record<string, { id: string; poNumber: string; supplier: string; status: string; lines: { partNumber: string; qtyOrdered: number; qtyReceived: number }[] }> = {
-  'PO-2024-00001': { id: 'po1', poNumber: 'PO-2024-00001', supplier: 'MotorTech Inc.', status: 'Partial', lines: [{ partNumber: 'RTR-MOTOR-001', qtyOrdered: 100, qtyReceived: 50 }] },
-  'PO-2024-00002': { id: 'po2', poNumber: 'PO-2024-00002', supplier: 'BatteryWorld', status: 'Open', lines: [{ partNumber: 'RTR-BATT-005', qtyOrdered: 50, qtyReceived: 0 }] },
-};
+  if (!part) return null;
+
+  const onHand = part.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+  const reserved = part.inventory.reduce((sum, inv) => sum + inv.reservedQty, 0);
+
+  return {
+    id: part.id,
+    partNumber: part.partNumber,
+    description: part.name,
+    category: part.category,
+    onHand,
+    reserved,
+    available: onHand - reserved,
+    reorderPoint: part.reorderPoint,
+    uom: part.unit,
+    unitCost: part.unitCost,
+  };
+}
+
+async function lookupLocation(code: string): Promise<Record<string, unknown> | null> {
+  const warehouse = await prisma.warehouse.findFirst({
+    where: { code },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      type: true,
+      status: true,
+      inventory: {
+        select: {
+          partId: true,
+          quantity: true,
+          part: {
+            select: {
+              partNumber: true,
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!warehouse) return null;
+
+  return {
+    id: warehouse.id,
+    code: warehouse.code,
+    name: warehouse.name,
+    warehouse: warehouse.name,
+    contents: warehouse.inventory.map((inv) => ({
+      partId: inv.partId,
+      partNumber: inv.part.partNumber,
+      partName: inv.part.name,
+      qty: inv.quantity,
+    })),
+  };
+}
+
+async function lookupWorkOrder(woNumber: string): Promise<Record<string, unknown> | null> {
+  const wo = await prisma.workOrder.findFirst({
+    where: { woNumber },
+    select: {
+      id: true,
+      woNumber: true,
+      quantity: true,
+      completedQty: true,
+      status: true,
+      plannedStart: true,
+      dueDate: true,
+      product: {
+        select: {
+          sku: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  if (!wo) return null;
+
+  return {
+    id: wo.id,
+    woNumber: wo.woNumber,
+    partNumber: wo.product.sku,
+    description: wo.product.name,
+    qty: wo.quantity,
+    completedQty: wo.completedQty,
+    status: wo.status,
+    startDate: wo.plannedStart?.toISOString() ?? null,
+    dueDate: wo.dueDate?.toISOString() ?? null,
+  };
+}
+
+async function lookupPurchaseOrder(poNumber: string): Promise<Record<string, unknown> | null> {
+  const po = await prisma.purchaseOrder.findFirst({
+    where: { poNumber },
+    select: {
+      id: true,
+      poNumber: true,
+      status: true,
+      supplier: {
+        select: {
+          name: true,
+        },
+      },
+      lines: {
+        select: {
+          partId: true,
+          quantity: true,
+          receivedQty: true,
+          unitPrice: true,
+          part: {
+            select: {
+              partNumber: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!po) return null;
+
+  return {
+    id: po.id,
+    poNumber: po.poNumber,
+    supplier: po.supplier.name,
+    status: po.status,
+    lines: po.lines.map((line) => ({
+      partNumber: line.part.partNumber,
+      qtyOrdered: line.quantity,
+      qtyReceived: line.receivedQty,
+      unitPrice: line.unitPrice,
+    })),
+  };
+}
 
 /**
- * POST /api/mobile/scan
- * Process a barcode scan and resolve to entity
+ * Fuzzy search across parts when barcode type is UNKNOWN.
+ * Returns the first matching part (by partNumber or name substring).
  */
-export const POST = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
+async function fuzzyLookupPart(value: string): Promise<{ entity: Record<string, unknown>; type: EntityType } | null> {
+  const part = await prisma.part.findFirst({
+    where: {
+      OR: [
+        { partNumber: { contains: value, mode: 'insensitive' } },
+        { name: { contains: value, mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      id: true,
+      partNumber: true,
+      name: true,
+      category: true,
+      unit: true,
+      unitCost: true,
+      reorderPoint: true,
+      inventory: {
+        select: {
+          quantity: true,
+          reservedQty: true,
+        },
+      },
+    },
+  });
+
+  if (!part) return null;
+
+  const onHand = part.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+  const reserved = part.inventory.reduce((sum, inv) => sum + inv.reservedQty, 0);
+
+  return {
+    type: 'PART',
+    entity: {
+      id: part.id,
+      partNumber: part.partNumber,
+      description: part.name,
+      category: part.category,
+      onHand,
+      reserved,
+      available: onHand - reserved,
+      reorderPoint: part.reorderPoint,
+      uom: part.unit,
+      unitCost: part.unitCost,
+    },
+  };
+}
+
+// ────────────────────────────────────────────────────────────
+// POST /api/mobile/scan
+// Process a barcode scan and resolve to entity
+// ────────────────────────────────────────────────────────────
+
+export const POST = withAuth(async (req, _context, _session) => {
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const bodySchema = z.object({
+    const bodySchema = z.object({
       barcode: z.string(),
       context: z.string().default('general'),
     });
@@ -60,76 +251,60 @@ const bodySchema = z.object({
     }
     const body = parseResult.data;
     const { barcode, context } = body;
-    
+
     if (!barcode) {
       return NextResponse.json(
         { success: false, error: 'Barcode is required' },
         { status: 400 }
       );
     }
-    
+
     // Parse the barcode
     const scanResult = parseBarcode(barcode);
-    
-    // Try to resolve the entity
+
+    // Try to resolve the entity from the database
     let entity: Record<string, unknown> | null = null;
     let resolved = false;
-    
+
     switch (scanResult.type) {
       case 'PART': {
-        const part = MOCK_PARTS[scanResult.value];
-        if (part) {
-          entity = {
-            ...part,
-            available: part.onHand - part.reserved,
-          };
-          resolved = true;
-        }
+        entity = await lookupPart(scanResult.value);
+        resolved = entity !== null;
         break;
       }
-      
+
       case 'LOCATION': {
-        const location = MOCK_LOCATIONS[scanResult.value];
-        if (location) {
-          entity = location;
-          resolved = true;
-        }
+        entity = await lookupLocation(scanResult.value);
+        resolved = entity !== null;
         break;
       }
-      
+
       case 'WORK_ORDER': {
-        const wo = MOCK_WORK_ORDERS[scanResult.value];
-        if (wo) {
-          entity = wo;
-          resolved = true;
-        }
+        entity = await lookupWorkOrder(scanResult.value);
+        resolved = entity !== null;
         break;
       }
-      
+
       case 'PURCHASE_ORDER': {
-        const po = MOCK_PURCHASE_ORDERS[scanResult.value];
-        if (po) {
-          entity = po;
-          resolved = true;
-        }
+        entity = await lookupPurchaseOrder(scanResult.value);
+        resolved = entity !== null;
         break;
       }
-      
-      default:
-        // Try to find by searching all entities
-        for (const [key, part] of Object.entries(MOCK_PARTS)) {
-          if (key.includes(scanResult.value) || part.description.toUpperCase().includes(scanResult.value)) {
-            entity = { ...part, available: part.onHand - part.reserved };
-            scanResult.type = 'PART';
-            resolved = true;
-            break;
-          }
+
+      default: {
+        // Try fuzzy search across parts when type is unknown
+        const fuzzyResult = await fuzzyLookupPart(scanResult.value);
+        if (fuzzyResult) {
+          entity = fuzzyResult.entity;
+          scanResult.type = fuzzyResult.type;
+          resolved = true;
         }
+      }
     }
-    
+
     // Get available actions
     const actions = getAvailableActions(scanResult.type as EntityType, context);
-    
+
     return NextResponse.json({
       success: true,
       scan: {
@@ -144,7 +319,6 @@ const bodySchema = z.object({
       actions,
       timestamp: new Date().toISOString(),
     });
-    
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/scan' });
     return NextResponse.json(
@@ -154,19 +328,28 @@ const bodySchema = z.object({
   }
 });
 
-/**
- * GET /api/mobile/scan/history
- * Get recent scan history
- */
-export const GET = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkReadEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
-const { searchParams } = new URL(req.url);
+// ────────────────────────────────────────────────────────────
+// GET /api/mobile/scan
+// Get recent scan history
+// ────────────────────────────────────────────────────────────
+
+export const GET = withAuth(async (req, _context, _session) => {
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
+
+  const { searchParams } = new URL(req.url);
   const limit = parseInt(searchParams.get('limit') || '20');
-  
-  // In production, fetch from database
-  // For now, return empty array (history is stored client-side in IndexedDB)
+
+  // TODO: ScanLog table does not exist yet in the schema.
+  // Once a ScanLog model is added, replace the empty array below with:
+  //   const history = await prisma.scanLog.findMany({
+  //     where: { userId: session.user.id },
+  //     orderBy: { createdAt: 'desc' },
+  //     take: limit,
+  //   });
+  // For now, scan history is stored client-side in IndexedDB.
+
   return NextResponse.json({
     success: true,
     history: [],

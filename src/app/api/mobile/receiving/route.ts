@@ -1,85 +1,63 @@
-// ═══════════════════════════════════════════════════════════════════
-//                    MOBILE RECEIVING API
-//              Purchase order receiving operations
-// ═══════════════════════════════════════════════════════════════════
-
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
-
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
-// Mock PO data
-const mockPurchaseOrders = [
-  {
-    id: 'po1',
-    poNumber: 'PO-2024-00001',
-    supplier: 'MotorTech Inc.',
-    status: 'Partial',
-    orderDate: '2024-01-10',
-    expectedDate: '2024-01-20',
-    lines: [
-      { id: 'pol1', partNumber: 'RTR-MOTOR-001', description: 'Brushless DC Motor 2205', qtyOrdered: 100, qtyReceived: 50, qtyRemaining: 50, unitCost: 45.00 },
-      { id: 'pol2', partNumber: 'RTR-ESC-002', description: 'Electronic Speed Controller 30A', qtyOrdered: 50, qtyReceived: 0, qtyRemaining: 50, unitCost: 25.00 },
-    ],
-  },
-  {
-    id: 'po2',
-    poNumber: 'PO-2024-00002',
-    supplier: 'BatteryWorld',
-    status: 'Open',
-    orderDate: '2024-01-12',
-    expectedDate: '2024-01-22',
-    lines: [
-      { id: 'pol3', partNumber: 'RTR-BATT-005', description: 'LiPo Battery 4S 1500mAh', qtyOrdered: 50, qtyReceived: 0, qtyRemaining: 50, unitCost: 35.00 },
-    ],
-  },
-  {
-    id: 'po3',
-    poNumber: 'PO-2024-00003',
-    supplier: 'CarbonFrames Ltd.',
-    status: 'Open',
-    orderDate: '2024-01-14',
-    expectedDate: '2024-01-24',
-    lines: [
-      { id: 'pol4', partNumber: 'RTR-FRAME-003', description: 'Carbon Fiber Frame 250mm', qtyOrdered: 30, qtyReceived: 0, qtyRemaining: 30, unitCost: 120.00 },
-      { id: 'pol5', partNumber: 'RTR-PROP-004', description: 'Propeller 5x4.5 (Set of 4)', qtyOrdered: 200, qtyReceived: 0, qtyRemaining: 200, unitCost: 8.00 },
-    ],
-  },
-];
 
-/**
- * GET /api/mobile/receiving
- * Get open POs for receiving
- */
 export const GET = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkReadEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
-const { searchParams } = new URL(req.url);
+  const rateLimitResult = await checkReadEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
+
+  const { searchParams } = new URL(req.url);
   const poId = searchParams.get('poId');
   const status = searchParams.get('status') || 'Open,Partial';
-  
-  let results = mockPurchaseOrders;
-  
-  // Filter by PO ID
-  if (poId) {
-    results = results.filter(po => po.id === poId);
-  }
-  
-  // Filter by status
   const statusList = status.split(',');
-  results = results.filter(po => statusList.includes(po.status));
-  
-  // Calculate summary stats
+
+  const purchaseOrders = await prisma.purchaseOrder.findMany({
+    where: {
+      ...(poId ? { id: poId } : {}),
+      status: { in: statusList },
+    },
+    include: {
+      supplier: true,
+      lines: {
+        include: {
+          part: true,
+        },
+      },
+    },
+    orderBy: { expectedDate: 'asc' },
+  });
+
+  const results = purchaseOrders.map((po) => ({
+    id: po.id,
+    poNumber: po.poNumber,
+    supplier: po.supplier.name,
+    status: po.status,
+    orderDate: po.orderDate.toISOString().split('T')[0],
+    expectedDate: po.expectedDate.toISOString().split('T')[0],
+    lines: po.lines.map((line) => ({
+      id: line.id,
+      partNumber: line.part.partNumber,
+      description: line.part.name,
+      qtyOrdered: line.quantity,
+      qtyReceived: line.receivedQty,
+      qtyRemaining: line.quantity - line.receivedQty,
+      unitCost: line.unitPrice,
+    })),
+  }));
+
   const summary = {
     totalPOs: results.length,
     totalLines: results.reduce((sum, po) => sum + po.lines.length, 0),
-    totalQtyRemaining: results.reduce((sum, po) => 
-      sum + po.lines.reduce((lineSum, line) => lineSum + line.qtyRemaining, 0), 0
+    totalQtyRemaining: results.reduce(
+      (sum, po) =>
+        sum + po.lines.reduce((lineSum, line) => lineSum + line.qtyRemaining, 0),
+      0
     ),
   };
-  
+
   return NextResponse.json({
     success: true,
     data: results,
@@ -87,17 +65,12 @@ const { searchParams } = new URL(req.url);
   });
 });
 
-/**
- * POST /api/mobile/receiving
- * Process PO receipt
- */
 export const POST = withAuth(async (req, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(req);
-    if (rateLimitResult) return rateLimitResult;
+  const rateLimitResult = await checkWriteEndpointLimit(req);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const bodySchema = z.object({
+    const bodySchema = z.object({
       poId: z.string(),
       lineId: z.string(),
       qtyReceived: z.number(),
@@ -116,67 +89,154 @@ const bodySchema = z.object({
       );
     }
     const body = parseResult.data;
-    const { poId, lineId, qtyReceived, locationId, lotNumber, notes, userId } = body;
-    
-    // Validate required fields
+    const { poId, lineId, qtyReceived, locationId, lotNumber, notes } = body;
+    const userId = body.userId ?? session.user.id;
+
     if (!poId || !lineId || qtyReceived === undefined || !locationId) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields: poId, lineId, qtyReceived, locationId' },
         { status: 400 }
       );
     }
-    
+
     if (qtyReceived <= 0) {
       return NextResponse.json(
         { success: false, error: 'Quantity must be positive' },
         { status: 400 }
       );
     }
-    
-    // Find the PO and line (mock)
-    const po = mockPurchaseOrders.find(p => p.id === poId);
+
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id: poId },
+      include: {
+        lines: {
+          include: { part: true },
+        },
+      },
+    });
+
     if (!po) {
       return NextResponse.json(
         { success: false, error: 'Purchase order not found' },
         { status: 404 }
       );
     }
-    
-    const line = po.lines.find(l => l.id === lineId);
+
+    const line = po.lines.find((l) => l.id === lineId);
     if (!line) {
       return NextResponse.json(
         { success: false, error: 'PO line not found' },
         { status: 404 }
       );
     }
-    
-    // Check if qty exceeds remaining
-    if (qtyReceived > line.qtyRemaining) {
+
+    const qtyRemaining = line.quantity - line.receivedQty;
+    if (qtyReceived > qtyRemaining) {
       return NextResponse.json(
-        { success: false, error: `Quantity exceeds remaining (${line.qtyRemaining})` },
+        { success: false, error: `Quantity exceeds remaining (${qtyRemaining})` },
         { status: 400 }
       );
     }
-    
-    // In production: Create receipt transaction, update inventory
-    const receiptId = `RCV-${Date.now()}`;
-    
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedLine = await tx.purchaseOrderLine.update({
+        where: { id: lineId },
+        data: {
+          receivedQty: { increment: qtyReceived },
+          status: line.receivedQty + qtyReceived >= line.quantity ? 'received' : 'partial',
+        },
+      });
+
+      await tx.inventory.upsert({
+        where: {
+          partId_warehouseId_lotNumber: {
+            partId: line.partId,
+            warehouseId: locationId,
+            lotNumber: lotNumber ?? '',
+          },
+        },
+        create: {
+          partId: line.partId,
+          warehouseId: locationId,
+          quantity: qtyReceived,
+          lotNumber: lotNumber ?? '',
+          locationCode: null,
+        },
+        update: {
+          quantity: { increment: qtyReceived },
+        },
+      });
+
+      const existingInventory = await tx.inventory.findUnique({
+        where: {
+          partId_warehouseId_lotNumber: {
+            partId: line.partId,
+            warehouseId: locationId,
+            lotNumber: lotNumber ?? '',
+          },
+        },
+      });
+
+      await tx.lotTransaction.create({
+        data: {
+          lotNumber: lotNumber ?? `RCV-${Date.now()}`,
+          transactionType: 'RECEIVED',
+          partId: line.partId,
+          quantity: qtyReceived,
+          previousQty: (existingInventory?.quantity ?? qtyReceived) - qtyReceived,
+          newQty: existingInventory?.quantity ?? qtyReceived,
+          poId: poId,
+          poLineNumber: line.lineNumber,
+          toWarehouseId: locationId,
+          notes: notes ?? null,
+          userId,
+        },
+      });
+
+      const allLines = await tx.purchaseOrderLine.findMany({
+        where: { poId },
+      });
+
+      const allReceived = allLines.every((l) => l.receivedQty >= l.quantity);
+      const anyReceived = allLines.some((l) => l.receivedQty > 0);
+
+      let newPoStatus: string;
+      if (allReceived) {
+        newPoStatus = 'Received';
+      } else if (anyReceived) {
+        newPoStatus = 'Partial';
+      } else {
+        newPoStatus = po.status;
+      }
+
+      if (newPoStatus !== po.status) {
+        await tx.purchaseOrder.update({
+          where: { id: poId },
+          data: { status: newPoStatus },
+        });
+      }
+
+      return { updatedLine, newPoStatus };
+    });
+
+    const newQtyReceived = result.updatedLine.receivedQty;
+    const newQtyRemaining = line.quantity - newQtyReceived;
+
     return NextResponse.json({
       success: true,
-      receiptId,
-      message: `Received ${qtyReceived} units of ${line.partNumber}`,
+      receiptId: `RCV-${Date.now()}`,
+      message: `Received ${qtyReceived} units of ${line.part.partNumber}`,
       data: {
         poNumber: po.poNumber,
-        partNumber: line.partNumber,
+        partNumber: line.part.partNumber,
         qtyReceived,
         location: locationId,
         lotNumber,
-        newQtyReceived: line.qtyReceived + qtyReceived,
-        newQtyRemaining: line.qtyRemaining - qtyReceived,
+        newQtyReceived,
+        newQtyRemaining,
         timestamp: new Date().toISOString(),
       },
     });
-    
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/mobile/receiving' });
     return NextResponse.json(

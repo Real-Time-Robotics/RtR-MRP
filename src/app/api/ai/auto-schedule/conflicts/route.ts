@@ -3,12 +3,12 @@
 // GET: Detect conflicts, POST: Resolve conflicts
 // =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
 import { ConflictSeverity, ConflictType } from '@/lib/ai/autonomous/conflict-detector';
-
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
 const resolveConflictsSchema = z.object({
@@ -17,11 +17,12 @@ const resolveConflictsSchema = z.object({
   autoResolve: z.boolean().optional(),
   applyResolutions: z.boolean().optional(),
 });
+
 // =============================================================================
-// MOCK DATA GENERATORS
+// CONFLICT TYPES
 // =============================================================================
 
-interface MockConflict {
+interface DetectedConflict {
   id: string;
   type: ConflictType;
   severity: ConflictSeverity;
@@ -41,76 +42,249 @@ interface MockConflict {
   createdAt: Date;
 }
 
-function generateMockConflicts(workCenterId?: string | null): MockConflict[] {
-  const conflicts: MockConflict[] = [
-    {
-      id: 'conflict-1',
-      type: 'overlap',
-      severity: 'critical',
-      description: 'WO-2026-0001 và WO-2026-0005 được lên lịch cùng thời điểm trên Dây chuyền 1',
-      affectedWorkOrders: [
-        { id: 'wo-1', workOrderNumber: 'WO-2026-0001', workCenterId: 'wc-1', workCenterName: 'Dây chuyền 1' },
-        { id: 'wo-5', workOrderNumber: 'WO-2026-0005', workCenterId: 'wc-1', workCenterName: 'Dây chuyền 1' },
-      ],
-      suggestedResolutions: [
-        { id: 'res-1', description: 'Di chuyển WO-2026-0005 sang Dây chuyền 2', impact: 'Không ảnh hưởng deadline', autoResolvable: true },
-        { id: 'res-2', description: 'Delay WO-2026-0005 thêm 2 ngày', impact: 'Trễ deadline 1 ngày', autoResolvable: true },
-      ],
-      createdAt: new Date(),
-    },
-    {
-      id: 'conflict-2',
-      type: 'overload',
-      severity: 'high',
-      description: 'Dây chuyền 2 vượt 15% công suất trong tuần 3-4 của tháng 1',
-      affectedWorkOrders: [
-        { id: 'wo-3', workOrderNumber: 'WO-2026-0003', workCenterId: 'wc-2', workCenterName: 'Dây chuyền 2' },
-        { id: 'wo-7', workOrderNumber: 'WO-2026-0007', workCenterId: 'wc-2', workCenterName: 'Dây chuyền 2' },
-        { id: 'wo-12', workOrderNumber: 'WO-2026-0012', workCenterId: 'wc-2', workCenterName: 'Dây chuyền 2' },
-      ],
-      suggestedResolutions: [
-        { id: 'res-3', description: 'Phân bổ WO-2026-0012 sang Dây chuyền 3', impact: 'Giảm tải 12%', autoResolvable: true },
-        { id: 'res-4', description: 'Thêm ca làm việc ngoài giờ', impact: 'Tăng chi phí 8%', autoResolvable: false },
-      ],
-      createdAt: new Date(),
-    },
-    {
-      id: 'conflict-3',
-      type: 'due_date_risk',
-      severity: 'medium',
-      description: 'WO-2026-0008 có nguy cơ trễ deadline do phụ thuộc nguyên vật liệu',
-      affectedWorkOrders: [
-        { id: 'wo-8', workOrderNumber: 'WO-2026-0008', workCenterId: 'wc-3', workCenterName: 'Dây chuyền 3' },
-      ],
-      suggestedResolutions: [
-        { id: 'res-5', description: 'Tăng độ ưu tiên lên khẩn cấp', impact: 'Có thể ảnh hưởng các WO khác', autoResolvable: true },
-        { id: 'res-6', description: 'Thương lượng gia hạn với khách hàng', impact: 'Cần phê duyệt', autoResolvable: false },
-      ],
-      createdAt: new Date(),
-    },
-    {
-      id: 'conflict-4',
-      type: 'material_shortage',
-      severity: 'low',
-      description: 'Nguyên liệu bột mì có thể thiếu hụt nhẹ vào cuối tháng',
-      affectedWorkOrders: [
-        { id: 'wo-15', workOrderNumber: 'WO-2026-0015', workCenterId: 'wc-1', workCenterName: 'Dây chuyền 1' },
-      ],
-      suggestedResolutions: [
-        { id: 'res-7', description: 'Đặt hàng bổ sung từ nhà cung cấp phụ', impact: 'Tăng chi phí 3%', autoResolvable: false },
-      ],
-      createdAt: new Date(),
-    },
-  ];
+// =============================================================================
+// CONFLICT DETECTION LOGIC
+// =============================================================================
 
-  // Filter by work center if specified
+/**
+ * Detect time-range overlaps among scheduled operations on the same work center.
+ * Two operations conflict when: op1.scheduledStart < op2.scheduledEnd AND op2.scheduledStart < op1.scheduledEnd
+ */
+async function detectOverlapConflicts(workCenterId?: string | null): Promise<DetectedConflict[]> {
+  const conflicts: DetectedConflict[] = [];
+
+  const whereClause: Record<string, unknown> = {
+    status: { not: 'completed' },
+  };
   if (workCenterId) {
-    return conflicts.filter((c) =>
-      c.affectedWorkOrders.some((wo) => wo.workCenterId === workCenterId)
-    );
+    whereClause.workCenterId = workCenterId;
+  }
+
+  const operations = await prisma.scheduledOperation.findMany({
+    where: whereClause,
+    include: {
+      workCenter: { select: { id: true, code: true, name: true } },
+      workOrderOperation: {
+        select: {
+          id: true,
+          workOrderId: true,
+          name: true,
+          workOrder: { select: { id: true, woNumber: true } },
+        },
+      },
+    },
+    orderBy: [{ workCenterId: 'asc' }, { scheduledStart: 'asc' }],
+  });
+
+  // Group operations by work center
+  const byWorkCenter = new Map<string, typeof operations>();
+  for (const op of operations) {
+    const wcId = op.workCenterId;
+    if (!byWorkCenter.has(wcId)) {
+      byWorkCenter.set(wcId, []);
+    }
+    byWorkCenter.get(wcId)!.push(op);
+  }
+
+  // Compare pairs within each work center for overlaps
+  for (const [wcId, wcOps] of byWorkCenter) {
+    for (let i = 0; i < wcOps.length; i++) {
+      for (let j = i + 1; j < wcOps.length; j++) {
+        const opA = wcOps[i];
+        const opB = wcOps[j];
+
+        const aStart = opA.scheduledStart.getTime();
+        const aEnd = opA.scheduledEnd.getTime();
+        const bStart = opB.scheduledStart.getTime();
+        const bEnd = opB.scheduledEnd.getTime();
+
+        if (aStart < bEnd && bStart < aEnd) {
+          const overlapMs = Math.min(aEnd, bEnd) - Math.max(aStart, bStart);
+          const overlapHours = overlapMs / (1000 * 60 * 60);
+          const wcName = opA.workCenter.name;
+
+          const woA = opA.workOrderOperation.workOrder;
+          const woB = opB.workOrderOperation.workOrder;
+
+          const severity: ConflictSeverity =
+            overlapHours > 8 ? 'critical' : overlapHours > 4 ? 'high' : 'medium';
+
+          conflicts.push({
+            id: `overlap-${opA.id}-${opB.id}`,
+            type: 'overlap',
+            severity,
+            description: `${woA.woNumber} va ${woB.woNumber} chong cheo ${overlapHours.toFixed(1)} gio tren ${wcName}`,
+            affectedWorkOrders: [
+              {
+                id: woA.id,
+                workOrderNumber: woA.woNumber,
+                workCenterId: wcId,
+                workCenterName: wcName,
+              },
+              {
+                id: woB.id,
+                workOrderNumber: woB.woNumber,
+                workCenterId: wcId,
+                workCenterName: wcName,
+              },
+            ],
+            suggestedResolutions: [
+              {
+                id: `res-move-${opB.id}`,
+                description: `Doi ${woB.woNumber} bat dau sau ${woA.woNumber}`,
+                impact: `Tre ${Math.ceil(overlapHours / 8)} ngay`,
+                autoResolvable: true,
+              },
+              {
+                id: `res-reassign-${opB.id}`,
+                description: `Chuyen ${woB.woNumber} sang may khac`,
+                impact: 'Khong anh huong deadline neu may trong',
+                autoResolvable: true,
+              },
+            ],
+            createdAt: new Date(),
+          });
+        }
+      }
+    }
   }
 
   return conflicts;
+}
+
+/**
+ * Detect capacity overloads by comparing scheduledHours vs availableHours
+ * from CapacityRecord entries.
+ */
+async function detectCapacityOverloads(workCenterId?: string | null): Promise<DetectedConflict[]> {
+  const conflicts: DetectedConflict[] = [];
+
+  const whereClause: Record<string, unknown> = {
+    scheduledHours: { gt: 0 },
+  };
+  if (workCenterId) {
+    whereClause.workCenterId = workCenterId;
+  }
+
+  const overloadedRecords = await prisma.capacityRecord.findMany({
+    where: whereClause,
+    include: {
+      workCenter: { select: { id: true, code: true, name: true } },
+    },
+    orderBy: [{ workCenterId: 'asc' }, { date: 'asc' }],
+  });
+
+  // Filter to records where scheduledHours exceeds availableHours
+  const overloads = overloadedRecords.filter(
+    (record) => record.scheduledHours > record.availableHours && record.availableHours > 0
+  );
+
+  // Group consecutive overload days by work center for consolidated reporting
+  const byWorkCenter = new Map<string, typeof overloads>();
+  for (const record of overloads) {
+    const wcId = record.workCenterId;
+    if (!byWorkCenter.has(wcId)) {
+      byWorkCenter.set(wcId, []);
+    }
+    byWorkCenter.get(wcId)!.push(record);
+  }
+
+  for (const [wcId, records] of byWorkCenter) {
+    const wcName = records[0].workCenter.name;
+
+    // Find the scheduled operations on those overloaded dates to identify affected work orders
+    const overloadDates = records.map((r) => r.date);
+    const earliestDate = new Date(Math.min(...overloadDates.map((d) => d.getTime())));
+    const latestDate = new Date(Math.max(...overloadDates.map((d) => d.getTime())));
+
+    const affectedOps = await prisma.scheduledOperation.findMany({
+      where: {
+        workCenterId: wcId,
+        status: { not: 'completed' },
+        scheduledStart: { lte: latestDate },
+        scheduledEnd: { gte: earliestDate },
+      },
+      include: {
+        workOrderOperation: {
+          select: {
+            workOrder: { select: { id: true, woNumber: true } },
+          },
+        },
+      },
+    });
+
+    // Deduplicate affected work orders
+    const seenWoIds = new Set<string>();
+    const affectedWorkOrders: DetectedConflict['affectedWorkOrders'] = [];
+    for (const op of affectedOps) {
+      const wo = op.workOrderOperation.workOrder;
+      if (!seenWoIds.has(wo.id)) {
+        seenWoIds.add(wo.id);
+        affectedWorkOrders.push({
+          id: wo.id,
+          workOrderNumber: wo.woNumber,
+          workCenterId: wcId,
+          workCenterName: wcName,
+        });
+      }
+    }
+
+    // Calculate aggregate overload metrics
+    const totalOverloadHours = records.reduce(
+      (sum, r) => sum + (r.scheduledHours - r.availableHours),
+      0
+    );
+    const avgOverloadPercent =
+      records.reduce(
+        (sum, r) => sum + ((r.scheduledHours - r.availableHours) / r.availableHours) * 100,
+        0
+      ) / records.length;
+
+    const severity: ConflictSeverity =
+      avgOverloadPercent > 50 ? 'critical' : avgOverloadPercent > 25 ? 'high' : 'medium';
+
+    const dateRange =
+      records.length === 1
+        ? records[0].date.toLocaleDateString('vi-VN')
+        : `${earliestDate.toLocaleDateString('vi-VN')} - ${latestDate.toLocaleDateString('vi-VN')}`;
+
+    conflicts.push({
+      id: `overload-${wcId}-${earliestDate.getTime()}`,
+      type: 'overload',
+      severity,
+      description: `${wcName} vuot ${avgOverloadPercent.toFixed(0)}% cong suat (${totalOverloadHours.toFixed(1)}h) trong ${records.length} ngay (${dateRange})`,
+      affectedWorkOrders,
+      suggestedResolutions: [
+        {
+          id: `res-redistribute-${wcId}`,
+          description: `Phan bo lai cong viec sang may khac`,
+          impact: `Giam tai ${avgOverloadPercent.toFixed(0)}%`,
+          autoResolvable: true,
+        },
+        {
+          id: `res-overtime-${wcId}`,
+          description: `Them ${totalOverloadHours.toFixed(1)} gio lam them`,
+          impact: `Tang chi phi lam them`,
+          autoResolvable: false,
+        },
+      ],
+      createdAt: new Date(),
+    });
+  }
+
+  return conflicts;
+}
+
+/**
+ * Run all conflict detection queries and return a combined list.
+ */
+async function detectAllConflicts(workCenterId?: string | null): Promise<DetectedConflict[]> {
+  const [overlaps, overloads] = await Promise.all([
+    detectOverlapConflicts(workCenterId),
+    detectCapacityOverloads(workCenterId),
+  ]);
+
+  return [...overlaps, ...overloads];
 }
 
 // =============================================================================
@@ -118,17 +292,17 @@ function generateMockConflicts(workCenterId?: string | null): MockConflict[] {
 // =============================================================================
 
 export const GET = withAuth(async (request, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkReadEndpointLimit(request);
-    if (rateLimitResult) return rateLimitResult;
+  // Rate limiting
+  const rateLimitResult = await checkReadEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(request.url);
     const workCenterId = searchParams.get('workCenterId');
     const severity = searchParams.get('severity') as ConflictSeverity | null;
 
-    // Get mock conflicts
-    let conflicts = generateMockConflicts(workCenterId);
+    // Detect real conflicts from the database
+    let conflicts = await detectAllConflicts(workCenterId);
 
     // Filter by severity if specified
     if (severity) {
@@ -179,12 +353,12 @@ const { searchParams } = new URL(request.url);
 // =============================================================================
 
 export const POST = withAuth(async (request, context, session) => {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(request);
-    if (rateLimitResult) return rateLimitResult;
+  // Rate limiting
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
-const rawBody = await request.json();
+    const rawBody = await request.json();
     const parseResult = resolveConflictsSchema.safeParse(rawBody);
     if (!parseResult.success) {
       return NextResponse.json(
@@ -199,8 +373,8 @@ const rawBody = await request.json();
       applyResolutions = false,
     } = parseResult.data;
 
-    // Get all conflicts
-    const allConflicts = generateMockConflicts();
+    // Detect all current conflicts from the database
+    const allConflicts = await detectAllConflicts();
 
     // Filter to specified conflicts
     let targetConflicts = allConflicts;

@@ -3,14 +3,16 @@
 // Phase 11: Quality Management - SPC
 // =============================================================================
 
-import { NextRequest, NextResponse } from 'next/server';import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 import {
-  SPCEngine, 
-  ProcessCharacteristic, 
-  Measurement, 
+  SPCEngine,
+  ProcessCharacteristic,
+  Measurement,
   ControlChart,
   ControlChartDataPoint,
   ProcessCapability,
@@ -21,142 +23,149 @@ import {
 } from '@/lib/spc';
 
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+
 // =============================================================================
-// MOCK DATA
+// DATA ACCESS HELPERS
 // =============================================================================
 
-const mockCharacteristics: ProcessCharacteristic[] = [
-  {
-    id: 'char-001',
-    processId: 'proc-001',
-    name: 'Đường kính trục',
-    code: 'DIA-001',
-    description: 'Đường kính trục chính sau gia công tiện',
-    unit: 'mm',
-    nominalValue: 25.0,
-    lsl: 24.95,
-    usl: 25.05,
-    targetValue: 25.0,
-    subgroupSize: 5,
-    samplingFrequency: '1h',
-    chartType: 'XBAR_R',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'char-002',
-    processId: 'proc-001',
-    name: 'Độ nhám bề mặt',
-    code: 'RA-001',
-    description: 'Độ nhám Ra sau mài',
-    unit: 'μm',
-    nominalValue: 0.8,
-    lsl: 0.4,
-    usl: 1.2,
-    targetValue: 0.8,
-    subgroupSize: 3,
-    samplingFrequency: '2h',
-    chartType: 'XBAR_R',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'char-003',
-    processId: 'proc-002',
-    name: 'Chiều dài cắt',
-    code: 'LEN-001',
-    description: 'Chiều dài sau cắt CNC',
-    unit: 'mm',
-    nominalValue: 100.0,
-    lsl: 99.9,
-    usl: 100.1,
-    targetValue: 100.0,
-    subgroupSize: 5,
-    samplingFrequency: 'batch',
-    chartType: 'XBAR_S',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'char-004',
-    processId: 'proc-003',
-    name: 'Tỷ lệ lỗi hàn',
-    code: 'DEF-001',
-    description: 'Tỷ lệ mối hàn lỗi',
-    unit: '%',
-    nominalValue: 0,
-    lsl: 0,
-    usl: 5,
-    targetValue: 0,
-    subgroupSize: 100,
-    samplingFrequency: 'shift',
-    chartType: 'P',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: 'char-005',
-    processId: 'proc-004',
-    name: 'Độ cứng vật liệu',
-    code: 'HRC-001',
-    description: 'Độ cứng HRC sau xử lý nhiệt',
-    unit: 'HRC',
-    nominalValue: 58,
-    lsl: 56,
-    usl: 60,
-    targetValue: 58,
-    subgroupSize: 1,
-    samplingFrequency: 'batch',
-    chartType: 'I_MR',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z'
+/**
+ * Fetch inspection characteristics from DB and map to SPC ProcessCharacteristic.
+ * Only returns characteristics that have SPC fields populated (subgroupSize, chartType).
+ */
+async function fetchCharacteristics(characteristicId?: string): Promise<ProcessCharacteristic[]> {
+  const where: Record<string, unknown> = {
+    subgroupSize: { not: null },
+    chartType: { not: null },
+  };
+  if (characteristicId) {
+    where.id = characteristicId;
   }
-];
 
-// Generate mock measurements
-function generateMockMeasurements(characteristic: ProcessCharacteristic, count: number = 25): Measurement[] {
-  const measurements: Measurement[] = [];
-  const now = new Date();
-  
-  for (let i = 0; i < count; i++) {
-    const values: number[] = [];
-    const baseValue = characteristic.nominalValue;
-    const variance = (characteristic.usl - characteristic.lsl) / 6;
-    
-    for (let j = 0; j < characteristic.subgroupSize; j++) {
-      const u1 = Math.random();
-      const u2 = Math.random();
-      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      const value = baseValue + z * variance;
-      values.push(Math.round(value * 1000) / 1000);
-    }
-    
-    const mean = SPCEngine.mean(values);
-    const range = SPCEngine.range(values);
-    const stdDev = SPCEngine.stdDev(values);
-    
-    const timestamp = new Date(now);
-    timestamp.setHours(timestamp.getHours() - (count - i));
-    
-    measurements.push({
-      id: `meas-${characteristic.id}-${i + 1}`,
-      processId: characteristic.processId,
-      characteristicId: characteristic.id,
-      sampleNumber: i + 1,
-      subgroupId: `sg-${i + 1}`,
+  const rows = await prisma.inspectionCharacteristic.findMany({
+    where,
+    include: {
+      plan: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    processId: row.planId,
+    name: row.name,
+    code: row.code ?? row.id,
+    description: row.description ?? undefined,
+    unit: row.unitOfMeasure ?? '',
+    nominalValue: row.nominalValue ?? 0,
+    lsl: row.lowerLimit ?? 0,
+    usl: row.upperLimit ?? 0,
+    targetValue: row.nominalValue ?? 0,
+    subgroupSize: row.subgroupSize ?? 5,
+    samplingFrequency: row.samplingFrequency ?? 'batch',
+    chartType: (row.chartType ?? 'XBAR_R') as ChartType,
+    isActive: true,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
+/**
+ * Fetch inspection results for a characteristic and map to SPC Measurement.
+ */
+async function fetchMeasurements(
+  characteristicId: string,
+  limit: number = 50
+): Promise<Measurement[]> {
+  const rows = await prisma.inspectionResult.findMany({
+    where: { characteristicId },
+    orderBy: { inspectedAt: 'asc' },
+    take: limit,
+    include: {
+      inspection: { select: { id: true } },
+    },
+  });
+
+  return rows.map((row, idx) => {
+    // measuredValues is a Json field that should contain a number[]
+    const values: number[] = Array.isArray(row.measuredValues)
+      ? (row.measuredValues as number[])
+      : row.measuredValue != null
+        ? [row.measuredValue]
+        : [];
+
+    const mean = row.mean ?? (values.length > 0 ? SPCEngine.mean(values) : 0);
+    const range = row.range ?? (values.length > 0 ? SPCEngine.range(values) : 0);
+    const stdDev = row.stdDev ?? (values.length > 0 ? SPCEngine.stdDev(values) : 0);
+
+    return {
+      id: row.id,
+      processId: row.inspectionId,
+      characteristicId: row.characteristicId,
+      sampleNumber: row.sampleNumber ?? idx + 1,
+      subgroupId: row.subgroupId ?? `sg-${idx + 1}`,
       values,
       mean: Math.round(mean * 1000) / 1000,
       range: Math.round(range * 1000) / 1000,
       stdDev: Math.round(stdDev * 1000) / 1000,
-      timestamp: timestamp.toISOString(),
-      operatorId: `op-${(i % 3) + 1}`,
-      machineId: `mc-${(i % 2) + 1}`,
-      batchId: `batch-${Math.floor(i / 5) + 1}`
-    });
-  }
-  
-  return measurements;
+      timestamp: row.inspectedAt.toISOString(),
+      operatorId: row.inspectedBy,
+      machineId: row.machineId ?? undefined,
+      notes: row.findings ?? undefined,
+    };
+  });
 }
+
+/**
+ * Fetch quality alerts from DB and map to SPC QualityAlert type.
+ */
+async function fetchAlerts(filters?: {
+  status?: string;
+  severity?: string;
+  characteristicId?: string;
+}): Promise<QualityAlert[]> {
+  const where: Record<string, unknown> = {};
+  if (filters?.status) where.status = filters.status;
+  if (filters?.severity) where.severity = filters.severity;
+  if (filters?.characteristicId) where.characteristicId = filters.characteristicId;
+
+  const rows = await prisma.qualityAlert.findMany({
+    where,
+    include: {
+      characteristic: {
+        select: {
+          id: true,
+          name: true,
+          planId: true,
+          plan: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    characteristicId: row.characteristicId,
+    characteristicName: row.characteristic.name,
+    processId: row.characteristic.planId,
+    processName: row.characteristic.plan?.name ?? `Process ${row.characteristic.planId}`,
+    type: row.type as QualityAlert['type'],
+    severity: row.severity as QualityAlert['severity'],
+    status: row.status as QualityAlert['status'],
+    title: row.title,
+    description: row.description ?? '',
+    violation: row.violation as unknown as Violation | undefined,
+    acknowledgedBy: row.acknowledgedBy ?? undefined,
+    acknowledgedAt: row.acknowledgedAt?.toISOString() ?? undefined,
+    resolvedBy: row.resolvedBy ?? undefined,
+    resolvedAt: row.resolvedAt?.toISOString() ?? undefined,
+    resolution: row.resolution ?? undefined,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
+// =============================================================================
+// SPC CALCULATION HELPERS (unchanged logic, real data input)
+// =============================================================================
 
 function generateControlChart(
   characteristic: ProcessCharacteristic,
@@ -165,13 +174,13 @@ function generateControlChart(
   if (measurements.length === 0) {
     return createEmptyControlChart(characteristic);
   }
-  
+
   const subgroups = measurements.map(m => m.values);
   const primaryValues = measurements.map(m => m.mean);
-  const secondaryValues = characteristic.chartType === 'XBAR_S' 
+  const secondaryValues = characteristic.chartType === 'XBAR_S'
     ? measurements.map(m => m.stdDev)
     : measurements.map(m => m.range);
-  
+
   let limits;
   if (characteristic.chartType === 'XBAR_R') {
     limits = SPCEngine.calculateXbarRLimits(subgroups, characteristic.subgroupSize);
@@ -201,14 +210,14 @@ function generateControlChart(
   } else {
     limits = SPCEngine.calculateXbarRLimits(subgroups, characteristic.subgroupSize);
   }
-  
+
   const violations = SPCEngine.checkWesternElectricRules(
-    primaryValues, 
-    limits.xbarUCL, 
-    limits.xbarCL, 
+    primaryValues,
+    limits.xbarUCL,
+    limits.xbarCL,
     limits.xbarLCL
   );
-  
+
   const dataPoints: ControlChartDataPoint[] = measurements.map((m, i) => {
     const pointViolations = violations.filter(v => v.pointIndex === i);
     return {
@@ -223,10 +232,10 @@ function generateControlChart(
       isOutOfControl: pointViolations.some(v => v.severity === 'CRITICAL')
     };
   });
-  
+
   const hasOOC = dataPoints.some(dp => dp.isOutOfControl);
   const hasWarning = violations.some(v => v.severity === 'WARNING');
-  
+
   return {
     id: `chart-${characteristic.id}`,
     characteristicId: characteristic.id,
@@ -273,7 +282,7 @@ function generateCapability(
   measurements: Measurement[]
 ): ProcessCapability {
   const allValues = measurements.flatMap(m => m.values);
-  
+
   if (allValues.length === 0) {
     return {
       characteristicId: characteristic.id,
@@ -287,90 +296,17 @@ function generateCapability(
       recommendation: 'Không đủ dữ liệu để tính toán'
     };
   }
-  
+
   const capability = SPCEngine.calculateCapability(
     allValues, characteristic.usl, characteristic.lsl, characteristic.targetValue
   );
-  
+
   return {
     ...capability,
     characteristicId: characteristic.id,
     characteristicName: characteristic.name,
     processName: `Process ${characteristic.processId}`
   };
-}
-
-function generateMockAlerts(): QualityAlert[] {
-  return [
-    {
-      id: 'alert-001',
-      characteristicId: 'char-001',
-      characteristicName: 'Đường kính trục',
-      processId: 'proc-001',
-      processName: 'Tiện CNC',
-      type: 'OUT_OF_CONTROL',
-      severity: 'CRITICAL',
-      status: 'NEW',
-      title: 'Điểm nằm ngoài giới hạn kiểm soát',
-      description: 'Mẫu #23 có giá trị 25.08mm vượt UCL (25.06mm)',
-      violation: {
-        type: 'RULE_1',
-        rule: 'Western Electric Rule 1',
-        description: 'Điểm nằm ngoài giới hạn kiểm soát 3σ',
-        severity: 'CRITICAL',
-        pointIndex: 22
-      },
-      createdAt: new Date(Date.now() - 30 * 60000).toISOString()
-    },
-    {
-      id: 'alert-002',
-      characteristicId: 'char-002',
-      characteristicName: 'Độ nhám bề mặt',
-      processId: 'proc-001',
-      processName: 'Mài tinh',
-      type: 'TREND',
-      severity: 'WARNING',
-      status: 'ACKNOWLEDGED',
-      title: 'Phát hiện xu hướng tăng',
-      description: '6 điểm liên tiếp có xu hướng tăng dần',
-      acknowledgedBy: 'Nguyễn Văn A',
-      acknowledgedAt: new Date(Date.now() - 15 * 60000).toISOString(),
-      createdAt: new Date(Date.now() - 2 * 3600000).toISOString()
-    },
-    {
-      id: 'alert-003',
-      characteristicId: 'char-003',
-      characteristicName: 'Chiều dài cắt',
-      processId: 'proc-002',
-      processName: 'Cắt CNC',
-      type: 'CAPABILITY_LOW',
-      severity: 'WARNING',
-      status: 'INVESTIGATING',
-      title: 'Năng lực quy trình thấp',
-      description: 'Cpk = 0.95 thấp hơn mức chấp nhận (1.0)',
-      acknowledgedBy: 'Trần Văn B',
-      acknowledgedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-      createdAt: new Date(Date.now() - 24 * 3600000).toISOString()
-    },
-    {
-      id: 'alert-004',
-      characteristicId: 'char-004',
-      characteristicName: 'Tỷ lệ lỗi hàn',
-      processId: 'proc-003',
-      processName: 'Hàn Robot',
-      type: 'SHIFT',
-      severity: 'WARNING',
-      status: 'RESOLVED',
-      title: 'Phát hiện dịch chuyển quy trình',
-      description: '8 điểm liên tiếp nằm trên đường trung tâm',
-      acknowledgedBy: 'Lê Văn C',
-      acknowledgedAt: new Date(Date.now() - 48 * 3600000).toISOString(),
-      resolvedBy: 'Lê Văn C',
-      resolvedAt: new Date(Date.now() - 24 * 3600000).toISOString(),
-      resolution: 'Đã điều chỉnh thông số hàn và tái đào tạo operator',
-      createdAt: new Date(Date.now() - 72 * 3600000).toISOString()
-    }
-  ];
 }
 
 // =============================================================================
@@ -386,32 +322,42 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get('view') || 'dashboard';
     const characteristicId = searchParams.get('characteristicId');
-    
+
     switch (view) {
       case 'dashboard': {
-        const characteristicsData = mockCharacteristics.map(char => {
-          const measurements = generateMockMeasurements(char, 25);
-          const chart = generateControlChart(char, measurements);
-          const capability = generateCapability(char, measurements);
-          return { characteristic: char, chart, capability };
-        });
-        
-        const alerts = generateMockAlerts();
-        const activeAlerts = alerts.filter(a => ['NEW', 'ACKNOWLEDGED', 'INVESTIGATING'].includes(a.status));
-        
-        const avgCpk = SPCEngine.mean(
-          characteristicsData.map(d => d.capability.cpk).filter(c => c > 0)
+        const characteristics = await fetchCharacteristics();
+
+        const characteristicsData = await Promise.all(
+          characteristics.map(async (char) => {
+            const measurements = await fetchMeasurements(char.id, 25);
+            const chart = generateControlChart(char, measurements);
+            const capability = generateCapability(char, measurements);
+            return { characteristic: char, chart, capability };
+          })
         );
-        
+
+        const alerts = await fetchAlerts();
+        const activeAlerts = alerts.filter(a => ['NEW', 'ACKNOWLEDGED', 'INVESTIGATING'].includes(a.status));
+
+        // Count measurements recorded today
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const measurementsToday = await prisma.inspectionResult.count({
+          where: { inspectedAt: { gte: todayStart } },
+        });
+
+        const cpkValues = characteristicsData.map(d => d.capability.cpk).filter(c => c > 0);
+        const avgCpk = cpkValues.length > 0 ? SPCEngine.mean(cpkValues) : 0;
+
         const dashboard: SPCDashboard = {
           summary: {
-            totalCharacteristics: mockCharacteristics.length,
+            totalCharacteristics: characteristics.length,
             inControl: characteristicsData.filter(d => d.chart.status === 'IN_CONTROL').length,
             outOfControl: characteristicsData.filter(d => d.chart.status === 'OUT_OF_CONTROL').length,
             warning: characteristicsData.filter(d => d.chart.status === 'WARNING').length,
             avgCpk: Math.round(avgCpk * 100) / 100,
             activeAlerts: activeAlerts.length,
-            measurementsToday: 87
+            measurementsToday
           },
           recentAlerts: activeAlerts.slice(0, 5),
           criticalProcesses: characteristicsData
@@ -434,49 +380,54 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
             lastUpdated: d.chart.lastUpdated
           }))
         };
-        
+
         return NextResponse.json({ success: true, data: dashboard });
       }
-      
-      case 'characteristics':
-        return NextResponse.json({ success: true, data: { characteristics: mockCharacteristics } });
-      
+
+      case 'characteristics': {
+        const characteristics = await fetchCharacteristics();
+        return NextResponse.json({ success: true, data: { characteristics } });
+      }
+
       case 'chart': {
         if (!characteristicId) {
           return NextResponse.json({ success: false, error: 'characteristicId is required' }, { status: 400 });
         }
-        const characteristic = mockCharacteristics.find(c => c.id === characteristicId);
+        const characteristics = await fetchCharacteristics(characteristicId);
+        const characteristic = characteristics[0];
         if (!characteristic) {
           return NextResponse.json({ success: false, error: 'Characteristic not found' }, { status: 404 });
         }
-        const measurements = generateMockMeasurements(characteristic, 30);
+        const measurements = await fetchMeasurements(characteristicId, 30);
         const chart = generateControlChart(characteristic, measurements);
         return NextResponse.json({ success: true, data: { chart, characteristic } });
       }
-      
+
       case 'capability': {
         if (!characteristicId) {
-          const capabilities = mockCharacteristics.map(char => {
-            const measurements = generateMockMeasurements(char, 50);
-            return generateCapability(char, measurements);
-          });
+          const characteristics = await fetchCharacteristics();
+          const capabilities = await Promise.all(
+            characteristics.map(async (char) => {
+              const measurements = await fetchMeasurements(char.id, 50);
+              return generateCapability(char, measurements);
+            })
+          );
           return NextResponse.json({ success: true, data: { capabilities } });
         }
-        const characteristic = mockCharacteristics.find(c => c.id === characteristicId);
+        const characteristics = await fetchCharacteristics(characteristicId);
+        const characteristic = characteristics[0];
         if (!characteristic) {
           return NextResponse.json({ success: false, error: 'Characteristic not found' }, { status: 404 });
         }
-        const measurements = generateMockMeasurements(characteristic, 50);
+        const measurements = await fetchMeasurements(characteristicId, 50);
         const capability = generateCapability(characteristic, measurements);
         return NextResponse.json({ success: true, data: { capability, characteristic } });
       }
-      
+
       case 'alerts': {
-        const status = searchParams.get('status');
-        const severity = searchParams.get('severity');
-        let alerts = generateMockAlerts();
-        if (status) alerts = alerts.filter(a => a.status === status);
-        if (severity) alerts = alerts.filter(a => a.severity === severity);
+        const status = searchParams.get('status') ?? undefined;
+        const severity = searchParams.get('severity') ?? undefined;
+        const alerts = await fetchAlerts({ status, severity });
         const summary = {
           total: alerts.length,
           new: alerts.filter(a => a.status === 'NEW').length,
@@ -488,20 +439,21 @@ export const GET = withAuth(async (request: NextRequest, context, session) => {
         };
         return NextResponse.json({ success: true, data: { alerts, summary } });
       }
-      
+
       case 'measurements': {
         if (!characteristicId) {
           return NextResponse.json({ success: false, error: 'characteristicId is required' }, { status: 400 });
         }
-        const characteristic = mockCharacteristics.find(c => c.id === characteristicId);
+        const characteristics = await fetchCharacteristics(characteristicId);
+        const characteristic = characteristics[0];
         if (!characteristic) {
           return NextResponse.json({ success: false, error: 'Characteristic not found' }, { status: 404 });
         }
         const limit = parseInt(searchParams.get('limit') || '50');
-        const measurements = generateMockMeasurements(characteristic, limit);
+        const measurements = await fetchMeasurements(characteristicId, limit);
         return NextResponse.json({ success: true, data: { measurements, characteristic } });
       }
-      
+
       default:
         return NextResponse.json({ success: false, error: 'Invalid view' }, { status: 400 });
     }
@@ -533,6 +485,7 @@ export const POST = withAuth(async (request: NextRequest, context, session) => {
       acknowledgedBy: z.string().optional(),
       resolvedBy: z.string().optional(),
       resolution: z.string().optional(),
+      inspectionId: z.string().optional(),
     });
     const rawBody = await request.json();
     const parseResult = bodySchema.safeParse(rawBody);
@@ -547,90 +500,238 @@ export const POST = withAuth(async (request: NextRequest, context, session) => {
 
     switch (action) {
       case 'add_measurement': {
-        const { characteristicId, values, operatorId, machineId, batchId, notes } = body;
+        const { characteristicId, values, operatorId, machineId, batchId, notes, inspectionId } = body;
         if (!characteristicId || !values || !Array.isArray(values)) {
           return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
-        const characteristic = mockCharacteristics.find(c => c.id === characteristicId);
+
+        const characteristics = await fetchCharacteristics(characteristicId);
+        const characteristic = characteristics[0];
         if (!characteristic) {
           return NextResponse.json({ success: false, error: 'Characteristic not found' }, { status: 404 });
         }
         if (values.length !== characteristic.subgroupSize) {
-          return NextResponse.json({ 
-            success: false, 
-            error: `Expected ${characteristic.subgroupSize} values, got ${values.length}` 
+          return NextResponse.json({
+            success: false,
+            error: `Expected ${characteristic.subgroupSize} values, got ${values.length}`
           }, { status: 400 });
         }
+
         const mean = SPCEngine.mean(values);
         const range = SPCEngine.range(values);
         const stdDev = SPCEngine.stdDev(values);
+
+        // Determine the inspection to associate with.
+        // If no inspectionId provided, try to find an active inspection for this characteristic.
+        let resolvedInspectionId = inspectionId;
+        if (!resolvedInspectionId) {
+          const activeInspection = await prisma.inspection.findFirst({
+            where: {
+              status: { in: ['pending', 'in_progress'] },
+              plan: { characteristics: { some: { id: characteristicId } } },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true },
+          });
+          resolvedInspectionId = activeInspection?.id;
+        }
+
+        if (!resolvedInspectionId) {
+          return NextResponse.json({ success: false, error: 'No active inspection found for this characteristic. Provide inspectionId.' }, { status: 400 });
+        }
+
+        // Determine next sample number
+        const lastResult = await prisma.inspectionResult.findFirst({
+          where: { characteristicId },
+          orderBy: { sampleNumber: 'desc' },
+          select: { sampleNumber: true },
+        });
+        const nextSampleNumber = (lastResult?.sampleNumber ?? 0) + 1;
+
+        const result = await prisma.inspectionResult.create({
+          data: {
+            inspectionId: resolvedInspectionId,
+            characteristicId,
+            result: 'PASS', // Will be updated by downstream logic if needed
+            measuredValue: Math.round(mean * 1000) / 1000,
+            measuredValues: values,
+            findings: notes,
+            sampleNumber: nextSampleNumber,
+            subgroupId: `sg-${nextSampleNumber}`,
+            machineId: machineId ?? null,
+            mean: Math.round(mean * 1000) / 1000,
+            range: Math.round(range * 1000) / 1000,
+            stdDev: Math.round(stdDev * 1000) / 1000,
+            inspectedBy: operatorId ?? session?.user?.id ?? 'system',
+          },
+        });
+
         const measurement: Measurement = {
-          id: `meas-${Date.now()}`,
-          processId: characteristic.processId,
+          id: result.id,
+          processId: resolvedInspectionId,
           characteristicId,
-          sampleNumber: 1,
-          subgroupId: `sg-${Date.now()}`,
+          sampleNumber: nextSampleNumber,
+          subgroupId: `sg-${nextSampleNumber}`,
           values,
           mean: Math.round(mean * 1000) / 1000,
           range: Math.round(range * 1000) / 1000,
           stdDev: Math.round(stdDev * 1000) / 1000,
-          timestamp: new Date().toISOString(),
+          timestamp: result.inspectedAt.toISOString(),
           operatorId, machineId, batchId, notes
         };
+
+        // Check for SPC violations against existing measurements
+        const recentMeasurements = await fetchMeasurements(characteristicId, 30);
+        const chart = generateControlChart(characteristic, recentMeasurements);
+        const lastPoint = chart.dataPoints[chart.dataPoints.length - 1];
+        let alert: QualityAlert | null = null;
+
+        if (lastPoint?.isOutOfControl && lastPoint.violations.length > 0) {
+          const violation = lastPoint.violations[0];
+          const createdAlert = await prisma.qualityAlert.create({
+            data: {
+              characteristicId,
+              type: violation.type === 'RULE_1' ? 'OUT_OF_CONTROL' : 'RULE_VIOLATION',
+              severity: violation.severity,
+              status: 'open',
+              title: violation.description,
+              description: `Sample #${nextSampleNumber}: ${violation.rule} - ${violation.description}`,
+              violation: JSON.parse(JSON.stringify(violation)),
+            },
+          });
+
+          const charInfo = await prisma.inspectionCharacteristic.findUnique({
+            where: { id: characteristicId },
+            select: { name: true, planId: true, plan: { select: { name: true } } },
+          });
+
+          alert = {
+            id: createdAlert.id,
+            characteristicId,
+            characteristicName: charInfo?.name ?? '',
+            processId: charInfo?.planId ?? '',
+            processName: charInfo?.plan?.name ?? `Process ${charInfo?.planId ?? ''}`,
+            type: createdAlert.type as QualityAlert['type'],
+            severity: createdAlert.severity as QualityAlert['severity'],
+            status: createdAlert.status as QualityAlert['status'],
+            title: createdAlert.title,
+            description: createdAlert.description ?? '',
+            violation,
+            createdAt: createdAlert.createdAt.toISOString(),
+          };
+        }
+
         return NextResponse.json({
           success: true,
-          data: { measurement, alert: null },
+          data: { measurement, alert },
           message: 'Đã thêm dữ liệu đo lường'
         });
       }
-      
+
       case 'acknowledge_alert': {
         const { alertId, acknowledgedBy } = body;
         if (!alertId || !acknowledgedBy) {
           return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
+
+        const existingAlert = await prisma.qualityAlert.findUnique({ where: { id: alertId } });
+        if (!existingAlert) {
+          return NextResponse.json({ success: false, error: 'Alert not found' }, { status: 404 });
+        }
+
+        const updated = await prisma.qualityAlert.update({
+          where: { id: alertId },
+          data: {
+            status: 'acknowledged',
+            acknowledgedBy,
+            acknowledgedAt: new Date(),
+          },
+        });
+
         return NextResponse.json({
           success: true,
-          data: { alertId, status: 'ACKNOWLEDGED', acknowledgedBy, acknowledgedAt: new Date().toISOString() },
+          data: {
+            alertId: updated.id,
+            status: 'ACKNOWLEDGED',
+            acknowledgedBy: updated.acknowledgedBy,
+            acknowledgedAt: updated.acknowledgedAt?.toISOString(),
+          },
           message: 'Đã xác nhận cảnh báo'
         });
       }
-      
+
       case 'resolve_alert': {
         const { alertId, resolvedBy, resolution } = body;
         if (!alertId || !resolvedBy || !resolution) {
           return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
         }
+
+        const existingAlert = await prisma.qualityAlert.findUnique({ where: { id: alertId } });
+        if (!existingAlert) {
+          return NextResponse.json({ success: false, error: 'Alert not found' }, { status: 404 });
+        }
+
+        const updated = await prisma.qualityAlert.update({
+          where: { id: alertId },
+          data: {
+            status: 'resolved',
+            resolvedBy,
+            resolvedAt: new Date(),
+            resolution,
+          },
+        });
+
         return NextResponse.json({
           success: true,
-          data: { alertId, status: 'RESOLVED', resolvedBy, resolvedAt: new Date().toISOString(), resolution },
+          data: {
+            alertId: updated.id,
+            status: 'RESOLVED',
+            resolvedBy: updated.resolvedBy,
+            resolvedAt: updated.resolvedAt?.toISOString(),
+            resolution: updated.resolution,
+          },
           message: 'Đã giải quyết cảnh báo'
         });
       }
-      
+
       case 'dismiss_alert': {
         const { alertId } = body;
         if (!alertId) {
           return NextResponse.json({ success: false, error: 'Missing alertId' }, { status: 400 });
         }
+
+        const existingAlert = await prisma.qualityAlert.findUnique({ where: { id: alertId } });
+        if (!existingAlert) {
+          return NextResponse.json({ success: false, error: 'Alert not found' }, { status: 404 });
+        }
+
+        await prisma.qualityAlert.update({
+          where: { id: alertId },
+          data: { status: 'dismissed' },
+        });
+
         return NextResponse.json({
           success: true,
           data: { alertId, status: 'DISMISSED' },
           message: 'Đã bỏ qua cảnh báo'
         });
       }
-      
+
       case 'recalculate_limits': {
         const { characteristicId } = body;
         if (!characteristicId) {
           return NextResponse.json({ success: false, error: 'Missing characteristicId' }, { status: 400 });
         }
-        const characteristic = mockCharacteristics.find(c => c.id === characteristicId);
+
+        const characteristics = await fetchCharacteristics(characteristicId);
+        const characteristic = characteristics[0];
         if (!characteristic) {
           return NextResponse.json({ success: false, error: 'Characteristic not found' }, { status: 404 });
         }
-        const measurements = generateMockMeasurements(characteristic, 30);
+
+        const measurements = await fetchMeasurements(characteristicId, 30);
         const chart = generateControlChart(characteristic, measurements);
+
         return NextResponse.json({
           success: true,
           data: {
@@ -640,7 +741,7 @@ export const POST = withAuth(async (request: NextRequest, context, session) => {
           message: 'Đã tính lại giới hạn kiểm soát'
         });
       }
-      
+
       default:
         return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
     }

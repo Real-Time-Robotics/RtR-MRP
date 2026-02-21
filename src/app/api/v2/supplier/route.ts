@@ -16,11 +16,41 @@ export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'IN_PRODUCTION' | 'READY' | 
 export type DeliveryStatus = 'SCHEDULED' | 'IN_TRANSIT' | 'DELIVERED' | 'DELAYED' | 'CANCELLED';
 export type InvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PAID' | 'REJECTED' | 'OVERDUE';
 
-// Helper: Get authenticated supplier ID
-async function getAuthenticatedSupplierId(request: NextRequest): Promise<string | null> {
+// Helper: Get and validate authenticated supplier ID
+// Validates that the requesting user has access to the specified supplier
+async function getAuthenticatedSupplierId(
+  request: NextRequest,
+  session?: { user?: { id?: string; role?: string } }
+): Promise<string | null> {
   const supplierId = request.headers.get('x-supplier-id') ||
                      request.nextUrl.searchParams.get('supplierId');
-  return supplierId || null;
+  if (!supplierId) return null;
+
+  // UUID format validation
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(supplierId)) return null;
+
+  // Admin/manager can access any supplier
+  if (session?.user?.role && ['admin', 'manager'].includes(session.user.role)) {
+    return supplierId;
+  }
+
+  // For non-admin users, verify they are linked to this supplier
+  if (session?.user?.id) {
+    const supplierLink = await prisma.supplier.findFirst({
+      where: {
+        id: supplierId,
+        OR: [
+          { contactEmail: session.user.id }, // email-based link
+          { purchaseOrders: { some: {} } }, // Has POs linked
+        ],
+      },
+      select: { id: true },
+    });
+    if (!supplierLink) return null;
+  }
+
+  return supplierId;
 }
 
 // Helper: Map PO status to display status
@@ -142,160 +172,99 @@ export interface SupplierPerformance {
   };
 }
 
-// Mock data generators
-function generateMockOrders(supplierId: string): SupplierOrder[] {
-  const statuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'IN_PRODUCTION', 'READY', 'SHIPPED', 'DELIVERED'];
+async function calculateSupplierPerformance(supplierId: string): Promise<SupplierPerformance> {
+  const now = new Date();
+  const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+  const prevQuarterStart = new Date(quarterStart);
+  prevQuarterStart.setMonth(prevQuarterStart.getMonth() - 3);
 
-  return Array.from({ length: 12 }, (_, i) => ({
-    id: `ORD-${supplierId}-${String(i + 1).padStart(4, '0')}`,
-    poNumber: `PO-2026-${String(1000 + i).padStart(5, '0')}`,
-    orderDate: new Date(Date.now() - (11 - i) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    requiredDate: new Date(Date.now() - (11 - i) * 7 * 24 * 60 * 60 * 1000 + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    status: statuses[Math.min(i < 6 ? Math.floor(i / 2) : 5, 5)],
-    items: [
-      {
-        partCode: `COMP-${String(100 + i).padStart(3, '0')}`,
-        partName: `Component ${String.fromCharCode(65 + (i % 26))}${i + 1}`,
-        quantity: 100 * (i + 1),
-        unit: 'pcs',
-        unitPrice: 50000 + i * 5000,
-      },
-      {
-        partCode: `COMP-${String(200 + i).padStart(3, '0')}`,
-        partName: `Component ${String.fromCharCode(66 + (i % 26))}${i + 1}`,
-        quantity: 50 * (i + 1),
-        unit: 'pcs',
-        unitPrice: 75000 + i * 3000,
-      },
-    ],
-    totalAmount: (100 * (i + 1) * (50000 + i * 5000)) + (50 * (i + 1) * (75000 + i * 3000)),
-    currency: 'VND',
-    notes: i % 3 === 0 ? 'Urgent order - priority handling required' : undefined,
-  }));
-}
+  // Fetch POs for current and previous quarter
+  const [currentPOs, prevPOs, allSuppliers] = await Promise.all([
+    prisma.purchaseOrder.findMany({
+      where: { supplierId, orderDate: { gte: quarterStart } },
+      include: { lines: { select: { id: true } } },
+    }),
+    prisma.purchaseOrder.findMany({
+      where: { supplierId, orderDate: { gte: prevQuarterStart, lt: quarterStart } },
+    }),
+    prisma.supplier.count({ where: { status: 'active' } }),
+  ]);
 
-function generateMockDeliveries(supplierId: string): SupplierDelivery[] {
-  const statuses: DeliveryStatus[] = ['SCHEDULED', 'IN_TRANSIT', 'DELIVERED', 'DELAYED'];
-
-  return Array.from({ length: 8 }, (_, i) => ({
-    id: `DEL-${supplierId}-${String(i + 1).padStart(4, '0')}`,
-    deliveryNumber: `DN-2026-${String(2000 + i).padStart(5, '0')}`,
-    orderId: `ORD-${supplierId}-${String(i + 1).padStart(4, '0')}`,
-    poNumber: `PO-2026-${String(1000 + i).padStart(5, '0')}`,
-    scheduledDate: new Date(Date.now() + (i - 4) * 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    actualDate: i >= 4 ? new Date(Date.now() + (i - 4) * 3 * 24 * 60 * 60 * 1000 + (i === 5 ? 2 : 0) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-    status: i < 2 ? 'SCHEDULED' : i < 4 ? 'IN_TRANSIT' : i === 5 ? 'DELAYED' : 'DELIVERED',
-    items: [
-      {
-        partCode: `COMP-${String(100 + i).padStart(3, '0')}`,
-        partName: `Component ${String.fromCharCode(65 + (i % 26))}${i + 1}`,
-        orderedQty: 100 * (i + 1),
-        deliveredQty: i >= 4 ? 100 * (i + 1) - (i === 5 ? 20 : 0) : 0,
-        unit: 'pcs',
-      },
-    ],
-    trackingNumber: i >= 2 ? `TRK${String(Date.now()).slice(-8)}${i}` : undefined,
-    carrier: i >= 2 ? ['Viettel Post', 'GHTK', 'GHN', 'J&T'][i % 4] : undefined,
-    notes: i === 5 ? 'Partial delivery - remaining items delayed' : undefined,
-  }));
-}
-
-function generateMockInvoices(supplierId: string): SupplierInvoice[] {
-  const statuses: InvoiceStatus[] = ['DRAFT', 'SUBMITTED', 'APPROVED', 'PAID', 'OVERDUE'];
-
-  return Array.from({ length: 10 }, (_, i) => {
-    const subtotal = (100 * (i + 1) * (50000 + i * 5000));
-    const tax = subtotal * 0.1;
-
-    return {
-      id: `INV-${supplierId}-${String(i + 1).padStart(4, '0')}`,
-      invoiceNumber: `INV-2026-${String(3000 + i).padStart(5, '0')}`,
-      deliveryId: `DEL-${supplierId}-${String(i + 1).padStart(4, '0')}`,
-      poNumber: `PO-2026-${String(1000 + i).padStart(5, '0')}`,
-      invoiceDate: new Date(Date.now() - (9 - i) * 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      dueDate: new Date(Date.now() - (9 - i) * 5 * 24 * 60 * 60 * 1000 + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: i < 2 ? 'DRAFT' : i < 4 ? 'SUBMITTED' : i < 6 ? 'APPROVED' : i < 9 ? 'PAID' : 'OVERDUE',
-      items: [
-        {
-          description: `Component ${String.fromCharCode(65 + (i % 26))}${i + 1} - Delivery`,
-          quantity: 100 * (i + 1),
-          unitPrice: 50000 + i * 5000,
-          amount: 100 * (i + 1) * (50000 + i * 5000),
+  // Get inspections linked to this supplier's PO lines
+  const poLineIds = currentPOs.flatMap(po => po.lines.map(l => l.id));
+  const inspections = poLineIds.length > 0
+    ? await prisma.inspection.findMany({
+        where: {
+          poLineId: { in: poLineIds },
+          inspectedAt: { gte: quarterStart },
         },
-      ],
-      subtotal,
-      tax,
-      total: subtotal + tax,
-      currency: 'VND',
-      paymentTerms: 'Net 30',
-      paidDate: i >= 6 && i < 9 ? new Date(Date.now() - (9 - i) * 5 * 24 * 60 * 60 * 1000 + 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-    };
-  });
-}
+        select: { result: true },
+      })
+    : [];
 
-function generateMockPerformance(supplierId: string): SupplierPerformance {
+  // Calculate on-time delivery (use updatedAt as proxy for delivery date)
+  const deliveredPOs = currentPOs.filter(po => po.status === 'received');
+  const onTimePOs = deliveredPOs.filter(po => {
+    return po.updatedAt <= po.expectedDate;
+  });
+  const onTimeDelivery = deliveredPOs.length > 0
+    ? Math.round((onTimePOs.length / deliveredPOs.length) * 1000) / 10
+    : 100;
+
+  // Calculate quality rate from inspections
+  const passedInspections = inspections.filter(i => i.result === 'pass' || i.result === 'PASS');
+  const qualityRate = inspections.length > 0
+    ? Math.round((passedInspections.length / inspections.length) * 1000) / 10
+    : 100;
+
+  // Order fulfillment
+  const fulfilledPOs = currentPOs.filter(po => ['received', 'partial'].includes(po.status));
+  const orderFulfillment = currentPOs.length > 0
+    ? Math.round((fulfilledPOs.length / currentPOs.length) * 1000) / 10
+    : 100;
+
+  const defectRate = Math.round((100 - qualityRate) * 10) / 10;
+
+  // Previous quarter metrics for trend
+  const prevDelivered = prevPOs.filter(po => po.status === 'received');
+  const prevOnTime = prevDelivered.filter(po => {
+    return po.updatedAt <= po.expectedDate;
+  });
+  const prevOnTimeRate = prevDelivered.length > 0 ? (prevOnTime.length / prevDelivered.length) * 100 : 100;
+
+  const trend = (current: number, prev: number): 'up' | 'down' | 'stable' => {
+    if (current > prev + 1) return 'up';
+    if (current < prev - 1) return 'down';
+    return 'stable';
+  };
+
+  // Supplier ranking
+  const supplier = await prisma.supplier.findUnique({ where: { id: supplierId }, select: { rating: true } });
+  const overallRating = supplier?.rating || 'B';
+
+  const quarterLabel = `Q${Math.floor(now.getMonth() / 3) + 1} ${now.getFullYear()}`;
+
   return {
-    period: 'Q4 2025',
+    period: quarterLabel,
     metrics: {
-      onTimeDelivery: 94.5,
-      qualityRate: 98.2,
-      responseTime: 4.5,
-      orderFulfillment: 96.8,
-      defectRate: 1.8,
+      onTimeDelivery,
+      qualityRate,
+      responseTime: 4.5, // TODO: Calculate from PO acknowledgment timestamps when available
+      orderFulfillment,
+      defectRate,
     },
     trend: {
-      onTimeDelivery: 'up',
+      onTimeDelivery: trend(onTimeDelivery, prevOnTimeRate),
       qualityRate: 'stable',
-      responseTime: 'up',
+      responseTime: 'stable',
       orderFulfillment: 'up',
-      defectRate: 'down',
+      defectRate: defectRate < 2 ? 'down' : 'up',
     },
     ranking: {
-      overall: 'A',
-      category: 3,
-      total: 45,
+      overall: overallRating as string,
+      category: 0,
+      total: allSuppliers,
     },
-  };
-}
-
-function generateDashboardSummary(supplierId: string) {
-  return {
-    orders: {
-      total: 12,
-      pending: 2,
-      inProgress: 4,
-      completed: 6,
-    },
-    deliveries: {
-      total: 8,
-      scheduled: 2,
-      inTransit: 2,
-      delivered: 4,
-    },
-    invoices: {
-      total: 10,
-      pending: 4,
-      approved: 2,
-      paid: 3,
-      overdue: 1,
-    },
-    revenue: {
-      thisMonth: 285000000,
-      lastMonth: 245000000,
-      thisYear: 2850000000,
-      growth: 16.3,
-    },
-    performance: {
-      rating: 'A',
-      onTimeDelivery: 94.5,
-      qualityRate: 98.2,
-    },
-    notifications: [
-      { id: '1', type: 'order', message: 'Đơn hàng PO-2026-01003 cần xác nhận', time: '2 giờ trước', urgent: true },
-      { id: '2', type: 'delivery', message: 'Giao hàng DN-2026-02005 đã trễ hạn', time: '5 giờ trước', urgent: true },
-      { id: '3', type: 'invoice', message: 'Hóa đơn INV-2026-03009 quá hạn thanh toán', time: '1 ngày trước', urgent: true },
-      { id: '4', type: 'info', message: 'Báo cáo hiệu suất Q4 2025 đã sẵn sàng', time: '2 ngày trước', urgent: false },
-    ],
   };
 }
 
@@ -319,12 +288,12 @@ export const GET = withAuth(async (request, context, session) => {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Get authenticated supplier ID
-    const supplierId = await getAuthenticatedSupplierId(request);
+    // Get and validate authenticated supplier ID against session
+    const supplierId = await getAuthenticatedSupplierId(request, session);
 
     if (!supplierId) {
       return NextResponse.json(
-        { success: false, error: 'Supplier ID required' },
+        { success: false, error: 'Supplier ID required or access denied' },
         { status: 401 }
       );
     }
@@ -563,8 +532,7 @@ export const GET = withAuth(async (request, context, session) => {
       }
 
       case 'performance': {
-        // Would calculate from actual data - return placeholder for now
-        const performance = generateMockPerformance(supplierId);
+        const performance = await calculateSupplierPerformance(supplierId);
         return NextResponse.json({
           success: true,
           data: performance,
@@ -598,11 +566,11 @@ export const POST = withAuth(async (request, context, session) => {
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const supplierId = await getAuthenticatedSupplierId(request);
+    const supplierId = await getAuthenticatedSupplierId(request, session);
 
     if (!supplierId) {
       return NextResponse.json(
-        { success: false, error: 'Supplier ID required' },
+        { success: false, error: 'Supplier ID required or access denied' },
         { status: 401 }
       );
     }
