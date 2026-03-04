@@ -56,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
 // TYPES
@@ -832,8 +833,23 @@ export function PartsTable() {
           </p>
         </div>
 
-        {/* Stats */}
-        <StatsCards parts={parts} />
+        {/* Stats - CompactStatsBar */}
+        <CompactStatsBar stats={(() => {
+          const stats = {
+            total: parts.length,
+            active: parts.filter(p => p.lifecycleStatus === 'ACTIVE').length,
+            critical: parts.filter(p => p.isCritical).length,
+            make: parts.filter(p => p.makeOrBuy === 'MAKE').length,
+            buy: parts.filter(p => p.makeOrBuy === 'BUY').length,
+          };
+          return [
+            { label: t('parts.totalCount'), value: stats.total },
+            { label: t('parts.activeCount'), value: stats.active, color: 'text-green-600' },
+            { label: t('parts.criticalCount'), value: stats.critical, color: 'text-orange-600' },
+            { label: t('parts.makeCount'), value: stats.make, color: 'text-indigo-600' },
+            { label: t('parts.buyCount'), value: stats.buy, color: 'text-orange-600' },
+          ];
+        })()} />
 
         {/* Table Card - fill remaining height */}
         <Card className="border-gray-200 dark:border-mrp-border flex-1 flex flex-col min-h-0 overflow-hidden">

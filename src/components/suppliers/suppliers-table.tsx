@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
 // TYPES
@@ -367,8 +368,20 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
         </p>
       </div>
 
-      {/* Stats */}
-      <StatsCards suppliers={suppliers} />
+      {/* Stats - CompactStatsBar */}
+      <CompactStatsBar stats={(() => {
+        const active = suppliers.filter(s => s.status === 'active').length;
+        const ndaaCompliant = suppliers.filter(s => s.ndaaCompliant).length;
+        const avgLeadTime = suppliers.length > 0
+          ? Math.round(suppliers.reduce((sum, s) => sum + s.leadTimeDays, 0) / suppliers.length)
+          : 0;
+        return [
+          { label: t('suppliers.totalSuppliers'), value: suppliers.length },
+          { label: t('suppliers.activeCount'), value: active, color: 'text-green-600' },
+          { label: t('suppliers.ndaaCompliantCount'), value: ndaaCompliant, color: 'text-blue-600' },
+          { label: t('suppliers.avgLeadTimeLabel'), value: t('suppliers.leadTimeDays', { days: String(avgLeadTime) }) },
+        ];
+      })()} />
 
       {/* Table Card - COMPACT */}
       <Card className="border-gray-200 dark:border-mrp-border">

@@ -16,6 +16,7 @@ import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import { useApiData } from '@/hooks/use-api-data';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
 // TYPES
@@ -402,8 +403,16 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         </p>
       </div>
 
-      {/* Stats */}
-      <StatsCards orders={orders} />
+      {/* Stats - CompactStatsBar */}
+      <CompactStatsBar stats={(() => {
+        const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        return [
+          { label: t('orders.totalOrders'), value: orders.length },
+          { label: t('orders.totalValue'), value: formatCurrency(totalValue), color: 'text-green-600' },
+          { label: t('orders.inProduction'), value: orders.filter(o => o.status === 'in_progress').length, color: 'text-blue-600' },
+          { label: t('orders.pendingCount'), value: orders.filter(o => o.status === 'pending').length, color: 'text-amber-600' },
+        ];
+      })()} />
 
       {/* Table Card - COMPACT */}
       <Card className="border-gray-200 dark:border-mrp-border flex-1 flex flex-col min-h-0 overflow-hidden">

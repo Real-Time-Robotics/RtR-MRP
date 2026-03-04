@@ -28,7 +28,7 @@ import {
   INVENTORY_FIELD_LABELS,
   formatCurrency,
 } from './inventory-types';
-import { StatsCards } from './inventory-stats-cards';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 import { InventoryAdjustDialog } from './inventory-adjust-dialog';
 
 // Re-export InventoryItem for backward compatibility
@@ -436,14 +436,14 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
 
   return (
     <div className="h-full flex flex-col space-y-2">
-      {/* Header Area */}
+      {/* Header Area - COMPACT */}
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Package className="h-5 w-5" />
+          <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
+            <Package className="h-4 w-4" />
             {t('inv.pageTitle')}
           </h1>
-          <p className="text-xs text-muted-foreground">{t('inv.pageDesc')}</p>
+          <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">{t('inv.pageDesc')}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => { setLocalUpdates({}); refresh(); }}>
@@ -461,7 +461,12 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
         </div>
       </div>
 
-      <StatsCards summary={summary} />
+      <CompactStatsBar stats={[
+        { label: t('inv.totalSKU'), value: summary.total },
+        { label: t('inv.criticalOutOfStock'), value: summary.critical, color: 'text-red-600' },
+        { label: t('inv.reorderNeeded'), value: summary.reorder, color: 'text-amber-600' },
+        { label: t('inv.inStock'), value: summary.ok, color: 'text-green-600' },
+      ]} />
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <SmartGrid
