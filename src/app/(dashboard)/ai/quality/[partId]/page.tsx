@@ -220,7 +220,7 @@ export default function PartQualityDetailPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className="h-8">
+          <Button asChild variant="ghost" size="icon">
             <Link href="/ai/quality">
               <ArrowLeft className="h-4 w-4" />
             </Link>

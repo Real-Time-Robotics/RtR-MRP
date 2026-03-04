@@ -84,11 +84,11 @@ export default function BomVersionsPage() {
               onChange={(e) => setProductId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchVersions()}
             />
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={fetchVersions} disabled={loading || !productId.trim()}>
+            <Button size="sm" variant="outline" className="text-[10px]" onClick={fetchVersions} disabled={loading || !productId.trim()}>
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5 mr-1" />}
               Tìm
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={createVersion} disabled={actionLoading === "new" || !productId.trim()}>
+            <Button size="sm" variant="outline" className="text-[10px]" onClick={createVersion} disabled={actionLoading === "new" || !productId.trim()}>
               {actionLoading === "new" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
               Tạo phiên bản mới
             </Button>

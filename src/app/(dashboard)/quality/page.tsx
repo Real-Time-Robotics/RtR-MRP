@@ -295,7 +295,7 @@ export default function QualityDashboardPage() {
                 {stats?.openNCRs || 0}
               </p>
               <p className="text-[10px] text-muted-foreground">{t("quality.openNCRs")}</p>
-              <Button asChild className="mt-2 h-7 text-[11px]" size="sm">
+              <Button asChild className="mt-2 text-[11px]" size="sm">
                 <Link href="/quality/ncr/new">{t("quality.createNCR")}</Link>
               </Button>
             </div>
@@ -318,7 +318,7 @@ export default function QualityDashboardPage() {
                 {stats?.openCAPAs || 0}
               </p>
               <p className="text-[10px] text-muted-foreground">{t("quality.openCAPAs")}</p>
-              <Button asChild className="mt-2 h-7 text-[11px]" size="sm">
+              <Button asChild className="mt-2 text-[11px]" size="sm">
                 <Link href="/quality/capa/new">{t("quality.createCAPA")}</Link>
               </Button>
             </div>

@@ -80,7 +80,7 @@ export default function ReworkPage() {
                   {created.has(ncr.ncrId) ? (
                     <span className="text-[10px] font-mono text-green-600 font-bold">→ {created.get(ncr.ncrId)}</span>
                   ) : (
-                    <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={creating === ncr.ncrId} onClick={() => createRework(ncr)}>
+                    <Button size="sm" variant="outline" className="text-[10px]" disabled={creating === ncr.ncrId} onClick={() => createRework(ncr)}>
                       {creating === ncr.ncrId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
                       Tạo Rework WO
                     </Button>

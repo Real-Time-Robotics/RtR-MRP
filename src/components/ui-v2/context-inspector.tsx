@@ -33,7 +33,7 @@ export function ContextInspector() {
                     <Database className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                     <h3 className="font-semibold text-sm dark:text-slate-200">Context Inspector</h3>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setSelectedId(null)} aria-label="Đóng">
+                <Button variant="ghost" size="icon" className="hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setSelectedId(null)} aria-label="Đóng">
                     <X className="h-4 w-4 dark:text-slate-400" />
                 </Button>
             </div>
@@ -211,8 +211,8 @@ export function ContextInspector() {
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                                <Input placeholder="Ask Copilot..." className="h-8 text-xs dark:bg-slate-950 dark:border-slate-800" />
-                                <Button size="sm" className="h-8">Ask</Button>
+                                <Input placeholder="Ask Copilot..." className="text-xs dark:bg-slate-950 dark:border-slate-800" />
+                                <Button size="sm">Ask</Button>
                             </div>
                         </TabsContent>
                     </Tabs>

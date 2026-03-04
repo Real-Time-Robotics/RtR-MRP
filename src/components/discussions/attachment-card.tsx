@@ -187,7 +187,7 @@ export function DocumentAttachmentCard({ attachment, onRemove, showRemove }: Doc
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Tải xuống">
+          <Button variant="ghost" size="icon" asChild aria-label="Tải xuống">
             <a href={attachment.fileUrl} download={attachment.filename}>
               <Download className="h-4 w-4" />
             </a>
@@ -275,7 +275,7 @@ export function EntityLinkCard({
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Xem ${config.label}`}>
+              <Button variant="ghost" size="icon" asChild aria-label={`Xem ${config.label}`}>
                 <Link href={entityUrl}>
                   <Eye className="h-4 w-4" />
                 </Link>
@@ -286,7 +286,7 @@ export function EntityLinkCard({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label={`Chỉnh sửa ${config.label}`}>
+              <Button variant="ghost" size="icon" asChild aria-label={`Chỉnh sửa ${config.label}`}>
                 <Link href={editUrl}>
                   <Pencil className="h-4 w-4" />
                 </Link>
@@ -297,7 +297,7 @@ export function EntityLinkCard({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" asChild aria-label="Mở trong tab mới">
+              <Button variant="ghost" size="icon" asChild aria-label="Mở trong tab mới">
                 <Link href={entityUrl} target="_blank">
                   <ExternalLink className="h-4 w-4" />
                 </Link>

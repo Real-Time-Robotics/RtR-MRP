@@ -157,7 +157,7 @@ export default function EnhancedReportsPage() {
                 </div>
               </>
             )}
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={loading} onClick={generateReport}>
+            <Button size="sm" variant="outline" className="text-[10px]" disabled={loading} onClick={generateReport}>
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5 mr-1" />}
               Tạo báo cáo
             </Button>

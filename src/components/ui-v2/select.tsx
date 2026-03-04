@@ -66,9 +66,9 @@ export interface SelectProps {
 }
 
 const selectSizes = {
-  sm: 'h-8 text-sm px-3',
-  md: 'h-10 text-sm px-3.5',
-  lg: 'h-12 text-base px-4',
+  sm: 'h-7 text-sm px-2.5',
+  md: 'h-8 text-sm px-3',
+  lg: 'h-9 text-base px-3.5',
 };
 
 const Select = forwardRef<HTMLDivElement, SelectProps>(

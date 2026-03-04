@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Truck, Calendar, FileText, CheckCircle, Clock, Ban, Printer } from 'lucide-react';
+import { ArrowLeft, Truck, Calendar, FileText, CheckCircle, Clock, Ban, Printer, Send, PackageCheck, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui-v2/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +62,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+    const [statusLoading, setStatusLoading] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -109,6 +110,48 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
         generatePurchaseOrderPDF(po);
     };
 
+    const handleStatusChange = async (newStatus: string, label: string) => {
+        if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+        setStatusLoading(true);
+        try {
+            const res = await fetch(`/api/purchase-orders/${params.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Lỗi cập nhật trạng thái');
+            }
+            toast.success(`PO đã chuyển sang trạng thái "${label}"`);
+            fetchData();
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Lỗi cập nhật trạng thái');
+        } finally {
+            setStatusLoading(false);
+        }
+    };
+
+    const STATUS_ACTIONS: Record<string, Array<{ status: string; label: string; icon: React.ReactNode; variant: 'primary' | 'danger' | 'secondary' | 'ghost' }>> = {
+        draft: [
+            { status: 'pending', label: 'Gửi PO', icon: <Send className="h-4 w-4" />, variant: 'primary' },
+            { status: 'cancelled', label: 'Hủy', icon: <XCircle className="h-4 w-4" />, variant: 'danger' },
+        ],
+        pending: [
+            { status: 'confirmed', label: 'Xác nhận', icon: <CheckCircle className="h-4 w-4" />, variant: 'primary' },
+            { status: 'cancelled', label: 'Hủy', icon: <XCircle className="h-4 w-4" />, variant: 'danger' },
+        ],
+        confirmed: [
+            { status: 'in_progress', label: 'Đang giao', icon: <Truck className="h-4 w-4" />, variant: 'primary' },
+            { status: 'cancelled', label: 'Hủy', icon: <XCircle className="h-4 w-4" />, variant: 'danger' },
+        ],
+        in_progress: [
+            { status: 'received', label: 'Đã nhận hàng', icon: <PackageCheck className="h-4 w-4" />, variant: 'primary' },
+        ],
+    };
+
+    const availableActions = STATUS_ACTIONS[po.status] || [];
+
     return (
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
             {/* Header */}
@@ -130,9 +173,23 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                         </span>
                     </div>
                 </div>
-                <Button variant="secondary" size="sm" leftIcon={<Printer className="h-4 w-4" />} onClick={handlePrintPDF}>
-                    Print PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                    {availableActions.map((action) => (
+                        <Button
+                            key={action.status}
+                            variant={action.variant}
+                            size="sm"
+                            disabled={statusLoading}
+                            leftIcon={statusLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : action.icon}
+                            onClick={() => handleStatusChange(action.status, action.label)}
+                        >
+                            {action.label}
+                        </Button>
+                    ))}
+                    <Button variant="secondary" size="sm" leftIcon={<Printer className="h-4 w-4" />} onClick={handlePrintPDF}>
+                        Print PDF
+                    </Button>
+                </div>
             </div>
 
             <Tabs defaultValue="details" className="w-full">

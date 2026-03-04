@@ -77,19 +77,19 @@ const buttonVariants = {
 };
 
 const buttonSizes = {
-  xs: 'h-7 px-2.5 text-xs gap-1',
-  sm: 'h-9 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-5 text-base gap-2',
-  xl: 'h-14 px-6 text-lg gap-2.5',
+  xs: 'h-6 px-2 text-xs gap-1',
+  sm: 'h-7 px-2.5 text-sm gap-1.5',
+  md: 'h-8 px-3 text-sm gap-2',
+  lg: 'h-9 px-4 text-base gap-2',
+  xl: 'h-10 px-5 text-lg gap-2.5',
 };
 
 const iconOnlySizes = {
-  xs: 'h-7 w-7',
-  sm: 'h-9 w-9',
-  md: 'h-10 w-10',
-  lg: 'h-12 w-12',
-  xl: 'h-14 w-14',
+  xs: 'h-6 w-6',
+  sm: 'h-7 w-7',
+  md: 'h-8 w-8',
+  lg: 'h-9 w-9',
+  xl: 'h-10 w-10',
 };
 
 const iconSizes = {

@@ -93,11 +93,11 @@ export default function MISAExportPage() {
                 {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={loading} onClick={preview}>
+            <Button size="sm" variant="outline" className="text-[10px]" disabled={loading} onClick={preview}>
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5 mr-1" />}
               Xem trước
             </Button>
-            <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={loading} onClick={downloadCSV}>
+            <Button size="sm" variant="outline" className="text-[10px]" disabled={loading} onClick={downloadCSV}>
               <Download className="h-3.5 w-3.5 mr-1" /> Tải CSV
             </Button>
           </div>

@@ -19,7 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
+import { MRPExceptionsTab } from "@/components/mrp/mrp-exceptions-tab";
 import { clientLogger } from '@/lib/client-logger';
+import { toast } from "sonner";
 
 interface MrpRunData {
   id: string;
@@ -41,6 +43,7 @@ interface MrpRunData {
     reason: string | null;
     status: string;
     estimatedCost: number | null;
+    onOrder?: number;
     part: {
       partNumber: string;
       name: string;
@@ -48,6 +51,28 @@ interface MrpRunData {
     supplier: {
       name: string;
     } | null;
+    bomChildren?: Array<{
+      partId: string;
+      partNumber: string;
+      name: string;
+      quantity: number;
+      unit: string;
+      stock: number;
+      onOrder: number;
+      isCritical: boolean;
+      totalDemandAll?: number;
+      children?: Array<{
+        partId: string;
+        partNumber: string;
+        name: string;
+        quantity: number;
+        unit: string;
+        stock: number;
+        onOrder: number;
+        isCritical: boolean;
+        totalDemandAll?: number;
+      }>;
+    }>;
   }>;
 }
 
@@ -115,30 +140,86 @@ export default function MrpRunDetailPage() {
   }, [data, fetchData]);
 
   const handleApprove = async (id: string) => {
-    await fetch(`/api/mrp/suggestions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "approve" }),
-    });
-    fetchData();
+    try {
+      const res = await fetch(`/api/mrp/suggestions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Không thể duyệt suggestion");
+        return;
+      }
+      toast.success("Đã duyệt suggestion", {
+        description: "Bạn có thể tạo PO từ tab 'Đã duyệt'",
+      });
+      setStatusFilter("approved");
+      fetchData();
+    } catch {
+      toast.error("Lỗi khi duyệt suggestion");
+    }
   };
 
   const handleReject = async (id: string) => {
-    await fetch(`/api/mrp/suggestions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reject" }),
-    });
-    fetchData();
+    try {
+      const res = await fetch(`/api/mrp/suggestions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject" }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Không thể từ chối suggestion");
+        return;
+      }
+      toast.success("Đã từ chối suggestion");
+      fetchData();
+    } catch {
+      toast.error("Lỗi khi từ chối suggestion");
+    }
   };
 
   const handleCreatePO = async (id: string) => {
-    await fetch(`/api/mrp/suggestions/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "approve", createPO: true }),
-    });
-    fetchData();
+    try {
+      const res = await fetch(`/api/mrp/suggestions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", createPO: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Không thể tạo PO");
+        return;
+      }
+      const result = await res.json();
+      if (result.error) {
+        toast.error(result.error);
+        fetchData();
+        return;
+      }
+      const poId = result.po?.id;
+      if (!poId) {
+        toast.warning("Suggestion đã duyệt nhưng không tạo được PO", {
+          description: "Không tìm thấy nhà cung cấp. Tạo PO thủ công từ trang Purchasing.",
+        });
+        setStatusFilter("approved");
+        fetchData();
+        return;
+      }
+      const isConsolidated = result.consolidated === true;
+      toast.success(
+        isConsolidated ? "Đã gộp vào PO hiện có!" : "Đã tạo PO thành công!", {
+        description: isConsolidated
+          ? "Part đã được thêm vào PO draft cùng nhà cung cấp"
+          : "Suggestion đã duyệt và PO đã được tạo tự động",
+        action: { label: "Xem PO", onClick: () => router.push(`/purchasing/${poId}`) },
+      });
+      setStatusFilter("converted");
+      fetchData();
+    } catch {
+      toast.error("Lỗi khi tạo PO");
+    }
   };
 
   if (loading) {
@@ -286,6 +367,7 @@ export default function MrpRunDetailPage() {
       <Tabs defaultValue="suggestions" className="w-full">
         <TabsList>
           <TabsTrigger value="suggestions">Đề xuất</TabsTrigger>
+          <TabsTrigger value="exceptions">Exceptions</TabsTrigger>
           <TabsTrigger value="discussions">Thảo luận</TabsTrigger>
         </TabsList>
 
@@ -356,6 +438,8 @@ export default function MrpRunDetailPage() {
                         supplierName: suggestion.supplier?.name,
                         estimatedCost: suggestion.estimatedCost,
                         status: suggestion.status,
+                        onOrder: suggestion.onOrder,
+                        bomChildren: suggestion.bomChildren,
                       }}
                       onApprove={handleApprove}
                       onReject={handleReject}
@@ -366,6 +450,10 @@ export default function MrpRunDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="exceptions" className="mt-4">
+          <MRPExceptionsTab mrpRunId={data.id} />
         </TabsContent>
 
         <TabsContent value="discussions" className="mt-4">

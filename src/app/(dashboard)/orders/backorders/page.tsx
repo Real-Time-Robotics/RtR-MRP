@@ -63,7 +63,7 @@ export default function BackordersPage() {
           <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">Đơn hàng giao thiếu — tự động tạo lô giao bổ sung</p>
         </div>
         {backorders.some((b) => b.canFulfill) && !processed && (
-          <Button size="sm" variant="outline" className="h-7 text-[10px]" disabled={processing} onClick={processAll}>
+          <Button size="sm" variant="outline" className="text-[10px]" disabled={processing} onClick={processAll}>
             {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Truck className="h-3.5 w-3.5 mr-1" />}
             Xử lý Backorder
           </Button>

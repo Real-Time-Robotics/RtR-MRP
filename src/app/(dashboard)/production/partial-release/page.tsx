@@ -72,7 +72,7 @@ export default function PartialReleasePage() {
                     {released.has(c.workOrderId) ? (
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
                     ) : (
-                      <Button size="sm" variant="outline" className="text-[10px] h-7" disabled={releasing === c.workOrderId} onClick={() => release(c)}>
+                      <Button size="sm" variant="outline" className="text-[10px]" disabled={releasing === c.workOrderId} onClick={() => release(c)}>
                         {releasing === c.workOrderId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5 mr-1" />}
                         Release {c.maxProducibleQty}
                       </Button>

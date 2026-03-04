@@ -267,7 +267,7 @@ export default function MrpPage() {
               MRP Calculation
             </span>
           </div>
-          <Button onClick={runMrp} disabled={running} size="sm" className="h-7 text-[11px] px-3 gap-1.5">
+          <Button onClick={runMrp} disabled={running} size="sm" className="text-[11px] px-3 gap-1.5">
             {running ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />

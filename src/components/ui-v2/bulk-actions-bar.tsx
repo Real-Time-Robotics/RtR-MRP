@@ -125,7 +125,7 @@ export function BulkActionsBar({
         {overflowActions.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="h-8 w-8 p-0">
+              <Button variant="secondary" size="icon">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
