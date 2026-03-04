@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
 // STATS
@@ -79,6 +80,19 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
     { search, status: filters.status, type: filters.type },
     { debounce: search ? 300 : 0 }
   );
+
+  // Compact stats for bar
+  const customerStats = useMemo(() => {
+    const active = customers.filter((c) => c.status === 'active').length;
+    const enterprise = customers.filter((c) => c.type === 'Enterprise').length;
+    const totalCredit = customers.reduce((sum, c) => sum + (c.creditLimit || 0), 0);
+    return [
+      { label: t('customers.totalCustomers'), value: customers.length },
+      { label: t('customers.activeCount'), value: active, color: 'text-green-600' },
+      { label: t('customers.enterprise'), value: enterprise, color: 'text-blue-600' },
+      { label: t('customers.totalCreditLimit'), value: `$${(totalCredit / 1000).toFixed(0)}K` },
+    ];
+  }, [customers, t]);
 
   const handleAdd = () => { setEditingCustomer(null); setFormOpen(true); };
   const handleEdit = (customer: Customer) => { setEditingCustomer(customer); setFormOpen(true); };
@@ -250,19 +264,21 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
   ], [t]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
+      {/* Header - COMPACT */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Users className="h-6 w-6" />
+        <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
+          <Users className="h-4 w-4" />
           {t('customers.pageTitle')}
         </h1>
-        <p className="text-muted-foreground">{t('customers.pageDesc')}</p>
+        <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">{t('customers.pageDesc')}</p>
       </div>
 
-      <StatsCards customers={customers} />
+      {/* Stats - CompactStatsBar */}
+      <CompactStatsBar stats={customerStats} />
 
-      <Card>
-        <CardHeader className="pb-4">
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2 shrink-0">
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}

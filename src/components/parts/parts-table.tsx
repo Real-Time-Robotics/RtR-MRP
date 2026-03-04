@@ -820,7 +820,7 @@ export function PartsTable() {
   return (
     <TooltipProvider>
       {/* Fill viewport: flex column with overflow containment */}
-      <div className="h-full flex flex-col gap-3">
+      <div className="h-full flex flex-col gap-2">
         {/* Header - COMPACT */}
         <div>
           <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">

@@ -355,7 +355,7 @@ export function SuppliersTable({ initialData = [] }: SuppliersTableProps) {
 
   return (
     // COMPACT: space-y-6 → space-y-3
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Header - COMPACT */}
       <div>
         <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">

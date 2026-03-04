@@ -14,6 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Lock, Unlock, Edit, Trash2, Plus, Package } from "lucide-react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
@@ -200,49 +201,21 @@ export function FirmOrderTable({
     },
   ], [onFirm, onEdit, onDelete]);
 
+  const firmOrderStats = useMemo(() => [
+    { label: 'Total Orders', value: orders.length },
+    { label: 'Firm Orders', value: firmCount, color: 'text-amber-600' },
+    { label: 'Planned Orders', value: plannedCount },
+  ], [orders.length, firmCount, plannedCount]);
+
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <Package className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <div className="text-3xl font-bold">{orders.length}</div>
-                <div className="text-sm text-muted-foreground">Total Orders</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <Lock className="h-8 w-8 text-amber-600" />
-              <div>
-                <div className="text-3xl font-bold text-amber-700">{firmCount}</div>
-                <div className="text-sm text-amber-600">Firm Orders</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <Unlock className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <div className="text-3xl font-bold">{plannedCount}</div>
-                <div className="text-sm text-muted-foreground">Planned Orders</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-2">
+      {/* Summary - CompactStatsBar */}
+      <CompactStatsBar stats={firmOrderStats} />
 
       {/* Orders Table */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle>Planned Orders</CardTitle>
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="flex flex-row items-center justify-between px-3 py-2">
+          <CardTitle className="text-sm font-medium">Planned Orders</CardTitle>
           {onCreate && (
             <Button onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-1" /> New Order

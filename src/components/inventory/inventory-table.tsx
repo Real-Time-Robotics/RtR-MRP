@@ -435,7 +435,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
   ], [displayInventory, t]);
 
   return (
-    <div className="h-full flex flex-col space-y-4">
+    <div className="h-full flex flex-col space-y-2">
       {/* Header Area */}
       <div className="flex items-center justify-between shrink-0">
         <div>

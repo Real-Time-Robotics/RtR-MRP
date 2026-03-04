@@ -131,9 +131,9 @@ export function DataTableToolbar({
   const hasActiveFilters = Object.values(activeFilters).some(v => v && v !== 'all');
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('space-y-2', className)}>
       {/* Main Toolbar Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         {/* Left Side - Search & Filters */}
         <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
           {/* Search */}

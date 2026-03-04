@@ -159,10 +159,10 @@ export function ModernAppShell({
         {/* Main Content - COMPACT: p-6 → p-4 */}
         <main className="flex-1 overflow-y-auto">
           {/* Add bottom padding on mobile for fixed bottom nav (h-14 + safe area) */}
-          <div className="p-4 pb-20 md:pb-4">
+          <div className="p-3 pb-20 md:pb-3">
             {/* Breadcrumb navigation (hidden on home page) */}
             {pathname !== '/home' && pathname !== '/' && (
-              <div className="mb-3">
+              <div className="mb-1">
                 <Breadcrumb showHome maxItems={4} />
               </div>
             )}

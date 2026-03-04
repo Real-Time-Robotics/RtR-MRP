@@ -16,6 +16,7 @@ import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import { useApiData } from '@/hooks/use-api-data';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
 // TYPES
@@ -152,6 +153,18 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
     { debounce: search ? 300 : 0 }
   );
 
+  // Compact stats for bar
+  const poStats = useMemo(() => {
+    const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const pendingOrders = orders.filter((o) => !['received', 'cancelled'].includes(o.status));
+    return [
+      { label: t('po.totalPO'), value: orders.length },
+      { label: t('po.totalValue'), value: formatCurrency(totalValue), color: 'text-green-600' },
+      { label: t('po.processing'), value: pendingOrders.length, color: 'text-amber-600' },
+      { label: t('po.received'), value: orders.filter((o) => o.status === 'received').length, color: 'text-blue-600' },
+    ];
+  }, [orders, t]);
+
   // Handlers
   const handleAdd = () => {
     setEditingOrder(null);
@@ -250,7 +263,7 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
       label: t('common.edit'),
       onClick: () => handleEdit(order),
       permission: 'orders:edit',
-      disabled: !['draft', 'pending', 'confirmed'].includes(order.status),
+      disabled: ['received', 'cancelled'].includes(order.status),
     },
     {
       label: order.status === 'draft' ? t('common.delete') : t('po.cancelPO'),
@@ -378,29 +391,29 @@ export function PurchaseOrdersTable({ initialData = [] }: PurchaseOrdersTablePro
   ], [t]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Deep link handler for URL params (e.g., from AI Copilot) */}
       <Suspense fallback={null}>
         <DeepLinkHandler formOpen={formOpen} onDeepLink={handleDeepLink} />
       </Suspense>
 
-      {/* Header */}
+      {/* Header - COMPACT */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Truck className="h-6 w-6" />
+        <h1 className="text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
+          <Truck className="h-4 w-4" />
           {t('po.pageTitle')}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-[11px] text-gray-500 dark:text-mrp-text-muted">
           {t('po.pageDesc')}
         </p>
       </div>
 
-      {/* Stats */}
-      <StatsCards orders={orders} />
+      {/* Stats - CompactStatsBar */}
+      <CompactStatsBar stats={poStats} />
 
-      {/* Table Card */}
-      <Card>
-        <CardHeader className="pb-4">
+      {/* Table Card - COMPACT */}
+      <Card className="border-gray-200 dark:border-mrp-border">
+        <CardHeader className="px-3 py-2 shrink-0">
           <DataTableToolbar
             searchValue={search}
             onSearchChange={setSearch}
