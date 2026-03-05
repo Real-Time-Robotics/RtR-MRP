@@ -15,7 +15,8 @@ interface MrpPartRow {
     id: string;
     partNumber: string;
     makeOrBuy: string;
-    planning: { leadTimeDays: number; safetyStock: number; orderMultiple: number; minStockLevel: number } | null;
+    moq: number;
+    planning: { leadTimeDays: number; safetyStock: number; orderMultiple: number; minStockLevel: number; moq: number } | null;
     inventory: Array<{ quantity: number; reservedQty: number; warehouseId: string }>;
 }
 
@@ -45,8 +46,9 @@ export class MrpEngine {
                 id: true,
                 partNumber: true,
                 makeOrBuy: true,
+                moq: true,
                 planning: {
-                    select: { leadTimeDays: true, safetyStock: true, orderMultiple: true, minStockLevel: true }
+                    select: { leadTimeDays: true, safetyStock: true, orderMultiple: true, minStockLevel: true, moq: true }
                 },
                 inventory: {
                     select: { quantity: true, reservedQty: true, warehouseId: true }
@@ -146,7 +148,7 @@ export class MrpEngine {
                     },
                 });
                 skuToPartId.set(product.sku, newPart.id);
-                partMap.set(newPart.id, { id: newPart.id, partNumber: newPart.partNumber, makeOrBuy: 'MAKE', planning: null, inventory: [] });
+                partMap.set(newPart.id, { id: newPart.id, partNumber: newPart.partNumber, makeOrBuy: 'MAKE', moq: 1, planning: null, inventory: [] });
             }
         }
 
@@ -372,9 +374,15 @@ export class MrpEngine {
 
                 if (netRequired > 0) {
                     // Apply MOQ and order multiple rounding
+                    const moq = part.planning?.moq || part.moq || 1;
                     const orderMultiple = part.planning?.orderMultiple || 1;
                     const minStockLevel = part.planning?.minStockLevel || 0;
                     let suggestedQty = netRequired;
+
+                    // Enforce MOQ: suggested quantity must be at least MOQ
+                    if (moq > 1 && suggestedQty < moq) {
+                        suggestedQty = moq;
+                    }
 
                     // Round up to nearest order multiple
                     if (orderMultiple > 1) {
@@ -384,6 +392,11 @@ export class MrpEngine {
                     // Ensure at least the minimum stock level
                     if (minStockLevel > 0 && suggestedQty < minStockLevel) {
                         suggestedQty = Math.ceil(minStockLevel / orderMultiple) * orderMultiple;
+                    }
+
+                    // Final MOQ check after all rounding (ensure MOQ is still respected)
+                    if (moq > 1 && suggestedQty < moq) {
+                        suggestedQty = Math.ceil(moq / orderMultiple) * orderMultiple;
                     }
 
                     // Determine action type based on makeOrBuy (D-01 fix)
@@ -444,7 +457,7 @@ export class MrpEngine {
                         requiredQty: totalGross,
                         shortageQty: netRequired,
                         supplierId: supplierId,
-                        reason: `Gross: ${totalGross}, Stock: ${totalStock}, OnOrder: ${onOrder}, SS: ${safetyStock}, MOQ: ${orderMultiple}, Type: ${actionType}${warningStr}`
+                        reason: `Gross: ${totalGross}, Stock: ${totalStock}, OnOrder: ${onOrder}, SS: ${safetyStock}, MOQ: ${moq}, OrderMultiple: ${orderMultiple}, Type: ${actionType}${warningStr}`
                     });
                 }
 

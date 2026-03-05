@@ -147,16 +147,14 @@ export function usePaginatedData<T extends { id: string }>(
   }, []);
 
   // Auto-fetch on mount and when dependencies change
+  // Note: No cleanup abort — fetchPage() already cancels stale requests via
+  // its own AbortController logic. Aborting in cleanup causes a race condition
+  // in React Strict Mode (dev) where the initial fetch is always cancelled.
+  // React 18+ safely ignores setState on unmounted components.
   useEffect(() => {
     if (autoFetch) {
       fetchPage(page);
     }
-
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
   }, [autoFetch, fetchPage, page, pageSize, filters, search, sortBy, sortOrder]);
 
   return {

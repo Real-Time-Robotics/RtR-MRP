@@ -30,7 +30,8 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
         ...buildOffsetPaginationQuery(params),
         include: {
           bomHeaders: {
-            where: { status: "active" },
+            where: { status: { in: ["active", "draft"] } },
+            orderBy: [{ status: "asc" }, { createdAt: "desc" }],
             include: {
               bomLines: true,
             },
@@ -53,6 +54,8 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
         basePrice: product.basePrice || 0,
         status: product.status,
         bomVersion: activeBom?.version || "N/A",
+        bomStatus: activeBom?.status || null,
+        bomHeaderId: activeBom?.id || null,
         totalParts,
         hasBom: !!activeBom,
       };

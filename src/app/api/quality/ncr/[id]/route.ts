@@ -84,7 +84,9 @@ export const PATCH = withAuth(async (request, context, session) => {
 
     // If action is provided, use the workflow transition
     if (data.action) {
-      const result = await transitionNCR(id, data.action, session.user.id, body);
+      // Strip non-model fields before passing to transitionNCR
+      const { action: _action, ...transitionData } = body;
+      const result = await transitionNCR(id, data.action, session.user.id, transitionData);
       if (!result.success) {
         return NextResponse.json({ error: result.error }, { status: 400 });
       }

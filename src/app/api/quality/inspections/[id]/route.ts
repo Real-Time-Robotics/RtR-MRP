@@ -26,19 +26,29 @@ export const GET = withAuth(async (request, context, session) => {
   try {
     const { id } = await context.params;
 
-    const inspection = await prisma.inspection.findUnique({
-      where: { id },
-      include: {
-        part: { select: { id: true, partNumber: true, name: true, unit: true } },
-        product: { select: { id: true, sku: true, name: true } },
-        plan: { select: { id: true, planNumber: true, name: true } },
-        workOrder: { select: { id: true, woNumber: true, status: true, completedQty: true } },
-        results: {
-          include: { characteristic: true },
-          orderBy: { inspectedAt: "asc" },
-        },
+    const includeRelations = {
+      part: { select: { id: true, partNumber: true, name: true, unit: true } },
+      product: { select: { id: true, sku: true, name: true } },
+      plan: { select: { id: true, planNumber: true, name: true } },
+      workOrder: { select: { id: true, woNumber: true, status: true, completedQty: true } },
+      results: {
+        include: { characteristic: true },
+        orderBy: { inspectedAt: "asc" as const },
       },
+    };
+
+    // Try by ID first, then fallback to inspectionNumber
+    let inspection = await prisma.inspection.findUnique({
+      where: { id },
+      include: includeRelations,
     });
+
+    if (!inspection) {
+      inspection = await prisma.inspection.findUnique({
+        where: { inspectionNumber: id },
+        include: includeRelations,
+      });
+    }
 
     if (!inspection) {
       return NextResponse.json({ error: "Inspection not found" }, { status: 404 });
@@ -69,10 +79,17 @@ export const PUT = withAuth(async (request, context, session) => {
     }
     const data = parsed.data;
 
-    const existing = await prisma.inspection.findUnique({
+    // Try by ID first, then fallback to inspectionNumber
+    let existing = await prisma.inspection.findUnique({
       where: { id },
       include: { part: true },
     });
+    if (!existing) {
+      existing = await prisma.inspection.findUnique({
+        where: { inspectionNumber: id },
+        include: { part: true },
+      });
+    }
     if (!existing) {
       return NextResponse.json({ error: "Inspection not found" }, { status: 404 });
     }
@@ -99,7 +116,7 @@ export const PUT = withAuth(async (request, context, session) => {
     }
 
     const inspection = await prisma.inspection.update({
-      where: { id },
+      where: { id: existing.id },
       data: updateData,
       include: {
         part: { select: { id: true, partNumber: true, name: true, unit: true } },

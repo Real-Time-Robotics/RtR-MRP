@@ -2,6 +2,7 @@
 
 // src/components/excel/import-wizard/import-wizard.tsx
 // Multi-Step Import Wizard Component with AI Integration (Refactored)
+// 6 steps: Upload → Entity Type → Column Mapping → Validation → Data Cleansing → Import
 
 import { useState, useCallback } from "react";
 import {
@@ -24,6 +25,7 @@ import { StepFileUpload } from "./step-file-upload";
 import { StepEntityType } from "./step-entity-type";
 import { StepColumnMapping } from "./step-column-mapping";
 import { StepValidation } from "./step-validation";
+import { StepDataCleansing } from "./step-data-cleansing";
 import { StepImportConfirm } from "./step-import-confirm";
 
 export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWizardProps = {}) {
@@ -41,6 +43,9 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
   const [targetFields, setTargetFields] = useState<FieldDefinition[]>([]);
   const [showAIPanel, setShowAIPanel] = useState(true);
   const [duplicateActions, setDuplicateActions] = useState<Record<number, string>>({});
+
+  // Cleansed data for step 5
+  const [cleansedData, setCleansedData] = useState<Record<string, unknown>[] | null>(null);
 
   // AI Import Hook
   const aiImport = useAIImport();
@@ -219,6 +224,18 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     }
   }, [parseResult, mappings, entityType, updateMode, aiImport]);
 
+  // Handle data cleansing changes
+  const handleCleansedDataChange = useCallback((updatedData: Record<string, unknown>[]) => {
+    setCleansedData(updatedData);
+    // Also update parseResult preview so import uses cleansed data
+    if (parseResult) {
+      setParseResult({
+        ...parseResult,
+        preview: updatedData,
+      });
+    }
+  }, [parseResult]);
+
   // Process import -- submits to background job queue, then polls for result
   const handleImport = useCallback(async () => {
     setIsLoading(true);
@@ -226,13 +243,16 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     setImportResult(null);
 
     try {
+      // Use cleansed data if available, otherwise use original
+      const importData = cleansedData || parseResult?.preview;
+
       // Submit to background queue
       const response = await fetch("/api/excel/import/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: parseResult?.jobId,
-          data: parseResult?.preview,
+          data: importData,
         }),
       });
 
@@ -294,7 +314,7 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     } finally {
       setIsLoading(false);
     }
-  }, [parseResult, onSuccess]);
+  }, [parseResult, cleansedData, onSuccess]);
 
   const canProceed = (): boolean => {
     switch (currentStep) {
@@ -304,11 +324,15 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
         return entityType !== "";
       case 3:
         return mappings.length > 0;
-      case 4:
+      case 4: {
         // Allow proceeding if no critical errors
         const criticalErrors = aiImport.dataIssues.filter((i) => i.severity === "error").length;
         return criticalErrors === 0 || validationErrors.filter((e) => e.severity === "error").length === 0;
+      }
       case 5:
+        // Data cleansing - always can proceed (optional step)
+        return true;
+      case 6:
         return importResult !== null;
       default:
         return false;
@@ -319,8 +343,14 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
     if (currentStep === 3) {
       handleValidate();
     } else if (currentStep === 4) {
+      // Initialize cleansed data from current preview
+      if (parseResult?.preview && !cleansedData) {
+        setCleansedData([...parseResult.preview]);
+      }
       setCurrentStep(5);
-    } else if (currentStep < 5) {
+    } else if (currentStep === 5) {
+      setCurrentStep(6);
+    } else if (currentStep < 6) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -376,6 +406,7 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
             showAIPanel={showAIPanel}
             columnSuggestions={aiImport.columnSuggestions}
             isMappingColumns={aiImport.isMappingColumns}
+            entityType={entityType}
             onMappingChange={handleMappingChange}
             onUpdateModeChange={setUpdateMode}
             onToggleAIPanel={() => setShowAIPanel(!showAIPanel)}
@@ -399,8 +430,18 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
           />
         )}
 
-        {/* Step 5: Import */}
+        {/* Step 5: Data Cleansing */}
         {currentStep === 5 && (
+          <StepDataCleansing
+            data={cleansedData || parseResult?.preview || []}
+            mappings={mappings}
+            dataIssues={aiImport.dataIssues}
+            onDataChange={handleCleansedDataChange}
+          />
+        )}
+
+        {/* Step 6: Import */}
+        {currentStep === 6 && (
           <StepImportConfirm
             parseResult={parseResult}
             entityType={entityType}
@@ -430,10 +471,10 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
           className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          Quay lại
+          Quay lai
         </button>
 
-        {currentStep < 5 && currentStep !== 2 && (
+        {currentStep < 6 && currentStep !== 2 && (
           <button
             onClick={handleNext}
             disabled={!canProceed() || isLoading || isAILoading}
@@ -442,21 +483,26 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
             {isAILoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Đang phân tích...
+                Dang phan tich...
               </>
             ) : currentStep === 3 ? (
               <>
-                Kiểm tra
+                Kiem tra
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : currentStep === 4 ? (
               <>
-                Tiếp tục Import
+                Chinh sua du lieu
+                <ArrowRight className="w-4 h-4" />
+              </>
+            ) : currentStep === 5 ? (
+              <>
+                Tiep tuc Import
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : (
               <>
-                Tiếp theo
+                Tiep theo
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

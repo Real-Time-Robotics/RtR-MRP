@@ -37,50 +37,6 @@ function formatCurrency(amount: number) {
 }
 
 // =============================================================================
-// STATS CARDS
-// =============================================================================
-
-function StatsCards({ orders }: { orders: SalesOrder[] }) {
-  const { t } = useLanguage();
-  const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-  return (
-    // COMPACT: gap-4 → gap-2
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      <Card className="border-gray-200 dark:border-mrp-border">
-        {/* COMPACT: pt-4 → p-3 */}
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{orders.length}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.totalOrders')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-green-600">{formatCurrency(totalValue)}</div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.totalValue')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-blue-600">
-            {orders.filter((o) => o.status === 'in_progress').length}
-          </div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.inProduction')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-amber-600">
-            {orders.filter((o) => o.status === 'pending').length}
-          </div>
-          <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('orders.pendingCount')}</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 

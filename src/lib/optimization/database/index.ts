@@ -504,7 +504,8 @@ export async function safeTransaction<T>(
 // =============================================================================
 
 /**
- * Efficient bulk upsert using raw SQL for PostgreSQL
+ * Efficient bulk upsert using parameterized SQL for PostgreSQL
+ * Uses $1, $2, ... placeholders to prevent SQL injection
  */
 export async function bulkUpsert<T extends Record<string, unknown>>(
   tableName: string,
@@ -514,31 +515,43 @@ export async function bulkUpsert<T extends Record<string, unknown>>(
 ): Promise<{ affected: number }> {
   if (data.length === 0) return { affected: 0 };
 
-  const fields = Object.keys(data[0]);
-  const values = data.map(item => 
-    `(${fields.map(f => {
-      const value = item[f];
-      if (value === null) return 'NULL';
-      if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
-      if (value instanceof Date) return `'${value.toISOString()}'`;
-      return value;
-    }).join(', ')})`
-  ).join(',\n');
+  // Validate table and field names (allow only alphanumeric + underscore)
+  const validName = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!validName.test(tableName)) {
+    throw new Error(`Invalid table name: ${tableName}`);
+  }
 
-  const conflictFields = uniqueFields.join(', ');
+  const fields = Object.keys(data[0]);
+  for (const field of [...fields, ...uniqueFields, ...updateFields]) {
+    if (!validName.test(field)) {
+      throw new Error(`Invalid field name: ${field}`);
+    }
+  }
+
+  // Build parameterized values
+  const params: unknown[] = [];
+  const valuePlaceholders = data.map(item => {
+    const placeholders = fields.map(f => {
+      params.push(item[f] ?? null);
+      return `$${params.length}`;
+    });
+    return `(${placeholders.join(', ')})`;
+  }).join(',\n');
+
+  const conflictFields = uniqueFields.map(f => `"${f}"`).join(', ');
   const updateClause = updateFields
     .map(f => `"${f}" = EXCLUDED."${f}"`)
     .join(', ');
 
   const sql = `
     INSERT INTO "${tableName}" (${fields.map(f => `"${f}"`).join(', ')})
-    VALUES ${values}
+    VALUES ${valuePlaceholders}
     ON CONFLICT (${conflictFields}) DO UPDATE SET
     ${updateClause},
     "updatedAt" = NOW()
   `;
 
-  const result = await prisma.$executeRawUnsafe(sql);
+  const result = await prisma.$executeRawUnsafe(sql, ...params);
   return { affected: result };
 }
 

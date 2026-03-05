@@ -101,6 +101,9 @@ export default function ReceivingInspectionDetailPage() {
         setQuantityInspected(String(data.quantityInspected || received));
         setQuantityAccepted(String(data.quantityAccepted || received));
         setQuantityRejected(String(data.quantityRejected || 0));
+      } else {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        clientLogger.error("Inspection fetch failed:", err);
       }
     } catch (error) {
       clientLogger.error("Failed to fetch inspection:", error);

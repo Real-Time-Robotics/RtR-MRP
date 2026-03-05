@@ -57,6 +57,19 @@ export interface EntityType {
   description: string;
 }
 
+// Data Cleansing types
+export interface CellEdit {
+  rowIndex: number;
+  columnKey: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface CleansingAction {
+  type: 'trim_whitespace' | 'remove_empty_rows' | 'apply_fix' | 'fix_all';
+  label: string;
+}
+
 export const ENTITY_TYPES: EntityType[] = [
   { value: "parts", label: "Linh kiện", description: "Import dữ liệu linh kiện / vật tư" },
   { value: "suppliers", label: "Nhà cung cấp", description: "Import thông tin nhà cung cấp" },

@@ -386,6 +386,14 @@ export const PUT = withAuth(async (request, context, session) => {
       });
     }
 
+    // Sync MOQ to all existing PartSupplier records when moq changes
+    if (data.moq !== undefined && data.moq !== existing.moq) {
+      await prisma.partSupplier.updateMany({
+        where: { partId: id },
+        data: { minOrderQty: data.moq },
+      });
+    }
+
     // Update primary supplier if primarySupplierId is provided
     if (data.primarySupplierId !== undefined) {
       // Remove existing preferred supplier

@@ -30,51 +30,6 @@ interface FetchState {
 }
 
 // =============================================================================
-// STATS CARDS
-// =============================================================================
-
-function StatsCards({ suppliers }: { suppliers: Supplier[] }) {
-  const { t } = useLanguage();
-  const active = suppliers.filter((s) => s.status === 'active').length;
-  const ndaaCompliant = suppliers.filter((s) => s.ndaaCompliant).length;
-  const avgLeadTime =
-    suppliers.length > 0
-      ? Math.round(suppliers.reduce((sum, s) => sum + s.leadTimeDays, 0) / suppliers.length)
-      : 0;
-
-  return (
-    // COMPACT: gap-4 → gap-2
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      <Card className="border-gray-200 dark:border-mrp-border">
-        {/* COMPACT: pt-4 → p-3 */}
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{suppliers.length}</div>
-          <p className="text-[10px] text-muted-foreground">{t('suppliers.totalSuppliers')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-green-600">{active}</div>
-          <p className="text-[10px] text-muted-foreground">{t('suppliers.activeCount')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono text-blue-600">{ndaaCompliant}</div>
-          <p className="text-[10px] text-muted-foreground">{t('suppliers.ndaaCompliantCount')}</p>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="text-lg font-semibold font-mono">{t('suppliers.leadTimeDays', { days: String(avgLeadTime) })}</div>
-          <p className="text-[10px] text-muted-foreground">{t('suppliers.avgLeadTimeLabel')}</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 

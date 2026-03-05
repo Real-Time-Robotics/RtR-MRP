@@ -32,7 +32,7 @@ export interface PartRequirement {
 
 export interface MrpSuggestionData {
   partId: string;
-  actionType: "PURCHASE" | "EXPEDITE" | "DEFER" | "CANCEL";
+  actionType: "PURCHASE" | "MANUFACTURE" | "EXPEDITE" | "DEFER" | "CANCEL";
   priority: "HIGH" | "MEDIUM" | "LOW";
   suggestedQty?: number;
   suggestedDate?: Date;

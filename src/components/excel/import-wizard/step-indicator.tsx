@@ -10,16 +10,18 @@ import {
   Play,
   FileCheck,
   Check,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ImportStep } from "./import-wizard-types";
 
 const STEPS: ImportStep[] = [
-  { id: 1, name: "Tải file", icon: Upload },
-  { id: 2, name: "Chọn loại", icon: FileCheck },
-  { id: 3, name: "Mapping cột", icon: Columns },
-  { id: 4, name: "Kiểm tra", icon: CheckCircle },
-  { id: 5, name: "Import", icon: Play },
+  { id: 1, name: "Tai file", icon: Upload },
+  { id: 2, name: "Chon loai", icon: FileCheck },
+  { id: 3, name: "Mapping cot", icon: Columns },
+  { id: 4, name: "Kiem tra", icon: CheckCircle },
+  { id: 5, name: "Chinh sua", icon: Pencil },
+  { id: 6, name: "Import", icon: Play },
 ];
 
 interface StepIndicatorProps {

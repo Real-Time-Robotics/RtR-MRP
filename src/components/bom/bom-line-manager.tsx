@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2, Search, AlertTriangle, Pencil } from "lucide-react";
 import { clientLogger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ interface BomLineManagerProps {
 }
 
 export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerProps) {
+  const router = useRouter();
   const [lines, setLines] = useState<BomLineData[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -190,6 +192,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         setDialogOpen(false);
         await fetchLines();
         onLinesChanged?.();
+        router.refresh();
       } else {
         const error = await res.json();
         toast.error(error.error || "Lỗi thêm BOM line");
@@ -231,6 +234,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         setDialogOpen(false);
         await fetchLines();
         onLinesChanged?.();
+        router.refresh();
       } else {
         const error = await res.json();
         toast.error(error.error || "Lỗi cập nhật BOM line");
@@ -264,6 +268,7 @@ export function BomLineManager({ bomHeaderId, onLinesChanged }: BomLineManagerPr
         toast.success("Đã xóa line khỏi BOM");
         await fetchLines();
         onLinesChanged?.();
+        router.refresh();
       } else {
         const error = await res.json();
         toast.error(error.error || "Lỗi xóa line");

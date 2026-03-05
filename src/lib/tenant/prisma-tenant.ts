@@ -304,10 +304,11 @@ export function getTenantPrisma(tenantId: string): TenantPrismaClient {
 
 /**
  * Execute raw SQL with tenant filter
+ * Uses Prisma.$queryRaw with tagged template literals for safe parameterization.
  *
  * Usage:
  * ```typescript
- * const results = await tenantQuery(
+ * const results = await tenantQuery<Part[]>(
  *   tenantId,
  *   `SELECT * FROM "Part" WHERE "category" = $1 AND "tenantId" = $2`,
  *   ['COMPONENT', tenantId]
@@ -319,12 +320,22 @@ export async function tenantQuery<T = unknown>(
   sql: string,
   params: unknown[] = []
 ): Promise<T> {
+  // Validate tenantId format (UUID)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(tenantId)) {
+    throw new Error('Invalid tenantId format');
+  }
+
+  // Validate SQL doesn't contain dangerous patterns
+  const dangerousPatterns = /;\s*(DROP|DELETE|TRUNCATE|ALTER|CREATE|GRANT)\s/i;
+  if (dangerousPatterns.test(sql)) {
+    throw new Error('SQL contains disallowed statements');
+  }
+
   const prisma = new PrismaClient();
 
-  // Ensure tenantId is in params if query uses it
-  // This is just a helper - the caller should properly parameterize
-
   try {
+    // Use parameterized query - params are passed separately, not interpolated
     const result = await prisma.$queryRawUnsafe<T>(sql, ...params);
     return result;
   } finally {

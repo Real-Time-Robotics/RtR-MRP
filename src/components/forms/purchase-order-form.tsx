@@ -84,6 +84,7 @@ export interface PurchaseOrder {
   currency: string;
   totalAmount?: number;
   notes?: string | null;
+  updatedAt?: string | Date;
   supplier?: { id: string; code: string; name: string };
   lines?: Array<{
     id: string;
@@ -253,10 +254,15 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
     setLoading(true);
 
     try {
-      const cleanData = {
+      const cleanData: Record<string, unknown> = {
         ...data,
         notes: data.notes || null,
       };
+
+      // Optimistic locking: send updatedAt timestamp for conflict detection
+      if (isEditing && order?.updatedAt) {
+        cleanData.expectedUpdatedAt = new Date(order.updatedAt).toISOString();
+      }
 
       const url = isEditing ? `/api/purchase-orders/${order!.id}` : '/api/purchase-orders';
       const method = isEditing ? 'PUT' : 'POST';
@@ -270,6 +276,11 @@ export function PurchaseOrderForm({ open, onOpenChange, order, initialData, onSu
       const result = await response.json();
 
       if (!response.ok) {
+        // Handle 409 Conflict (optimistic locking)
+        if (response.status === 409) {
+          toast.error('Dữ liệu đã bị thay đổi bởi người dùng khác. Vui lòng đóng form và thử lại.');
+          return;
+        }
         if (result.errors) {
           Object.entries(result.errors).forEach(([field, messages]) => {
             form.setError(field as keyof PurchaseOrderFormData, {

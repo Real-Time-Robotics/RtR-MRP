@@ -230,7 +230,7 @@ export async function verifyMFASetup(
       return { success: false, error: "Device not found or already verified" };
     }
 
-    const isValid = verifyTOTPCode(device.totpSecret, code);
+    const isValid = await verifyTOTPCode(device.totpSecret, code);
     if (!isValid) {
       return { success: false, error: "Invalid verification code" };
     }
@@ -301,7 +301,7 @@ export async function verifyMFALogin(
     }
 
     // Verify TOTP code
-    const isValid = verifyTOTPCode(device.totpSecret, code);
+    const isValid = await verifyTOTPCode(device.totpSecret, code);
     if (!isValid) {
       // Create failed challenge record
       await prisma.mFAChallenge.create({
@@ -414,7 +414,7 @@ export async function verifyMFAChallenge(
       return { success: false, error: "MFA device not configured" };
     }
 
-    const isValid = verifyTOTPCode(challenge.device.totpSecret, code);
+    const isValid = await verifyTOTPCode(challenge.device.totpSecret, code);
 
     if (!isValid) {
       await prisma.mFAChallenge.update({

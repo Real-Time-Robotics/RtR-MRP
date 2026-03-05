@@ -41,7 +41,7 @@ const statusLabelKeys: Record<string, string> = {
 const transitions: Record<string, string[]> = {
   draft: ["active"],
   active: ["obsolete"],
-  obsolete: [],
+  obsolete: ["draft"],
 };
 
 export function BomStatusSwitcher({ bomHeaderId, currentStatus }: BomStatusSwitcherProps) {

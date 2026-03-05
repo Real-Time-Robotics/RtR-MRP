@@ -80,7 +80,71 @@ async function getProductWithBOM(id: string) {
       })
     : [];
 
-  // Build a map: partNumber → sub-BOM children
+  // Collect all child part numbers from sub-BOMs to check for sub-sub-BOMs
+  const childPartNumbers: string[] = [];
+  for (const sp of subProducts) {
+    const subBom = sp.bomHeaders[0];
+    if (!subBom) continue;
+    for (const sl of subBom.bomLines) {
+      childPartNumbers.push(sl.part.partNumber);
+    }
+  }
+
+  // Fetch sub-sub-BOM products with their BOM lines
+  const subSubProducts = childPartNumbers.length > 0
+    ? await prisma.product.findMany({
+        where: {
+          sku: { in: childPartNumbers },
+          bomHeaders: { some: { status: { in: ["active", "draft"] } } },
+        },
+        include: {
+          bomHeaders: {
+            where: { status: { in: ["active", "draft"] } },
+            orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+            take: 1,
+            include: {
+              bomLines: {
+                include: { part: { include: { costs: true } } },
+                orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
+              },
+            },
+          },
+        },
+      })
+    : [];
+  const subSubProductMap = new Map(subSubProducts.map((p) => [p.sku, p.id]));
+
+  // Build sub-sub-BOM children map: partNumber → lines
+  const subSubBomMap = new Map<string, Array<{
+    id: string;
+    lineNumber: number;
+    partNumber: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    unitCost: number;
+    isCritical: boolean;
+    subBomProductId?: string;
+  }>>();
+  for (const ssp of subSubProducts) {
+    const ssBom = ssp.bomHeaders[0];
+    if (!ssBom || ssBom.bomLines.length === 0) continue;
+    subSubBomMap.set(
+      ssp.sku,
+      ssBom.bomLines.map((sl) => ({
+        id: sl.id,
+        lineNumber: sl.lineNumber,
+        partNumber: sl.part.partNumber,
+        name: sl.part.name,
+        quantity: sl.quantity,
+        unit: sl.unit,
+        unitCost: sl.part.costs?.[0]?.unitCost || 0,
+        isCritical: sl.isCritical,
+      }))
+    );
+  }
+
+  // Build a map: partNumber → sub-BOM children (with their own children if any)
   const subBomMap = new Map<string, Array<{
     id: string;
     lineNumber: number;
@@ -92,6 +156,18 @@ async function getProductWithBOM(id: string) {
     isCritical: boolean;
     moduleCode: string;
     moduleName: string;
+    subBomProductId?: string;
+    children?: Array<{
+      id: string;
+      lineNumber: number;
+      partNumber: string;
+      name: string;
+      quantity: number;
+      unit: string;
+      unitCost: number;
+      isCritical: boolean;
+      subBomProductId?: string;
+    }>;
   }>>();
 
   for (const sp of subProducts) {
@@ -110,8 +186,24 @@ async function getProductWithBOM(id: string) {
         isCritical: sl.isCritical,
         moduleCode: sl.moduleCode || "MISC",
         moduleName: sl.moduleName || "Miscellaneous",
+        subBomProductId: subSubProductMap.get(sl.part.partNumber),
+        children: subSubBomMap.get(sl.part.partNumber) || undefined,
       }))
     );
+  }
+
+  // BomLineItem shape matching the client component interface
+  interface BomLineData {
+    id: string;
+    lineNumber: number;
+    partNumber: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    unitCost: number;
+    isCritical: boolean;
+    children?: BomLineData[];
+    subBomProductId?: string;
   }
 
   // Group lines by module
@@ -120,27 +212,7 @@ async function getProductWithBOM(id: string) {
     {
       moduleCode: string;
       moduleName: string;
-      lines: Array<{
-        id: string;
-        lineNumber: number;
-        partNumber: string;
-        name: string;
-        quantity: number;
-        unit: string;
-        unitCost: number;
-        isCritical: boolean;
-        children?: Array<{
-          id: string;
-          lineNumber: number;
-          partNumber: string;
-          name: string;
-          quantity: number;
-          unit: string;
-          unitCost: number;
-          isCritical: boolean;
-        }>;
-        subBomProductId?: string;
-      }>;
+      lines: BomLineData[];
       totalCost: number;
     }
   >();

@@ -98,3 +98,36 @@ export const PUT = withAuth(async (request, context, session) => {
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
 });
+
+// DELETE - Delete product (only if no BOMs exist)
+export const DELETE = withAuth(async (request, context, session) => {
+  const rateLimitResult = await checkWriteEndpointLimit(request);
+  if (rateLimitResult) return rateLimitResult;
+
+  try {
+    const { id } = await context.params;
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { _count: { select: { bomHeaders: true } } },
+    });
+
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    if (product._count.bomHeaders > 0) {
+      return NextResponse.json(
+        { error: "Không thể xóa product vẫn còn BOM. Xóa BOM trước." },
+        { status: 400 }
+      );
+    }
+
+    await prisma.product.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Product đã được xóa thành công" });
+  } catch (error) {
+    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'DELETE /api/products/[id]' });
+    return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
+  }
+});

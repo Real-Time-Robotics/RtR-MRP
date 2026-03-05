@@ -167,28 +167,30 @@ export default function ImportHubPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'Parts Template', desc: 'Mẫu import linh kiện', type: 'parts' },
-              { name: 'Suppliers Template', desc: 'Mẫu import NCC', type: 'suppliers' },
-              { name: 'BOM Template', desc: 'Mẫu import định mức', type: 'bom' },
-              { name: 'Inventory Template', desc: 'Mẫu import tồn kho', type: 'inventory' },
-            ].map((template) => (
-              <Link
-                key={template.type}
-                href={`/api/excel/templates?type=${template.type}&download=true`}
+              { name: 'Parts', desc: 'Vat tu, linh kien', file: 'TEMPLATE_Parts.xlsx', order: 3 },
+              { name: 'Suppliers', desc: 'Nha cung cap', file: 'TEMPLATE_Suppliers.xlsx', order: 2 },
+              { name: 'BOM', desc: 'Dinh muc san pham', file: 'TEMPLATE_BOM.xlsx', order: 6 },
+              { name: 'Inventory', desc: 'Ton kho hien tai', file: 'TEMPLATE_Inventory.xlsx', order: 7 },
+              { name: 'Warehouses', desc: 'Danh sach kho', file: 'TEMPLATE_Warehouses.xlsx', order: 1 },
+              { name: 'PartSupplier', desc: 'Gia mua tu NCC', file: 'TEMPLATE_PartSupplier.xlsx', order: 4 },
+              { name: 'PartPlanning', desc: 'MOQ, Lead time, SS', file: 'TEMPLATE_PartPlanning.xlsx', order: 5 },
+              { name: 'Customers', desc: 'Khach hang', file: 'TEMPLATE_Customers.xlsx', order: 8 },
+            ]
+              .sort((a, b) => a.order - b.order)
+              .map((template) => (
+              <a
+                key={template.file}
+                href={`/templates/${template.file}`}
+                download
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <div>
                   <p className="font-medium text-sm">{template.name}</p>
-                  <p className="text-xs text-muted-foreground">{template.desc}</p>
+                  <p className="text-xs text-muted-foreground">{template.order}. {template.desc}</p>
                 </div>
                 <Download className="w-4 h-4 text-muted-foreground" />
-              </Link>
+              </a>
             ))}
-            <Link href="/excel/templates">
-              <Button variant="outline" className="w-full mt-2">
-                Xem tất cả templates
-              </Button>
-            </Link>
           </CardContent>
         </Card>
 

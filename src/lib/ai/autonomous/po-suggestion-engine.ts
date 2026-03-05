@@ -246,6 +246,7 @@ export class POSuggestionEngine {
     const part = await prisma.part.findUnique({
       where: { id: partId },
       include: {
+        planning: true,
         partSuppliers: {
           where: { status: 'active', isPreferred: true },
           take: 1,
@@ -280,8 +281,10 @@ export class POSuggestionEngine {
       (forecastDemand / this.config.forecastHorizonDays) * this.config.safetyStockDays * (1 + demandVariability)
     );
 
-    // Get MOQ from supplier
-    const moqQuantity = part.partSuppliers[0]?.minOrderQty || 1;
+    // Get MOQ: use supplier MOQ if available, fallback to part MOQ
+    const supplierMoq = part.partSuppliers[0]?.minOrderQty || 0;
+    const partMoq = part.planning?.moq || part.moq || 1;
+    const moqQuantity = Math.max(supplierMoq, partMoq);
 
     // Calculate recommended quantity
     // Take the max of EOQ and forecast demand for the horizon, then round up to MOQ

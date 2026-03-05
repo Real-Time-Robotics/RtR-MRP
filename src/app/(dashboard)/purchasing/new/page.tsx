@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, Save, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +50,12 @@ interface Part {
   partNumber: string;
   name: string;
   unitCost: number;
+  partSuppliers?: Array<{
+    supplierId: string;
+    unitPrice: number;
+    isPreferred: boolean;
+    supplier: { id: string; name: string; code: string };
+  }>;
 }
 
 interface POLine {
@@ -72,9 +78,11 @@ const CURRENCY_OPTIONS = [
 
 export default function NewPurchaseOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
   const [formData, setFormData] = useState({
     poNumber: `PO-${Date.now().toString().slice(-6)}`,
     supplierId: "",
@@ -92,6 +100,73 @@ export default function NewPurchaseOrderPage() {
     fetchParts();
   }, []);
 
+  // Pre-fill lines from URL params (from MRP shortage "Tạo PO" buttons)
+  useEffect(() => {
+    if (prefilled || parts.length === 0 || suppliers.length === 0) return;
+    const partsParam = searchParams.get("parts");
+    if (!partsParam) return;
+
+    try {
+      const prefilledParts: Array<{ id: string; pn: string; qty: number }> =
+        JSON.parse(partsParam);
+      if (!Array.isArray(prefilledParts) || prefilledParts.length === 0) return;
+
+      const newLines: POLine[] = [];
+      // Track supplier frequency to auto-select the most common preferred supplier
+      const supplierCount = new Map<string, number>();
+
+      for (const pp of prefilledParts) {
+        const part = parts.find((p) => p.id === pp.id) || parts.find((p) => p.partNumber === pp.pn);
+        if (part) {
+          // Use PartSupplier price if available, otherwise fallback to unitCost
+          const preferred = part.partSuppliers?.find((ps) => ps.isPreferred);
+          const partSupplier = preferred || part.partSuppliers?.[0];
+          const unitPrice = partSupplier?.unitPrice || part.unitCost || 0;
+
+          newLines.push({
+            partId: part.id,
+            quantity: pp.qty,
+            unitPrice,
+          });
+
+          // Count supplier appearances
+          if (partSupplier?.supplierId) {
+            supplierCount.set(
+              partSupplier.supplierId,
+              (supplierCount.get(partSupplier.supplierId) || 0) + 1
+            );
+          }
+        }
+      }
+
+      if (newLines.length > 0) {
+        setLines(newLines);
+
+        // Auto-select the most common supplier
+        let bestSupplierId = "";
+        let bestCount = 0;
+        for (const [sid, count] of supplierCount) {
+          if (count > bestCount) {
+            bestCount = count;
+            bestSupplierId = sid;
+          }
+        }
+
+        // Verify supplier exists in our suppliers list
+        const supplierExists = suppliers.some((s) => s.id === bestSupplierId);
+
+        setFormData((prev) => ({
+          ...prev,
+          supplierId: supplierExists ? bestSupplierId : prev.supplierId,
+          notes: `Tạo từ MRP suggestion - bổ sung ${newLines.length} vật tư thiếu`,
+        }));
+        setPrefilled(true);
+      }
+    } catch {
+      // Invalid JSON in URL param — ignore
+    }
+  }, [parts, suppliers, searchParams, prefilled]);
+
   const fetchSuppliers = async () => {
     try {
       const res = await fetch("/api/suppliers?status=active");
@@ -106,7 +181,10 @@ export default function NewPurchaseOrderPage() {
 
   const fetchParts = async () => {
     try {
-      const res = await fetch("/api/parts?makeOrBuy=BUY");
+      // If coming from MRP, fetch all parts (not just BUY) since MRP includes assembled items
+      const isMrpPrefill = searchParams.get("parts");
+      const url = isMrpPrefill ? "/api/parts?limit=500" : "/api/parts?makeOrBuy=BUY";
+      const res = await fetch(url);
       if (res.ok) {
         const result = await res.json();
         setParts(result.data || []);
@@ -130,7 +208,13 @@ export default function NewPurchaseOrderPage() {
       newLines[index].partId = value as string;
       const part = parts.find((p) => p.id === value);
       if (part) {
-        newLines[index].unitPrice = part.unitCost;
+        // Use PartSupplier price if available for selected supplier, then preferred, then unitCost
+        const supplierMatch = part.partSuppliers?.find(
+          (ps) => ps.supplierId === formData.supplierId
+        );
+        const preferred = part.partSuppliers?.find((ps) => ps.isPreferred);
+        const bestPrice = supplierMatch?.unitPrice || preferred?.unitPrice || part.unitCost;
+        newLines[index].unitPrice = bestPrice;
       }
     } else if (field === "quantity") {
       newLines[index].quantity = parseInt(value as string) || 0;

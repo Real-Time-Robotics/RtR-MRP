@@ -228,6 +228,15 @@ async function putHandler(
       const poLines = updatedOrder.lines || existing.lines;
 
       for (const line of poLines) {
+        // Update receivedQty and line status
+        await tx.purchaseOrderLine.update({
+          where: { id: line.id },
+          data: {
+            receivedQty: line.quantity,
+            status: 'received',
+          },
+        });
+
         const existingInventory = await tx.inventory.findFirst({
           where: { partId: line.partId, warehouseId: receivingWarehouse.id, locationCode: 'RECEIVING' },
         });
