@@ -34,6 +34,7 @@ export function StepDataCleansing({
   const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null);
   const [editValue, setEditValue] = useState("");
   const [edits, setEdits] = useState<CellEdit[]>([]);
+  const [savedCell, setSavedCell] = useState<string | null>(null);
 
   // Get mapped column names
   const columns = useMemo(() => {
@@ -83,6 +84,11 @@ export function StepDataCleansing({
         oldValue,
         newValue: editValue,
       }]);
+
+      // Show brief saved indicator
+      const cellKey = `${row}-${col}`;
+      setSavedCell(cellKey);
+      setTimeout(() => setSavedCell((prev) => prev === cellKey ? null : prev), 1500);
     }
 
     setEditingCell(null);
@@ -165,9 +171,9 @@ export function StepDataCleansing({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Chinh sua du lieu</h3>
+          <h3 className="text-lg font-semibold">Chỉnh sửa dữ liệu</h3>
           <p className="text-gray-600">
-            Sua cac loi duoc phat hien truoc khi import. Click vao o de sua.
+            Sửa các lỗi được phát hiện trước khi import. Click vào ô để sửa.
           </p>
         </div>
       </div>
@@ -175,24 +181,24 @@ export function StepDataCleansing({
       {/* Summary */}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium">{data.length} dong</span>
+          <span className="font-medium">{data.length} dòng</span>
           <span className="text-muted-foreground">·</span>
           {errorCount > 0 && (
             <span className="flex items-center gap-1 text-red-600">
               <AlertCircle className="w-4 h-4" />
-              {errorCount} loi
+              {errorCount} lỗi
             </span>
           )}
           {warningCount > 0 && (
             <span className="flex items-center gap-1 text-amber-600">
               <AlertTriangle className="w-4 h-4" />
-              {warningCount} canh bao
+              {warningCount} cảnh báo
             </span>
           )}
           {edits.length > 0 && (
             <span className="flex items-center gap-1 text-green-600">
               <CheckCircle className="w-4 h-4" />
-              {edits.length} da sua
+              {edits.length} đã sửa
             </span>
           )}
         </div>
@@ -206,7 +212,7 @@ export function StepDataCleansing({
           onClick={handleTrimWhitespace}
         >
           <Eraser className="w-4 h-4 mr-1" />
-          Trim khoang trang
+          Trim khoảng trắng
         </Button>
         <Button
           variant="outline"
@@ -214,7 +220,7 @@ export function StepDataCleansing({
           onClick={handleRemoveEmptyRows}
         >
           <Trash2 className="w-4 h-4 mr-1" />
-          Xoa dong trong
+          Xoá dòng trống
         </Button>
         {fixableCount > 0 && (
           <Button
@@ -224,7 +230,7 @@ export function StepDataCleansing({
             className="bg-purple-600 hover:bg-purple-700"
           >
             <Wand2 className="w-4 h-4 mr-1" />
-            Sua tat ca ({fixableCount} goi y)
+            Sửa tất cả ({fixableCount} gợi ý)
           </Button>
         )}
       </div>
@@ -251,6 +257,7 @@ export function StepDataCleansing({
                 {columns.map((col) => {
                   const issue = getCellIssue(rowIndex, col);
                   const isEditing = editingCell?.row === rowIndex && editingCell?.col === col;
+                  const isSaved = savedCell === `${rowIndex}-${col}`;
                   const value = row[col];
 
                   return (
@@ -263,7 +270,7 @@ export function StepDataCleansing({
                         isEditing && "p-0"
                       )}
                       onClick={() => !isEditing && handleCellClick(rowIndex, col)}
-                      title={issue ? `${issue.issue}\nGoi y: ${issue.suggestion || "Khong co"}` : undefined}
+                      title={issue ? `${issue.issue}\nGợi ý: ${issue.suggestion || "Không có"}` : undefined}
                     >
                       {isEditing ? (
                         <input
@@ -280,9 +287,12 @@ export function StepDataCleansing({
                         />
                       ) : (
                         <div className="flex items-center gap-1">
+                          {isSaved && (
+                            <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0 animate-in fade-in" />
+                          )}
                           <span className="truncate max-w-[200px]">
                             {value === null || value === undefined ? (
-                              <span className="text-muted-foreground italic">trong</span>
+                              <span className="text-muted-foreground italic">trống</span>
                             ) : (
                               String(value)
                             )}
@@ -294,7 +304,7 @@ export function StepDataCleansing({
                                 e.stopPropagation();
                                 if (issue.suggestion) handleApplyFix(issue);
                               }}
-                              title={issue.suggestion ? `Ap dung: ${issue.suggestion}` : issue.issue}
+                              title={issue.suggestion ? `Áp dụng: ${issue.suggestion}` : issue.issue}
                             >
                               {issue.severity === "error" ? (
                                 <AlertCircle className="w-3.5 h-3.5 text-red-500" />
@@ -316,14 +326,14 @@ export function StepDataCleansing({
 
       {data.length > 100 && (
         <p className="text-xs text-muted-foreground text-center">
-          Hien thi 100 / {data.length} dong. Cac dong con lai se duoc import binh thuong.
+          Hiển thị 100 / {data.length} dòng. Các dòng còn lại sẽ được import bình thường.
         </p>
       )}
 
       {/* Issue list with quick fix */}
       {dataIssues.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Cac van de can xu ly</h4>
+          <h4 className="text-sm font-medium">Các vấn đề cần xử lý</h4>
           <div className="max-h-[200px] overflow-auto space-y-1">
             {dataIssues.slice(0, 50).map((issue, idx) => (
               <div
@@ -340,7 +350,7 @@ export function StepDataCleansing({
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                   )}
                   <span className="truncate">
-                    Dong {issue.row}, cot "{issue.column}": {issue.issue}
+                    Dòng {issue.row}, cột &quot;{issue.column}&quot;: {issue.issue}
                   </span>
                 </div>
                 {issue.suggestion && (
@@ -349,14 +359,14 @@ export function StepDataCleansing({
                     className="flex items-center gap-1 px-2 py-1 bg-white border rounded text-xs hover:bg-gray-50 flex-shrink-0 ml-2"
                   >
                     <Wand2 className="w-3 h-3" />
-                    Sua: {String(issue.suggestion).slice(0, 20)}
+                    Sửa: {String(issue.suggestion).slice(0, 20)}
                   </button>
                 )}
               </div>
             ))}
             {dataIssues.length > 50 && (
               <p className="text-xs text-muted-foreground text-center py-1">
-                Va {dataIssues.length - 50} van de khac...
+                Và {dataIssues.length - 50} vấn đề khác...
               </p>
             )}
           </div>

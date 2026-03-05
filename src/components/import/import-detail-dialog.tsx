@@ -254,8 +254,8 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
                 </div>
 
                 {/* Logs table */}
-                <div className="flex-1 overflow-auto border rounded-lg">
-                  <table className="w-full text-sm">
+                <div className="flex-1 overflow-auto border rounded-lg -mx-2 sm:mx-0">
+                  <table className="w-full text-sm min-w-[600px]">
                     <thead className="bg-gray-50 sticky top-0">
                       <tr>
                         <th className="text-left px-4 py-2 font-medium">Dòng</th>

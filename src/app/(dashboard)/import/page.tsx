@@ -92,7 +92,7 @@ export default function ImportHubPage() {
 
       {/* AI Feature Banner */}
       <div className="bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
-        <div className="flex items-start gap-4">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
             <Sparkles className="w-6 h-6 text-purple-600" />
           </div>
@@ -116,8 +116,8 @@ export default function ImportHubPage() {
               </Badge>
             </div>
           </div>
-          <Link href="/excel/import">
-            <Button className="bg-purple-600 hover:bg-purple-700">
+          <Link href="/excel/import" className="w-full sm:w-auto">
+            <Button className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto">
               Bắt đầu Import
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -167,14 +167,14 @@ export default function ImportHubPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { name: 'Parts', desc: 'Vat tu, linh kien', file: 'TEMPLATE_Parts.xlsx', order: 3 },
-              { name: 'Suppliers', desc: 'Nha cung cap', file: 'TEMPLATE_Suppliers.xlsx', order: 2 },
-              { name: 'BOM', desc: 'Dinh muc san pham', file: 'TEMPLATE_BOM.xlsx', order: 6 },
-              { name: 'Inventory', desc: 'Ton kho hien tai', file: 'TEMPLATE_Inventory.xlsx', order: 7 },
-              { name: 'Warehouses', desc: 'Danh sach kho', file: 'TEMPLATE_Warehouses.xlsx', order: 1 },
-              { name: 'PartSupplier', desc: 'Gia mua tu NCC', file: 'TEMPLATE_PartSupplier.xlsx', order: 4 },
+              { name: 'Parts', desc: 'Vật tư, linh kiện', file: 'TEMPLATE_Parts.xlsx', order: 3 },
+              { name: 'Suppliers', desc: 'Nhà cung cấp', file: 'TEMPLATE_Suppliers.xlsx', order: 2 },
+              { name: 'BOM', desc: 'Định mức sản phẩm', file: 'TEMPLATE_BOM.xlsx', order: 6 },
+              { name: 'Inventory', desc: 'Tồn kho hiện tại', file: 'TEMPLATE_Inventory.xlsx', order: 7 },
+              { name: 'Warehouses', desc: 'Danh sách kho', file: 'TEMPLATE_Warehouses.xlsx', order: 1 },
+              { name: 'PartSupplier', desc: 'Giá mua từ NCC', file: 'TEMPLATE_PartSupplier.xlsx', order: 4 },
               { name: 'PartPlanning', desc: 'MOQ, Lead time, SS', file: 'TEMPLATE_PartPlanning.xlsx', order: 5 },
-              { name: 'Customers', desc: 'Khach hang', file: 'TEMPLATE_Customers.xlsx', order: 8 },
+              { name: 'Customers', desc: 'Khách hàng', file: 'TEMPLATE_Customers.xlsx', order: 8 },
             ]
               .sort((a, b) => a.order - b.order)
               .map((template) => (
@@ -221,37 +221,23 @@ export default function ImportHubPage() {
         </Card>
       </div>
 
-      {/* Recent Imports */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="w-5 h-5" />
-              Import gần đây
-            </CardTitle>
-            <CardDescription>
-              Các phiên import gần nhất của bạn
-            </CardDescription>
-          </div>
-          <Link href="/import/history">
-            <Button variant="ghost" size="sm">
-              Xem tất cả
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <History className="w-10 h-10 mx-auto mb-3 opacity-50" />
-            <p>Xem lịch sử import chi tiết</p>
-            <Link href="/import/history">
-              <Button variant="outline" size="sm" className="mt-3">
-                Đi tới lịch sử
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Recent Imports — links to full history */}
+      <Link href="/import/history">
+        <Card className="hover:border-blue-300 transition-colors cursor-pointer">
+          <CardContent className="flex items-center justify-between py-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                <History className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold">Lịch sử import</p>
+                <p className="text-sm text-muted-foreground">Xem chi tiết, hoàn tác hoặc xuất kết quả các phiên import</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Help Section */}
       <Card className="bg-primary-50 border-primary-200">

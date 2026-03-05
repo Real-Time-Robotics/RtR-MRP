@@ -474,14 +474,14 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between">
+      <div className="flex justify-between sticky bottom-0 bg-white py-3 border-t -mx-6 px-6 mt-4 sm:static sm:bg-transparent sm:py-0 sm:border-0 sm:mx-0 sm:px-0 sm:mt-0">
         <button
           onClick={handleBack}
           disabled={currentStep === 1 || isLoading}
           className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          Quay lai
+          Quay lại
         </button>
 
         {currentStep < 6 && currentStep !== 2 && (
@@ -493,26 +493,26 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
             {isAILoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Dang phan tich...
+                Đang phân tích...
               </>
             ) : currentStep === 3 ? (
               <>
-                Kiem tra
+                Kiểm tra
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : currentStep === 4 ? (
               <>
-                Chinh sua du lieu
+                Chỉnh sửa dữ liệu
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : currentStep === 5 ? (
               <>
-                Tiep tuc Import
+                Tiếp tục Import
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : (
               <>
-                Tiep theo
+                Tiếp theo
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

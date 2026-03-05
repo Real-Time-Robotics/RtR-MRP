@@ -108,15 +108,15 @@ export function StepColumnMapping({
       const data = await res.json();
 
       if (data.success) {
-        toast.success(`Da luu template "${templateName.trim()}"`);
+        toast.success(`Đã lưu template "${templateName.trim()}"`);
         setSavedMappings((prev) => [data.data, ...prev]);
         setShowSaveDialog(false);
         setTemplateName("");
       } else {
-        toast.error(data.error || "Luu template that bai");
+        toast.error(data.error || "Lưu template thất bại");
       }
     } catch {
-      toast.error("Luu template that bai");
+      toast.error("Lưu template thất bại");
     } finally {
       setIsSaving(false);
     }
@@ -146,19 +146,19 @@ export function StepColumnMapping({
       // Non-critical - don't show error
     }
 
-    toast.success(`Da ap dung template "${template.name}"`);
+    toast.success(`Đã áp dụng template "${template.name}"`);
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold">Mapping cot du lieu</h3>
+          <h3 className="text-lg font-semibold">Mapping cột dữ liệu</h3>
           <p className="text-gray-600">
-            Ghep noi cac cot trong file voi truong du lieu he thong.
+            Ghép nối các cột trong file với trường dữ liệu hệ thống.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Load Template */}
           <div className="relative">
             <button
@@ -170,7 +170,7 @@ export function StepColumnMapping({
               )}
             >
               <FolderOpen className="w-4 h-4" />
-              Tai template
+              Tải template
               {savedMappings.length > 0 && (
                 <span className="bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
                   {savedMappings.length}
@@ -191,7 +191,7 @@ export function StepColumnMapping({
                       <div>
                         <div className="font-medium">{template.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {Object.keys(template.mapping).length} cot · {template.usageCount} luot dung
+                          {Object.keys(template.mapping).length} cột · {template.usageCount} lượt dùng
                         </div>
                       </div>
                       <Check className="w-4 h-4 text-green-600 opacity-0 group-hover:opacity-100" />
@@ -212,7 +212,7 @@ export function StepColumnMapping({
             )}
           >
             <Save className="w-4 h-4" />
-            Luu template
+            Lưu template
           </button>
 
           {/* AI Toggle */}
@@ -226,7 +226,7 @@ export function StepColumnMapping({
             )}
           >
             <Sparkles className="w-4 h-4" />
-            {showAIPanel ? "An AI" : "Hien AI"}
+            {showAIPanel ? "Ẩn AI" : "Hiện AI"}
           </button>
         </div>
       </div>
@@ -237,17 +237,17 @@ export function StepColumnMapping({
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={() => setShowSaveDialog(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold mb-4">Luu Mapping Template</h3>
+              <h3 className="text-lg font-semibold mb-4">Lưu Mapping Template</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ten template
+                    Tên template
                   </label>
                   <input
                     type="text"
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
-                    placeholder="VD: Mapping linh kien cong ty ABC"
+                    placeholder="VD: Mapping linh kiện công ty ABC"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     autoFocus
                     onKeyDown={(e) => {
@@ -258,14 +258,14 @@ export function StepColumnMapping({
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Template se luu {mappings.filter(m => m.targetField).length} mapping cot cho loai "{entityType}".
+                  Template sẽ lưu {mappings.filter(m => m.targetField).length} mapping cột cho loại &quot;{entityType}&quot;.
                 </div>
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setShowSaveDialog(false)}
                     className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                   >
-                    Huy
+                    Huỷ
                   </button>
                   <button
                     onClick={handleSaveTemplate}
@@ -277,7 +277,7 @@ export function StepColumnMapping({
                     ) : (
                       <Save className="w-4 h-4" />
                     )}
-                    Luu
+                    Lưu
                   </button>
                 </div>
               </div>
@@ -300,20 +300,25 @@ export function StepColumnMapping({
 
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Che do cap nhat
+          Chế độ cập nhật
         </label>
         <select
           value={updateMode}
           onChange={(e) =>
             onUpdateModeChange(e.target.value as "insert" | "update" | "upsert")
           }
-          aria-label="Che do cap nhat"
+          aria-label="Chế độ cập nhật"
           className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="insert">Chi them ban ghi moi</option>
-          <option value="update">Chi cap nhat ban ghi da co</option>
-          <option value="upsert">Them moi hoac cap nhat (upsert)</option>
+          <option value="insert">Chỉ thêm bản ghi mới</option>
+          <option value="update">Chỉ cập nhật bản ghi đã có</option>
+          <option value="upsert">Thêm mới hoặc cập nhật (upsert)</option>
         </select>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {updateMode === "insert" && "Bỏ qua nếu bản ghi đã tồn tại trong hệ thống."}
+          {updateMode === "update" && "Chỉ cập nhật bản ghi khớp mã. Bỏ qua bản ghi mới."}
+          {updateMode === "upsert" && "Cập nhật nếu đã có, thêm mới nếu chưa tồn tại."}
+        </p>
       </div>
 
       <ColumnMapper

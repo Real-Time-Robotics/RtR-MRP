@@ -15,12 +15,21 @@ import {
 import { cn } from "@/lib/utils";
 import type { ImportStep } from "./import-wizard-types";
 
+const STEP_TOOLTIPS: Record<number, string> = {
+  1: "Tải lên file Excel hoặc CSV",
+  2: "Chọn loại dữ liệu cần import",
+  3: "Ghép nối cột file với trường hệ thống",
+  4: "Kiểm tra lỗi và dữ liệu trùng lặp",
+  5: "Chỉnh sửa dữ liệu trước khi import",
+  6: "Xác nhận và thực hiện import",
+};
+
 const STEPS: ImportStep[] = [
-  { id: 1, name: "Tai file", icon: Upload },
-  { id: 2, name: "Chon loai", icon: FileCheck },
-  { id: 3, name: "Mapping cot", icon: Columns },
-  { id: 4, name: "Kiem tra", icon: CheckCircle },
-  { id: 5, name: "Chinh sua", icon: Pencil },
+  { id: 1, name: "Tải file", icon: Upload },
+  { id: 2, name: "Chọn loại", icon: FileCheck },
+  { id: 3, name: "Mapping cột", icon: Columns },
+  { id: 4, name: "Kiểm tra", icon: CheckCircle },
+  { id: 5, name: "Chỉnh sửa", icon: Pencil },
   { id: 6, name: "Import", icon: Play },
 ];
 
@@ -46,6 +55,7 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                   isComplete && "bg-green-100 text-green-700",
                   !isActive && !isComplete && "text-gray-400"
                 )}
+                title={STEP_TOOLTIPS[step.id]}
               >
                 <div
                   className={cn(
