@@ -21,11 +21,20 @@ const { searchParams } = new URL(request.url);
     // If sessionId provided, get specific session or its logs
     if (sessionId) {
       if (logsOnly) {
+        // Ownership check for logs
+        const importSession = await getImportSession(sessionId);
+        if (!importSession) {
+          return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+        }
+        if (importSession.importedBy !== session.user.id) {
+          return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+        }
+
         const page = parseInt(searchParams.get('page') || '1');
-        const pageSize = parseInt(searchParams.get('pageSize') || '50');
+        const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50'), 100);
         const status = searchParams.get('status') || undefined;
 
-        const result = await getImportLogs(sessionId, { page, pageSize, status });
+        const result = await getImportLogs(sessionId, { page: Math.max(1, page), pageSize, status });
         return NextResponse.json({ success: true, data: result });
       }
 
@@ -43,9 +52,9 @@ const { searchParams } = new URL(request.url);
       return NextResponse.json({ success: true, data: importSession });
     }
 
-    // Get paginated history
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    // Get paginated history with validated params
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20') || 20));
     const status = searchParams.get('status') || undefined;
     const entityType = searchParams.get('entityType') || undefined;
 

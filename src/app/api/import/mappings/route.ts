@@ -99,6 +99,19 @@ const body = await request.json();
       );
     }
 
+    // Verify ownership before updating usage
+    const existing = await import('@/lib/prisma').then(m => m.default.importMapping.findUnique({
+      where: { id: mappingId },
+      select: { createdBy: true },
+    }));
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Mapping not found' }, { status: 404 });
+    }
+    if (existing.createdBy !== session.user.id) {
+      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+    }
+
     const mapping = await useSavedMapping(mappingId);
 
     return NextResponse.json({

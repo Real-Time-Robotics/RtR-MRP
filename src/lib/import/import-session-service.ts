@@ -234,10 +234,11 @@ export async function completeImportSession(
   sessionId: string,
   result: { successRows: number; failedRows: number; skippedRows: number }
 ) {
+  const status = result.failedRows > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED';
   return prisma.importSession.update({
     where: { id: sessionId },
     data: {
-      status: 'COMPLETED',
+      status,
       completedAt: new Date(),
       successRows: result.successRows,
       failedRows: result.failedRows,
@@ -273,39 +274,67 @@ export async function rollbackImportSession(sessionId: string) {
     },
   });
 
-  // Delete imported records grouped by entity type
+  // Group entity IDs by type for bulk deletion
+  const entityGroups = new Map<string, string[]>();
   for (const log of logs) {
     if (!log.entityId) continue;
-    try {
-      switch (log.entityType) {
-        case 'Part':
-          await prisma.part.delete({ where: { id: log.entityId } });
-          break;
-        case 'Supplier':
-          await prisma.supplier.delete({ where: { id: log.entityId } });
-          break;
-        case 'Customer':
-          await prisma.customer.delete({ where: { id: log.entityId } });
-          break;
-        case 'Product':
-          await prisma.product.delete({ where: { id: log.entityId } });
-          break;
-        default:
-          logger.warn(`Rollback not supported for entity type: ${log.entityType}`, { context: 'import-session-service' });
-      }
-    } catch (deleteError) {
-      // Record may have been manually deleted or has dependent records; log and continue
-      logger.warn(`Failed to rollback ${log.entityType} ${log.entityId}`, { context: 'import-session-service', error: String(deleteError) });
-    }
+    const ids = entityGroups.get(log.entityType) || [];
+    ids.push(log.entityId);
+    entityGroups.set(log.entityType, ids);
   }
 
-  return prisma.importSession.update({
-    where: { id: sessionId },
-    data: {
-      status: 'ROLLED_BACK',
-      rollbackAt: new Date(),
-    },
+  // Execute rollback in a transaction for atomicity
+  let deletedCount = 0;
+  await prisma.$transaction(async (tx) => {
+    for (const [entityType, ids] of entityGroups) {
+      try {
+        let result: { count: number } = { count: 0 };
+        switch (entityType) {
+          case 'Part':
+            result = await tx.part.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'Supplier':
+            result = await tx.supplier.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'Customer':
+            result = await tx.customer.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'Product':
+            result = await tx.product.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'Inventory':
+            result = await tx.inventory.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'BomHeader':
+          case 'BOM':
+            // Delete BOM lines first, then headers
+            await tx.bomLine.deleteMany({ where: { bomId: { in: ids } } });
+            result = await tx.bomHeader.deleteMany({ where: { id: { in: ids } } });
+            break;
+          case 'Warehouse':
+            result = await tx.warehouse.deleteMany({ where: { id: { in: ids } } });
+            break;
+          default:
+            logger.warn(`Rollback not supported for entity type: ${entityType}`, { context: 'import-session-service' });
+        }
+        deletedCount += result.count;
+      } catch (deleteError) {
+        logger.warn(`Failed to rollback ${entityType} (${ids.length} records)`, { context: 'import-session-service', error: String(deleteError) });
+        throw deleteError; // Re-throw to abort transaction
+      }
+    }
+
+    // Update session status within the same transaction
+    await tx.importSession.update({
+      where: { id: sessionId },
+      data: {
+        status: 'ROLLED_BACK',
+        rollbackAt: new Date(),
+      },
+    });
   });
+
+  return { deletedCount };
 }
 
 /**

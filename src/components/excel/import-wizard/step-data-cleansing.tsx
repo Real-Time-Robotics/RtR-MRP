@@ -244,7 +244,7 @@ export function StepDataCleansing({
           </thead>
           <tbody className="divide-y">
             {displayData.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50/50">
+              <tr key={rowIndex} className="group hover:bg-gray-50/50">
                 <td className="px-3 py-1.5 text-xs text-muted-foreground font-mono">
                   {rowIndex + 1}
                 </td>

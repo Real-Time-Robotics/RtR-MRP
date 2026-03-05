@@ -12,16 +12,16 @@ export default function ImportHistoryPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <FileSpreadsheet className="h-7 w-7" />
-            Lich su Import
+            Lịch sử Import
           </h1>
           <p className="text-muted-foreground mt-1">
-            Xem lai cac phien import truoc do, hoan tac hoac xem chi tiet
+            Xem lại các phiên import trước đó, hoàn tác hoặc xem chi tiết
           </p>
         </div>
         <Link href="/import/smart">
           <Button className="bg-purple-600 hover:bg-purple-700">
             <Brain className="h-4 w-4 mr-2" />
-            Import moi
+            Import mới
           </Button>
         </Link>
       </div>

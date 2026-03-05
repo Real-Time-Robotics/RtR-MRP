@@ -57,25 +57,25 @@ interface ImportHistoryProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  ANALYZING: { label: 'Dang phan tich', icon: Clock, color: 'text-blue-600 bg-blue-50' },
-  MAPPED: { label: 'Da mapping', icon: CheckCircle, color: 'text-purple-600 bg-purple-50' },
-  VALIDATING: { label: 'Dang kiem tra', icon: Clock, color: 'text-amber-600 bg-amber-50' },
-  IMPORTING: { label: 'Dang import', icon: Loader2, color: 'text-blue-600 bg-blue-50' },
-  COMPLETED: { label: 'Hoan thanh', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
-  COMPLETED_WITH_ERRORS: { label: 'Co loi', icon: AlertCircle, color: 'text-amber-600 bg-amber-50' },
-  FAILED: { label: 'That bai', icon: XCircle, color: 'text-red-600 bg-red-50' },
-  ROLLED_BACK: { label: 'Da hoan tac', icon: RotateCcw, color: 'text-orange-600 bg-orange-50' },
+  ANALYZING: { label: 'Đang phân tích', icon: Clock, color: 'text-blue-600 bg-blue-50' },
+  MAPPED: { label: 'Đã mapping', icon: CheckCircle, color: 'text-purple-600 bg-purple-50' },
+  VALIDATING: { label: 'Đang kiểm tra', icon: Clock, color: 'text-amber-600 bg-amber-50' },
+  IMPORTING: { label: 'Đang import', icon: Loader2, color: 'text-blue-600 bg-blue-50' },
+  COMPLETED: { label: 'Hoàn thành', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
+  COMPLETED_WITH_ERRORS: { label: 'Có lỗi', icon: AlertCircle, color: 'text-amber-600 bg-amber-50' },
+  FAILED: { label: 'Thất bại', icon: XCircle, color: 'text-red-600 bg-red-50' },
+  ROLLED_BACK: { label: 'Đã hoàn tác', icon: RotateCcw, color: 'text-orange-600 bg-orange-50' },
 };
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
-  PARTS: 'Linh kien',
-  SUPPLIERS: 'Nha cung cap',
-  INVENTORY: 'Ton kho',
+  PARTS: 'Linh kiện',
+  SUPPLIERS: 'Nhà cung cấp',
+  INVENTORY: 'Tồn kho',
   BOM: 'BOM',
-  PRODUCTS: 'San pham',
-  CUSTOMERS: 'Khach hang',
-  PURCHASE_ORDERS: 'Don mua hang',
-  UNKNOWN: 'Khong xac dinh',
+  PRODUCTS: 'Sản phẩm',
+  CUSTOMERS: 'Khách hàng',
+  PURCHASE_ORDERS: 'Đơn mua hàng',
+  UNKNOWN: 'Không xác định',
 };
 
 export function ImportHistory({ onViewSession }: ImportHistoryProps) {
@@ -133,11 +133,11 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
         setError(data.error);
       }
     } catch {
-      setError('Khong the tai lich su import');
+      setError('Không thể tải lịch sử import');
     } finally {
       setIsLoading(false);
     }
-  }, [page, statusFilter, entityFilter, searchQuery]);
+  }, [page, statusFilter, entityFilter]);
 
   useEffect(() => {
     fetchHistory();
@@ -158,14 +158,14 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
       const data = await res.json();
 
       if (data.success) {
-        toast.success(`Da hoan tac ${data.data.recordsDeleted} ban ghi`);
+        toast.success(`Đã hoàn tác ${data.data.recordsDeleted} bản ghi`);
         setRollbackSession(null);
         fetchHistory(); // Refresh list
       } else {
-        toast.error(data.error || 'Hoan tac that bai');
+        toast.error(data.error || 'Hoàn tác thất bại');
       }
     } catch {
-      toast.error('Hoan tac that bai');
+      toast.error('Hoàn tác thất bại');
     } finally {
       setIsRollingBack(false);
     }
@@ -181,11 +181,11 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Compute stats
+  // Compute stats from current page (clearly labeled)
   const stats = {
     total: totalCount,
-    successRate: totalCount > 0
-      ? Math.round((sessions.filter(s => s.status === 'COMPLETED').length / Math.max(sessions.length, 1)) * 100)
+    successRate: sessions.length > 0
+      ? Math.round((sessions.filter(s => s.status === 'COMPLETED' || s.status === 'COMPLETED_WITH_ERRORS').length / sessions.length) * 100)
       : 0,
     totalRowsImported: sessions.reduce((acc, s) => acc + (s.successRows || 0), 0),
     failedImports: sessions.filter(s => s.status === 'FAILED').length,
@@ -211,22 +211,22 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
   return (
     <div className="space-y-4">
       {/* Stats bar */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
-          <div className="text-sm text-blue-600">Tong imports</div>
+          <div className="text-sm text-blue-600">Tổng imports</div>
         </div>
         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="text-2xl font-bold text-green-700">{stats.successRate}%</div>
-          <div className="text-sm text-green-600">Ti le thanh cong</div>
+          <div className="text-sm text-green-600">Tỉ lệ thành công</div>
         </div>
         <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
           <div className="text-2xl font-bold text-purple-700">{stats.totalRowsImported}</div>
-          <div className="text-sm text-purple-600">Dong da import</div>
+          <div className="text-sm text-purple-600">Dòng đã import</div>
         </div>
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="text-2xl font-bold text-red-700">{stats.failedImports}</div>
-          <div className="text-sm text-red-600">Import loi</div>
+          <div className="text-sm text-red-600">Import lỗi</div>
         </div>
       </div>
 
@@ -237,7 +237,7 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Tim theo ten file..."
+            placeholder="Tìm theo tên file..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -251,11 +251,11 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
               <SelectValue placeholder="Trang thai" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tat ca trang thai</SelectItem>
-              <SelectItem value="COMPLETED">Hoan thanh</SelectItem>
-              <SelectItem value="FAILED">That bai</SelectItem>
-              <SelectItem value="IMPORTING">Dang import</SelectItem>
-              <SelectItem value="ROLLED_BACK">Da hoan tac</SelectItem>
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
+              <SelectItem value="FAILED">Thất bại</SelectItem>
+              <SelectItem value="IMPORTING">Đang import</SelectItem>
+              <SelectItem value="ROLLED_BACK">Đã hoàn tác</SelectItem>
             </SelectContent>
           </Select>
           <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
@@ -263,13 +263,13 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
               <SelectValue placeholder="Loai du lieu" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tat ca loai</SelectItem>
-              <SelectItem value="PARTS">Linh kien</SelectItem>
-              <SelectItem value="SUPPLIERS">Nha cung cap</SelectItem>
+              <SelectItem value="all">Tất cả loại</SelectItem>
+              <SelectItem value="PARTS">Linh kiện</SelectItem>
+              <SelectItem value="SUPPLIERS">Nhà cung cấp</SelectItem>
               <SelectItem value="BOM">BOM</SelectItem>
-              <SelectItem value="INVENTORY">Ton kho</SelectItem>
-              <SelectItem value="PRODUCTS">San pham</SelectItem>
-              <SelectItem value="CUSTOMERS">Khach hang</SelectItem>
+              <SelectItem value="INVENTORY">Tồn kho</SelectItem>
+              <SelectItem value="PRODUCTS">Sản phẩm</SelectItem>
+              <SelectItem value="CUSTOMERS">Khách hàng</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -279,9 +279,9 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
       {sessions.length === 0 ? (
         <div className="text-center py-12">
           <FileSpreadsheet className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Chua co lich su import</h3>
+          <h3 className="text-lg font-medium">Chưa có lịch sử import</h3>
           <p className="text-muted-foreground">
-            Cac phien import cua ban se hien thi tai day
+            Các phiên import của bạn sẽ hiển thị tại đây
           </p>
         </div>
       ) : (
@@ -310,7 +310,7 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                     <span>{formatFileSize(session.fileSize)}</span>
-                    <span>{session.totalRows} dong</span>
+                    <span>{session.totalRows} dòng</span>
                     <span>
                       {format(new Date(session.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
                     </span>
@@ -377,7 +377,7 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
                           }}
                         >
                           <Eye className="w-4 h-4" />
-                          Xem chi tiet
+                          Xem chi tiết
                         </button>
                         {canRollback(session.status) && (
                           <button
@@ -388,7 +388,7 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
                             }}
                           >
                             <RotateCcw className="w-4 h-4" />
-                            Hoan tac (Rollback)
+                            Hoàn tác (Rollback)
                           </button>
                         )}
                       </div>
@@ -410,7 +410,7 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || isLoading}
           >
-            Truoc
+            Trước
           </Button>
           <span className="text-sm text-muted-foreground">
             Trang {page} / {totalPages}
@@ -431,13 +431,13 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
         isOpen={rollbackSession !== null}
         onClose={() => setRollbackSession(null)}
         onConfirm={handleRollback}
-        title="Hoan tac Import"
+        title="Hoàn tác Import"
         description={
           rollbackSession
-            ? `Thao tac nay se xoa ${rollbackSession.successRows} ban ghi da import tu file "${rollbackSession.fileName}". Khong the hoan tac sau khi thuc hien.`
+            ? `Thao tác này sẽ xoá ${rollbackSession.successRows} bản ghi đã import từ file "${rollbackSession.fileName}". Không thể hoàn tác sau khi thực hiện.`
             : ''
         }
-        confirmLabel="Hoan tac"
+        confirmLabel="Hoàn tác"
         variant="danger"
         isLoading={isRollingBack}
       />

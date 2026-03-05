@@ -67,28 +67,29 @@ interface ImportDetailDialogProps {
 }
 
 const LOG_STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  SUCCESS: { label: 'Thanh cong', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
-  FAILED: { label: 'Loi', icon: XCircle, color: 'text-red-600 bg-red-50' },
-  SKIPPED: { label: 'Bo qua', icon: SkipForward, color: 'text-amber-600 bg-amber-50' },
-  DUPLICATE: { label: 'Trung lap', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
-  MERGED: { label: 'Da gop', icon: GitMerge, color: 'text-purple-600 bg-purple-50' },
+  SUCCESS: { label: 'Thành công', icon: CheckCircle, color: 'text-green-600 bg-green-50' },
+  FAILED: { label: 'Lỗi', icon: XCircle, color: 'text-red-600 bg-red-50' },
+  SKIPPED: { label: 'Bỏ qua', icon: SkipForward, color: 'text-amber-600 bg-amber-50' },
+  DUPLICATE: { label: 'Trùng lặp', icon: AlertTriangle, color: 'text-orange-600 bg-orange-50' },
+  MERGED: { label: 'Đã gộp', icon: GitMerge, color: 'text-purple-600 bg-purple-50' },
 };
 
 const ENTITY_TYPE_LABELS: Record<string, string> = {
-  PARTS: 'Linh kien',
-  SUPPLIERS: 'Nha cung cap',
-  INVENTORY: 'Ton kho',
+  PARTS: 'Linh kiện',
+  SUPPLIERS: 'Nhà cung cấp',
+  INVENTORY: 'Tồn kho',
   BOM: 'BOM',
-  PRODUCTS: 'San pham',
-  CUSTOMERS: 'Khach hang',
-  PURCHASE_ORDERS: 'Don mua hang',
-  UNKNOWN: 'Khong xac dinh',
+  PRODUCTS: 'Sản phẩm',
+  CUSTOMERS: 'Khách hàng',
+  PURCHASE_ORDERS: 'Đơn mua hàng',
+  UNKNOWN: 'Không xác định',
 };
 
 export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailDialogProps) {
   const [session, setSession] = useState<ImportSessionDetail | null>(null);
   const [logs, setLogs] = useState<ImportLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [logsPage, setLogsPage] = useState(1);
   const [logsTotalPages, setLogsTotalPages] = useState(1);
   const [logsStatusFilter, setLogsStatusFilter] = useState<string>('all');
@@ -96,17 +97,27 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
   useEffect(() => {
     if (!isOpen || !sessionId) return;
 
+    // Reset state when opening for a different session
+    setSession(null);
+    setLogs([]);
+    setFetchError(null);
+    setLogsPage(1);
+    setLogsStatusFilter('all');
+
     const fetchSession = async () => {
       setIsLoading(true);
+      setFetchError(null);
       try {
         const res = await fetch(`/api/import/history?sessionId=${sessionId}`);
         const data = await res.json();
         if (data.success) {
           setSession(data.data);
           setLogs(data.data.logs || []);
+        } else {
+          setFetchError(data.error || 'Không thể tải dữ liệu');
         }
       } catch {
-        // Error handled silently
+        setFetchError('Lỗi kết nối. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
@@ -138,7 +149,7 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
           setLogsTotalPages(data.data.totalPages);
         }
       } catch {
-        // Error handled silently
+        // Logs fetch failure is non-critical, initial logs from session still available
       }
     };
 
@@ -176,7 +187,7 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
               </div>
               <div>
                 <h2 className="text-lg font-semibold">
-                  {session?.fileName || 'Chi tiet Import'}
+                  {session?.fileName || 'Chi tiết Import'}
                 </h2>
                 {session && (
                   <p className="text-sm text-muted-foreground">
@@ -205,39 +216,39 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
           ) : session ? (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-4 gap-4 p-6 border-b">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 border-b">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-700">{session.totalRows}</div>
-                  <div className="text-xs text-blue-600">Tong dong</div>
+                  <div className="text-xs text-blue-600">Tổng dòng</div>
                 </div>
                 <div className="text-center p-3 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-700">{session.successRows}</div>
-                  <div className="text-xs text-green-600">Thanh cong</div>
+                  <div className="text-xs text-green-600">Thành công</div>
                 </div>
                 <div className="text-center p-3 bg-red-50 rounded-lg">
                   <div className="text-2xl font-bold text-red-700">{session.failedRows}</div>
-                  <div className="text-xs text-red-600">Loi</div>
+                  <div className="text-xs text-red-600">Lỗi</div>
                 </div>
                 <div className="text-center p-3 bg-amber-50 rounded-lg">
                   <div className="text-2xl font-bold text-amber-700">{session.skippedRows}</div>
-                  <div className="text-xs text-amber-600">Bo qua</div>
+                  <div className="text-xs text-amber-600">Bỏ qua</div>
                 </div>
               </div>
 
               {/* Logs section */}
               <div className="flex-1 overflow-hidden flex flex-col p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold">Chi tiet theo dong</h3>
+                  <h3 className="font-semibold">Chi tiết theo dòng</h3>
                   <Select value={logsStatusFilter} onValueChange={(v) => { setLogsStatusFilter(v); setLogsPage(1); }}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Trang thai" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tat ca</SelectItem>
-                      <SelectItem value="SUCCESS">Thanh cong</SelectItem>
-                      <SelectItem value="FAILED">Loi</SelectItem>
-                      <SelectItem value="SKIPPED">Bo qua</SelectItem>
-                      <SelectItem value="DUPLICATE">Trung lap</SelectItem>
+                      <SelectItem value="all">Tất cả</SelectItem>
+                      <SelectItem value="SUCCESS">Thành công</SelectItem>
+                      <SelectItem value="FAILED">Lỗi</SelectItem>
+                      <SelectItem value="SKIPPED">Bỏ qua</SelectItem>
+                      <SelectItem value="DUPLICATE">Trùng lặp</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -247,18 +258,18 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 sticky top-0">
                       <tr>
-                        <th className="text-left px-4 py-2 font-medium">Dong</th>
-                        <th className="text-left px-4 py-2 font-medium">Trang thai</th>
+                        <th className="text-left px-4 py-2 font-medium">Dòng</th>
+                        <th className="text-left px-4 py-2 font-medium">Trạng thái</th>
                         <th className="text-left px-4 py-2 font-medium">Entity ID</th>
-                        <th className="text-left px-4 py-2 font-medium">Du lieu</th>
-                        <th className="text-left px-4 py-2 font-medium">Loi</th>
+                        <th className="text-left px-4 py-2 font-medium">Dữ liệu</th>
+                        <th className="text-left px-4 py-2 font-medium">Lỗi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {logs.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="text-center py-8 text-muted-foreground">
-                            Khong co du lieu
+                            Không có dữ liệu
                           </td>
                         </tr>
                       ) : (
@@ -322,9 +333,25 @@ export function ImportDetailDialog({ isOpen, sessionId, onClose }: ImportDetailD
                 )}
               </div>
             </>
+          ) : fetchError ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
+              <XCircle className="w-8 h-8 text-red-400" />
+              <p>{fetchError}</p>
+              <Button variant="outline" size="sm" onClick={() => {
+                setFetchError(null);
+                setIsLoading(true);
+                fetch(`/api/import/history?sessionId=${sessionId}`)
+                  .then(r => r.json())
+                  .then(data => { if (data.success) { setSession(data.data); setLogs(data.data.logs || []); } else { setFetchError(data.error); } })
+                  .catch(() => setFetchError('Lỗi kết nối'))
+                  .finally(() => setIsLoading(false));
+              }}>
+                Thử lại
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
-              Khong tim thay phien import
+              Không tìm thấy phiên import
             </div>
           )}
         </div>

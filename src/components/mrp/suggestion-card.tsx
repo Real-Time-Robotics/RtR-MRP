@@ -53,6 +53,7 @@ interface SuggestionProps {
 }
 
 const priorityColors: Record<string, string> = {
+  CRITICAL: "bg-purple-100 text-purple-800",
   HIGH: "bg-red-100 text-red-800",
   MEDIUM: "bg-amber-100 text-amber-800",
   LOW: "bg-green-100 text-green-800",

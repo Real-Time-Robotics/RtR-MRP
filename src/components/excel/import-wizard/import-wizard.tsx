@@ -361,6 +361,16 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
 
   const handleBack = () => {
     if (currentStep > 1) {
+      // Reset cleansed data and validation when navigating back
+      // so stale results don't persist when mappings change
+      if (currentStep <= 5) {
+        setCleansedData(null);
+      }
+      // Going back to step 3 (mapping) invalidates validation results
+      if (currentStep === 4) {
+        aiImport.reset();
+        setValidationErrors([]);
+      }
       setCurrentStep(currentStep - 1);
     }
   };
@@ -379,7 +389,7 @@ export function ImportWizard({ onSuccess, onClose, defaultEntityType }: ImportWi
       )}
 
       {/* Step content */}
-      <div className="bg-white rounded-lg border p-6 min-h-[400px]">
+      <div className="relative bg-white rounded-lg border p-6 min-h-[400px]">
         {/* Step 1: Upload */}
         {currentStep === 1 && (
           <StepFileUpload onFileSelect={handleFileSelect} isLoading={isLoading} />

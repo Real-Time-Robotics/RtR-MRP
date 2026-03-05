@@ -61,7 +61,10 @@ export function StepIndicator({ currentStep }: StepIndicatorProps) {
                     <Icon className="w-4 h-4" />
                   )}
                 </div>
-                <span className="text-sm font-medium hidden sm:block">
+                <span className={cn(
+                  "text-sm font-medium",
+                  isActive ? "block" : "hidden sm:block"
+                )}>
                   {step.name}
                 </span>
               </div>

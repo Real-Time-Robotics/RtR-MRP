@@ -49,12 +49,7 @@ export const POST = withAuth(async (request, context, session) => {
       );
     }
 
-    // Count records that will be rolled back
-    const successLogs = importSession.logs?.filter(
-      (log) => log.status === 'SUCCESS' && log.entityId
-    ) || [];
-
-    // Execute rollback
+    // Execute rollback (returns actual deleted count)
     const result = await rollbackImportSession(sessionId);
 
     return NextResponse.json({
@@ -62,9 +57,9 @@ export const POST = withAuth(async (request, context, session) => {
       data: {
         sessionId,
         status: 'ROLLED_BACK',
-        recordsDeleted: successLogs.length,
+        recordsDeleted: result.deletedCount,
       },
-      message: `Successfully rolled back ${successLogs.length} records`,
+      message: `Successfully rolled back ${result.deletedCount} records`,
     });
   } catch (error) {
     logger.logError(
