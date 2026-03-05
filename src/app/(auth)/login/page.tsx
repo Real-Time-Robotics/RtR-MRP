@@ -9,6 +9,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { LogoLight } from '@/components/ui/logo';
 import {
   Eye,
   EyeOff,
@@ -128,14 +129,9 @@ function LoginContent() {
 
           {/* Content */}
           <div className="relative z-10 flex flex-col h-full justify-between text-white">
-            {/* Bloomberg-style Logo */}
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-                <span className="text-white font-bold text-sm lg:text-base font-mono">MRP</span>
-              </div>
-              <span className="font-bold text-xl lg:text-2xl font-mono text-white tracking-tight flex items-end">
-                MRP<span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-orange-500 ml-0.5 mb-1" />
-              </span>
+            {/* RTRobotics Logo */}
+            <div className="flex items-center">
+              <LogoLight height={48} width={180} className="h-10 lg:h-12 w-auto" priority />
             </div>
 
             {/* Features */}

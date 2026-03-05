@@ -1,7 +1,7 @@
 {
-  "name": "RTR MRP - Manufacturing Resource Planning",
-  "short_name": "RTR MRP",
-  "description": "Enterprise Manufacturing Resource Planning System for RTR",
+  "name": "RTRobotics MRP - Manufacturing Resource Planning",
+  "short_name": "RTRobotics MRP",
+  "description": "Enterprise Manufacturing Resource Planning System for RTRobotics",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#111827",

@@ -47,21 +47,21 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | RTR MRP',
-    default: 'RTR MRP - Hệ thống quản lý sản xuất',
+    template: '%s | RTRobotics MRP',
+    default: 'RTRobotics MRP - Hệ thống quản lý sản xuất',
   },
-  description: 'Hệ thống hoạch định nguồn lực sản xuất RTR MRP - AI-First Material Requirements Planning',
+  description: 'Hệ thống hoạch định nguồn lực sản xuất RTRobotics MRP - AI-First Material Requirements Planning',
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "RTR MRP",
+    title: "RTRobotics MRP",
   },
   formatDetection: {
     telephone: false,
   },
-  keywords: ['MRP', 'sản xuất', 'quản lý', 'vật tư', 'tồn kho', 'RTR'],
-  authors: [{ name: 'RTR MRP Team' }],
+  keywords: ['MRP', 'sản xuất', 'quản lý', 'vật tư', 'tồn kho', 'RTRobotics'],
+  authors: [{ name: 'RTRobotics' }],
 };
 
 export const viewport: Viewport = {

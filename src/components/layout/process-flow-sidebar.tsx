@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Logo } from '@/components/ui/logo';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useSidebar } from '@/lib/sidebar-context';
@@ -374,14 +375,10 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-[rgb(var(--border-primary))]">
           <Link href="/home" className="flex items-center gap-3">
-            {/* Bloomberg-style Logo */}
-            <div className="h-8 w-8 rounded bg-neutral-900 dark:bg-neutral-800 flex items-center justify-center">
-              <span className="text-white font-bold text-xs font-mono">MRP</span>
-            </div>
-            {!isCollapsed && (
-              <span className="font-bold text-lg font-mono text-gray-900 dark:text-white tracking-tight flex items-end">
-                MRP<span className="w-1.5 h-1.5 rounded-full bg-orange-500 ml-0.5 mb-1" />
-              </span>
+            {isCollapsed ? (
+              <Logo height={32} width={32} className="h-8 w-8 object-contain" />
+            ) : (
+              <Logo height={32} width={120} className="h-8 w-auto" />
             )}
           </Link>
 

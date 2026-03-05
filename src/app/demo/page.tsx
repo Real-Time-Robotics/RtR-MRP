@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Crown,
   Briefcase,
@@ -208,30 +209,20 @@ export default function DemoPage() {
       }`}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className={`h-9 w-9 rounded flex items-center justify-center ${
-              darkMode ? 'bg-gray-800' : 'bg-gray-900'
+            <Image
+              src={darkMode ? '/logo-rtrobotics.png' : '/logo-rtrobotics-dark.png'}
+              alt="RTRobotics"
+              width={120}
+              height={32}
+              className="h-8 w-auto"
+            />
+            <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+              darkMode
+                ? 'bg-gray-800 text-gray-400'
+                : 'bg-gray-100 text-gray-600'
             }`}>
-              <span className="text-white font-bold text-xs">MRP</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="font-semibold text-lg"
-                style={{
-                  color: darkMode ? '#ffffff' : '#111827',
-                  WebkitTextFillColor: darkMode ? '#ffffff' : '#111827',
-                  background: 'none'
-                }}
-              >
-                RTR-MRP
-              </span>
-              <span className={`px-2 py-0.5 text-xs rounded font-medium ${
-                darkMode
-                  ? 'bg-gray-800 text-gray-400'
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                Demo
-              </span>
-            </div>
+              Demo
+            </span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -292,7 +283,7 @@ export default function DemoPage() {
               WebkitBackgroundClip: 'initial'
             }}
           >
-            {t('RTR-MRP Demo', 'Hệ thống RTR-MRP Demo')}
+            {t('RTRobotics MRP Demo', 'Hệ thống RTRobotics MRP Demo')}
           </h1>
 
           <p className={`text-base max-w-xl mx-auto ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -526,7 +517,7 @@ export default function DemoPage() {
               <Link href="/login" className={`transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
                 {t('Sign In', 'Đăng nhập')}
               </Link>
-              <span className={darkMode ? 'text-gray-600' : 'text-gray-400'}>© 2026 RTR-MRP</span>
+              <span className={darkMode ? 'text-gray-600' : 'text-gray-400'}>© 2026 RTRobotics</span>
             </div>
           </div>
         </div>

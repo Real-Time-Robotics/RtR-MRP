@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   description: 'Nền tảng MRP hàng đầu cho sản xuất UAV công nghiệp. Quản lý BOM đa cấp, theo dõi linh kiện và tuân thủ NDAA.',
 };
 import Image from 'next/image';
+import { Logo, LogoDark } from '@/components/ui/logo';
 import {
   ArrowRight,
   Github,
@@ -48,9 +49,7 @@ function LandingHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-black dark:bg-white rounded-md flex items-center justify-center">
-              <span className="text-[10px] font-bold text-white dark:text-gray-900 tracking-tight">RTR</span>
-            </div>
+            <Logo height={32} width={120} className="h-8 w-auto" priority />
           </Link>
 
           {/* Navigation */}
@@ -149,7 +148,7 @@ function HeroSection() {
               className="group flex items-center gap-2 px-5 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-              <span className="text-[14px] font-medium">RTR Cloud</span>
+              <span className="text-[14px] font-medium">RTRobotics Cloud</span>
             </Link>
           </div>
         </div>
@@ -165,10 +164,7 @@ function HeroSection() {
                   {/* Sidebar */}
                   <div className="w-56 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
                     <div className="flex items-center gap-2 mb-6">
-                      <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center">
-                        <span className="text-[8px] font-bold text-white dark:text-gray-900">RTR</span>
-                      </div>
-                      <span className="text-[13px] font-semibold text-gray-900 dark:text-white">HERA Drones</span>
+                      <LogoDark height={24} width={80} className="h-6 w-auto" />
                     </div>
                     <div className="space-y-1">
                       {['Tìm kiếm', 'Work Orders', 'Sản phẩm', 'Linh kiện', 'BOM'].map((item, i) => (
@@ -957,9 +953,7 @@ function Footer() {
           {/* Logo */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-7 h-7 bg-black dark:bg-white rounded-md flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white dark:text-gray-900 tracking-tight">RTR</span>
-              </div>
+              <Logo height={28} width={100} className="h-7 w-auto" />
             </Link>
           </div>
 
@@ -1011,7 +1005,7 @@ function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[13px] text-gray-400">
-            © 2024 RTR MRP. Đã đăng ký bản quyền.
+            © 2024 RTRobotics. Đã đăng ký bản quyền.
           </p>
           <div className="flex items-center gap-6">
             <a href="#" className="text-[13px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Điều khoản</a>

@@ -7,6 +7,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { Logo } from '@/components/ui/logo';
 import { usePathname } from 'next/navigation';
 import {
   Package,
@@ -211,13 +212,7 @@ export function MinimalistSidebar({
         collapsed ? "justify-center" : "justify-between"
       )}>
         {!collapsed && (
-          <div className="flex items-baseline gap-0.5">
-            <span className="font-bold text-sm font-mono text-gray-900 dark:text-mrp-text-primary tracking-tight">
-              RTR
-            </span>
-            <span className="text-info-cyan font-bold text-sm font-mono">-MRP</span>
-            <span className="w-1.5 h-1.5 bg-production-green ml-1 animate-pulse" />
-          </div>
+          <Logo height={28} width={100} className="h-7 w-auto" />
         )}
         <button
           onClick={onToggle}

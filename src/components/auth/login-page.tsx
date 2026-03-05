@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Logo } from '@/components/ui/logo';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -12,7 +13,6 @@ import {
   AlertCircle,
   CheckCircle,
   ChevronRight,
-  Factory,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -109,8 +109,8 @@ export function LoginPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl shadow-lg mb-4">
-              <Factory className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center mb-4">
+              <Logo height={48} width={160} className="h-12 w-auto" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {t('login.title')}
