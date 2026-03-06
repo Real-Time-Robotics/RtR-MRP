@@ -10,10 +10,49 @@ import { NextRequest } from 'next/server';
 // MOCKS
 // =============================================================================
 
-const mockPrisma = {
+const mockPrisma: Record<string, Record<string, ReturnType<typeof vi.fn>>> = {
   user: {
     findUnique: vi.fn(),
     update: vi.fn(),
+  },
+  equipment: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findUnique: vi.fn().mockResolvedValue(null),
+  },
+  part: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findUnique: vi.fn().mockResolvedValue(null),
+  },
+  inspection: {
+    findFirst: vi.fn().mockResolvedValue(null),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+  },
+  inspectionCharacteristic: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  inspectionResult: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findFirst: vi.fn().mockResolvedValue(null),
+    count: vi.fn().mockResolvedValue(0),
+    create: vi.fn().mockResolvedValue({ id: 'res-1' }),
+  },
+  qualityAlert: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findUnique: vi.fn().mockResolvedValue({ id: 'alert-001', status: 'ACTIVE' }),
+    create: vi.fn().mockResolvedValue({ id: 'alert-new' }),
+    update: vi.fn().mockResolvedValue({ id: 'alert-001', status: 'ACKNOWLEDGED' }),
+  },
+  inspectionPlan: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  demandForecast: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  aiRecommendation: {
+    findMany: vi.fn().mockResolvedValue([]),
+    findUnique: vi.fn().mockResolvedValue(null),
+    update: vi.fn().mockResolvedValue({}),
   },
 };
 

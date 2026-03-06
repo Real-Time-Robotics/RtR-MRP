@@ -28,6 +28,16 @@ vi.mock('../prisma', () => ({
     },
     purchaseOrder: {
       create: vi.fn(),
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
+    purchaseOrderLine: {
+      create: vi.fn(),
+      update: vi.fn(),
+      findMany: vi.fn(),
+    },
+    partSupplier: {
+      findFirst: vi.fn(),
     },
     product: {
       findUnique: vi.fn(),

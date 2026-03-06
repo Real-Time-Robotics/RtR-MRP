@@ -70,7 +70,20 @@ vi.mock('@/lib/prisma', () => {
     workOrder: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
     },
+    inventory: {
+      upsert: vi.fn().mockResolvedValue({ id: 'inv-1', quantity: 10 }),
+      findUnique: vi.fn(),
+      findFirst: vi.fn().mockResolvedValue({ id: 'inv-1', quantity: 50 }),
+      update: vi.fn().mockResolvedValue({ id: 'inv-1' }),
+      create: vi.fn().mockResolvedValue({ id: 'inv-1' }),
+    },
+    lotTransaction: {
+      create: vi.fn().mockResolvedValue({ id: 'tx-1', createdAt: new Date() }),
+    },
+    $transaction: vi.fn(),
   };
   return {
     prisma: mockPrisma,
@@ -861,6 +874,32 @@ describe('Mobile Extended API Routes', () => {
     beforeEach(async () => {
       const module = await import('../mobile/sync/route');
       POST = module.POST;
+      // Mock $transaction to pass through the callback with prisma as tx
+      (prisma.$transaction as Mock).mockImplementation(async (fn: Function) => {
+        const tx = {
+          inventory: {
+            findFirst: vi.fn().mockResolvedValue({ id: 'inv-1', quantity: 50 }),
+            upsert: vi.fn().mockResolvedValue({ id: 'inv-1', quantity: 60 }),
+          },
+          lotTransaction: {
+            create: vi.fn().mockResolvedValue({ id: 'tx-1', createdAt: new Date() }),
+          },
+        };
+        return fn(tx);
+      });
+      // Mock workOrder for wo_start operation
+      (prisma.workOrder.findUnique as Mock).mockResolvedValue({
+        id: 'wo-1',
+        woNumber: 'WO-001',
+        status: 'draft',
+        actualStart: null,
+      });
+      (prisma.workOrder.update as Mock).mockResolvedValue({
+        id: 'wo-1',
+        woNumber: 'WO-001',
+        status: 'in_progress',
+        actualStart: new Date(),
+      });
     });
 
     it('should return 401 when not authenticated', async () => {
@@ -880,7 +919,7 @@ describe('Mobile Extended API Routes', () => {
       const request = createPostRequest('http://localhost:3000/api/mobile/sync', {
         id: 'op-1',
         type: 'inventory_adjust',
-        data: { partId: '1', quantity: 10, reason: 'Stock correction' },
+        data: { partId: '1', warehouseId: 'wh-1', quantity: 10, reason: 'Stock correction' },
       });
       const response = await POST(request, mockContext);
       const data = await response.json();
@@ -915,7 +954,7 @@ describe('Mobile Extended API Routes', () => {
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.result.woId).toBe('wo-1');
-      expect(data.result.status).toBe('started');
+      expect(data.result.status).toBe('in_progress');
     });
   });
 });

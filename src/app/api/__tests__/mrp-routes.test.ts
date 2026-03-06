@@ -22,6 +22,12 @@ vi.mock('@/lib/prisma', () => {
     part: {
       findMany: vi.fn(),
     },
+    purchaseOrderLine: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    product: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   };
   return {
     prisma: mockPrisma,

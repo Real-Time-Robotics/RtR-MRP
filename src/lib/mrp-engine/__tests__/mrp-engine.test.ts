@@ -23,7 +23,9 @@ vi.mock("@/lib/prisma", () => {
   const mockPrisma: Record<string, unknown> = {
     mrpRun: { create: vi.fn(), update: vi.fn() },
     mrpSuggestion: { update: vi.fn() },
-    purchaseOrder: { create: vi.fn() },
+    purchaseOrder: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    purchaseOrderLine: { create: vi.fn(), update: vi.fn(), findMany: vi.fn() },
+    partSupplier: { findFirst: vi.fn() },
     product: { findUnique: vi.fn() },
     workOrder: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
     materialAllocation: {

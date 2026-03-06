@@ -29,6 +29,30 @@ vi.mock('@/lib/prisma', () => {
     part: { findFirst: vi.fn() },
     salesOrder: { create: vi.fn() },
     purchaseOrder: { create: vi.fn() },
+    workOrder: {
+      findMany: vi.fn().mockResolvedValue([
+        {
+          id: 'wo-1',
+          woNumber: 'WO-001',
+          quantity: 10,
+          priority: 'high',
+          status: 'pending',
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          plannedStart: null,
+          plannedEnd: null,
+          workCenterId: null,
+          product: { id: 'prod-1', sku: 'SKU-001', name: 'Product A', assemblyHours: 4, testingHours: 1, defaultWorkCenterId: 'wc-1' },
+          workCenterRef: { id: 'wc-1', code: 'WC-001', name: 'Work Center 1' },
+          salesOrder: { id: 'so-1', orderNumber: 'SO-001', requiredDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), priority: 'high' },
+        },
+      ]),
+    },
+    capacityRecord: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    scheduledOperation: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   };
   return { prisma: prismaObj, default: prismaObj };
 });

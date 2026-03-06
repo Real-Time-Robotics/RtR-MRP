@@ -387,7 +387,7 @@ describe('Quality NCR API', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(transitionNCR).toHaveBeenCalledWith('ncr-1', 'review', 'user-1', { action: 'review' });
+      expect(transitionNCR).toHaveBeenCalledWith('ncr-1', 'review', 'user-1', {});
       expect(data.status).toBe('under_review');
     });
 
