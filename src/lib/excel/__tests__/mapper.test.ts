@@ -1,7 +1,7 @@
 // src/lib/excel/__tests__/mapper.test.ts
 // Unit tests for Excel Mapper with Vietnamese support
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   autoDetectMappings,
   applyMappings,
@@ -10,6 +10,8 @@ import {
   getIdentifierField,
   createMappingConfig,
   entityFieldDefinitions,
+  type MappingConfig,
+  type ColumnMapping,
 } from "../mapper";
 
 describe("Excel Mapper", () => {
@@ -347,6 +349,248 @@ describe("Excel Mapper", () => {
           expect(field.aliases?.length).toBeGreaterThan(0);
         }
       }
+    });
+  });
+
+  // ==========================================================================
+  // DATA TRANSFORM TESTS (covering createTransform branches)
+  // ==========================================================================
+  describe("Data Transforms via applyMappings", () => {
+    it("should transform number fields and use default for empty", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "unit_cost": "123.45" },
+        { "part_number": "P2", "name": "B", "unit_cost": "" },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.data[0].unitCost).toBe(123.45);
+      // Empty cost should fall through to default (null)
+      expect(result.data[1].unitCost).toBeNull();
+    });
+
+    it("should round integer fields", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "min_stock": "7.8" },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.data[0].minStockLevel).toBe(8);
+    });
+
+    it("should use integer default when value is empty", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "min_stock": "" },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      // Default for minStockLevel is 0
+      expect(result.data[0].minStockLevel).toBe(0);
+    });
+
+    it("should transform enum fields to lowercase and validate", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "status": "ACTIVE" },
+        { "part_number": "P2", "name": "B", "status": "invalid_status" },
+        { "part_number": "P3", "name": "C", "status": "" },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.data[0].status).toBe("active");
+      // Invalid enum should fall back to default
+      expect(result.data[1].status).toBe("active");
+      // Empty enum should fall back to default
+      expect(result.data[2].status).toBe("active");
+    });
+
+    it("should transform string fields trimming whitespace", () => {
+      const data = [
+        { "part_number": "  P1  ", "name": "  Widget  " },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.data[0].partNumber).toBe("P1");
+      expect(result.data[0].name).toBe("Widget");
+    });
+
+    it("should return null for string fields with null/undefined values", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "description": null },
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.data[0].description).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // APPLY MAPPINGS - ERROR PATHS
+  // ==========================================================================
+  describe("applyMappings error handling", () => {
+    it("should report errors for rows missing required fields", () => {
+      const data = [
+        { "part_number": "", "name": "Test" },  // partNumber is empty
+        { "part_number": "P1", "name": "" },     // name is empty
+      ];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.success).toBe(false);
+      expect(result.errors).toBeDefined();
+      expect(result.errors!.length).toBe(2);
+      expect(result.errors![0]).toContain("Row 2");
+      expect(result.errors![1]).toContain("Row 3");
+    });
+
+    it("should report unmapped source columns", () => {
+      const data = [
+        { "part_number": "P1", "name": "A", "extra_col": "x", "another": "y" },
+      ];
+      const { mappings } = autoDetectMappings(["part_number", "name"], "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.unmappedColumns).toBeDefined();
+      expect(result.unmappedColumns).toContain("extra_col");
+      expect(result.unmappedColumns).toContain("another");
+    });
+
+    it("should report missing required target fields", () => {
+      // Only map description — partNumber and name are required but missing
+      const mappings: ColumnMapping[] = [
+        { sourceColumn: "desc", targetField: "description" },
+      ];
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings([{ desc: "Some desc" }], config);
+
+      expect(result.missingRequiredFields).toBeDefined();
+      expect(result.missingRequiredFields).toContain("Part Number");
+      expect(result.missingRequiredFields).toContain("Name");
+    });
+
+    it("should return success true when all required fields present", () => {
+      const data = [{ "part_number": "P1", "name": "Widget" }];
+      const { mappings } = autoDetectMappings(Object.keys(data[0]), "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings(data, config);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toBeUndefined();
+    });
+
+    it("should handle empty data array", () => {
+      const { mappings } = autoDetectMappings(["part_number", "name"], "parts");
+      const config = createMappingConfig(mappings, "parts");
+      const result = applyMappings([], config);
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([]);
+    });
+  });
+
+  // ==========================================================================
+  // createMappingConfig
+  // ==========================================================================
+  describe("createMappingConfig", () => {
+    it("should set default updateMode to insert", () => {
+      const config = createMappingConfig([], "parts");
+      expect(config.updateMode).toBe("insert");
+      expect(config.entityType).toBe("parts");
+      expect(config.identifierField).toBe("partNumber");
+    });
+
+    it("should accept custom updateMode", () => {
+      const config = createMappingConfig([], "suppliers", "upsert");
+      expect(config.updateMode).toBe("upsert");
+      expect(config.identifierField).toBe("code");
+    });
+
+    it("should handle unknown entity type", () => {
+      const config = createMappingConfig([], "unknown");
+      expect(config.identifierField).toBeUndefined();
+    });
+  });
+
+  // ==========================================================================
+  // autoDetectMappings with unknown entity
+  // ==========================================================================
+  describe("autoDetectMappings edge cases", () => {
+    it("should return all columns as unmapped for unknown entity type", () => {
+      const result = autoDetectMappings(["col1", "col2"], "unknown_entity");
+      expect(result.mappings).toHaveLength(0);
+      expect(result.unmappedColumns).toEqual(["col1", "col2"]);
+      expect(result.missingRequiredFields).toEqual([]);
+    });
+
+    it("should handle empty source columns", () => {
+      const result = autoDetectMappings([], "parts");
+      expect(result.mappings).toHaveLength(0);
+      expect(result.missingRequiredFields).toContain("Part Number");
+      expect(result.missingRequiredFields).toContain("Name");
+    });
+
+    it("should attach transform functions to mappings", () => {
+      const result = autoDetectMappings(["unit_cost"], "parts");
+      const mapping = result.mappings.find(m => m.targetField === "unitCost");
+      expect(mapping).toBeDefined();
+      expect(mapping!.transform).toBeInstanceOf(Function);
+
+      // Test that the transform works
+      expect(mapping!.transform!("42.5")).toBe(42.5);
+    });
+  });
+
+  // ==========================================================================
+  // getIdentifierField additional cases
+  // ==========================================================================
+  describe("getIdentifierField edge cases", () => {
+    it("should return undefined for unknown entity", () => {
+      expect(getIdentifierField("unknown")).toBeUndefined();
+    });
+
+    it("should return partNumber for inventory", () => {
+      expect(getIdentifierField("inventory")).toBe("partNumber");
+    });
+  });
+
+  // ==========================================================================
+  // getRequiredFields additional cases
+  // ==========================================================================
+  describe("getRequiredFields edge cases", () => {
+    it("should return empty for unknown entity", () => {
+      expect(getRequiredFields("unknown")).toEqual([]);
+    });
+
+    it("should return required fields for products", () => {
+      const required = getRequiredFields("products");
+      expect(required).toContain("sku");
+      expect(required).toContain("name");
+    });
+
+    it("should return required fields for inventory", () => {
+      const required = getRequiredFields("inventory");
+      expect(required).toContain("partNumber");
+      expect(required).toContain("warehouseCode");
+      expect(required).toContain("quantity");
+    });
+
+    it("should return required fields for bom", () => {
+      const required = getRequiredFields("bom");
+      expect(required).toContain("productSku");
+      expect(required).toContain("partNumber");
+      expect(required).toContain("quantity");
     });
   });
 });

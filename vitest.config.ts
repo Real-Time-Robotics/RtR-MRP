@@ -16,11 +16,21 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      include: [
+        'src/hooks/**/*.{ts,tsx}',
+        'src/lib/**/*.{ts,tsx}',
+        'src/app/api/**/*.{ts,tsx}',
+      ],
       exclude: [
         'node_modules/',
         '.next/',
         'src/__tests__/setup.ts',
         '__tests__/',
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
+        '**/*.d.ts',
+        '**/types.ts',
+        '**/index.ts',
       ],
     },
     testTimeout: 30000,

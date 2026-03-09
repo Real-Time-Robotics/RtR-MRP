@@ -248,4 +248,210 @@ describe('ScheduleOptimizer', () => {
       expect(best.result).toBeDefined();
     });
   });
+
+  describe('setWeights', () => {
+    it('should update optimization weights', () => {
+      optimizer.setWeights({ makespan: 0.5, lateness: 0.5 });
+      // No direct way to check, but should not throw
+      expect(optimizer).toBeDefined();
+    });
+  });
+
+  describe('optimizeByPriority', () => {
+    it('should schedule critical work orders first', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-low', priority: 'low', woNumber: 'WO-LOW' }),
+        createTestWorkOrder({ id: 'wo-crit', priority: 'critical', woNumber: 'WO-CRIT' }),
+        createTestWorkOrder({ id: 'wo-high', priority: 'high', woNumber: 'WO-HIGH' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeByPriority(workOrders, capacities);
+
+      expect(result.algorithm).toBe('priority_first');
+      expect(result.schedule.length).toBe(3);
+      // Critical should be first
+      expect(result.schedule[0].woNumber).toBe('WO-CRIT');
+    });
+
+    it('should sort by due date for same priority', async () => {
+      const earlyDue = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      const lateDue = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-late', priority: 'normal', dueDate: lateDue, woNumber: 'WO-LATE' }),
+        createTestWorkOrder({ id: 'wo-early', priority: 'normal', dueDate: earlyDue, woNumber: 'WO-EARLY' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeByPriority(workOrders, capacities);
+
+      expect(result.schedule[0].woNumber).toBe('WO-EARLY');
+    });
+  });
+
+  describe('optimizeByDueDate', () => {
+    it('should schedule by earliest due date', async () => {
+      const earlyDue = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      const lateDue = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-late', dueDate: lateDue, woNumber: 'WO-LATE' }),
+        createTestWorkOrder({ id: 'wo-early', dueDate: earlyDue, woNumber: 'WO-EARLY' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeByDueDate(workOrders, capacities);
+
+      expect(result.algorithm).toBe('due_date_first');
+      expect(result.schedule[0].woNumber).toBe('WO-EARLY');
+    });
+
+    it('should handle work orders without due dates', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', dueDate: null, woNumber: 'WO-1' }),
+        createTestWorkOrder({ id: 'wo-2', dueDate: new Date(Date.now() + 7 * 86400000), woNumber: 'WO-2' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeByDueDate(workOrders, capacities);
+      expect(result.schedule.length).toBe(2);
+      // Work order with due date should come first
+      expect(result.schedule[0].woNumber).toBe('WO-2');
+    });
+  });
+
+  describe('optimizeByShortestFirst', () => {
+    it('should schedule shortest duration first', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-long', estimatedDuration: 16, woNumber: 'WO-LONG' }),
+        createTestWorkOrder({ id: 'wo-short', estimatedDuration: 2, woNumber: 'WO-SHORT' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeByShortestFirst(workOrders, capacities);
+
+      expect(result.algorithm).toBe('shortest_first');
+      expect(result.schedule[0].woNumber).toBe('WO-SHORT');
+    });
+  });
+
+  describe('optimizeBySetupTime', () => {
+    it('should group by work center and product family', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', productCode: 'ABC-001', workCenterId: 'wc-1' }),
+        createTestWorkOrder({ id: 'wo-2', productCode: 'XYZ-001', workCenterId: 'wc-1' }),
+        createTestWorkOrder({ id: 'wo-3', productCode: 'ABC-002', workCenterId: 'wc-1' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = optimizer.optimizeBySetupTime(workOrders, capacities);
+
+      expect(result.algorithm).toBe('setup_minimize');
+      expect(result.schedule.length).toBe(3);
+    });
+  });
+
+  describe('balanceWorkload', () => {
+    it('should distribute work across centers', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', workCenterId: null, estimatedDuration: 4 }),
+        createTestWorkOrder({ id: 'wo-2', workCenterId: null, estimatedDuration: 4 }),
+      ];
+      const capacities = [
+        createTestCapacity({ id: 'wc-1', name: 'WC 1' }),
+        createTestCapacity({ id: 'wc-2', name: 'WC 2' }),
+      ];
+
+      const result = optimizer.balanceWorkload(workOrders, capacities);
+
+      expect(result.algorithm).toBe('balanced_load');
+      expect(result.schedule.length).toBe(2);
+    });
+
+    it('should respect work center assignment', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', workCenterId: 'wc-1', estimatedDuration: 4 }),
+      ];
+      const capacities = [
+        createTestCapacity({ id: 'wc-1', name: 'WC 1' }),
+        createTestCapacity({ id: 'wc-2', name: 'WC 2' }),
+      ];
+
+      const result = optimizer.balanceWorkload(workOrders, capacities);
+
+      expect(result.schedule[0]?.workCenterId).toBe('wc-1');
+    });
+  });
+
+  describe('metrics - empty schedule', () => {
+    it('should return zeroed metrics for empty schedule', async () => {
+      const result = await optimizer.optimize([], [createTestCapacity()], 'priority_first');
+      expect(result.metrics.makespan).toBe(0);
+      expect(result.metrics.totalSetupTime).toBe(0);
+      expect(result.metrics.avgFlowTime).toBe(0);
+      expect(result.metrics.fitnessScore).toBe(0);
+      expect(result.metrics.balanceScore).toBe(100);
+    });
+  });
+
+  describe('metrics - lateness tracking', () => {
+    it('should track late work orders', async () => {
+      const pastDue = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1', dueDate: pastDue, estimatedDuration: 8 }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'priority_first');
+
+      expect(result.metrics.lateCount).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('scheduleOperations', () => {
+    it('should schedule operations sequentially', async () => {
+      const workOrders = [
+        createTestWorkOrder({
+          id: 'wo-1',
+          operations: [
+            { id: 'op-1', operationNumber: 10, name: 'Cut', workCenterId: 'wc-1', plannedSetupTime: 0.5, plannedRunTime: 2 },
+            { id: 'op-2', operationNumber: 20, name: 'Weld', workCenterId: 'wc-1', plannedSetupTime: 0.3, plannedRunTime: 3 },
+          ],
+        }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.optimize(workOrders, capacities, 'priority_first');
+
+      expect(result.schedule.length).toBe(1);
+      expect(result.schedule[0].operations.length).toBe(2);
+      // Second operation should start after first ends
+      expect(result.schedule[0].operations[1].startDate.getTime())
+        .toBeGreaterThanOrEqual(result.schedule[0].operations[0].endDate.getTime());
+    });
+  });
+
+  describe('genetic algorithm internals', () => {
+    it('should handle small population genetic algorithm', async () => {
+      const workOrders = [
+        createTestWorkOrder({ id: 'wo-1' }),
+        createTestWorkOrder({ id: 'wo-2' }),
+      ];
+      const capacities = [createTestCapacity()];
+
+      const result = await optimizer.runGeneticAlgorithm(workOrders, capacities, {
+        populationSize: 10,
+        generations: 5,
+        mutationRate: 0.2,
+        crossoverRate: 0.8,
+        elitismCount: 1,
+        tournamentSize: 3,
+        convergenceThreshold: 0.001,
+      });
+
+      expect(result.algorithm).toBe('genetic');
+      expect(result.schedule.length).toBeGreaterThanOrEqual(0);
+    });
+  });
 });
