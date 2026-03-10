@@ -267,6 +267,13 @@ model Part {
   partCertifications PartCertification[]
   scrapDisposals     ScrapDisposal[]
 
+  // Cost Optimization relations
+  autonomyStatus          PartAutonomyStatus?
+  makeVsBuyAnalyses       MakeVsBuyAnalysis[]       @relation("MakeVsBuyAnalysisPart")
+  subEvalOriginal         SubstituteEvaluation[]    @relation("SubEvalOriginalPart")
+  subEvalSubstitute       SubstituteEvaluation[]    @relation("SubEvalSubstitutePart")
+  costReductionActions    CostReductionAction[]     @relation("CostReductionActionPart")
+
   @@index([category])
   @@index([lifecycleStatus])
   @@index([status])
@@ -597,6 +604,9 @@ model Product {
 
   // Financial relations
   salesInvoiceLines SalesInvoiceLine[]
+
+  // Cost Optimization
+  costTargets CostTarget[]
 
   @@index([status])
   @@index([defaultWorkCenterId])
@@ -954,6 +964,7 @@ model User {
   electronicSignatures ElectronicSignature[]
   itarAccessLogs       ITARAccessLog[]
   mobileDevices        MobileDevice[]
+  workSessions         WorkSession[]
 
   // Contextual Chat relations
   createdThreads       ConversationThread[] @relation("ThreadCreator")
@@ -992,6 +1003,12 @@ model User {
 
   // Extended notification settings (JSON for flexibility)
   notificationSettings Json?
+
+  // Cost Optimization relations
+  costTargets             CostTarget[]             @relation("CostTargetCreator")
+  costReductionActions    CostReductionAction[]    @relation("CostReductionActionOwner")
+  makeVsBuyAnalyses       MakeVsBuyAnalysis[]      @relation("MakeVsBuyAnalysisCreator")
+  substituteEvaluations   SubstituteEvaluation[]   @relation("SubstituteEvaluationCreator")
 
   @@index([tenantId])
   @@map("users")
@@ -5835,4 +5852,409 @@ model QualityAlert {
   @@index([severity])
   @@index([type])
   @@map("quality_alerts")
+}
+
+// ============ WORK SESSION TRACKING ============
+enum WorkSessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ABANDONED
+}
+
+model WorkSession {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  entityType   String // PO, SO, MRP_RUN, WORK_ORDER, INVENTORY, PART, BOM
+  entityId     String
+  entityNumber String
+
+  status WorkSessionStatus @default(ACTIVE)
+
+  workflowStep      Int    @default(1)
+  workflowTotalSteps Int   @default(1)
+  workflowStepName  String @default("")
+
+  contextSummary String @default("")
+  contextJson    Json   @default("{}")
+
+  startedAt      DateTime  @default(now())
+  lastActivityAt DateTime  @default(now())
+  pausedAt       DateTime?
+  completedAt    DateTime?
+  totalActiveTime Int      @default(0) // seconds
+
+  resumeUrl       String @default("")
+  resumeStateJson Json?
+
+  activities SessionActivity[]
+
+  @@index([userId, status])
+  @@index([userId, lastActivityAt])
+  @@index([entityType, entityId])
+  @@map("work_sessions")
+}
+
+model SessionActivity {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   WorkSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  action      String
+  description String
+  timestamp   DateTime @default(now())
+  metadataJson Json?
+
+  @@index([sessionId, timestamp])
+  @@map("session_activities")
+}
+
+// ============ COST OPTIMIZATION & MANUFACTURING AUTONOMY ============
+
+enum CostTargetStatus {
+  DRAFT
+  ACTIVE
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+  CANCELLED
+}
+
+enum PhaseStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum ActionType {
+  MAKE_VS_BUY
+  SUBSTITUTE
+  SUPPLIER_OPTIMIZE
+  PROCESS_IMPROVE
+  DESIGN_CHANGE
+  LOCALIZE
+}
+
+enum ActionStatus {
+  IDEA
+  APPROVED
+  IN_PROGRESS_ACTION
+  TESTING_ACTION
+  COMPLETED_ACTION
+  CANCELLED_ACTION
+  ON_HOLD
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AutonomyStatus {
+  MAKE
+  IN_DEVELOPMENT
+  EVALUATE
+  BUY_STRATEGIC
+  BUY_REQUIRED
+}
+
+enum SourceType {
+  MAKE_SOURCE
+  BUY_SOURCE
+  HYBRID
+}
+
+enum MakeVsBuyRecommendation {
+  STRONG_MAKE
+  CONSIDER_MAKE
+  NEUTRAL
+  CONSIDER_BUY
+  STRONG_BUY
+}
+
+enum MakeVsBuyDecision {
+  DECIDE_MAKE
+  DECIDE_BUY
+  DECIDE_HYBRID
+  DECIDE_DEFER
+}
+
+enum CostAnalysisStatus {
+  ANALYSIS_DRAFT
+  ANALYSIS_SUBMITTED
+  ANALYSIS_UNDER_REVIEW
+  ANALYSIS_DECIDED
+  ANALYSIS_ARCHIVED
+}
+
+enum CostTestStatus {
+  NOT_STARTED
+  SAMPLE_ORDERED
+  COST_TESTING
+  TEST_PASSED
+  TEST_FAILED
+}
+
+enum SubstituteStatus {
+  IDENTIFIED
+  EVALUATING
+  SUB_TESTING
+  SUB_APPROVED
+  SUB_REJECTED
+  IMPLEMENTED
+}
+
+enum SavingsSource {
+  SAVINGS_MAKE_VS_BUY
+  SAVINGS_SUBSTITUTE
+  SUPPLIER_NEGOTIATION
+  CONSOLIDATION
+  PROCESS_IMPROVEMENT
+  SAVINGS_DESIGN_CHANGE
+  SAVINGS_OTHER
+}
+
+model CostTarget {
+  id          String           @id @default(cuid())
+  productId   String
+  product     Product          @relation(fields: [productId], references: [id])
+
+  name        String
+  currentCost Float
+  targetCost  Float
+  targetDate  DateTime
+
+  status      CostTargetStatus @default(DRAFT)
+
+  phases      CostReductionPhase[]
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  createdById String
+  createdBy   User             @relation("CostTargetCreator", fields: [createdById], references: [id])
+
+  @@index([productId])
+  @@index([status])
+  @@map("cost_targets")
+}
+
+model CostReductionPhase {
+  id           String     @id @default(cuid())
+  costTargetId String
+  costTarget   CostTarget @relation(fields: [costTargetId], references: [id], onDelete: Cascade)
+
+  name         String
+  targetCost   Float
+  targetDate   DateTime
+
+  status       PhaseStatus @default(PLANNED)
+
+  actions      CostReductionAction[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([costTargetId])
+  @@map("cost_reduction_phases")
+}
+
+model CostReductionAction {
+  id          String             @id @default(cuid())
+  phaseId     String
+  phase       CostReductionPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  type        ActionType
+  partId      String?
+  part        Part?              @relation("CostReductionActionPart", fields: [partId], references: [id])
+
+  description String
+
+  currentCost    Float
+  targetCost     Float
+  savingsPerUnit Float
+  annualVolume   Int
+  annualSavings  Float
+
+  investmentRequired Float  @default(0)
+  breakEvenUnits     Int    @default(0)
+  roiMonths          Int    @default(0)
+
+  startDate            DateTime?
+  targetCompletionDate DateTime
+  actualCompletionDate DateTime?
+
+  status          ActionStatus @default(IDEA)
+  progressPercent Int          @default(0)
+
+  riskLevel RiskLevel @default(LOW)
+  riskNotes String?
+  notes     String?
+
+  ownerId String
+  owner   User   @relation("CostReductionActionOwner", fields: [ownerId], references: [id])
+
+  dependsOnIds String[]
+
+  savingsRecords SavingsRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phaseId])
+  @@index([status])
+  @@index([partId])
+  @@map("cost_reduction_actions")
+}
+
+model PartAutonomyStatus {
+  id     String @id @default(cuid())
+  partId String @unique
+  part   Part   @relation(fields: [partId], references: [id])
+
+  status AutonomyStatus @default(BUY_REQUIRED)
+
+  currentSource      SourceType @default(BUY_SOURCE)
+  currentCost        Float
+  currentLeadTimeDays Int
+
+  makeCapabilityPercent Int    @default(0)
+  makeTargetDate        DateTime?
+  makeCostEstimate      Float?
+  makeInvestmentRequired Float?
+
+  rdProgressPercent Int?
+  rdBlockers        String[]
+
+  ndaaCompliant  Boolean @default(false)
+  itarControlled Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@map("part_autonomy_statuses")
+}
+
+model MakeVsBuyAnalysis {
+  id     String @id @default(cuid())
+  partId String
+  part   Part   @relation("MakeVsBuyAnalysisPart", fields: [partId], references: [id])
+
+  buyPrice        Float
+  buyMOQ          Int
+  buyLeadTimeDays Int
+  buyRisks        String[]
+
+  makeCostEstimate       Float
+  makeInvestmentRequired Float
+  makeLeadTimeDays       Int
+  makeTimelineMonths     Int
+  makeCapabilityGapsJson Json?
+
+  savingsPerUnit       Float
+  annualVolumeEstimate Int
+  annualSavings        Float
+  breakEvenUnits       Int
+  breakEvenMonths      Int
+  npv3Year             Float
+
+  financialScore  Float
+  capabilityScore Float
+  strategicScore  Float
+  overallScore    Float
+
+  recommendation          MakeVsBuyRecommendation
+  recommendationRationale String
+  conditions              String[]
+
+  status     CostAnalysisStatus @default(ANALYSIS_DRAFT)
+  decision   MakeVsBuyDecision?
+  decisionDate DateTime?
+  decisionById String?
+
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation("MakeVsBuyAnalysisCreator", fields: [createdById], references: [id])
+
+  @@index([partId])
+  @@index([status])
+  @@map("make_vs_buy_analyses")
+}
+
+model SubstituteEvaluation {
+  id               String @id @default(cuid())
+  originalPartId   String
+  originalPart     Part   @relation("SubEvalOriginalPart", fields: [originalPartId], references: [id])
+
+  substitutePartId String
+  substitutePart   Part   @relation("SubEvalSubstitutePart", fields: [substitutePartId], references: [id])
+
+  originalPrice   Float
+  substitutePrice Float
+  savingsPercent  Float
+
+  compatibilityScore  Float
+  specsComparisonJson Json?
+
+  ndaaCompliant Boolean
+  itarCompliant Boolean
+
+  riskLevel   RiskLevel
+  riskFactors String[]
+
+  sampleOrdered   Boolean        @default(false)
+  sampleOrderDate DateTime?
+  testStatus      CostTestStatus @default(NOT_STARTED)
+  testResults     String?
+  testDate        DateTime?
+
+  status          SubstituteStatus @default(IDENTIFIED)
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  implementedAt DateTime?
+  actualSavings Float?
+
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation("SubstituteEvaluationCreator", fields: [createdById], references: [id])
+
+  @@index([originalPartId])
+  @@index([status])
+  @@map("substitute_evaluations")
+}
+
+model SavingsRecord {
+  id       String               @id @default(cuid())
+  actionId String?
+  action   CostReductionAction? @relation(fields: [actionId], references: [id])
+
+  source SavingsSource
+
+  partId     String?
+  supplierId String?
+
+  description String
+
+  savingsPerUnit Float
+  unitsAffected  Int
+  totalSavings   Float
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  verified     Boolean   @default(false)
+  verifiedById String?
+  verifiedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([source])
+  @@index([periodStart, periodEnd])
+  @@map("savings_records")
 }

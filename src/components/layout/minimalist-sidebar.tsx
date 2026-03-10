@@ -32,7 +32,8 @@ import {
   PackageX,
   Truck,
   ClipboardList,
-  Clock
+  Clock,
+  TrendingDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +72,7 @@ const toolItems: SidebarItem[] = [
   { id: 'issue', label: 'ISSUE', labelVi: 'XUẤT KHO', icon: <PackageMinus className="w-3.5 h-3.5" />, href: '/inventory/issue' },
   { id: 'finance', label: 'FINANCE', labelVi: 'KẾ TOÁN', icon: <FileSpreadsheet className="w-3.5 h-3.5" />, href: '/finance/misa-export' },
   { id: 'reports', label: 'REPORTS', labelVi: 'BÁO CÁO', icon: <BarChart3 className="w-3.5 h-3.5" />, href: '/reports' },
+  { id: 'cost-optimization', label: 'COST OPT', labelVi: 'TỐI ƯU CP', icon: <TrendingDown className="w-3.5 h-3.5" />, href: '/cost-optimization' },
 ];
 
 const utilityItems: SidebarItem[] = [

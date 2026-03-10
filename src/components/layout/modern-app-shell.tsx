@@ -117,7 +117,6 @@ export function ModernAppShell({
       {/* Header */}
       <ModernHeader
         user={user}
-        notifications={notifications}
         language={language}
         onLanguageChange={handleLanguageChange}
         darkMode={darkMode}

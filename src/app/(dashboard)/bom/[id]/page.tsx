@@ -133,6 +133,7 @@ async function getProductWithBOM(id: string) {
       ssp.sku,
       ssBom.bomLines.map((sl) => ({
         id: sl.id,
+        partId: sl.part.id,
         lineNumber: sl.lineNumber,
         partNumber: sl.part.partNumber,
         name: sl.part.name,
@@ -177,6 +178,7 @@ async function getProductWithBOM(id: string) {
       sp.sku,
       subBom.bomLines.map((sl) => ({
         id: sl.id,
+        partId: sl.part.id,
         lineNumber: sl.lineNumber,
         partNumber: sl.part.partNumber,
         name: sl.part.name,
@@ -195,6 +197,7 @@ async function getProductWithBOM(id: string) {
   // BomLineItem shape matching the client component interface
   interface BomLineData {
     id: string;
+    partId?: string;
     lineNumber: number;
     partNumber: string;
     name: string;
@@ -240,6 +243,7 @@ async function getProductWithBOM(id: string) {
 
     bomModule.lines.push({
       id: line.id,
+      partId: line.part.id,
       lineNumber: line.lineNumber,
       partNumber: line.part.partNumber,
       name: line.part.name,
