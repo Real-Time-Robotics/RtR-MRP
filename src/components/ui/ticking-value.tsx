@@ -6,10 +6,6 @@ import { cn } from '@/lib/utils';
 /**
  * TickingValue — World Monitor-style animated counter that smoothly
  * transitions between numeric values using requestAnimationFrame.
- *
- * @param value - Target number to display
- * @param format - Formatting function (e.g., currency, percent)
- * @param duration - Animation duration in ms (default 600)
  */
 export function TickingValue({
   value,
@@ -22,14 +18,18 @@ export function TickingValue({
   duration?: number;
   className?: string;
 }) {
-  const [display, setDisplay] = useState(value);
-  const prevRef = useRef(value);
+  // Guard against NaN/Infinity
+  const safeValue = isFinite(value) ? value : 0;
+
+  const [display, setDisplay] = useState(safeValue);
+  const prevRef = useRef(safeValue);
   const rafRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
   const [direction, setDirection] = useState<'up' | 'down' | null>(null);
 
   useEffect(() => {
     const from = prevRef.current;
-    const to = value;
+    const to = safeValue;
     if (from === to) return;
 
     setDirection(to > from ? 'up' : 'down');
@@ -40,7 +40,6 @@ export function TickingValue({
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = from + delta * eased;
       setDisplay(current);
@@ -50,14 +49,16 @@ export function TickingValue({
       } else {
         setDisplay(to);
         prevRef.current = to;
-        // Clear direction indicator after a brief flash
-        setTimeout(() => setDirection(null), 800);
+        timerRef.current = setTimeout(() => setDirection(null), 800);
       }
     };
 
     rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [value, duration]);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [safeValue, duration]);
 
   const formatted = format ? format(display) : Math.round(display).toLocaleString();
 

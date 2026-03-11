@@ -22,6 +22,7 @@ export function LivePulse({
 
   return (
     <span
+      aria-hidden="true"
       className={cn(
         'inline-block rounded-full flex-shrink-0',
         sizeMap[size],

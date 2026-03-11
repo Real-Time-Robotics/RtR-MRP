@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PendingApprovals } from '@/components/workflow';
 import { toast } from 'sonner';
 import { clientLogger } from '@/lib/client-logger';
@@ -139,6 +140,7 @@ function KpiTile({
   href,
   severity = 'default',
   pulse = false,
+  tooltip,
 }: {
   label: string;
   value: string | number;
@@ -146,6 +148,7 @@ function KpiTile({
   href: string;
   severity?: 'default' | 'success' | 'warning' | 'danger';
   pulse?: boolean;
+  tooltip?: string;
 }) {
   const router = useRouter();
 
@@ -181,9 +184,12 @@ function KpiTile({
   return (
     <button
       onClick={() => router.push(href)}
+      aria-label={`${label}: ${typeof value === 'number' ? value.toLocaleString() : value}`}
+      title={tooltip}
       className={cn(
         'relative flex flex-col items-center gap-0.5 p-2 border bg-white dark:bg-gunmetal transition-all',
         'hover:bg-gray-50 dark:hover:bg-gunmetal-light cursor-pointer touch-manipulation active:scale-[0.97]',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1',
         s.border,
         s.bg,
       )}
@@ -199,7 +205,7 @@ function KpiTile({
         {typeof value === 'number' ? value.toLocaleString() : value}
       </span>
 
-      <span className="text-[8px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted text-center leading-tight">
+      <span className="text-[8px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted text-center leading-tight truncate max-w-full" title={label}>
         {label}
       </span>
     </button>
@@ -245,9 +251,14 @@ function StatCard({
         // COMPACT: p-4 → p-3, min-h reduced
         'bg-white dark:bg-gunmetal border p-3 transition-all min-h-[72px]',
         statusColors[status],
-        onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gunmetal-light touch-manipulation active:scale-[0.98]'
+        onClick && 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gunmetal-light touch-manipulation active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1'
       )}
       onClick={onClick}
+      {...(onClick ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } },
+      } : {})}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-0.5">
@@ -329,12 +340,12 @@ function ProductionStatusCard({ order }: { order: WorkOrder }) {
         <div className="h-1 bg-gray-200 dark:bg-mrp-border">
           <div
             className={cn(
-              'h-full transition-all',
+              'h-full w-full origin-left transition-transform',
               order.status === 'completed' ? 'bg-info-cyan' :
               order.status === 'delayed' ? 'bg-urgent-red' :
               order.status === 'paused' ? 'bg-alert-amber' : 'bg-production-green'
             )}
-            style={{ width: `${order.progress}%` }}
+            style={{ transform: `scaleX(${(order.progress || 0) / 100})` }}
           />
         </div>
       </div>
@@ -601,8 +612,40 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="h-6 w-6 animate-spin text-info-cyan" />
+      <div className="space-y-3 pb-4">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-3 w-64" />
+          </div>
+          <Skeleton className="h-7 w-24" />
+        </div>
+        {/* KPI grid skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 p-2 border border-gray-200 dark:border-mrp-border bg-white dark:bg-gunmetal">
+              <Skeleton className="w-3.5 h-3.5 rounded" />
+              <Skeleton className="h-5 w-10" />
+              <Skeleton className="h-2 w-12" />
+            </div>
+          ))}
+        </div>
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+          <div className="lg:col-span-2 border border-gray-200 dark:border-mrp-border p-3 space-y-2">
+            <Skeleton className="h-4 w-32" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+          <div className="border border-gray-200 dark:border-mrp-border p-3 space-y-2">
+            <Skeleton className="h-4 w-24" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -657,6 +700,7 @@ export default function HomePage() {
           icon={ShoppingCart}
           href="/orders"
           severity={(stats?.pendingOrders ?? 0) > 5 ? 'warning' : 'default'}
+          tooltip="Đơn hàng: Số lượng đơn hàng chờ xử lý"
         />
         <KpiTile
           label={t('dashboard.criticalStock')}
@@ -665,6 +709,7 @@ export default function HomePage() {
           href="/inventory"
           severity={(stats?.criticalStock ?? 0) > 0 ? 'danger' : 'success'}
           pulse={(stats?.criticalStock ?? 0) > 0}
+          tooltip="Tồn kho: Số mặt hàng dưới mức tồn kho tối thiểu"
         />
         <KpiTile
           label={t('dashboard.activePOs')}
@@ -672,6 +717,7 @@ export default function HomePage() {
           icon={Package}
           href="/purchase-orders"
           severity="default"
+          tooltip="Đơn mua: Số đơn đặt hàng đang xử lý"
         />
         <KpiTile
           label={t('dashboard.reorderAlerts')}
@@ -680,6 +726,7 @@ export default function HomePage() {
           href="/alerts"
           severity={(stats?.reorderAlerts ?? 0) > 0 ? 'warning' : 'success'}
           pulse={(stats?.reorderAlerts ?? 0) > 3}
+          tooltip="Cảnh báo: Số cảnh báo đặt hàng lại cần xử lý"
         />
         <KpiTile
           label={t('dashboard.oee')}
@@ -687,6 +734,7 @@ export default function HomePage() {
           icon={Activity}
           href="/production"
           severity={oee >= 85 ? 'success' : oee >= 60 ? 'warning' : 'danger'}
+          tooltip="OEE: Hiệu suất thiết bị tổng thể (%)"
         />
         <KpiTile
           label={t('dashboard.uptime')}
@@ -694,6 +742,7 @@ export default function HomePage() {
           icon={Target}
           href="/production"
           severity={uptime >= 90 ? 'success' : uptime >= 70 ? 'warning' : 'danger'}
+          tooltip="Khả dụng: Tỷ lệ thời gian máy hoạt động (%)"
         />
         <KpiTile
           label={t('dashboard.qualityRate')}
@@ -701,6 +750,7 @@ export default function HomePage() {
           icon={CheckCircle2}
           href="/quality"
           severity={quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
+          tooltip="Chất lượng: Tỷ lệ sản phẩm đạt yêu cầu (%)"
         />
         <KpiTile
           label={t('dashboard.activeWorkOrders')}
@@ -708,6 +758,7 @@ export default function HomePage() {
           icon={Factory}
           href="/production"
           severity="default"
+          tooltip="Sản xuất: Số lệnh sản xuất đang thực hiện"
         />
       </div>
 
@@ -733,11 +784,13 @@ export default function HomePage() {
           {workOrdersLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
-              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải dữ liệu sản xuất...</span>
             </div>
           ) : workOrders.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
-              <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có lệnh sản xuất nào</span>
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Factory className="h-8 w-8 text-gray-300 dark:text-mrp-border" />
+              <span className="text-[11px] font-medium text-gray-500 dark:text-mrp-text-muted">Chưa có lệnh sản xuất</span>
+              <span className="text-[10px] text-gray-400 dark:text-mrp-text-muted">Tạo lệnh sản xuất mới để bắt đầu theo dõi tiến độ</span>
             </div>
           ) : (
             workOrders.map((order) => (
@@ -773,11 +826,13 @@ export default function HomePage() {
           {alertsLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
-              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải cảnh báo...</span>
             </div>
           ) : alerts.length === 0 ? (
-            <div className="flex items-center justify-center py-6">
-              <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có cảnh báo nào</span>
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <CheckCircle2 className="h-8 w-8 text-production-green/50" />
+              <span className="text-[11px] font-medium text-gray-500 dark:text-mrp-text-muted">Không có cảnh báo</span>
+              <span className="text-[10px] text-gray-400 dark:text-mrp-text-muted">Hệ thống đang hoạt động bình thường</span>
             </div>
           ) : (
             alerts.map((a) => (
@@ -851,6 +906,7 @@ export default function HomePage() {
           {workOrdersLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
             </div>
           ) : (
             <>

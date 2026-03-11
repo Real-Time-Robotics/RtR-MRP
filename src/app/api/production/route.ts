@@ -12,6 +12,8 @@ import {
   paginatedSuccess,
   paginatedError,
   PaginatedResponse,
+  validateSortBy,
+  SortValidationError,
 } from "@/lib/pagination";
 import { validateQuery, validateBody } from "@/lib/api/validation";
 import { WorkOrderQuerySchema, WorkOrderCreateSchema } from "@/lib/validations";
@@ -20,6 +22,7 @@ import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 // Allowed filters for work orders
 const ALLOWED_FILTERS = ["status", "priority", "productId"];
 const SEARCH_FIELDS = ["woNumber"];
+const ALLOWED_SORT_FIELDS = ["createdAt", "updatedAt", "status", "dueDate", "priority", "woNumber", "quantity"];
 
 // GET - List work orders with pagination
 export const GET = withAuth(async (request, context, session) => {
@@ -28,6 +31,19 @@ export const GET = withAuth(async (request, context, session) => {
   try {
     // Parse pagination params
     const params = parsePaginationParams(request);
+
+    // Validate sortBy against allowed fields (strict → 400 for invalid)
+    try {
+      params.sortBy = params.sortBy
+        ? validateSortBy(params.sortBy, ALLOWED_SORT_FIELDS, 'createdAt', true)
+        : undefined;
+    } catch (error) {
+      if (error instanceof SortValidationError) {
+        return paginatedError(error.message, 400);
+      }
+      throw error;
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
 

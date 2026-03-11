@@ -100,11 +100,12 @@ const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     if (search) filter.search = search;
 
-    // Sort
+    // Sort — validate direction
     const sortField = searchParams.get('sortField') as AlertSort['field'] | undefined;
-    const sortDirection = searchParams.get('sortDirection') as AlertSort['direction'] | undefined;
+    const rawSortDir = searchParams.get('sortDirection')?.toLowerCase();
+    const sortDirection: AlertSort['direction'] = rawSortDir === 'asc' ? 'asc' : 'desc';
     const sort: AlertSort | undefined = sortField
-      ? { field: sortField, direction: sortDirection || 'desc' }
+      ? { field: sortField, direction: sortDirection }
       : undefined;
 
     // Refresh alerts first (collect new ones)
@@ -116,9 +117,11 @@ const { searchParams } = new URL(request.url);
     // Get alerts
     const alerts = unifiedAlertService.getAlerts(filter, sort);
 
-    // Pagination
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    // Pagination — clamp negative/zero/NaN values
+    const rawPage = parseInt(searchParams.get('page') || '1');
+    const rawLimit = parseInt(searchParams.get('limit') || '50');
+    const page = Math.max(1, isNaN(rawPage) ? 1 : rawPage);
+    const limit = Math.min(100, Math.max(1, isNaN(rawLimit) ? 50 : rawLimit));
     const startIndex = (page - 1) * limit;
     const paginatedAlerts = alerts.slice(startIndex, startIndex + limit);
 
@@ -139,7 +142,7 @@ const { searchParams } = new URL(request.url);
           page,
           limit,
           total: alerts.length,
-          totalPages: Math.ceil(alerts.length / limit),
+          totalPages: limit > 0 ? Math.ceil(alerts.length / limit) : 0,
         },
         counts,
         aiSummary,

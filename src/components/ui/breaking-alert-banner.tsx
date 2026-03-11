@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { X, AlertTriangle, XCircle } from 'lucide-react';
 
@@ -26,6 +26,8 @@ export function BreakingAlertBanner({
   className?: string;
 }) {
   const [visible, setVisible] = useState<Set<string>>(new Set());
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
   useEffect(() => {
     const newIds = alerts.map((a) => a.id);
@@ -46,13 +48,13 @@ export function BreakingAlertBanner({
               next.delete(alert.id);
               return next;
             });
-            onDismiss?.(alert.id);
+            onDismissRef.current?.(alert.id);
           }, alert.dismissAfterMs),
         );
       }
     }
     return () => timers.forEach(clearTimeout);
-  }, [alerts, onDismiss]);
+  }, [alerts]);
 
   const dismiss = (id: string) => {
     setVisible((prev) => {
@@ -75,6 +77,7 @@ export function BreakingAlertBanner({
         return (
           <div
             key={alert.id}
+            role="alert"
             className={cn(
               'flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono animate-[slide-in-top_0.3s_ease-out]',
               isCritical
@@ -96,7 +99,8 @@ export function BreakingAlertBanner({
 
             <button
               onClick={() => dismiss(alert.id)}
-              className="flex-shrink-0 p-0.5 hover:opacity-70 transition-opacity"
+              className="flex-shrink-0 p-1 hover:opacity-70 transition-opacity min-h-[28px] min-w-[28px] flex items-center justify-center"
+              aria-label="Đóng cảnh báo"
             >
               <X className="w-3 h-3" />
             </button>

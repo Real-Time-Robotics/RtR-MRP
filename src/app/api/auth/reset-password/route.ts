@@ -13,7 +13,7 @@ import {
   validateResetTokenWithUser,
   TokenValidationError,
 } from '@/lib/auth/password-reset-utils';
-import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { checkSigninLimit } from '@/lib/rate-limit';
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Token không hợp lệ'),
@@ -34,7 +34,7 @@ const resetPasswordSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(request);
+    const rateLimitResult = await checkSigninLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
     const token = request.nextUrl.searchParams.get('token');
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(request);
+    const rateLimitResult = await checkSigninLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();

@@ -246,37 +246,16 @@ export function Collapse({
   duration = DURATIONS.normal,
   className = '',
 }: CollapseProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | 'auto'>(isOpen ? 'auto' : 0);
-
-  useEffect(() => {
-    if (isOpen) {
-      const contentHeight = contentRef.current?.scrollHeight || 0;
-      setHeight(contentHeight);
-      // Set to auto after animation completes
-      const timer = setTimeout(() => setHeight('auto'), duration);
-      return () => clearTimeout(timer);
-    } else {
-      // First set explicit height, then animate to 0
-      const contentHeight = contentRef.current?.scrollHeight || 0;
-      setHeight(contentHeight);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setHeight(0);
-        });
-      });
-    }
-  }, [isOpen, duration]);
-
   return (
     <div
+      className="grid transition-[grid-template-rows,opacity] ease-[cubic-bezier(0.4,0,0.2,1)]"
       style={{
-        height,
-        overflow: 'hidden',
-        transition: `height ${duration}ms ${EASINGS.smooth}`,
+        gridTemplateRows: isOpen ? '1fr' : '0fr',
+        opacity: isOpen ? 1 : 0,
+        transitionDuration: `${duration}ms`,
       }}
     >
-      <div ref={contentRef} className={className}>
+      <div className={`overflow-hidden ${className}`}>
         {children}
       </div>
     </div>
@@ -357,9 +336,17 @@ export function AnimatedCounter({
   const previousValue = useRef(0);
 
   useEffect(() => {
-    const startValue = previousValue.current;
+    // NaN/Infinity guard
+    if (!Number.isFinite(value)) {
+      setDisplayValue(0);
+      previousValue.current = 0;
+      return;
+    }
+
+    const startValue = Number.isFinite(previousValue.current) ? previousValue.current : 0;
     const endValue = value;
     const startTime = performance.now();
+    let rafId = 0;
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
@@ -369,18 +356,20 @@ export function AnimatedCounter({
       const easeOut = 1 - Math.pow(1 - progress, 3);
 
       const current = startValue + (endValue - startValue) * easeOut;
-      setDisplayValue(current);
+      setDisplayValue(Number.isFinite(current) ? current : 0);
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        rafId = requestAnimationFrame(animate);
       }
     };
 
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
     previousValue.current = value;
+    return () => cancelAnimationFrame(rafId);
   }, [value, duration]);
 
-  const formattedValue = displayValue.toFixed(decimals);
+  const safeValue = Number.isFinite(displayValue) ? displayValue : 0;
+  const formattedValue = safeValue.toFixed(decimals);
 
   return (
     <span className={className}>
@@ -526,11 +515,11 @@ export function ProgressBar({
       `}>
         <div
           className={`
-            ${sizes[size]} ${colors[color]} rounded-full
-            transition-all duration-500 ease-out
+            w-full ${sizes[size]} ${colors[color]} rounded-full origin-left
+            transition-transform duration-500 ease-out
             ${animated ? 'animate-progress-stripe' : ''}
           `}
-          style={{ width: `${percentage}%` }}
+          style={{ transform: `scaleX(${percentage / 100})` }}
         />
       </div>
       {showValue && (

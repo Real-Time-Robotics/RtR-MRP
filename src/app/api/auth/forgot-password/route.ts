@@ -9,7 +9,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { emailService } from '@/lib/email/email-service';
-import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { checkStrictAuthLimit } from '@/lib/rate-limit';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -17,8 +17,8 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const rateLimitResult = await checkWriteEndpointLimit(request);
+    // Rate limiting (strict: 3 req/min per IP for password reset)
+    const rateLimitResult = await checkStrictAuthLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
     const body = await request.json();

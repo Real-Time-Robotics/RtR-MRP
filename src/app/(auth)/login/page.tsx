@@ -53,9 +53,10 @@ function LoginContent() {
     }
   }, [status, callbackUrl, router]);
 
-  // Handle error from URL
+  // Handle error from URL — only allowlisted error codes are processed
   useEffect(() => {
-    if (error) {
+    const ALLOWED_ERRORS = ['CredentialsSignin', 'SessionRequired', 'OAuthSignin', 'OAuthCallback', 'Callback'];
+    if (error && ALLOWED_ERRORS.includes(error)) {
       switch (error) {
         case 'CredentialsSignin':
           setLoginError(t('login.errorCredentials'));
@@ -66,6 +67,9 @@ function LoginContent() {
         default:
           setLoginError(t('login.errorGeneric'));
       }
+    } else if (error) {
+      // Unknown error code — show generic message, do not reflect the raw value
+      setLoginError(t('login.errorGeneric'));
     }
   }, [error, t]);
 

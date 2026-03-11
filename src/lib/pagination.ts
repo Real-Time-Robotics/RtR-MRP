@@ -72,9 +72,44 @@ export function parsePaginationParams(request: NextRequest): PaginationParams {
   );
   const cursor = searchParams.get('cursor') || undefined;
   const sortBy = searchParams.get('sortBy') || undefined;
-  const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
+  const rawSortOrder = searchParams.get('sortOrder')?.toLowerCase();
+  const sortOrder: 'asc' | 'desc' = rawSortOrder === 'asc' ? 'asc' : 'desc';
 
   return { page, pageSize, cursor, sortBy, sortOrder };
+}
+
+/**
+ * Validate sortBy against a list of allowed fields.
+ * Returns the validated sortBy or the defaultField if invalid.
+ * In strict mode, throws an error for invalid values.
+ */
+export function validateSortBy(
+  sortBy: string | undefined,
+  allowedFields: string[],
+  defaultField: string,
+  strict: boolean = false,
+): string {
+  if (!sortBy) return defaultField;
+  if (allowedFields.includes(sortBy)) return sortBy;
+  if (strict) {
+    throw new SortValidationError(
+      `Invalid sortBy: "${sortBy}". Allowed fields: ${allowedFields.join(', ')}`,
+      sortBy,
+      allowedFields,
+    );
+  }
+  return defaultField;
+}
+
+export class SortValidationError extends Error {
+  field: string;
+  allowedFields: string[];
+  constructor(message: string, field: string, allowedFields: string[]) {
+    super(message);
+    this.name = 'SortValidationError';
+    this.field = field;
+    this.allowedFields = allowedFields;
+  }
 }
 
 /**
@@ -132,13 +167,14 @@ export function buildPaginatedResponse<T extends { id: string }>(
   startTime: number,
   cached: boolean = false
 ): PaginatedResponse<T> {
-  const totalPages = Math.ceil(totalCount / params.pageSize);
+  const safePageSize = Math.max(1, params.pageSize);
+  const totalPages = Math.ceil(totalCount / safePageSize);
 
   return {
     data,
     pagination: {
       page: params.page,
-      pageSize: params.pageSize,
+      pageSize: safePageSize,
       totalItems: totalCount,
       totalPages,
       hasNextPage: params.page < totalPages,

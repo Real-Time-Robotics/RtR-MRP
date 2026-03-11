@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { signIn } from '@/lib/auth';
 
-import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { checkSigninLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 /**
  * SSO Callback Route
@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
     // Rate limiting
-    const rateLimitResult = await checkReadEndpointLimit(request);
+    const rateLimitResult = await checkSigninLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
   if (process.env.ENABLE_SUPABASE_SSO !== 'true') {
