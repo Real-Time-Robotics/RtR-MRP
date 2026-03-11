@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 import { Button } from '@/components/ui/button';
 import {
   Package,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { clientLogger } from '@/lib/client-logger';
+import { ActivityTimelineWidget } from '@/components/activity-timeline';
 
 interface DashboardStats {
   salesOrders: { total: number; pending: number };
@@ -70,76 +72,16 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">{t('dashboard.description')}</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Sales Orders</p>
-                <p className="text-2xl font-bold">{stats?.salesOrders.total || 0}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.salesOrders.pending || 0} pending
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-primary-100 dark:bg-primary-900/50 flex items-center justify-center">
-                <ShoppingCart className="h-6 w-6 text-primary-600 dark:text-primary-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* KPI Stats - compact inline */}
+      <CompactStatsBar stats={[
+        { label: `Sales Orders (${stats?.salesOrders.pending || 0} pending)`, value: stats?.salesOrders.total || 0 },
+        { label: `Inventory (${stats?.inventory.lowStock || 0} low stock)`, value: stats?.inventory.total || 0, color: 'text-success-600' },
+        { label: `Work Orders (${stats?.production.inProgress || 0} in progress)`, value: stats?.production.total || 0, color: 'text-purple-600' },
+        { label: `Quality (${stats?.quality.pending || 0} pending)`, value: stats?.quality.total || 0, color: 'text-danger-600' },
+      ]} />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Inventory Items</p>
-                <p className="text-2xl font-bold">{stats?.inventory.total || 0}</p>
-                <p className="text-xs text-amber-600">
-                  {stats?.inventory.lowStock || 0} low stock
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-success-100 dark:bg-success-900/50 flex items-center justify-center">
-                <Package className="h-6 w-6 text-success-600 dark:text-success-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Work Orders</p>
-                <p className="text-2xl font-bold">{stats?.production.total || 0}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.production.inProgress || 0} in progress
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-                <Factory className="h-6 w-6 text-chart-purple dark:text-purple-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Quality Issues</p>
-                <p className="text-2xl font-bold">{stats?.quality.total || 0}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.quality.pending || 0} pending review
-                </p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-danger-100 dark:bg-danger-900/50 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-danger-600 dark:text-danger-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Activity Timeline Widget */}
+      <ActivityTimelineWidget />
 
       {/* Quick Links */}
       <Card>

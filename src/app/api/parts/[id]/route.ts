@@ -463,6 +463,9 @@ export const PUT = withAuth(async (request, context, session) => {
   }
 });
 
+// PATCH - Alias for PUT (partial update)
+export const PATCH = PUT;
+
 // DELETE - Delete part
 export const DELETE = withAuth(async (request, context, session) => {
     // Rate limiting

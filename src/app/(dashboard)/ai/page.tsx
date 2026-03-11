@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import { useRouter } from "next/navigation";
 import {
   Brain,
@@ -172,61 +173,13 @@ export default function AiDashboardPage() {
         }
       />
 
-      {/* Model Status Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary-100 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-primary-600" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold">Demand Forecasting</p>
-              <p className="text-xs text-muted-foreground">
-                Prophet + ARIMA Ensemble
-              </p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Truck className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold">Lead Time Prediction</p>
-              <p className="text-xs text-muted-foreground">
-                XGBoost Regression
-              </p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-success-100 rounded-lg">
-              <Package className="h-5 w-5 text-success-600" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold">Inventory Optimization</p>
-              <p className="text-xs text-muted-foreground">
-                Safety Stock + EOQ
-              </p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-danger-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-danger-600" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold">Anomaly Detection</p>
-              <p className="text-xs text-muted-foreground">
-                Isolation Forest
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
+      {/* Model Status - compact inline */}
+      <CompactStatsBar stats={[
+        { label: 'Demand Forecasting', value: 'Prophet + ARIMA', color: 'text-primary-600' },
+        { label: 'Lead Time Prediction', value: 'XGBoost', color: 'text-purple-600' },
+        { label: 'Inventory Optimization', value: 'EOQ', color: 'text-success-600' },
+        { label: 'Anomaly Detection', value: 'Isolation Forest', color: 'text-danger-600' },
+      ]} />
 
       <Tabs defaultValue="ml-realtime" className="space-y-4">
         <TabsList>
@@ -304,62 +257,13 @@ export default function AiDashboardPage() {
         </TabsContent>
 
         <TabsContent value="insights" className="space-y-4">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-danger-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-danger-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{highPriority.length}</p>
-                  <p className="text-sm text-muted-foreground">High Priority</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-warning-100 rounded-lg">
-                  <Brain className="h-5 w-5 text-warning-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{recommendations.length}</p>
-                  <p className="text-sm text-muted-foreground">Total Insights</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-success-100 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-success-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">${totalSavings.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Potential Savings</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-primary-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">
-                    {recommendations.length > 0
-                      ? Math.round(
-                          (recommendations.reduce((sum, r) => sum + r.confidence, 0) /
-                            recommendations.length) *
-                            100
-                        )
-                      : 0}
-                    %
-                  </p>
-                  <p className="text-sm text-muted-foreground">Avg Confidence</p>
-                </div>
-              </div>
-            </Card>
-          </div>
+          {/* Quick Stats - compact inline */}
+          <CompactStatsBar stats={[
+            { label: 'High Priority', value: highPriority.length, color: 'text-danger-600' },
+            { label: 'Total Insights', value: recommendations.length, color: 'text-warning-600' },
+            { label: 'Potential Savings', value: `$${totalSavings.toLocaleString()}`, color: 'text-success-600' },
+            { label: 'Avg Confidence', value: `${recommendations.length > 0 ? Math.round((recommendations.reduce((sum, r) => sum + r.confidence, 0) / recommendations.length) * 100) : 0}%`, color: 'text-primary-600' },
+          ]} />
 
           {/* Recommendations */}
           <Card>

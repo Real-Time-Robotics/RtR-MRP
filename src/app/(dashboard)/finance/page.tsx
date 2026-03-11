@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import Link from "next/link";
 import {
   DollarSign,
@@ -104,80 +105,13 @@ export default function FinanceDashboardPage() {
         description="Costing, Invoicing, General Ledger & Reports"
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Accounts Receivable</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats?.totalAR || 0)}</p>
-                {(stats?.arOverdue || 0) > 0 && (
-                  <p className="text-xs text-danger-500 flex items-center mt-1">
-                    <ArrowUpRight className="h-3 w-3" />
-                    {formatCurrency(stats?.arOverdue || 0)} overdue
-                  </p>
-                )}
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-success-100 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-success-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Accounts Payable</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats?.totalAP || 0)}</p>
-                {(stats?.apOverdue || 0) > 0 && (
-                  <p className="text-xs text-danger-500 flex items-center mt-1">
-                    <ArrowDownRight className="h-3 w-3" />
-                    {formatCurrency(stats?.apOverdue || 0)} overdue
-                  </p>
-                )}
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-danger-100 flex items-center justify-center">
-                <TrendingDown className="h-6 w-6 text-danger-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Net Position</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency((stats?.totalAR || 0) - (stats?.totalAP || 0))}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">AR - AP</p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-primary-100 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-primary-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Gross Margin</p>
-                <p className="text-2xl font-bold">{(stats?.grossMargin || 0).toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Month to date</p>
-              </div>
-              <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary Stats - compact inline */}
+      <CompactStatsBar stats={[
+        { label: 'Accounts Receivable', value: formatCurrency(stats?.totalAR || 0), color: 'text-success-600' },
+        { label: 'Accounts Payable', value: formatCurrency(stats?.totalAP || 0), color: 'text-danger-600' },
+        { label: 'Net Position', value: formatCurrency((stats?.totalAR || 0) - (stats?.totalAP || 0)) },
+        { label: 'Gross Margin', value: `${(stats?.grossMargin || 0).toFixed(1)}%`, color: 'text-purple-600' },
+      ]} />
 
       {/* Quick Actions */}
       <Card>

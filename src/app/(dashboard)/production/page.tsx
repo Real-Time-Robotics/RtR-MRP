@@ -6,6 +6,7 @@ import { Plus, Factory, Calendar, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import {
   Select,
   SelectContent,
@@ -212,38 +213,13 @@ export default function ProductionPage() {
         </div>
       </div>
 
-      {/* Stats Cards - COMPACT: gap-4 → gap-2, p-4 → p-3 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Card className="p-3 border-gray-200 dark:border-mrp-border">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30">
-              <Factory className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold font-mono">{stats.total.toLocaleString()}</p>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Total WOs</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3 border-gray-200 dark:border-mrp-border">
-          <div>
-            <p className="text-lg font-semibold font-mono">{stats.displayed}</p>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Showing</p>
-          </div>
-        </Card>
-        <Card className="p-3 border-gray-200 dark:border-mrp-border">
-          <div>
-            <p className="text-lg font-semibold font-mono">{meta?.took || 0}ms</p>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Response Time</p>
-          </div>
-        </Card>
-        <Card className="p-3 border-gray-200 dark:border-mrp-border">
-          <div>
-            <p className="text-lg font-semibold font-mono">{pagination?.totalPages || 0}</p>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">Pages</p>
-          </div>
-        </Card>
-      </div>
+      {/* Stats Bar - Compact inline */}
+      <CompactStatsBar stats={[
+        { label: 'Total WOs', value: stats.total.toLocaleString(), color: 'text-blue-600 dark:text-blue-400' },
+        { label: 'Showing', value: stats.displayed },
+        { label: 'Response Time', value: `${meta?.took || 0}ms` },
+        { label: 'Pages', value: pagination?.totalPages || 0 },
+      ]} />
 
       {/* Work Orders List - COMPACT */}
       <Card className="border-gray-200 dark:border-mrp-border">

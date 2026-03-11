@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 import {
   Bell,
   AlertTriangle,
@@ -248,53 +249,13 @@ export default function AlertsPage() {
 
       {/* COMPACT: py-6 → py-3, remove px for full-width */}
       <div className="py-3 space-y-3">
-        {/* Summary Cards - COMPACT */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <div className="bg-white dark:bg-gunmetal p-3 border border-danger-200 dark:border-danger-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-500">Nghiêm trọng</p>
-                <p className="text-lg font-semibold font-mono text-danger-600">{summary?.bySeverity.critical || 0}</p>
-              </div>
-              <div className="p-2 bg-danger-100 dark:bg-danger-900/30">
-                <AlertTriangle className="w-4 h-4 text-danger-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gunmetal p-3 border border-orange-200 dark:border-orange-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-500">Cảnh báo</p>
-                <p className="text-lg font-semibold font-mono text-orange-600">{summary?.bySeverity.warning || 0}</p>
-              </div>
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30">
-                <AlertCircle className="w-4 h-4 text-orange-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gunmetal p-3 border border-primary-200 dark:border-primary-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-500">Thông tin</p>
-                <p className="text-lg font-semibold font-mono text-primary-600">{summary?.bySeverity.info || 0}</p>
-              </div>
-              <div className="p-2 bg-primary-100 dark:bg-primary-900/30">
-                <Info className="w-4 h-4 text-primary-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gunmetal p-3 border border-success-200 dark:border-success-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-500">Đã xử lý</p>
-                <p className="text-lg font-semibold font-mono text-success-600">{summary?.resolved || 0}</p>
-              </div>
-              <div className="p-2 bg-success-100 dark:bg-success-900/30">
-                <Check className="w-4 h-4 text-success-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Summary Stats - compact inline */}
+        <CompactStatsBar stats={[
+          { label: 'Nghiêm trọng', value: summary?.bySeverity.critical || 0, color: 'text-danger-600' },
+          { label: 'Cảnh báo', value: summary?.bySeverity.warning || 0, color: 'text-orange-600' },
+          { label: 'Thông tin', value: summary?.bySeverity.info || 0, color: 'text-primary-600' },
+          { label: 'Đã xử lý', value: summary?.resolved || 0, color: 'text-success-600' },
+        ]} />
 
         {/* Filters and Search - COMPACT */}
         <div className="bg-white dark:bg-gunmetal p-3 border border-gray-200 dark:border-mrp-border">

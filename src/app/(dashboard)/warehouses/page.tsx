@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import Link from "next/link";
 import { Warehouse, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,33 +198,13 @@ export default function WarehousesPage() {
     <div className="p-6 space-y-6">
       <PageHeader title={t("warehouse.title")} description={t("warehouse.description")} />
 
-      {/* Summary Stats - compact style giống InventoryTable */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Card className="border-gray-200 dark:border-mrp-border">
-          <CardContent className="p-3">
-            <div className="text-lg font-semibold font-mono">{totalSKU}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.totalSKU")}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-200 dark:border-mrp-border">
-          <CardContent className="p-3">
-            <div className="text-lg font-semibold font-mono">{totalQuantity.toLocaleString()}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.totalQuantity")}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-200 dark:border-mrp-border">
-          <CardContent className="p-3">
-            <div className="text-lg font-semibold font-mono text-danger-600">{totalAlerts}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.alerts")}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-gray-200 dark:border-mrp-border">
-          <CardContent className="p-3">
-            <div className="text-lg font-semibold font-mono">{warehouseCount}</div>
-            <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t("warehouse.warehouseCount")}</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary Stats - compact inline */}
+      <CompactStatsBar stats={[
+        { label: t("warehouse.totalSKU"), value: totalSKU },
+        { label: t("warehouse.totalQuantity"), value: totalQuantity.toLocaleString() },
+        { label: t("warehouse.alerts"), value: totalAlerts, color: 'text-danger-600' },
+        { label: t("warehouse.warehouseCount"), value: warehouseCount },
+      ]} />
 
       {/* Warehouse Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

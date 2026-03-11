@@ -227,7 +227,7 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 7%;              /* between 950 and 900 */
     --popover-foreground: 0 0% 98%;
-    --primary: 152 56% 53%;          /* Prismy green */
+    --primary: 152 64% 23%;          /* Dark green - high contrast */
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 15%;           /* neutral-800 #262626 */
     --secondary-foreground: 0 0% 98%;
@@ -239,14 +239,14 @@
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 18%;              /* slightly lighter than card */
     --input: 0 0% 15%;               /* neutral-800 */
-    --ring: 152 56% 53%;             /* Prismy green ring */
+    --ring: 152 64% 23%;             /* Dark green ring */
 
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --chart-1: 152 56% 53%;
+    --chart-1: 152 64% 23%;
     --chart-2: 142 71% 45%;
     --chart-3: 38 92% 50%;
     --chart-4: 0 84% 60%;

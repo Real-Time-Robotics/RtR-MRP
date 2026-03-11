@@ -8,6 +8,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
+import { LivePanel } from '@/components/ui/live-panel';
+import { AutoRefreshBar } from '@/components/ui/auto-refresh-bar';
+import { BreakingAlertBanner, type BreakingAlert } from '@/components/ui/breaking-alert-banner';
+import { TickingValue } from '@/components/ui/ticking-value';
+import { LiveRelativeTime } from '@/components/ui/live-relative-time';
+import { DataFreshnessBadge } from '@/components/ui/data-freshness-badge';
 import {
   Package,
   ShoppingCart,
@@ -123,6 +130,81 @@ function formatRelativeTime(dateStr: string): string {
 // =============================================================================
 // ULTRA COMPACT COMPONENTS
 // =============================================================================
+
+/** KpiTile — Clickable live metric tile for dashboard KPI grid */
+function KpiTile({
+  label,
+  value,
+  icon: Icon,
+  href,
+  severity = 'default',
+  pulse = false,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  href: string;
+  severity?: 'default' | 'success' | 'warning' | 'danger';
+  pulse?: boolean;
+}) {
+  const router = useRouter();
+
+  const severityStyles = {
+    default: {
+      border: 'border-gray-200 dark:border-mrp-border',
+      icon: 'text-gray-500 dark:text-mrp-text-muted',
+      value: 'text-gray-900 dark:text-mrp-text-primary',
+      bg: '',
+    },
+    success: {
+      border: 'border-production-green/30',
+      icon: 'text-production-green',
+      value: 'text-production-green',
+      bg: '',
+    },
+    warning: {
+      border: 'border-alert-amber/30',
+      icon: 'text-alert-amber',
+      value: 'text-alert-amber',
+      bg: 'bg-alert-amber-dim',
+    },
+    danger: {
+      border: 'border-urgent-red/40',
+      icon: 'text-urgent-red',
+      value: 'text-urgent-red',
+      bg: 'bg-urgent-red-dim',
+    },
+  };
+
+  const s = severityStyles[severity];
+
+  return (
+    <button
+      onClick={() => router.push(href)}
+      className={cn(
+        'relative flex flex-col items-center gap-0.5 p-2 border bg-white dark:bg-gunmetal transition-all',
+        'hover:bg-gray-50 dark:hover:bg-gunmetal-light cursor-pointer touch-manipulation active:scale-[0.97]',
+        s.border,
+        s.bg,
+      )}
+    >
+      {/* Pulse indicator for critical metrics */}
+      {pulse && (
+        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-urgent-red animate-[pulse-dot_1s_infinite]" />
+      )}
+
+      <Icon className={cn('w-3.5 h-3.5', s.icon)} />
+
+      <span className={cn('text-base font-mono font-bold tabular-nums leading-none', s.value)}>
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </span>
+
+      <span className="text-[8px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted text-center leading-tight">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 function StatCard({
   title,
@@ -342,6 +424,8 @@ export default function HomePage() {
   const [oeeLoading, setOeeLoading] = useState(true);
   const [woSummary, setWoSummary] = useState<WorkOrderSummary>({ completed: 0, inProgress: 0, pending: 0, issues: 0 });
   const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [breakingAlerts, setBreakingAlerts] = useState<BreakingAlert[]>([]);
 
   // Fetch all dashboard data
   const fetchAllData = useCallback(async (showRefreshToast = false) => {
@@ -430,6 +514,18 @@ export default function HomePage() {
 
           setAlerts(mapped);
           setAlertCriticalCount(counts?.critical ?? mapped.filter((a: Alert) => a.type === 'critical').length);
+
+          // Generate breaking alert banners from critical alerts
+          const criticals = mapped.filter((a: Alert) => a.type === 'critical');
+          if (criticals.length > 0) {
+            setBreakingAlerts(criticals.map((a: Alert) => ({
+              id: a.id,
+              type: 'critical' as const,
+              message: a.title,
+              link: '/alerts',
+              dismissAfterMs: 60_000,
+            })));
+          }
         }
       } catch (err) {
         clientLogger.error('Failed to fetch alerts:', err);
@@ -484,6 +580,8 @@ export default function HomePage() {
       fetchUser(),
     ]);
 
+    setLastUpdated(new Date());
+
     if (showRefreshToast) {
       setRefreshing(false);
       toast.success('Dữ liệu đã được cập nhật');
@@ -492,12 +590,6 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchAllData();
-
-    // Auto-refresh every 60 seconds for real-time dashboard data
-    const interval = setInterval(() => {
-      fetchAllData(false);
-    }, 60000);
-    return () => clearInterval(interval);
   }, [fetchAllData]);
 
   const formatCurrency = (value: number) => {
@@ -524,29 +616,32 @@ export default function HomePage() {
   return (
     // COMPACT: space-y-6 → space-y-3, pb-8 → pb-4
     <div className="space-y-3 pb-4">
-      {/* Page Header - Responsive */}
+      {/* Page Header - Real-time aware */}
       <div className="flex items-start sm:items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          {/* Mobile: smaller title, Desktop: normal */}
-          <h1 className="text-sm sm:text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary truncate">
-            {t('dashboard.title')}
-          </h1>
-          {/* Hide date on mobile for cleaner look */}
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm sm:text-base font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary truncate">
+              {t('dashboard.title')}
+            </h1>
+            <DataFreshnessBadge lastUpdated={lastUpdated} />
+          </div>
           <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-mrp-text-muted">
             <span>{t('dashboard.description')}</span>
             <span className="hidden sm:inline"> • {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
           </p>
         </div>
-        {/* Refresh button - larger touch target on mobile */}
-        <button
-          onClick={() => fetchAllData(true)}
-          disabled={refreshing}
-          className="flex items-center justify-center gap-1.5 px-2 py-1.5 sm:py-1 min-h-[36px] sm:min-h-0 text-[10px] font-mono uppercase tracking-wider text-gray-600 dark:text-mrp-text-muted hover:text-info-cyan hover:bg-gray-100 dark:hover:bg-gunmetal transition-colors touch-manipulation rounded disabled:opacity-50"
-        >
-          <RefreshCw className={cn('w-4 h-4 sm:w-3 sm:h-3', refreshing && 'animate-spin')} />
-          <span className="hidden sm:inline">{t('dashboard.refresh')}</span>
-        </button>
+        {/* Auto-refresh bar replaces manual refresh button */}
+        <AutoRefreshBar
+          intervalMs={60_000}
+          onRefresh={() => fetchAllData(true)}
+        />
       </div>
+
+      {/* Breaking alerts banner */}
+      <BreakingAlertBanner
+        alerts={breakingAlerts}
+        onDismiss={(id) => setBreakingAlerts((prev) => prev.filter((a) => a.id !== id))}
+      />
 
       {error && (
         <div className="p-2 bg-alert-amber-dim border border-alert-amber/30 text-alert-amber text-[11px] font-mono">
@@ -554,86 +649,76 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* KPI Cards Row 1 - COMPACT: gap-4 → gap-2 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <StatCard
-          title={t('dashboard.pendingOrders')}
+      {/* KPI Tiles — Clickable, live, visual */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1.5">
+        <KpiTile
+          label={t('dashboard.pendingOrders')}
           value={stats?.pendingOrders ?? 0}
-          subtitle={formatCurrency(stats?.pendingOrdersValue ?? 0)}
           icon={ShoppingCart}
-          trend="up"
-          trendValue={t('dashboard.trendUpLastWeek')}
-          onClick={() => router.push('/orders')}
+          href="/orders"
+          severity={(stats?.pendingOrders ?? 0) > 5 ? 'warning' : 'default'}
         />
-        <StatCard
-          title={t('dashboard.criticalStock')}
+        <KpiTile
+          label={t('dashboard.criticalStock')}
           value={stats?.criticalStock ?? 0}
-          subtitle={t('dashboard.itemsBelowMinimum')}
           icon={AlertTriangle}
-          status={(stats?.criticalStock ?? 0) > 0 ? 'danger' : 'success'}
-          onClick={() => router.push('/inventory?filter=critical')}
+          href="/inventory"
+          severity={(stats?.criticalStock ?? 0) > 0 ? 'danger' : 'success'}
+          pulse={(stats?.criticalStock ?? 0) > 0}
         />
-        <StatCard
-          title={t('dashboard.activePOs')}
+        <KpiTile
+          label={t('dashboard.activePOs')}
           value={stats?.activePOs ?? 0}
-          subtitle={formatCurrency(stats?.activePOsValue ?? 0)}
-          icon={Truck}
-          trend="neutral"
-          trendValue={t('dashboard.sameAsLastWeek')}
-          onClick={() => router.push('/purchasing')}
+          icon={Package}
+          href="/purchase-orders"
+          severity="default"
         />
-        <StatCard
-          title={t('dashboard.reorderAlerts')}
+        <KpiTile
+          label={t('dashboard.reorderAlerts')}
           value={stats?.reorderAlerts ?? 0}
-          subtitle={t('dashboard.itemsToReorder')}
-          icon={Boxes}
-          status={(stats?.reorderAlerts ?? 0) > 0 ? 'warning' : 'success'}
-          onClick={() => router.push('/inventory?filter=reorder')}
+          icon={AlertCircle}
+          href="/alerts"
+          severity={(stats?.reorderAlerts ?? 0) > 0 ? 'warning' : 'success'}
+          pulse={(stats?.reorderAlerts ?? 0) > 3}
         />
-      </div>
-
-      {/* KPI Cards Row 2 - COMPACT: gap-4 → gap-2 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <StatCard
-          title={t('dashboard.oee')}
+        <KpiTile
+          label={t('dashboard.oee')}
           value={oeeLoading ? '...' : `${oee.toFixed(1)}%`}
-          subtitle={t('dashboard.oeeSubtitle')}
-          icon={Target}
-          status={!oeeAvailable ? 'default' : oee >= 85 ? 'success' : oee >= 70 ? 'warning' : 'danger'}
-        />
-        <StatCard
-          title={t('dashboard.uptime')}
-          value={oeeLoading ? '...' : `${uptime.toFixed(1)}%`}
-          subtitle={t('dashboard.machineAvailability')}
           icon={Activity}
-          status={!oeeAvailable ? 'default' : uptime >= 90 ? 'success' : uptime >= 75 ? 'warning' : 'danger'}
+          href="/production"
+          severity={oee >= 85 ? 'success' : oee >= 60 ? 'warning' : 'danger'}
         />
-        <StatCard
-          title={t('dashboard.qualityRate')}
+        <KpiTile
+          label={t('dashboard.uptime')}
+          value={oeeLoading ? '...' : `${uptime.toFixed(1)}%`}
+          icon={Target}
+          href="/production"
+          severity={uptime >= 90 ? 'success' : uptime >= 70 ? 'warning' : 'danger'}
+        />
+        <KpiTile
+          label={t('dashboard.qualityRate')}
           value={oeeLoading ? '...' : `${quality.toFixed(1)}%`}
-          subtitle={t('dashboard.firstPassYield')}
           icon={CheckCircle2}
-          status={!oeeAvailable ? 'default' : quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
+          href="/quality"
+          severity={quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
         />
-        <StatCard
-          title={t('dashboard.activeWorkOrders')}
+        <KpiTile
+          label={t('dashboard.activeWorkOrders')}
           value={workOrdersLoading ? '...' : workOrders.filter(wo => wo.status === 'running').length}
-          subtitle={workOrdersLoading ? '' : t('dashboard.totalOrders', { count: String(workOrders.length) })}
           icon={Factory}
-          onClick={() => router.push('/production')}
+          href="/production"
+          severity="default"
         />
       </div>
 
       {/* Main Content Grid - COMPACT: gap-6 → gap-2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
-        {/* Production Status */}
-        <div className="lg:col-span-2 bg-white dark:bg-gunmetal border border-gray-200 dark:border-mrp-border">
-          {/* COMPACT: px-4 py-3 → px-3 py-2 */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
-            <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
-              <Factory className="w-3.5 h-3.5 text-info-cyan" />
-              {t('dashboard.productionStatus')}
-            </h2>
+        {/* Production Status — LivePanel with freshness */}
+        <LivePanel
+          title={t('dashboard.productionStatus')}
+          icon={<Factory className="w-3.5 h-3.5 text-info-cyan" />}
+          lastUpdated={lastUpdated}
+          action={
             <Link
               href="/production"
               className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan transition-colors flex items-center gap-0.5"
@@ -641,82 +726,80 @@ export default function HomePage() {
               {t('dashboard.viewAll')}
               <ArrowRight className="w-3 h-3" />
             </Link>
-          </div>
-          {/* COMPACT: p-4 → p-2, space-y-2 → space-y-1 */}
-          <div className="p-2 space-y-1">
-            {workOrdersLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
-                <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
-              </div>
-            ) : workOrders.length === 0 ? (
-              <div className="flex items-center justify-center py-6">
-                <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có lệnh sản xuất nào</span>
-              </div>
-            ) : (
-              workOrders.map((order) => (
-                <ProductionStatusCard key={order.id} order={order} />
-              ))
-            )}
-          </div>
-        </div>
+          }
+          className="lg:col-span-2"
+          contentClassName="space-y-1"
+        >
+          {workOrdersLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+            </div>
+          ) : workOrders.length === 0 ? (
+            <div className="flex items-center justify-center py-6">
+              <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có lệnh sản xuất nào</span>
+            </div>
+          ) : (
+            workOrders.map((order) => (
+              <ProductionStatusCard key={order.id} order={order} />
+            ))
+          )}
+        </LivePanel>
 
-        {/* Alerts Panel */}
-        <div className="bg-white dark:bg-gunmetal border border-gray-200 dark:border-mrp-border">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
-            <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
+        {/* Alerts Panel — LivePanel with freshness + critical count */}
+        <LivePanel
+          title={t('dashboard.alerts')}
+          icon={
+            <>
               <AlertCircle className="w-3.5 h-3.5 text-alert-amber" />
-              {t('dashboard.alerts')}
               {alertCriticalCount > 0 && (
-                <span className="px-1 py-0.5 text-[9px] font-bold bg-urgent-red-dim text-urgent-red">
+                <span className="px-1 py-0.5 text-[9px] font-bold bg-urgent-red-dim text-urgent-red animate-[pulse-dot_1.5s_infinite]">
                   {alertCriticalCount}
                 </span>
               )}
-            </h2>
+            </>
+          }
+          lastUpdated={lastUpdated}
+          action={
             <Link
               href="/alerts"
               className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-mrp-text-muted hover:text-info-cyan transition-colors"
             >
               {t('dashboard.viewAll')}
             </Link>
-          </div>
-          {/* COMPACT: max-h reduced */}
-          <div className="max-h-[240px] overflow-y-auto">
-            {alertsLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
-                <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
-              </div>
-            ) : alerts.length === 0 ? (
-              <div className="flex items-center justify-center py-6">
-                <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có cảnh báo nào</span>
-              </div>
-            ) : (
-              alerts.map((a) => (
-                <AlertItem key={a.id} alert={a} />
-              ))
-            )}
-          </div>
-        </div>
+          }
+          contentClassName="p-0 max-h-[240px] overflow-y-auto"
+        >
+          {alertsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+              <span className="ml-2 text-[11px] text-gray-500 dark:text-mrp-text-muted">Đang tải...</span>
+            </div>
+          ) : alerts.length === 0 ? (
+            <div className="flex items-center justify-center py-6">
+              <span className="text-[11px] text-gray-400 dark:text-mrp-text-muted">Không có cảnh báo nào</span>
+            </div>
+          ) : (
+            alerts.map((a) => (
+              <AlertItem key={a.id} alert={a} />
+            ))
+          )}
+        </LivePanel>
       </div>
 
       {/* Pending Approvals - Workflow */}
       {userId && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-          <PendingApprovals userId={userId} />
-        </div>
+        <PendingApprovals userId={userId} />
       )}
 
       {/* Quick Actions & Summary - COMPACT: gap-6 → gap-2 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Quick Actions */}
-        <div className="lg:col-span-2 bg-white dark:bg-gunmetal border border-gray-200 dark:border-mrp-border">
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
-            <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-info-cyan" />
-              {t('dashboard.quickActions')}
-            </h2>
-          </div>
+        <LivePanel
+          title={t('dashboard.quickActions')}
+          icon={<Zap className="w-3.5 h-3.5 text-info-cyan" />}
+          className="lg:col-span-2"
+        >
           {/* COMPACT: p-4 → p-2, gap-3 → gap-1.5 */}
           <div className="p-2 grid grid-cols-2 gap-1.5">
             <QuickActionButton
@@ -756,65 +839,60 @@ export default function HomePage() {
               color="bg-warning-100 dark:bg-warning-900/30 text-warning-600 dark:text-warning-400"
             />
           </div>
-        </div>
+        </LivePanel>
 
-        {/* Today's Summary - COMPACT */}
-        <div className="bg-white dark:bg-gunmetal border border-gray-200 dark:border-mrp-border">
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-mrp-border">
-            <h2 className="text-[11px] font-semibold font-mono uppercase tracking-wider text-gray-900 dark:text-mrp-text-primary flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-info-cyan" />
-              {t('dashboard.todaySummary')}
-            </h2>
-          </div>
-          {/* COMPACT: p-4 → p-2, space-y-4 → space-y-1.5 */}
-          <div className="p-2 space-y-1.5">
-            {workOrdersLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+        {/* Today's Summary — LivePanel with TickingValue */}
+        <LivePanel
+          title={t('dashboard.todaySummary')}
+          icon={<Calendar className="w-3.5 h-3.5 text-info-cyan" />}
+          lastUpdated={lastUpdated}
+          contentClassName="space-y-1.5"
+        >
+          {workOrdersLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-4 w-4 animate-spin text-info-cyan" />
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center bg-production-green-dim">
+                    <CheckCircle2 className="w-3 h-3 text-production-green" />
+                  </div>
+                  <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.completed')}</span>
+                </div>
+                <TickingValue value={woSummary.completed} className="text-sm text-gray-900 dark:text-mrp-text-primary" />
               </div>
-            ) : (
-              <>
-                {/* COMPACT: p-3 → p-2 */}
-                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 flex items-center justify-center bg-production-green-dim">
-                      <CheckCircle2 className="w-3 h-3 text-production-green" />
-                    </div>
-                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.completed')}</span>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center bg-info-cyan-dim">
+                    <Play className="w-3 h-3 text-info-cyan" />
                   </div>
-                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.completed}</span>
+                  <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.inProgress')}</span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 flex items-center justify-center bg-info-cyan-dim">
-                      <Play className="w-3 h-3 text-info-cyan" />
-                    </div>
-                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.inProgress')}</span>
+                <TickingValue value={woSummary.inProgress} className="text-sm text-gray-900 dark:text-mrp-text-primary" />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center bg-alert-amber-dim">
+                    <Clock className="w-3 h-3 text-alert-amber" />
                   </div>
-                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.inProgress}</span>
+                  <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.pending')}</span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 flex items-center justify-center bg-alert-amber-dim">
-                      <Clock className="w-3 h-3 text-alert-amber" />
-                    </div>
-                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.pending')}</span>
+                <TickingValue value={woSummary.pending} className="text-sm text-gray-900 dark:text-mrp-text-primary" />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 flex items-center justify-center bg-urgent-red-dim">
+                    <AlertTriangle className="w-3 h-3 text-urgent-red" />
                   </div>
-                  <span className="text-sm font-mono font-semibold text-gray-900 dark:text-mrp-text-primary">{woSummary.pending}</span>
+                  <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.issues')}</span>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-steel-dark">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 flex items-center justify-center bg-urgent-red-dim">
-                      <AlertTriangle className="w-3 h-3 text-urgent-red" />
-                    </div>
-                    <span className="text-[11px] text-gray-600 dark:text-mrp-text-secondary">{t('dashboard.issues')}</span>
-                  </div>
-                  <span className="text-sm font-mono font-semibold text-urgent-red">{woSummary.issues}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+                <TickingValue value={woSummary.issues} className="text-sm text-urgent-red" />
+              </div>
+            </>
+          )}
+        </LivePanel>
       </div>
     </div>
   );

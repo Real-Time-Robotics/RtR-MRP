@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import {
   Search,
   RefreshCw,
@@ -225,57 +226,13 @@ export default function KPIsPage() {
         </Select>
       </div>
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Tổng KPI</span>
-              <Badge>{definitions.length}</Badge>
-            </div>
-            <p className="text-2xl font-bold mt-1">{definitions.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Đạt mục tiêu</span>
-              <Badge variant="default">
-                {Object.values(values).filter((v) => v.status === "normal").length}
-              </Badge>
-            </div>
-            <p className="text-2xl font-bold mt-1 text-success-600">
-              {Object.values(values).filter((v) => v.status === "normal").length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Cảnh báo</span>
-              <Badge variant="secondary">
-                {Object.values(values).filter((v) => v.status === "warning").length}
-              </Badge>
-            </div>
-            <p className="text-2xl font-bold mt-1 text-warning-500">
-              {Object.values(values).filter((v) => v.status === "warning").length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Nghiêm trọng</span>
-              <Badge variant="destructive">
-                {Object.values(values).filter((v) => v.status === "critical").length}
-              </Badge>
-            </div>
-            <p className="text-2xl font-bold mt-1 text-destructive">
-              {Object.values(values).filter((v) => v.status === "critical").length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats summary - compact inline */}
+      <CompactStatsBar stats={[
+        { label: 'Tổng KPI', value: definitions.length },
+        { label: 'Đạt mục tiêu', value: Object.values(values).filter((v) => v.status === "normal").length, color: 'text-success-600' },
+        { label: 'Cảnh báo', value: Object.values(values).filter((v) => v.status === "warning").length, color: 'text-warning-500' },
+        { label: 'Nghiêm trọng', value: Object.values(values).filter((v) => v.status === "critical").length, color: 'text-destructive' },
+      ]} />
 
       {/* KPI cards by category */}
       {isLoading ? (

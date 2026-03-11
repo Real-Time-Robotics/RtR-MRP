@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useEntityTooltip } from '@/hooks/use-entity-tooltip';
@@ -48,19 +49,21 @@ export function EntityTooltip({ type, id, children, side = 'top' }: EntityToolti
   const ContentComponent = CONTENT_MAP[type];
 
   return (
-    <Tooltip delayDuration={400} onOpenChange={handleOpenChange}>
-      <TooltipTrigger asChild>
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side={side} className="p-3 max-w-[280px]">
-        {isLoading ? (
-          <TooltipSkeleton />
-        ) : error || !data ? (
-          <div className="text-xs text-muted-foreground">Khong the tai du lieu</div>
-        ) : (
-          ContentComponent && <ContentComponent data={data} />
-        )}
-      </TooltipContent>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip delayDuration={400} onOpenChange={handleOpenChange}>
+        <TooltipTrigger asChild>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent side={side} className="p-3 max-w-[280px]">
+          {isLoading ? (
+            <TooltipSkeleton />
+          ) : error || !data ? (
+            <div className="text-xs text-yellow-300">Không thể tải dữ liệu</div>
+          ) : (
+            ContentComponent && <ContentComponent data={data} />
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -9,14 +9,14 @@ import { cn } from '@/lib/utils';
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { color: string; icon: React.ElementType }> = {
-    active: { color: 'text-green-600 bg-green-50', icon: CheckCircle },
-    completed: { color: 'text-green-600 bg-green-50', icon: CheckCircle },
-    received: { color: 'text-green-600 bg-green-50', icon: CheckCircle },
-    cancelled: { color: 'text-red-600 bg-red-50', icon: XCircle },
-    pending: { color: 'text-amber-600 bg-amber-50', icon: Pause },
-    pending_approval: { color: 'text-amber-600 bg-amber-50', icon: Pause },
-    in_progress: { color: 'text-blue-600 bg-blue-50', icon: Wrench },
-    draft: { color: 'text-gray-600 bg-gray-50', icon: Pause },
+    active: { color: 'text-green-700 bg-white', icon: CheckCircle },
+    completed: { color: 'text-green-700 bg-white', icon: CheckCircle },
+    received: { color: 'text-green-700 bg-white', icon: CheckCircle },
+    cancelled: { color: 'text-red-600 bg-white', icon: XCircle },
+    pending: { color: 'text-amber-600 bg-white', icon: Pause },
+    pending_approval: { color: 'text-amber-600 bg-white', icon: Pause },
+    in_progress: { color: 'text-blue-600 bg-white', icon: Wrench },
+    draft: { color: 'text-gray-600 bg-white', icon: Pause },
   };
 
   const s = config[status] || config.pending;
@@ -33,11 +33,11 @@ function StatusBadge({ status }: { status: string }) {
 function Row({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: React.ElementType }) {
   return (
     <div className="flex items-center justify-between gap-3 text-xs">
-      <span className="text-muted-foreground flex items-center gap-1">
+      <span className="text-yellow-300 flex items-center gap-1 font-medium">
         {Icon && <Icon className="w-3 h-3" />}
         {label}
       </span>
-      <span className="font-medium text-right">{value}</span>
+      <span className="font-medium text-right text-white">{value}</span>
     </div>
   );
 }
@@ -48,24 +48,24 @@ export function PartTooltipContent({ data }: { data: Record<string, unknown> }) 
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.partNumber as string}</div>
-        <div className="text-xs text-muted-foreground">{data.name as string}</div>
+        <div className="font-semibold text-sm text-white">{data.partNumber as string}</div>
+        <div className="text-xs text-yellow-200">{data.name as string}</div>
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={data.status as string} />
-        <span className="text-[10px] text-muted-foreground">{data.category as string}</span>
+        <span className="text-[10px] text-yellow-200">{data.category as string}</span>
       </div>
-      <div className="border-t pt-2 space-y-1">
-        <Row label="Ton kho" value={
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        <Row label="Tồn kho" value={
           <span className={cn(lowStock && 'text-red-600')}>
             {lowStock && <AlertTriangle className="w-3 h-3 inline mr-1" />}
             {data.quantityOnHand as number} {data.unit as string}
           </span>
         } icon={Package} />
-        <Row label="Kha dung" value={`${data.quantityAvailable} ${data.unit}`} />
+        <Row label="Khả dụng" value={`${data.quantityAvailable} ${data.unit}`} />
         <Row label="Safety stock" value={data.safetyStock as number} />
-        <Row label="Don gia" value={`${(data.unitCost as number).toLocaleString()} VND`} />
-        <Row label="Lead time" value={`${data.leadTimeDays} ngay`} icon={Clock} />
+        <Row label="Đơn giá" value={`${(data.unitCost as number).toLocaleString()} VND`} />
+        <Row label="Thời gian giao" value={`${data.leadTimeDays} ngày`} icon={Clock} />
       </div>
     </div>
   );
@@ -75,21 +75,21 @@ export function SupplierTooltipContent({ data }: { data: Record<string, unknown>
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.name as string}</div>
-        <div className="text-xs text-muted-foreground">{data.code as string}</div>
+        <div className="font-semibold text-sm text-white">{data.name as string}</div>
+        <div className="text-xs text-yellow-200">{data.code as string}</div>
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={data.status as string} />
       </div>
-      <div className="border-t pt-2 space-y-1">
-        <Row label="Quoc gia" value={data.country as string} icon={MapPin} />
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        <Row label="Quốc gia" value={data.country as string} icon={MapPin} />
         {data.rating ? (
-          <Row label="Rating" value={`${data.rating}/5`} icon={Star} />
+          <Row label="Đánh giá" value={`${data.rating}/5`} icon={Star} />
         ) : null}
-        <Row label="Lead time" value={`${data.leadTimeDays} ngay`} icon={Clock} />
-        <Row label="PO dang xu ly" value={data.activePOCount as number} icon={ShoppingCart} />
+        <Row label="Thời gian giao" value={`${data.leadTimeDays} ngày`} icon={Clock} />
+        <Row label="PO đang xử lý" value={data.activePOCount as number} icon={ShoppingCart} />
         {data.contactName ? (
-          <Row label="Lien he" value={data.contactName as string} />
+          <Row label="Liên hệ" value={data.contactName as string} />
         ) : null}
       </div>
     </div>
@@ -100,15 +100,15 @@ export function POTooltipContent({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.poNumber as string}</div>
-        <div className="text-xs text-muted-foreground">{data.supplierName as string}</div>
+        <div className="font-semibold text-sm text-white">{data.poNumber as string}</div>
+        <div className="text-xs text-yellow-200">{data.supplierName as string}</div>
       </div>
       <StatusBadge status={data.status as string} />
-      <div className="border-t pt-2 space-y-1">
-        <Row label="Tong tien" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
-        <Row label="So dong" value={data.lineCount as number} icon={Hash} />
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
+        <Row label="Số dòng" value={data.lineCount as number} icon={Hash} />
         {data.expectedDate ? (
-          <Row label="Giao hang" value={new Date(data.expectedDate as string).toLocaleDateString('vi-VN')} icon={Truck} />
+          <Row label="Giao hàng" value={new Date(data.expectedDate as string).toLocaleDateString('vi-VN')} icon={Truck} />
         ) : null}
       </div>
     </div>
@@ -119,15 +119,15 @@ export function SOTooltipContent({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.orderNumber as string}</div>
-        <div className="text-xs text-muted-foreground">{data.customerName as string}</div>
+        <div className="font-semibold text-sm text-white">{data.orderNumber as string}</div>
+        <div className="text-xs text-yellow-200">{data.customerName as string}</div>
       </div>
       <StatusBadge status={data.status as string} />
-      <div className="border-t pt-2 space-y-1">
-        <Row label="Tong tien" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
-        <Row label="So dong" value={data.lineCount as number} icon={Hash} />
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
+        <Row label="Số dòng" value={data.lineCount as number} icon={Hash} />
         {data.requiredDate ? (
-          <Row label="Yeu cau" value={new Date(data.requiredDate as string).toLocaleDateString('vi-VN')} icon={Clock} />
+          <Row label="Yêu cầu" value={new Date(data.requiredDate as string).toLocaleDateString('vi-VN')} icon={Clock} />
         ) : null}
       </div>
     </div>
@@ -140,17 +140,17 @@ export function WOTooltipContent({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.woNumber as string}</div>
-        <div className="text-xs text-muted-foreground">{data.partNumber as string} - {data.partName as string}</div>
+        <div className="font-semibold text-sm text-white">{data.woNumber as string}</div>
+        <div className="text-xs text-yellow-200">{data.partNumber as string} - {data.partName as string}</div>
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={data.status as string} />
         {data.priority ? (
-          <span className="text-[10px] text-muted-foreground">{data.priority as string}</span>
+          <span className="text-[10px] text-yellow-200">{data.priority as string}</span>
         ) : null}
       </div>
-      <div className="border-t pt-2 space-y-1">
-        <Row label="Tien do" value={`${data.completedQuantity}/${data.quantity} (${progress}%)`} icon={Wrench} />
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        <Row label="Tiến độ" value={`${data.completedQuantity}/${data.quantity} (${progress}%)`} icon={Wrench} />
         <div className="w-full bg-muted rounded-full h-1.5">
           <div
             className={cn(
@@ -161,7 +161,7 @@ export function WOTooltipContent({ data }: { data: Record<string, unknown> }) {
           />
         </div>
         {data.dueDate ? (
-          <Row label="Han" value={new Date(data.dueDate as string).toLocaleDateString('vi-VN')} icon={Clock} />
+          <Row label="Hạn" value={new Date(data.dueDate as string).toLocaleDateString('vi-VN')} icon={Clock} />
         ) : null}
       </div>
     </div>
@@ -172,24 +172,24 @@ export function CustomerTooltipContent({ data }: { data: Record<string, unknown>
   return (
     <div className="space-y-2 min-w-[200px]">
       <div>
-        <div className="font-semibold text-sm">{data.name as string}</div>
-        <div className="text-xs text-muted-foreground">{data.code as string}</div>
+        <div className="font-semibold text-sm text-white">{data.name as string}</div>
+        <div className="text-xs text-yellow-200">{data.code as string}</div>
       </div>
       <StatusBadge status={data.status as string} />
-      <div className="border-t pt-2 space-y-1">
+      <div className="border-t border-white/20 pt-2 space-y-1">
         {data.country ? (
-          <Row label="Quoc gia" value={data.country as string} icon={MapPin} />
+          <Row label="Quốc gia" value={data.country as string} icon={MapPin} />
         ) : null}
         {data.contactName ? (
-          <Row label="Lien he" value={data.contactName as string} icon={User} />
+          <Row label="Liên hệ" value={data.contactName as string} icon={User} />
         ) : null}
         {data.paymentTerms ? (
-          <Row label="Thanh toan" value={data.paymentTerms as string} />
+          <Row label="Thanh toán" value={data.paymentTerms as string} />
         ) : null}
         {data.creditLimit != null && (
-          <Row label="Han muc" value={`${(data.creditLimit as number).toLocaleString()} VND`} icon={CreditCard} />
+          <Row label="Hạn mức" value={`${(data.creditLimit as number).toLocaleString()} VND`} icon={CreditCard} />
         )}
-        <Row label="SO dang xu ly" value={data.activeSOCount as number} icon={ShoppingCart} />
+        <Row label="SO đang xử lý" value={data.activeSOCount as number} icon={ShoppingCart} />
       </div>
     </div>
   );

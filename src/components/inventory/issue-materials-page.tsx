@@ -12,6 +12,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { clientLogger } from '@/lib/client-logger';
+import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -94,40 +95,12 @@ interface ActiveWorkOrder {
 
 function StatsCards({ stats, t }: { stats: Stats; t: (key: string, params?: Record<string, string>) => string }) {
   return (
-    <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2">
-            <Hash className="h-4 w-4 text-blue-500" />
-            <div>
-              <div className="text-lg font-semibold font-mono">{stats.pendingCount}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.pendingIssues')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-amber-500" />
-            <div>
-              <div className="text-lg font-semibold font-mono">{stats.partsAffected}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.partsAffected')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="border-gray-200 dark:border-mrp-border">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-green-500" />
-            <div>
-              <div className="text-lg font-semibold font-mono">{stats.totalQtyToIssue}</div>
-              <p className="text-[10px] text-gray-500 dark:text-mrp-text-muted">{t('issueMat.totalQty')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mb-3 shrink-0">
+      <CompactStatsBar stats={[
+        { label: t('issueMat.pendingIssues'), value: stats.pendingCount, color: 'text-blue-500' },
+        { label: t('issueMat.partsAffected'), value: stats.partsAffected, color: 'text-amber-500' },
+        { label: t('issueMat.totalQty'), value: stats.totalQtyToIssue, color: 'text-green-500' },
+      ]} />
     </div>
   );
 }

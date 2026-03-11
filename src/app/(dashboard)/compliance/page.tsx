@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
 import {
   Shield,
   FileCheck,
@@ -243,51 +244,15 @@ export default function ComplianceDashboard() {
         </CardHeader>
       </Card>
 
-      {/* Compliance Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <MetricCard
-          title="Electronic Signatures"
-          value={complianceMetrics.signatureCompliance}
-          icon={FileCheck}
-          status="success"
-          description="21 CFR Part 11 compliant"
-        />
-        <MetricCard
-          title="Audit Trail Integrity"
-          value={complianceMetrics.auditIntegrity}
-          icon={Activity}
-          status="success"
-          description="Chain hash verified"
-        />
-        <MetricCard
-          title="MFA Adoption"
-          value={complianceMetrics.mfaAdoption}
-          icon={Key}
-          status="warning"
-          description="15% of users pending setup"
-        />
-        <MetricCard
-          title="Password Compliance"
-          value={complianceMetrics.passwordCompliance}
-          icon={Lock}
-          status="success"
-          description="Meeting policy requirements"
-        />
-        <MetricCard
-          title="ITAR Compliance"
-          value={complianceMetrics.itarCompliance}
-          icon={Shield}
-          status="success"
-          description="All access properly verified"
-        />
-        <MetricCard
-          title="Session Security"
-          value={complianceMetrics.sessionSecurity}
-          icon={Eye}
-          status="warning"
-          description="Some inactive sessions detected"
-        />
-      </div>
+      {/* Compliance Metrics - compact inline */}
+      <CompactStatsBar stats={[
+        { label: 'E-Signatures', value: `${complianceMetrics.signatureCompliance}%`, color: 'text-success-600' },
+        { label: 'Audit Trail', value: `${complianceMetrics.auditIntegrity}%`, color: 'text-success-600' },
+        { label: 'MFA Adoption', value: `${complianceMetrics.mfaAdoption}%`, color: 'text-warning-600' },
+        { label: 'Password', value: `${complianceMetrics.passwordCompliance}%`, color: 'text-success-600' },
+        { label: 'ITAR', value: `${complianceMetrics.itarCompliance}%`, color: 'text-success-600' },
+        { label: 'Session Security', value: `${complianceMetrics.sessionSecurity}%`, color: 'text-warning-600' },
+      ]} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
