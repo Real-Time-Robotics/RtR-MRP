@@ -76,22 +76,22 @@ export function AlertFilterBar({
     selectedStatus !== 'all';
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative w-48 lg:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Tìm kiếm alerts..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
         </div>
 
         {/* Status Select */}
         <Select value={selectedStatus} onValueChange={(v) => onStatusChange(v as AlertStatus | 'all')}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
@@ -107,17 +107,17 @@ export function AlertFilterBar({
         {/* Priority Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
+              <Filter className="h-3.5 w-3.5" />
               Mức độ
               {selectedPriorities.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 justify-center">
+                <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 p-0 justify-center text-[10px]">
                   {selectedPriorities.length}
                 </Badge>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-56" align="start">
+          <PopoverContent className="w-48" align="start">
             <div className="space-y-2">
               {allPriorities.map((priority) => (
                 <div key={priority} className="flex items-center space-x-2">
@@ -126,10 +126,7 @@ export function AlertFilterBar({
                     checked={selectedPriorities.includes(priority)}
                     onCheckedChange={() => togglePriority(priority)}
                   />
-                  <Label
-                    htmlFor={`priority-${priority}`}
-                    className="text-sm cursor-pointer"
-                  >
+                  <Label htmlFor={`priority-${priority}`} className="text-sm cursor-pointer">
                     {getPriorityLabel(priority)}
                   </Label>
                 </div>
@@ -141,17 +138,17 @@ export function AlertFilterBar({
         {/* Source Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
+            <Button variant="ghost" size="sm" className="h-8 px-2 text-xs gap-1">
+              <Filter className="h-3.5 w-3.5" />
               Nguồn
               {selectedSources.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 justify-center">
+                <Badge variant="secondary" className="ml-0.5 h-4 min-w-4 p-0 justify-center text-[10px]">
                   {selectedSources.length}
                 </Badge>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-56" align="start">
+          <PopoverContent className="w-48" align="start">
             <div className="space-y-2">
               {allSources.map((source) => (
                 <div key={source} className="flex items-center space-x-2">
@@ -160,10 +157,7 @@ export function AlertFilterBar({
                     checked={selectedSources.includes(source)}
                     onCheckedChange={() => toggleSource(source)}
                   />
-                  <Label
-                    htmlFor={`source-${source}`}
-                    className="text-sm cursor-pointer"
-                  >
+                  <Label htmlFor={`source-${source}`} className="text-sm cursor-pointer">
                     {getSourceLabel(source)}
                   </Label>
                 </div>
@@ -172,42 +166,37 @@ export function AlertFilterBar({
           </PopoverContent>
         </Popover>
 
+        {/* Active filter badges inline */}
+        {selectedPriorities.map((priority) => (
+          <Badge
+            key={priority}
+            variant="secondary"
+            className="cursor-pointer h-6 text-[10px] px-1.5"
+            onClick={() => togglePriority(priority)}
+          >
+            {getPriorityLabel(priority)}
+            <X className="h-3 w-3 ml-0.5" />
+          </Badge>
+        ))}
+        {selectedSources.map((source) => (
+          <Badge
+            key={source}
+            variant="secondary"
+            className="cursor-pointer h-6 text-[10px] px-1.5"
+            onClick={() => toggleSource(source)}
+          >
+            {getSourceLabel(source)}
+            <X className="h-3 w-3 ml-0.5" />
+          </Badge>
+        ))}
+
         {/* Clear Filters */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={onClearFilters}>
-            <X className="h-4 w-4 mr-1" />
-            Xóa bộ lọc
+          <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-8 px-2 text-xs text-muted-foreground">
+            <X className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
-
-      {/* Active Filters */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2">
-          {selectedPriorities.map((priority) => (
-            <Badge
-              key={priority}
-              variant="secondary"
-              className="cursor-pointer"
-              onClick={() => togglePriority(priority)}
-            >
-              {getPriorityLabel(priority)}
-              <X className="h-3 w-3 ml-1" />
-            </Badge>
-          ))}
-          {selectedSources.map((source) => (
-            <Badge
-              key={source}
-              variant="secondary"
-              className="cursor-pointer"
-              onClick={() => toggleSource(source)}
-            >
-              {getSourceLabel(source)}
-              <X className="h-3 w-3 ml-1" />
-            </Badge>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

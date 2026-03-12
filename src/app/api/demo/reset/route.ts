@@ -8,9 +8,20 @@ import { checkWriteEndpointLimit, checkReadEndpointLimit } from '@/lib/rate-limi
 // DEMO RESET API
 // Resets all demo data to initial state
 // Only accessible by demo admin users
+// GATED: Only available when NEXT_PUBLIC_DEMO_MODE=true or NODE_ENV !== 'production'
 // =============================================================================
 
+const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production';
+
 export const POST = withAuth(async (request, context, session) => {
+  // Environment gate check
+  if (!isDemoEnabled) {
+    return NextResponse.json(
+      { success: false, error: 'Demo endpoints are disabled in production.' },
+      { status: 403 }
+    );
+  }
+
   // Rate limiting
   const rateLimitResult = await checkWriteEndpointLimit(request);
   if (rateLimitResult) return rateLimitResult;

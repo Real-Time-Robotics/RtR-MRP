@@ -171,7 +171,7 @@ describe('BOM Version Service', () => {
     it('should approve and activate BOM immediately by default', async () => {
       const bom = makeBom({ status: 'pending_approval' });
       mockPrisma.bomHeader.findUnique.mockResolvedValue(bom);
-      mockPrisma.$transaction.mockImplementation(async (fn: Function) => {
+      mockPrisma.$transaction.mockImplementation(async (fn: (...args: any[]) => any) => {
         const tx = {
           bomHeader: {
             updateMany: vi.fn(),
@@ -194,7 +194,7 @@ describe('BOM Version Service', () => {
       mockPrisma.bomHeader.findUnique.mockResolvedValue(bom);
 
       let capturedTx: any;
-      mockPrisma.$transaction.mockImplementation(async (fn: Function) => {
+      mockPrisma.$transaction.mockImplementation(async (fn: (...args: any[]) => any) => {
         const tx = {
           bomHeader: {
             updateMany: vi.fn(),
@@ -224,7 +224,7 @@ describe('BOM Version Service', () => {
       mockPrisma.bomHeader.findUnique.mockResolvedValue(bom);
 
       let capturedTx: any;
-      mockPrisma.$transaction.mockImplementation(async (fn: Function) => {
+      mockPrisma.$transaction.mockImplementation(async (fn: (...args: any[]) => any) => {
         const tx = {
           bomHeader: {
             updateMany: vi.fn(),

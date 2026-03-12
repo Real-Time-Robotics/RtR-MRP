@@ -218,8 +218,8 @@ function createPostRequest(url: string, body: unknown): NextRequest {
 // =============================================================================
 
 describe('/api/v2/ai', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -288,8 +288,8 @@ describe('/api/v2/ai', () => {
 // =============================================================================
 
 describe('/api/v2/alerts', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -350,8 +350,8 @@ describe('/api/v2/alerts', () => {
 // =============================================================================
 
 describe('/api/v2/auth', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -415,8 +415,8 @@ describe('/api/v2/auth', () => {
 // =============================================================================
 
 describe('/api/v2/performance', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -474,8 +474,8 @@ describe('/api/v2/performance', () => {
 // =============================================================================
 
 describe('/api/v2/quality', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -531,8 +531,8 @@ describe('/api/v2/quality', () => {
 // =============================================================================
 
 describe('/api/v2/reports', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

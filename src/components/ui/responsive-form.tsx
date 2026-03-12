@@ -435,8 +435,7 @@ export function FormSubmit({
 // FORM CANCEL BUTTON
 // =============================================================================
 
-export interface FormCancelProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+export type FormCancelProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 export function FormCancel({
   children,

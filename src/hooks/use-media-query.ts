@@ -70,18 +70,18 @@ export function useIsDesktop(): boolean {
  * @returns Current breakpoint name
  */
 export function useBreakpoint(): 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' {
-  const isXs = !useMediaQuery(`(min-width: ${BREAKPOINTS.sm})`);
-  const isSm = useMediaQuery(`(min-width: ${BREAKPOINTS.sm})`) && !useMediaQuery(`(min-width: ${BREAKPOINTS.md})`);
-  const isMd = useMediaQuery(`(min-width: ${BREAKPOINTS.md})`) && !useMediaQuery(`(min-width: ${BREAKPOINTS.lg})`);
-  const isLg = useMediaQuery(`(min-width: ${BREAKPOINTS.lg})`) && !useMediaQuery(`(min-width: ${BREAKPOINTS.xl})`);
-  const isXl = useMediaQuery(`(min-width: ${BREAKPOINTS.xl})`) && !useMediaQuery(`(min-width: ${BREAKPOINTS['2xl']})`);
+  const matchesSm = useMediaQuery(`(min-width: ${BREAKPOINTS.sm})`);
+  const matchesMd = useMediaQuery(`(min-width: ${BREAKPOINTS.md})`);
+  const matchesLg = useMediaQuery(`(min-width: ${BREAKPOINTS.lg})`);
+  const matchesXl = useMediaQuery(`(min-width: ${BREAKPOINTS.xl})`);
+  const matches2xl = useMediaQuery(`(min-width: ${BREAKPOINTS['2xl']})`);
 
-  if (isXs) return 'xs';
-  if (isSm) return 'sm';
-  if (isMd) return 'md';
-  if (isLg) return 'lg';
-  if (isXl) return 'xl';
-  return '2xl';
+  if (matches2xl) return '2xl';
+  if (matchesXl) return 'xl';
+  if (matchesLg) return 'lg';
+  if (matchesMd) return 'md';
+  if (matchesSm) return 'sm';
+  return 'xs';
 }
 
 /**

@@ -74,22 +74,15 @@ export function AnalysisList() {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="w-4 h-4" />
+      <CardHeader className="pb-2 px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" />
             Danh sach phan tich
           </CardTitle>
-          <Link href="/cost-optimization/make-vs-buy/new">
-            <Button size="sm">
-              <Plus className="w-4 h-4 mr-1" />
-              Tao moi
-            </Button>
-          </Link>
-        </div>
-        <div className="flex items-center gap-2 mt-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex-1" />
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Tim theo part number, ten..."
               value={search}
@@ -97,7 +90,7 @@ export function AnalysisList() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9"
+              className="pl-8 h-8 text-sm"
             />
           </div>
           <Select
@@ -107,7 +100,7 @@ export function AnalysisList() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
               <SelectValue placeholder="Trang thai" />
             </SelectTrigger>
             <SelectContent>
@@ -118,6 +111,12 @@ export function AnalysisList() {
               <SelectItem value="ANALYSIS_DECIDED">Da quyet dinh</SelectItem>
             </SelectContent>
           </Select>
+          <Link href="/cost-optimization/make-vs-buy/new">
+            <Button size="sm" className="h-8 text-xs px-3">
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Tao moi
+            </Button>
+          </Link>
         </div>
       </CardHeader>
       <CardContent>

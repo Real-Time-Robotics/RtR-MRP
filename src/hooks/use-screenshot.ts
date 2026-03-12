@@ -98,7 +98,7 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
 
     // Get module from URL path
     const pathParts = window.location.pathname.split('/').filter(Boolean)
-    const module = pathParts[0] || 'dashboard'
+    const pageMod = pathParts[0] || 'dashboard'
 
     return {
       capturedBy: userName,
@@ -108,7 +108,7 @@ export function useScreenshot(options: UseScreenshotOptions = {}) {
       }),
       pageTitle: document.title,
       pageUrl: window.location.href,
-      module: module.charAt(0).toUpperCase() + module.slice(1),
+      module: pageMod.charAt(0).toUpperCase() + pageMod.slice(1),
       viewport: `${window.innerWidth} × ${window.innerHeight}`,
       resolution: `${width} × ${height}`,
       appVersion: options.appVersion || 'RTR-MRP v1.0',

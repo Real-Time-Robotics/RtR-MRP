@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build outputs
+.next
+dist
+out
+
+# Docker
+docker
+docker-compose*.yml
+Dockerfile*
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Tests
+__tests__
+e2e
+coverage
+.playwright
+playwright-report
+test-results
+load-testing
+
+# Documentation
+*.md
+!README.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.husky
+.github
+k8s
+backups
+customer-package
+ml-service

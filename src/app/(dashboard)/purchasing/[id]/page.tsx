@@ -20,6 +20,9 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
+import { useWorkSession } from '@/hooks/use-work-session';
+import { SmartBreadcrumb } from '@/components/smart-breadcrumb';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface PurchaseOrderDetail {
     id: string;
@@ -42,6 +45,7 @@ interface PurchaseOrderDetail {
         unitPrice: number;
         receivedQty: number;
         part: {
+            id: string;
             partNumber: string;
             name: string;
             unit: string;
@@ -63,6 +67,16 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
     const [loading, setLoading] = useState(true);
     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
     const [statusLoading, setStatusLoading] = useState(false);
+
+    // Work Session tracking
+    const { trackActivity, updateContext } = useWorkSession({
+        entityType: 'PO',
+        entityId: params.id,
+        entityNumber: po?.poNumber || params.id,
+        workflowSteps: ['Xem chi tiết', 'Cập nhật trạng thái', 'In PDF'],
+        currentStep: 1,
+        enabled: !!params.id,
+    });
 
     const fetchData = async () => {
         try {
@@ -86,6 +100,21 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
         fetchData();
     }, [params.id]);
 
+    // Update work session context when PO data loads
+    useEffect(() => {
+        if (!po) return;
+        const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+        updateContext({
+            summary: `PO ${po.poNumber} - ${po.supplier.name} - ${po.status}`,
+            keyMetrics: {
+                status: po.status,
+                supplier: po.supplier.name,
+                totalAmount: `$${totalAmount.toFixed(2)}`,
+                lineCount: po.lines.length,
+            },
+        });
+    }, [po, updateContext]);
+
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center p-8">
@@ -108,6 +137,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
     const handlePrintPDF = async () => {
         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
         generatePurchaseOrderPDF(po);
+        trackActivity('PO_PRINT_PDF', `In PDF cho ${po.poNumber}`);
     };
 
     const handleStatusChange = async (newStatus: string, label: string) => {
@@ -124,6 +154,7 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                 throw new Error(err.error || 'Lỗi cập nhật trạng thái');
             }
             toast.success(`PO đã chuyển sang trạng thái "${label}"`);
+            trackActivity('PO_STATUS_CHANGE', `Chuyển trạng thái sang "${label}"`, { from: po?.status, to: newStatus });
             fetchData();
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'Lỗi cập nhật trạng thái');
@@ -154,6 +185,16 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
 
     return (
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
+            {/* Smart Breadcrumb with Progress */}
+            <SmartBreadcrumb
+                items={[
+                    { label: 'Purchasing', href: '/purchasing' },
+                    { label: po.poNumber },
+                ]}
+                entityType="PO"
+                entityData={po as unknown as Record<string, unknown>}
+            />
+
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
@@ -227,8 +268,12 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                                                 <TableRow key={line.id}>
                                                     <TableCell>{line.lineNumber}</TableCell>
                                                     <TableCell>
-                                                        <div className="font-medium">{line.part.partNumber}</div>
-                                                        <div className="text-xs text-muted-foreground">{line.part.name}</div>
+                                                        <EntityTooltip type="part" id={line.part.id}>
+                                                            <div className="cursor-help">
+                                                                <div className="font-medium">{line.part.partNumber}</div>
+                                                                <div className="text-xs text-muted-foreground">{line.part.name}</div>
+                                                            </div>
+                                                        </EntityTooltip>
                                                     </TableCell>
                                                     <TableCell className="text-right">{line.quantity} <span className="text-xs text-muted-foreground">{line.part.unit}</span></TableCell>
                                                     <TableCell className="text-right font-mono">
@@ -266,7 +311,9 @@ export default function PurchaseOrderDetailPage({ params }: { params: { id: stri
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="font-semibold text-lg">{po.supplier.name}</div>
+                                    <EntityTooltip type="supplier" id={po.supplier.id}>
+                                        <div className="font-semibold text-lg cursor-help">{po.supplier.name}</div>
+                                    </EntityTooltip>
                                     <div className="space-y-2 text-sm text-muted-foreground">
                                         {po.supplier.contactName && <div>Contact: {po.supplier.contactName}</div>}
                                         {po.supplier.contactEmail && <div>Email: {po.supplier.contactEmail}</div>}

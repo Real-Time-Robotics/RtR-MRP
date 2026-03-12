@@ -3,6 +3,7 @@ import type { ReportData } from '../report-generator';
 
 // Mock pdfkit with a class-based mock
 vi.mock('pdfkit', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const EventEmitter = require('events');
 
   class MockPDFDocument extends EventEmitter {

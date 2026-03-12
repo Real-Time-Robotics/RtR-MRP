@@ -725,7 +725,7 @@ describe('EmailParserService', () => {
 
       expect(draft.type).toBe('sales_order');
       expect(draft.status).toBe('draft');
-      expect(draft.data.customerName).toBe('Draft Customer');
+      expect((draft.data as any).customerName).toBe('Draft Customer');
       expect(draft.confidence).toBe(0.85);
       expect(draft.requiresReview).toBe(true); // confidence < 0.9
     });

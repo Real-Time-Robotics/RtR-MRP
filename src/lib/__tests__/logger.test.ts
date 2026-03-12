@@ -14,6 +14,7 @@ describe('Logger', () => {
 
   it('should import logger without error', async () => {
     // Logger is disabled in test mode (NODE_ENV=test), so we test import
+    // eslint-disable-next-line @next/next/no-assign-module-variable
     const module = await import('../logger');
     expect(module.logger).toBeDefined();
   });
@@ -84,6 +85,7 @@ describe('Logger', () => {
 
   it('should create child logger', async () => {
     const { logger } = await import('../logger');
+    // @ts-expect-error test data
     const child = logger.child({ module: 'test' });
     expect(child).toBeDefined();
     expect(typeof child.info).toBe('function');
@@ -96,6 +98,7 @@ describe('Logger', () => {
   });
 
   it('should export standalone log functions', async () => {
+    // eslint-disable-next-line @next/next/no-assign-module-variable
     const module = await import('../logger');
     expect(typeof module.debug).toBe('function');
     expect(typeof module.info).toBe('function');

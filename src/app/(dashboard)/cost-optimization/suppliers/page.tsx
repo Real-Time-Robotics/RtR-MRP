@@ -2,6 +2,7 @@
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Loader2 } from "lucide-react";
+import { AIQuickAction } from "@/components/cost-optimization/shared/ai-quick-action";
 import {
   useSupplierSpend,
   useSupplierOpportunities,
@@ -22,6 +23,7 @@ export default function SupplierOptimizationPage() {
         title="Supplier Optimization"
         description="Phan tich va toi uu chi phi tu nha cung cap"
         backHref="/cost-optimization"
+        actions={<AIQuickAction context={{ type: "supplier" }} />}
       />
 
       {isLoading ? (

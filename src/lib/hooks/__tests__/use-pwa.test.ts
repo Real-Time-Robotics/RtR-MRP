@@ -40,7 +40,7 @@ function createMockServiceWorkerRegistration(overrides: Partial<ServiceWorkerReg
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn().mockReturnValue(true),
     ...overrides,
-  };
+  } as any;
 }
 
 // =============================================================================
@@ -413,10 +413,10 @@ describe('useInstallPrompt', () => {
 
 describe('usePushNotifications', () => {
   it('detects when push notifications are not supported', async () => {
-    const origNotification = (window as Record<string, unknown>).Notification;
-    const origPushManager = (window as Record<string, unknown>).PushManager;
-    delete (window as Record<string, unknown>).Notification;
-    delete (window as Record<string, unknown>).PushManager;
+    const origNotification = (window as unknown as Record<string, unknown>).Notification;
+    const origPushManager = (window as unknown as Record<string, unknown>).PushManager;
+    delete (window as unknown as Record<string, unknown>).Notification;
+    delete (window as unknown as Record<string, unknown>).PushManager;
 
     const { result } = renderHook(() => usePushNotifications());
 
@@ -426,13 +426,13 @@ describe('usePushNotifications', () => {
     });
 
     // Restore
-    if (origNotification) (window as Record<string, unknown>).Notification = origNotification;
-    if (origPushManager) (window as Record<string, unknown>).PushManager = origPushManager;
+    if (origNotification) (window as unknown as Record<string, unknown>).Notification = origNotification;
+    if (origPushManager) (window as unknown as Record<string, unknown>).PushManager = origPushManager;
   });
 
   it('detects when push notifications are supported', async () => {
-    (window as Record<string, unknown>).Notification = { permission: 'default', requestPermission: vi.fn() };
-    (window as Record<string, unknown>).PushManager = {};
+    (window as unknown as Record<string, unknown>).Notification = { permission: 'default', requestPermission: vi.fn() };
+    (window as unknown as Record<string, unknown>).PushManager = {};
 
     const { result } = renderHook(() => usePushNotifications());
 
@@ -444,8 +444,8 @@ describe('usePushNotifications', () => {
   });
 
   it('requestPermission returns false when not supported', async () => {
-    delete (window as Record<string, unknown>).Notification;
-    delete (window as Record<string, unknown>).PushManager;
+    delete (window as unknown as Record<string, unknown>).Notification;
+    delete (window as unknown as Record<string, unknown>).PushManager;
 
     const { result } = renderHook(() => usePushNotifications());
 
@@ -462,11 +462,11 @@ describe('usePushNotifications', () => {
   });
 
   it('requestPermission returns true when granted', async () => {
-    (window as Record<string, unknown>).Notification = {
+    (window as unknown as Record<string, unknown>).Notification = {
       permission: 'default',
       requestPermission: vi.fn().mockResolvedValue('granted'),
     };
-    (window as Record<string, unknown>).PushManager = {};
+    (window as unknown as Record<string, unknown>).PushManager = {};
 
     const { result } = renderHook(() => usePushNotifications());
 
@@ -484,8 +484,8 @@ describe('usePushNotifications', () => {
   });
 
   it('unsubscribe returns false when no subscription', async () => {
-    delete (window as Record<string, unknown>).Notification;
-    delete (window as Record<string, unknown>).PushManager;
+    delete (window as unknown as Record<string, unknown>).Notification;
+    delete (window as unknown as Record<string, unknown>).PushManager;
 
     const { result } = renderHook(() => usePushNotifications());
 
@@ -531,8 +531,8 @@ describe('usePWA', () => {
       writable: true,
     });
 
-    delete (window as Record<string, unknown>).Notification;
-    delete (window as Record<string, unknown>).PushManager;
+    delete (window as unknown as Record<string, unknown>).Notification;
+    delete (window as unknown as Record<string, unknown>).PushManager;
   });
 
   it('returns combined state from sub-hooks', async () => {

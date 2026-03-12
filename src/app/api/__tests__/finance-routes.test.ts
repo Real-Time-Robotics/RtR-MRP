@@ -50,10 +50,12 @@ vi.mock('@/lib/pagination', () => ({
     executionTime: Date.now() - startTime,
   })),
   paginatedSuccess: vi.fn((data: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json(data);
   }),
   paginatedError: vi.fn((message: string, status: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json({ error: message }, { status });
   }),
@@ -100,9 +102,10 @@ describe('Finance API Routes', () => {
   // POST /api/finance/costing - Run cost rollup
   // ===========================================================================
   describe('POST /api/finance/costing', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../finance/costing/route');
       POST = module.POST;
     });
@@ -246,9 +249,10 @@ describe('Finance API Routes', () => {
   // GET /api/finance/costing - Get cost rollup data
   // ===========================================================================
   describe('GET /api/finance/costing', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../finance/costing/route');
       GET = module.GET;
     });

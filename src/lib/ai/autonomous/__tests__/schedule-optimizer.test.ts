@@ -415,8 +415,8 @@ describe('ScheduleOptimizer', () => {
         createTestWorkOrder({
           id: 'wo-1',
           operations: [
-            { id: 'op-1', operationNumber: 10, name: 'Cut', workCenterId: 'wc-1', plannedSetupTime: 0.5, plannedRunTime: 2 },
-            { id: 'op-2', operationNumber: 20, name: 'Weld', workCenterId: 'wc-1', plannedSetupTime: 0.3, plannedRunTime: 3 },
+            { id: 'op-1', operationNumber: 10, name: 'Cut', workCenterId: 'wc-1', plannedSetupTime: 0.5, plannedRunTime: 2 } as any,
+            { id: 'op-2', operationNumber: 20, name: 'Weld', workCenterId: 'wc-1', plannedSetupTime: 0.3, plannedRunTime: 3 } as any,
           ],
         }),
       ];

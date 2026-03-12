@@ -163,11 +163,12 @@ export function ForecastTable({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Demand Forecasts</CardTitle>
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <CardHeader className="pb-2 px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium">Demand Forecasts</CardTitle>
+          <div className="flex-1" />
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search products..."
               value={search}
@@ -175,7 +176,7 @@ export function ForecastTable({
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-9"
+              className="pl-8 h-8 text-sm"
             />
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { ConversationPanel } from '@/components/conversations';
 import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface CustomerDetail {
   id: string;
@@ -231,7 +232,11 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
                         </TableRow>
                       ) : customer.salesOrders.map((so) => (
                         <TableRow key={so.id}>
-                          <TableCell className="font-mono font-medium">{so.orderNumber}</TableCell>
+                          <TableCell>
+                            <EntityTooltip type="so" id={so.id}>
+                              <span className="font-mono font-medium cursor-help">{so.orderNumber}</span>
+                            </EntityTooltip>
+                          </TableCell>
                           <TableCell>{new Date(so.orderDate).toLocaleDateString('vi-VN')}</TableCell>
                           <TableCell>
                             <Badge variant="secondary">{so.status}</Badge>

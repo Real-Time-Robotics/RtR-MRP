@@ -164,13 +164,14 @@ describe('Mobile API Routes', () => {
     // Default: PO lookup
     (prisma.purchaseOrder.findUnique as Mock).mockResolvedValue(mockPO);
     // Default: $transaction passes through
-    (prisma.$transaction as Mock).mockImplementation(async (fn: Function) => fn(mockTx));
+    (prisma.$transaction as Mock).mockImplementation(async (fn: (...args: unknown[]) => Promise<Response>) => fn(mockTx));
   });
 
   describe('POST /api/mobile/scan', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/scan/route');
       POST = module.POST;
     });
@@ -245,9 +246,10 @@ describe('Mobile API Routes', () => {
   // MOBILE RECEIVING TESTS
   // ===========================================================================
   describe('POST /api/mobile/receiving', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/receiving/route');
       POST = module.POST;
     });
@@ -347,9 +349,10 @@ describe('Mobile API Routes', () => {
   // MOBILE INVENTORY TESTS
   // ===========================================================================
   describe('POST /api/mobile/inventory', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/inventory/route');
       POST = module.POST;
     });

@@ -107,10 +107,12 @@ vi.mock('@/lib/pagination', () => ({
     meta: { total, page: 1, pageSize: 20, totalPages: Math.ceil(total / 20) },
   })),
   paginatedSuccess: vi.fn().mockImplementation((responseData: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json({ success: true, ...responseData as object });
   }),
   paginatedError: vi.fn().mockImplementation((message: string, status: number) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json({ success: false, error: message }, { status });
   }),
@@ -191,8 +193,8 @@ function createDeleteRequest(url: string): NextRequest {
 // =============================================================================
 
 describe('/api/finance/gl/accounts', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -260,8 +262,8 @@ describe('/api/finance/gl/accounts', () => {
 // =============================================================================
 
 describe('/api/finance/gl/journals', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -314,8 +316,8 @@ describe('/api/finance/gl/journals', () => {
 // =============================================================================
 
 describe('/api/finance/invoices/purchase', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -367,8 +369,8 @@ describe('/api/finance/invoices/purchase', () => {
 // =============================================================================
 
 describe('/api/finance/invoices/sales', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -418,7 +420,7 @@ describe('/api/finance/invoices/sales', () => {
 // =============================================================================
 
 describe('/api/finance/reports', () => {
-  let GET: Function;
+  let GET: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -452,7 +454,7 @@ describe('/api/finance/reports', () => {
 // =============================================================================
 
 describe('/api/import/history', () => {
-  let GET: Function;
+  let GET: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -496,9 +498,9 @@ describe('/api/import/history', () => {
 // =============================================================================
 
 describe('/api/import/mappings', () => {
-  let GET: Function;
-  let POST: Function;
-  let DELETE: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
+  let DELETE: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -557,8 +559,8 @@ describe('/api/import/mappings', () => {
 // =============================================================================
 
 describe('/api/excel/export', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -611,7 +613,7 @@ describe('/api/excel/export', () => {
 // =============================================================================
 
 describe('/api/excel/templates', () => {
-  let GET: Function;
+  let GET: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

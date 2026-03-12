@@ -231,48 +231,44 @@ export function ImportHistory({ onViewSession }: ImportHistoryProps) {
       </div>
 
       {/* Toolbar: Search + Filters */}
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="relative w-48 lg:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input
             type="text"
             placeholder="Tìm theo tên file..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-8 pr-3 py-1.5 border rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Trang thai" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
-              <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
-              <SelectItem value="FAILED">Thất bại</SelectItem>
-              <SelectItem value="IMPORTING">Đang import</SelectItem>
-              <SelectItem value="ROLLED_BACK">Đã hoàn tác</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Loai du lieu" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả loại</SelectItem>
-              <SelectItem value="PARTS">Linh kiện</SelectItem>
-              <SelectItem value="SUPPLIERS">Nhà cung cấp</SelectItem>
-              <SelectItem value="BOM">BOM</SelectItem>
-              <SelectItem value="INVENTORY">Tồn kho</SelectItem>
-              <SelectItem value="PRODUCTS">Sản phẩm</SelectItem>
-              <SelectItem value="CUSTOMERS">Khách hàng</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
+            <SelectValue placeholder="Trang thai" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
+            <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
+            <SelectItem value="FAILED">Thất bại</SelectItem>
+            <SelectItem value="IMPORTING">Đang import</SelectItem>
+            <SelectItem value="ROLLED_BACK">Đã hoàn tác</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={entityFilter} onValueChange={(v) => { setEntityFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
+            <SelectValue placeholder="Loai du lieu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả loại</SelectItem>
+            <SelectItem value="PARTS">Linh kiện</SelectItem>
+            <SelectItem value="SUPPLIERS">Nhà cung cấp</SelectItem>
+            <SelectItem value="BOM">BOM</SelectItem>
+            <SelectItem value="INVENTORY">Tồn kho</SelectItem>
+            <SelectItem value="PRODUCTS">Sản phẩm</SelectItem>
+            <SelectItem value="CUSTOMERS">Khách hàng</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Session List */}

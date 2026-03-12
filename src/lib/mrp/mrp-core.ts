@@ -41,7 +41,7 @@ export class MrpEngine {
         // For 10k parts, this is manageable. Optimization: Select only needed fields.
 
         // Fetch parts with planning data and makeOrBuy classification
-        const parts: MrpPartRow[] = await (prisma.part.findMany as Function)({
+        const parts: MrpPartRow[] = await (prisma.part.findMany as unknown as (...args: unknown[]) => Promise<MrpPartRow[]>)({
             select: {
                 id: true,
                 partNumber: true,

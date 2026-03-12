@@ -883,6 +883,7 @@ describe('SPCEngine', () => {
 
   describe('default export', () => {
     it('exports SPCEngine as default', async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../spc-engine');
       expect(module.default).toBe(SPCEngine);
     });

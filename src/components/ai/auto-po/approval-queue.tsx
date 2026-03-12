@@ -176,42 +176,32 @@ export function ApprovalQueue({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Header with summary */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h3 className="font-semibold">
-            Hàng đợi phê duyệt
-            <Badge variant="secondary" className="ml-2">
-              {summary.total}
-            </Badge>
-          </h3>
-          <span className="text-sm text-muted-foreground">
-            Tổng giá trị: <span className="font-medium">{formatCurrency(summary.totalValue)}</span>
-          </span>
-        </div>
-        {onRefresh && (
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-            <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
-            Làm mới
-          </Button>
-        )}
-      </div>
+      {/* Compact single-row header + filters */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <h3 className="text-sm font-semibold whitespace-nowrap">
+          Hàng đợi phê duyệt
+          <Badge variant="secondary" className="ml-1.5 text-[10px]">
+            {summary.total}
+          </Badge>
+        </h3>
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          Tổng: <span className="font-medium">{formatCurrency(summary.totalValue)}</span>
+        </span>
 
-      {/* Filters and search */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="flex-1" />
+
+        <div className="relative w-48">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Tìm kiếm..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
         </div>
 
         <Select value={filterConfidence} onValueChange={setFilterConfidence}>
-          <SelectTrigger className="w-[140px]">
-            <Filter className="h-4 w-4 mr-2" />
+          <SelectTrigger className="h-8 w-auto min-w-[90px] text-xs gap-1 px-2.5">
             <SelectValue placeholder="Độ tin cậy" />
           </SelectTrigger>
           <SelectContent>
@@ -223,8 +213,7 @@ export function ApprovalQueue({
         </Select>
 
         <Select value={filterUrgency} onValueChange={setFilterUrgency}>
-          <SelectTrigger className="w-[140px]">
-            <Filter className="h-4 w-4 mr-2" />
+          <SelectTrigger className="h-8 w-auto min-w-[90px] text-xs gap-1 px-2.5">
             <SelectValue placeholder="Mức độ" />
           </SelectTrigger>
           <SelectContent>
@@ -241,8 +230,8 @@ export function ApprovalQueue({
           setSortField(field);
           setSortOrder(order);
         }}>
-          <SelectTrigger className="w-[160px]">
-            <ArrowUpDown className="h-4 w-4 mr-2" />
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
+            <ArrowUpDown className="h-3.5 w-3.5" />
             <SelectValue placeholder="Sắp xếp" />
           </SelectTrigger>
           <SelectContent>
@@ -256,6 +245,12 @@ export function ApprovalQueue({
             <SelectItem value="date-asc">Cũ nhất trước</SelectItem>
           </SelectContent>
         </Select>
+
+        {onRefresh && (
+          <Button variant="ghost" size="icon" onClick={onRefresh} disabled={loading} className="h-8 w-8">
+            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
+          </Button>
+        )}
       </div>
 
       {/* Bulk action bar */}

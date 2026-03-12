@@ -37,7 +37,8 @@
     "test:e2e:bom": "playwright test e2e/bom/",
     "test:e2e:production": "playwright test e2e/production/",
     "test:e2e:discussions": "playwright test e2e/discussions/",
-    "test:e2e:perf": "playwright test e2e/performance/"
+    "test:e2e:perf": "playwright test e2e/performance/",
+    "test:e2e:cost-opt": "playwright test e2e/cost-optimization/"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

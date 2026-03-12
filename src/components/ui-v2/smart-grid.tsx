@@ -44,9 +44,7 @@ export const useSmartGridStore = create<SmartGridStore>((set) => ({
     toggleInspector: () => set((state) => ({ isInspectorOpen: !state.isInspectorOpen })),
 }));
 
-interface SmartGridProps<T> extends DataTableProps<T> {
-    // Extended props if needed
-}
+type SmartGridProps<T> = DataTableProps<T>;
 
 import { useKeyboardNavigation } from '@/hooks/use-keyboard-navigation';
 

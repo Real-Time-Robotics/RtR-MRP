@@ -303,7 +303,7 @@ describe('notifications', () => {
       });
 
       const createCall = vi.mocked(prisma.notification.create).mock.calls[0][0];
-      expect((createCall.data as Record<string, string>).message).toBe(longContent.slice(0, 100) + '...');
+      expect((createCall.data as unknown as Record<string, string>).message).toBe(longContent.slice(0, 100) + '...');
     });
   });
 

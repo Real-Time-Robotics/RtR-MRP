@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { NCRStatusBadge } from '@/components/quality/ncr-status-badge';
 import { PriorityBadge } from '@/components/quality/priority-badge';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface NCRDetail {
   id: string;
@@ -39,7 +40,7 @@ interface NCRDetail {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  part?: { partNumber: string; name: string } | null;
+  part?: { id: string; partNumber: string; name: string } | null;
   product?: { sku: string; name: string } | null;
   workOrder?: { woNumber: string } | null;
   inspection?: { inspectionNumber: string } | null;
@@ -506,7 +507,9 @@ export default function NCRDetailPage({ params }: { params: { id: string } }) {
               {ncr.part && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Part</span>
-                  <span className="font-mono">{ncr.part.partNumber}</span>
+                  <EntityTooltip type="part" id={ncr.part.id}>
+                    <span className="font-mono cursor-help">{ncr.part.partNumber}</span>
+                  </EntityTooltip>
                 </div>
               )}
               {ncr.part?.name && (

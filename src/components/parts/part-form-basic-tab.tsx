@@ -31,7 +31,7 @@ import {
 } from './part-form-schema';
 import type { TabSectionProps } from './part-form-types';
 
-export interface PartFormBasicTabProps extends TabSectionProps {}
+export type PartFormBasicTabProps = TabSectionProps;
 
 export function PartFormBasicTab({
     isEditing,

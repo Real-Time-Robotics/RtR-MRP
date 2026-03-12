@@ -17,6 +17,7 @@ import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
 import { useApiData } from '@/hooks/use-api-data';
 import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 // =============================================================================
 // TYPES
@@ -194,10 +195,12 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       width: '180px',
       sortable: true,
       render: (value) => value ? (
-        <div>
-          <span className="font-medium">{value.name}</span>
-          <span className="text-xs text-muted-foreground ml-1">({value.code})</span>
-        </div>
+        <EntityTooltip type="customer" id={value.id}>
+          <div className="cursor-help">
+            <span className="font-medium">{value.name}</span>
+            <span className="text-xs text-muted-foreground ml-1">({value.code})</span>
+          </div>
+        </EntityTooltip>
       ) : '-',
     },
     {

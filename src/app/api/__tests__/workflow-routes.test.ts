@@ -74,9 +74,10 @@ describe('Workflow API Routes', () => {
   // POST /api/workflows - Start a new workflow
   // ===========================================================================
   describe('POST /api/workflows', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../workflows/route');
       POST = module.POST;
     });
@@ -195,9 +196,10 @@ describe('Workflow API Routes', () => {
   // POST /api/workflows/approvals - Approve step
   // ===========================================================================
   describe('POST /api/workflows/approvals', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../workflows/approvals/route');
       POST = module.POST;
     });
@@ -327,9 +329,10 @@ describe('Workflow API Routes', () => {
   // GET /api/workflows/approvals - List pending approvals
   // ===========================================================================
   describe('GET /api/workflows/approvals', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../workflows/approvals/route');
       GET = module.GET;
     });

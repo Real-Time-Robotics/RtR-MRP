@@ -377,6 +377,7 @@ describe('label-generator', () => {
           Object.defineProperty(this, 'src', {
             set(_val: string) {
               // Trigger onload synchronously
+              // @ts-expect-error test override
               if (this.onload) (this.onload as () => void).call(this, new Event('load'));
             },
           });
@@ -413,6 +414,7 @@ describe('label-generator', () => {
           super();
           Object.defineProperty(this, 'src', {
             set(_val: string) {
+              // @ts-expect-error test override
               if (this.onload) (this.onload as () => void).call(this, new Event('load'));
             },
           });
@@ -449,6 +451,7 @@ describe('label-generator', () => {
           super();
           Object.defineProperty(this, 'src', {
             set(_val: string) {
+              // @ts-expect-error test override
               if (this.onload) (this.onload as () => void).call(this, new Event('load'));
             },
           });
@@ -531,6 +534,7 @@ describe('label-generator', () => {
           super();
           Object.defineProperty(this, 'src', {
             set(_val: string) {
+              // @ts-expect-error test override
               if (this.onload) (this.onload as () => void).call(this, new Event('load'));
             },
           });
@@ -557,6 +561,7 @@ describe('label-generator', () => {
           super();
           Object.defineProperty(this, 'src', {
             set(_val: string) {
+              // @ts-expect-error test override
               if (this.onload) (this.onload as () => void).call(this, new Event('load'));
             },
           });

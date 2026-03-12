@@ -1,5 +1,6 @@
 // =============================================================================
 // DEMO UNLOCK API - Unlock demo accounts that got locked
+// GATED: Only available when NEXT_PUBLIC_DEMO_MODE=true or NODE_ENV !== 'production'
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,6 +8,8 @@ import prisma from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 import { withAuth } from '@/lib/api/with-auth';
+
+const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production';
 
 const DEMO_EMAILS = [
   'admin@demo.rtr-mrp.com',
@@ -16,6 +19,14 @@ const DEMO_EMAILS = [
 ];
 
 export const POST = withAuth(async (request, context, session) => {
+  // Environment gate check
+  if (!isDemoEnabled) {
+    return NextResponse.json(
+      { success: false, error: 'Demo endpoints are disabled in production.' },
+      { status: 403 }
+    );
+  }
+
   // Rate limiting
   const rateLimitResult = await checkWriteEndpointLimit(request);
   if (rateLimitResult) return rateLimitResult;

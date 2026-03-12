@@ -81,7 +81,7 @@ describe('Saved Views Service', () => {
       mockSavedView.findFirst.mockResolvedValueOnce({ id: '1', isDefault: true });
       const result = await getDefaultView('parts', 'user-1');
       expect(result).toBeDefined();
-      expect(result.id).toBe('1');
+      expect(result!.id).toBe('1');
     });
 
     it('should fall back to shared default', async () => {

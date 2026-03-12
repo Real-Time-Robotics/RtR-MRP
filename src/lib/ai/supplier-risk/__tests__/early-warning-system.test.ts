@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   EarlyWarningSystem,
   getEarlyWarningSystem,
-  DEFAULT_THRESHOLDS,
 } from '../early-warning-system';
 
 // ============================================================================

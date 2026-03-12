@@ -16,7 +16,7 @@ import { RotateCcw } from 'lucide-react';
 import { PartFormData } from './part-form-schema';
 import type { TabSectionProps } from './part-form-types';
 
-export interface PartFormPhysicalTabProps extends TabSectionProps {}
+export type PartFormPhysicalTabProps = TabSectionProps;
 
 export function PartFormPhysicalTab({
     isSubmitting,

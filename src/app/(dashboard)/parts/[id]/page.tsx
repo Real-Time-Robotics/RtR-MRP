@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { clientLogger } from '@/lib/client-logger';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface Part {
   id: string;
@@ -643,7 +644,11 @@ export default function PartDetailPage() {
                 <InfoRow label="Buyer Code" value={part.buyerCode} />
                 <InfoRow
                   label="Primary Supplier"
-                  value={part.supplier?.name}
+                  value={part.supplier ? (
+                    <EntityTooltip type="supplier" id={part.supplier.id}>
+                      <span className="cursor-help">{part.supplier.name}</span>
+                    </EntityTooltip>
+                  ) : null}
                 />
                 {part.partSuppliers && part.partSuppliers.filter(ps => !ps.isPreferred).length > 0 && (
                   <InfoRow
@@ -950,12 +955,14 @@ export default function PartDetailPage() {
                           <Badge variant="secondary">{alt.priority}</Badge>
                         </TableCell>
                         <TableCell className="font-mono">
-                          <Link
-                            href={`/parts/${alt.alternatePart.id}`}
-                            className="text-primary hover:underline"
-                          >
-                            {alt.alternatePart.partNumber}
-                          </Link>
+                          <EntityTooltip type="part" id={alt.alternatePart.id}>
+                            <Link
+                              href={`/parts/${alt.alternatePart.id}`}
+                              className="text-primary hover:underline cursor-help"
+                            >
+                              {alt.alternatePart.partNumber}
+                            </Link>
+                          </EntityTooltip>
                         </TableCell>
                         <TableCell>{alt.alternatePart.name}</TableCell>
                         <TableCell>

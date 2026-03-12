@@ -104,10 +104,12 @@ vi.mock('@/lib/pagination', () => ({
     meta: { took: Date.now() - startTime, cached: false },
   })),
   paginatedSuccess: vi.fn().mockImplementation((response) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json(response);
   }),
   paginatedError: vi.fn().mockImplementation((message, status = 500) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json({ error: message }, { status });
   }),
@@ -115,6 +117,7 @@ vi.mock('@/lib/pagination', () => ({
 
 vi.mock('@/lib/error-handler', () => ({
   handleError: vi.fn().mockImplementation((error) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     const message = error instanceof Error ? error.message : 'An unexpected error occurred';
     return NextResponse.json(
@@ -123,6 +126,7 @@ vi.mock('@/lib/error-handler', () => ({
     );
   }),
   successResponse: vi.fn().mockImplementation((data, message, status = 200) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { NextResponse } = require('next/server');
     return NextResponse.json({ success: true, data, message }, { status });
   }),

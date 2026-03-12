@@ -118,6 +118,7 @@ vi.mock('@/lib/error-handler', async (importOriginal) => {
     ...actual,
     handleError: vi.fn((error: unknown) => {
       // Reproduce minimal handleError behaviour for test assertions
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { NextResponse } = require('next/server');
       if (error instanceof Error) {
         const appErr = error as { statusCode?: number; code?: string };
@@ -132,6 +133,7 @@ vi.mock('@/lib/error-handler', async (importOriginal) => {
       );
     }),
     successResponse: vi.fn((data: unknown, message?: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { NextResponse } = require('next/server');
       return NextResponse.json({ success: true, data, message }, { status: 200 });
     }),

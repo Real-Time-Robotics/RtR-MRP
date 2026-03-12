@@ -22,6 +22,8 @@ import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 import { MRPExceptionsTab } from "@/components/mrp/mrp-exceptions-tab";
 import { clientLogger } from '@/lib/client-logger';
 import { toast } from "sonner";
+import { useWorkSession } from '@/hooks/use-work-session';
+import { SmartBreadcrumb } from '@/components/smart-breadcrumb';
 
 interface MrpRunData {
   id: string;
@@ -119,6 +121,35 @@ export default function MrpRunDetailPage() {
     }
   }, [runId]);
 
+  // Work Session tracking
+  const { trackActivity, updateContext } = useWorkSession({
+    entityType: 'MRP_RUN',
+    entityId: runId,
+    entityNumber: data?.runNumber || runId,
+    workflowSteps: ['Xem kết quả', 'Duyệt đề xuất', 'Tạo PO'],
+    currentStep: 1,
+    enabled: !!runId,
+  });
+
+  // Update work session context when MRP data loads
+  useEffect(() => {
+    if (!data) return;
+    const pendingCount = (data.suggestions || []).filter(s => s.status === 'pending').length;
+    const approvedCount = (data.suggestions || []).filter(s => s.status === 'approved').length;
+    updateContext({
+      summary: `MRP ${data.runNumber} - ${data.status} - ${data.suggestions?.length || 0} suggestions`,
+      keyMetrics: {
+        status: data.status,
+        totalParts: data.totalParts || 0,
+        purchaseSuggestions: data.purchaseSuggestions || 0,
+        expediteAlerts: data.expediteAlerts || 0,
+        shortageWarnings: data.shortageWarnings || 0,
+        pendingSuggestions: pendingCount,
+        approvedSuggestions: approvedCount,
+      },
+    });
+  }, [data, updateContext]);
+
   // Initial fetch
   useEffect(() => {
     fetchData();
@@ -154,6 +185,7 @@ export default function MrpRunDetailPage() {
       toast.success("Đã duyệt suggestion", {
         description: "Bạn có thể tạo PO từ tab 'Đã duyệt'",
       });
+      trackActivity('MRP_APPROVE', `Duyệt suggestion ${id}`);
       setStatusFilter("approved");
       fetchData();
     } catch {
@@ -174,6 +206,7 @@ export default function MrpRunDetailPage() {
         return;
       }
       toast.success("Đã từ chối suggestion");
+      trackActivity('MRP_REJECT', `Từ chối suggestion ${id}`);
       fetchData();
     } catch {
       toast.error("Lỗi khi từ chối suggestion");
@@ -208,6 +241,7 @@ export default function MrpRunDetailPage() {
         return;
       }
       const isConsolidated = result.consolidated === true;
+      trackActivity('MRP_CREATE_PO', `Tạo PO từ suggestion ${id}`, { poId, consolidated: isConsolidated });
       toast.success(
         isConsolidated ? "Đã gộp vào PO hiện có!" : "Đã tạo PO thành công!", {
         description: isConsolidated
@@ -345,6 +379,16 @@ export default function MrpRunDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Smart Breadcrumb with Progress */}
+      <SmartBreadcrumb
+        items={[
+          { label: 'MRP', href: '/mrp' },
+          { label: `Run ${data.runNumber}` },
+        ]}
+        entityType="MRP_RUN"
+        entityData={data as unknown as Record<string, unknown>}
+      />
+
       <PageHeader
         title={`MRP Run ${data.runNumber}`}
         description={`Run on ${format(new Date(data.runDate), "MMM dd, yyyy 'at' HH:mm")}`}
@@ -428,6 +472,7 @@ export default function MrpRunDetailPage() {
                       key={suggestion.id}
                       suggestion={{
                         id: suggestion.id,
+                        partId: suggestion.partId,
                         partNumber: suggestion.part.partNumber,
                         partName: suggestion.part.name,
                         actionType: suggestion.actionType,

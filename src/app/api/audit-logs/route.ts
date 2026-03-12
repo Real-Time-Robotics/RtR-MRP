@@ -33,7 +33,7 @@ export const GET = withAuth(async (req, context, session) => {
     const userId = searchParams.get('userId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const module = searchParams.get('module');
+    const moduleFilter = searchParams.get('module');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, context, session) => {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    if (module && module !== 'all') {
+    if (moduleFilter && moduleFilter !== 'all') {
       // Map module names to entity types
       const moduleEntityMap: Record<string, string[]> = {
         inventory: ['Inventory', 'Part', 'Warehouse'],
@@ -60,7 +60,7 @@ export const GET = withAuth(async (req, context, session) => {
         production: ['WorkOrder', 'MaterialAllocation', 'ProductionReceipt'],
         quality: ['NCR', 'CAPA', 'Inspection', 'InspectionResult'],
       };
-      const entityTypes = moduleEntityMap[module];
+      const entityTypes = moduleEntityMap[moduleFilter];
       if (entityTypes) {
         where.entityType = { in: entityTypes };
       }

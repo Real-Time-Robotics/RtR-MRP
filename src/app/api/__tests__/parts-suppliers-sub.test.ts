@@ -95,8 +95,8 @@ const adminSession = {
 // =============================================================================
 
 describe('Parts Alternates API - /api/parts/[id]/alternates', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -255,8 +255,8 @@ describe('Parts Alternates API - /api/parts/[id]/alternates', () => {
 // =============================================================================
 
 describe('Parts Cost History API - /api/parts/[id]/cost-history', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -391,7 +391,7 @@ describe('Parts Cost History API - /api/parts/[id]/cost-history', () => {
 // =============================================================================
 
 describe('Parts Planning API - /api/parts/[id]/planning', () => {
-  let PATCH: Function;
+  let PATCH: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -482,8 +482,8 @@ describe('Parts Planning API - /api/parts/[id]/planning', () => {
 // =============================================================================
 
 describe('Parts Revisions API - /api/parts/[id]/revisions', () => {
-  let GET: Function;
-  let POST: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let POST: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -636,7 +636,7 @@ describe('Parts Revisions API - /api/parts/[id]/revisions', () => {
 // =============================================================================
 
 describe('Parts Manufacturers API - /api/parts/manufacturers', () => {
-  let GET: Function;
+  let GET: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -692,9 +692,9 @@ describe('Parts Manufacturers API - /api/parts/manufacturers', () => {
 // =============================================================================
 
 describe('Suppliers [id] API - /api/suppliers/[id]', () => {
-  let GET: Function;
-  let PUT: Function;
-  let DELETE: Function;
+  let GET: (...args: any[]) => Promise<Response>;
+  let PUT: (...args: any[]) => Promise<Response>;
+  let DELETE: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -944,7 +944,7 @@ describe('Suppliers [id] API - /api/suppliers/[id]', () => {
 // =============================================================================
 
 describe('Suppliers Check Tax ID API - /api/suppliers/check-tax-id', () => {
-  let GET: Function;
+  let GET: (...args: any[]) => Promise<Response>;
 
   beforeEach(async () => {
     vi.clearAllMocks();

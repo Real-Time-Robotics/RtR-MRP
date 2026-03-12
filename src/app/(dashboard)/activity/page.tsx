@@ -22,9 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { clientLogger } from '@/lib/client-logger';
+import { ActivityTimeline } from '@/components/activity-timeline';
 
 interface ActivityItem {
   id: string;
@@ -119,6 +121,18 @@ export default function ActivityPage() {
           </Button>
         }
       />
+
+      <Tabs defaultValue="timeline" className="w-full">
+        <TabsList>
+          <TabsTrigger value="timeline">Work Session Timeline</TabsTrigger>
+          <TabsTrigger value="system">System Activity</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="timeline" className="mt-4">
+          <ActivityTimeline />
+        </TabsContent>
+
+        <TabsContent value="system" className="mt-4 space-y-6">
 
       {/* Filters */}
       <Card className="p-4">
@@ -230,6 +244,9 @@ export default function ActivityPage() {
           ))}
         </div>
       )}
+
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

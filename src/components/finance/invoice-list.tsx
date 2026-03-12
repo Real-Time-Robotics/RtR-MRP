@@ -153,19 +153,19 @@ export function InvoiceList({
   ], [entityLabel, onView, onRecordPayment]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <div className="relative w-48 lg:w-56">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Search invoices..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+            className="pl-8 h-8 text-sm"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>

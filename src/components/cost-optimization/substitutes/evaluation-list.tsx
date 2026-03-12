@@ -63,18 +63,18 @@ export function EvaluationList() {
             </Button>
           </Link>
         </div>
-        <div className="flex items-center gap-2 mt-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Tim theo part number..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9"
+              className="pl-8 h-8 text-sm"
             />
           </div>
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
               <SelectValue placeholder="Trang thai" />
             </SelectTrigger>
             <SelectContent>

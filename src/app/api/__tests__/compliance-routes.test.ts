@@ -76,9 +76,10 @@ describe('Compliance API Routes', () => {
   // POST /api/compliance/signatures
   // ===========================================================================
   describe('POST /api/compliance/signatures', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../compliance/signatures/route');
       POST = module.POST;
     });
@@ -185,9 +186,10 @@ describe('Compliance API Routes', () => {
   // POST /api/compliance/mfa/verify
   // ===========================================================================
   describe('POST /api/compliance/mfa/verify', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../compliance/mfa/verify/route');
       POST = module.POST;
     });
@@ -298,9 +300,10 @@ describe('Compliance API Routes', () => {
   // POST /api/compliance/mfa/setup
   // ===========================================================================
   describe('POST /api/compliance/mfa/setup', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../compliance/mfa/setup/route');
       POST = module.POST;
     });

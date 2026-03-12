@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { seedCostOptimization } from "./seed-cost-optimization";
 
 const prisma = new PrismaClient();
 
@@ -1312,6 +1313,9 @@ async function main() {
     }),
   ]);
   console.log("Created purchase orders");
+
+  // Seed cost optimization data
+  await seedCostOptimization();
 
   console.log("Seed completed successfully!");
 }

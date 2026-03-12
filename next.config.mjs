@@ -147,8 +147,8 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standalone mode disabled for Render compatibility
-  // Enable for Docker: output: "standalone",
+  // Enable standalone output for Docker deployment (auto-detect)
+  ...(process.env.DOCKER === "true" ? { output: "standalone" } : {}),
 
   // Server-side packages that should not be bundled by webpack
   experimental: {
@@ -198,8 +198,8 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               // Fonts
               "font-src 'self' https://fonts.gstatic.com",
-              // Connect: API endpoints
-              "connect-src 'self' https://api.anthropic.com wss:",
+              // Connect: API endpoints + dev HMR websocket
+              `connect-src 'self' https://api.anthropic.com wss: ${process.env.NODE_ENV === 'development' ? 'ws:' : ''}`,
               // Frame ancestors: prevent clickjacking
               "frame-ancestors 'none'",
               // Form action
@@ -251,7 +251,7 @@ const nextConfig = {
           },
           {
             key: "Cross-Origin-Resource-Policy",
-            value: "same-origin",
+            value: "same-site",
           },
           ...(process.env.NODE_ENV === "production"
             ? [

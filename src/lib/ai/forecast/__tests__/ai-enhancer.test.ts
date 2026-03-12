@@ -83,6 +83,7 @@ function createTestForecast(overrides: Partial<ForecastResult> = {}): ForecastRe
     recommendations: {
       safetyStock: { current: 50, recommended: 60, reason: 'Increasing demand' },
       reorderPoint: { current: 80, recommended: 90, reason: 'Higher demand' },
+      // @ts-expect-error test data
       orderQuantity: { current: 200, recommended: 220, reason: 'Trend adjustment' },
     },
     dataQuality: 'good',

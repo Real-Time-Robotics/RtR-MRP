@@ -260,8 +260,18 @@ async function generateSupplierPerformance(): Promise<GeneratorResult> {
       const completedPOs = pos.filter((po) =>
         ['completed', 'received', 'COMPLETED', 'RECEIVED'].includes(po.status)
       );
-      const onTimeRate = completedPOs.length > 0 ? 85 : 0;
-      const qualityRate = 95;
+      // Calculate on-time rate from actual delivery data
+      const deliveredWithDate = completedPOs.filter(po => po.expectedDate);
+      const onTimePOs = deliveredWithDate.filter(po => po.updatedAt <= po.expectedDate);
+      const onTimeRate = deliveredWithDate.length > 0
+        ? Math.round((onTimePOs.length / deliveredWithDate.length) * 1000) / 10
+        : (completedPOs.length > 0 ? 100 : 0);
+      // Calculate quality rate from inspection/line acceptance data
+      const allLines = pos.flatMap(po => po.lines || []);
+      const acceptedLines = allLines.filter(l => l.receivedQty && l.receivedQty > 0);
+      const qualityRate = allLines.length > 0
+        ? Math.round((acceptedLines.length / allLines.length) * 1000) / 10
+        : 100;
       const score = Math.round((onTimeRate + qualityRate) / 2);
 
       return {

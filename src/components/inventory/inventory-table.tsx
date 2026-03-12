@@ -17,6 +17,7 @@ import {
   ChangeImpactDialog,
   useChangeImpact,
 } from '@/components/change-impact';
+import { EntityTooltip } from '@/components/entity-tooltip';
 import { FieldChange } from '@/lib/change-impact/types';
 
 // Import extracted components and types
@@ -282,9 +283,17 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       sticky: 'left',
       render: (value, row) => (
         <div className="flex items-center gap-2">
-          <Link href={`/inventory/${row.id}`} className="font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline">
-            {value}
-          </Link>
+          {row.partId ? (
+            <EntityTooltip type="part" id={row.partId}>
+              <Link href={`/inventory/${row.id}`} className="font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-help">
+                {value}
+              </Link>
+            </EntityTooltip>
+          ) : (
+            <Link href={`/inventory/${row.id}`} className="font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline">
+              {value}
+            </Link>
+          )}
           {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
         </div>
       )

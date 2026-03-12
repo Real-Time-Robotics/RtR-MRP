@@ -11,6 +11,7 @@ import { CostBreakdownTable } from "@/components/cost-optimization/bom-cost/cost
 import { BomCostExport } from "@/components/cost-optimization/bom-cost/bom-cost-export";
 import { useBomCost } from "@/hooks/cost-optimization/use-bom-cost";
 import { Badge } from "@/components/ui/badge";
+import { AIQuickAction } from "@/components/cost-optimization/shared/ai-quick-action";
 
 export default function BomCostAnalysisPage() {
   const [productId, setProductId] = useState<string | null>(null);
@@ -23,15 +24,18 @@ export default function BomCostAnalysisPage() {
         description="Phan tich chi phi chi tiet theo linh kien, nguon goc Make vs Buy"
         backHref="/cost-optimization"
         actions={
-          data && data.bomHeader ? (
-            <BomCostExport
-              productName={data.product.name}
-              productSku={data.product.sku}
-              bomVersion={data.bomHeader.version}
-              items={data.items}
-              totalCost={data.totalCost}
-            />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {data && data.bomHeader && (
+              <BomCostExport
+                productName={data.product.name}
+                productSku={data.product.sku}
+                bomVersion={data.bomHeader.version}
+                items={data.items}
+                totalCost={data.totalCost}
+              />
+            )}
+            <AIQuickAction context={{ type: "bom" }} />
+          </div>
         }
       />
 

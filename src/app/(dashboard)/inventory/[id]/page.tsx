@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useSmartGridStore } from '@/components/ui-v2/smart-grid';
 import Link from 'next/link';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface ReceivingInspection {
     id: string;
@@ -191,7 +192,9 @@ export default function InventoryDetailPage({ params }: { params: { id: string }
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         Inventory Detail
-                        <Badge variant="outline" className="font-mono text-xs">{inventory.part.partNumber}</Badge>
+                        <EntityTooltip type="part" id={inventory.part.id}>
+                            <Badge variant="outline" className="font-mono text-xs cursor-help">{inventory.part.partNumber}</Badge>
+                        </EntityTooltip>
                     </h1>
                     <p className="text-muted-foreground">{inventory.part.name}</p>
                 </div>

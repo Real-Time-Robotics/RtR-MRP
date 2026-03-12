@@ -249,7 +249,16 @@ async function calculateSupplierPerformance(supplierId: string): Promise<Supplie
     metrics: {
       onTimeDelivery,
       qualityRate,
-      responseTime: 4.5, // TODO: Calculate from PO acknowledgment timestamps when available
+      responseTime: await (async () => {
+        // Calculate average response time (days between PO creation and first status change)
+        const acknowledgedPOs = currentPOs.filter(po => po.status !== 'draft' && po.status !== 'pending');
+        if (acknowledgedPOs.length === 0) return 0;
+        const totalDays = acknowledgedPOs.reduce((sum, po) => {
+          const diffMs = po.updatedAt.getTime() - po.createdAt.getTime();
+          return sum + diffMs / (1000 * 60 * 60 * 24);
+        }, 0);
+        return Math.round((totalDays / acknowledgedPOs.length) * 10) / 10;
+      })(),
       orderFulfillment,
       defectRate,
     },
@@ -394,8 +403,20 @@ export const GET = withAuth(async (request, context, session) => {
           },
           performance: {
             rating: supplier.rating ? (supplier.rating >= 4 ? 'A' : supplier.rating >= 3 ? 'B' : 'C') : 'N/A',
-            onTimeDelivery: 95, // Would calculate from delivery data
-            qualityRate: 98, // Would calculate from inspection data
+            onTimeDelivery: (() => {
+              const delivered = completedOrders.filter(po => po.expectedDate);
+              if (delivered.length === 0) return 100;
+              const onTime = delivered.filter(po => po.updatedAt <= po.expectedDate);
+              return Math.round((onTime.length / delivered.length) * 1000) / 10;
+            })(),
+            qualityRate: (() => {
+              const poLines = purchaseOrders.flatMap(po => po.lines || []);
+              if (poLines.length === 0) return 100;
+              const accepted = poLines.filter(l => l.receivedQty && l.receivedQty > 0);
+              return accepted.length > 0
+                ? Math.round((accepted.length / poLines.length) * 1000) / 10
+                : 100;
+            })(),
           },
           notifications: [],
         };

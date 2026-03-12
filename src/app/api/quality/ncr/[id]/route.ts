@@ -33,7 +33,7 @@ export const GET = withAuth(async (request, context, _session) => {
     const ncr = await prisma.nCR.findUnique({
       where: { id },
       include: {
-        part: { select: { partNumber: true, name: true } },
+        part: { select: { id: true, partNumber: true, name: true } },
         product: { select: { sku: true, name: true } },
         workOrder: { select: { woNumber: true } },
         inspection: { select: { inspectionNumber: true } },

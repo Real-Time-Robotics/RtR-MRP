@@ -232,7 +232,7 @@ describe('Health Check Module', () => {
         blocks: 1000000,
         bsize: 4096,
         bfree: 500000, // 50% free
-      } as unknown as fs.StatsFsSync);
+      } as unknown as ReturnType<typeof fs.statfsSync>);
 
       const result = checkDisk();
 
@@ -330,7 +330,7 @@ describe('Health Check Module', () => {
         blocks: 1000000,
         bsize: 4096,
         bfree: 500000,
-      } as unknown as fs.StatsFsSync);
+      } as unknown as ReturnType<typeof fs.statfsSync>);
 
       // S3 not configured so storage returns warn
       delete process.env.AWS_ACCESS_KEY_ID;

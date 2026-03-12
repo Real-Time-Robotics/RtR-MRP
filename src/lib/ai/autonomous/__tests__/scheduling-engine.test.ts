@@ -1156,7 +1156,7 @@ describe('SchedulingEngine', () => {
             workCenterId: 'wc-1',
             startDate: new Date(),
             endDate: new Date(Date.now() + 43200000),
-          },
+          } as any,
         ],
         changeType: 'new',
         reason: 'Test',

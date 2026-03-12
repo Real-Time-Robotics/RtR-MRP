@@ -153,9 +153,10 @@ describe('Analytics API Routes', () => {
   });
 
   describe('GET /api/analytics', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/route');
       GET = module.GET;
     });
@@ -201,9 +202,10 @@ describe('Analytics API Routes', () => {
   // DASHBOARDS LIST & CREATE TESTS
   // =============================================================================
   describe('GET /api/analytics/dashboards', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/dashboards/route');
       GET = module.GET;
     });
@@ -251,9 +253,10 @@ describe('Analytics API Routes', () => {
   });
 
   describe('POST /api/analytics/dashboards', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/dashboards/route');
       POST = module.POST;
     });
@@ -316,9 +319,10 @@ describe('Analytics API Routes', () => {
   // DASHBOARD [id] TESTS
   // =============================================================================
   describe('GET /api/analytics/dashboards/[id]', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/dashboards/[id]/route');
       GET = module.GET;
     });
@@ -367,9 +371,10 @@ describe('Analytics API Routes', () => {
   });
 
   describe('PUT /api/analytics/dashboards/[id]', () => {
-    let PUT: Function;
+    let PUT: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/dashboards/[id]/route');
       PUT = module.PUT;
     });
@@ -447,9 +452,10 @@ describe('Analytics API Routes', () => {
   });
 
   describe('DELETE /api/analytics/dashboards/[id]', () => {
-    let DELETE: Function;
+    let DELETE: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/dashboards/[id]/route');
       DELETE = module.DELETE;
     });
@@ -519,9 +525,10 @@ describe('Analytics API Routes', () => {
   // KPIs TESTS
   // =============================================================================
   describe('GET /api/analytics/kpis', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/kpis/route');
       GET = module.GET;
     });
@@ -566,9 +573,10 @@ describe('Analytics API Routes', () => {
   });
 
   describe('POST /api/analytics/kpis', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/kpis/route');
       POST = module.POST;
     });
@@ -602,9 +610,10 @@ describe('Analytics API Routes', () => {
   // TEMPLATES TESTS
   // =============================================================================
   describe('GET /api/analytics/templates', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../analytics/templates/route');
       GET = module.GET;
     });

@@ -29,6 +29,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { z } from "zod";
 import { clientLogger } from '@/lib/client-logger';
+import { useWorkSession } from '@/hooks/use-work-session';
 
 const poFormSchema = z.object({
   poNumber: z.string().min(1, "Số PO là bắt buộc"),
@@ -94,6 +95,15 @@ export default function NewPurchaseOrderPage() {
   });
   const [lines, setLines] = useState<POLine[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Work Session tracking for PO creation
+  const { trackActivity, completeSession } = useWorkSession({
+    entityType: 'PO',
+    entityId: 'new',
+    entityNumber: formData.poNumber,
+    workflowSteps: ['Điền thông tin', 'Thêm dòng', 'Lưu'],
+    currentStep: 1,
+  });
 
   useEffect(() => {
     fetchSuppliers();
@@ -268,6 +278,8 @@ export default function NewPurchaseOrderPage() {
       if (res.ok) {
         const result = await res.json();
         const order = result.data || result;
+        trackActivity('PO_CREATED', `Tạo PO ${formData.poNumber} với ${lines.length} dòng`);
+        completeSession();
         router.push(`/purchasing/${order.id}`);
       } else {
         const error = await res.json();

@@ -249,7 +249,7 @@ describe('cache', () => {
   describe('memoize', () => {
     it('should memoize function results', async () => {
       const fn = vi.fn().mockResolvedValue(42);
-      const memoized = memoize(fn, (x: never) => `memo:${x}`);
+      const memoized = memoize(fn as any, ((...args: unknown[]) => `memo:${args[0]}`) as any);
 
       const r1 = await memoized('a' as never);
       const r2 = await memoized('a' as never);

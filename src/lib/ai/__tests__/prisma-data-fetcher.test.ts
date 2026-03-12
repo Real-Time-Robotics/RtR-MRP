@@ -210,6 +210,7 @@ describe('getInventoryByParts', () => {
       supplier: 'Supplier A',
       supplierLeadTime: 5,
     });
+    // @ts-expect-error test data
     expect(result[0].locations).toHaveLength(2);
   });
 
@@ -225,7 +226,9 @@ describe('getInventoryByParts', () => {
     ]);
 
     const result = await prismaDataFetcher.getInventoryByParts(['P1']);
+    // @ts-expect-error test data
     expect(result[0].supplier).toBeNull();
+    // @ts-expect-error test data
     expect(result[0].supplierLeadTime).toBe(14); // falls back to part.leadTimeDays
   });
 
@@ -311,7 +314,7 @@ describe('getOrdersByNumbers', () => {
       requiredDate: '2026-03-15',
       createdAt: '2026-03-01',
     });
-    expect(result[0].lines[0]).toMatchObject({
+    expect((result as any)[0].lines[0]).toMatchObject({
       partNumber: 'SKU-1',
       partName: 'Widget',
       quantity: 10,

@@ -31,6 +31,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EntityDiscussions } from '@/components/discussions/entity-discussions';
 import { OrderStatusBadge } from '@/components/orders/order-status-badge';
 import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
+import { useWorkSession } from '@/hooks/use-work-session';
+import { SmartBreadcrumb } from '@/components/smart-breadcrumb';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface InventoryLot {
     lotNumber: string;
@@ -119,6 +122,16 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     const [lotAllocations, setLotAllocations] = useState<Record<number, Record<string, number>>>({});
     const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
 
+    // Work Session tracking
+    const { trackActivity, updateContext } = useWorkSession({
+        entityType: 'SO',
+        entityId: params.id,
+        entityNumber: order?.orderNumber || params.id,
+        workflowSteps: ['Xem chi tiết', 'Xuất kho', 'Xác nhận giao hàng'],
+        currentStep: 1,
+        enabled: !!params.id,
+    });
+
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -141,6 +154,24 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     }, [params.id]);
 
     useAIContextSync('order', order); // Sync with AI
+
+    // Update work session context when order data loads
+    useEffect(() => {
+        if (!order) return;
+        const totalAmount = order.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+        const shippedLines = order.lines.filter(l => (l.shippedQty || 0) >= l.quantity).length;
+        updateContext({
+            summary: `SO ${order.orderNumber} - ${order.customer.name} - ${order.status}`,
+            keyMetrics: {
+                status: order.status,
+                customer: order.customer.name,
+                totalAmount: `$${totalAmount.toFixed(2)}`,
+                lineCount: order.lines.length,
+                shippedLines: `${shippedLines}/${order.lines.length}`,
+                shipmentCount: order.shipments?.length || 0,
+            },
+        });
+    }, [order, updateContext]);
 
     const fetchInventoryPreview = async () => {
         try {
@@ -237,6 +268,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Lỗi khi xuất kho');
             toast.success(data.message || 'Đã xuất kho thành công');
+            trackActivity('SO_SHIP', `Xuất kho cho ${order?.orderNumber}`, { carrier: shipCarrier, tracking: shipTracking });
             setShowShipDialog(false);
             setShipCarrier('');
             setShipTracking('');
@@ -259,6 +291,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Lỗi khi xác nhận giao hàng');
             toast.success(data.message || 'Đã xác nhận giao hàng');
+            trackActivity('SO_DELIVERY_CONFIRMED', `Xác nhận giao hàng shipment ${shipmentId}`);
             fetchData();
         } catch (error: unknown) {
             toast.error(error instanceof Error ? error.message : 'An error occurred');
@@ -352,6 +385,16 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
 
     return (
         <div className="space-y-6 container mx-auto max-w-5xl py-6">
+            {/* Smart Breadcrumb with Progress */}
+            <SmartBreadcrumb
+                items={[
+                    { label: 'Sales Orders', href: '/orders' },
+                    { label: order.orderNumber },
+                ]}
+                entityType="SO"
+                entityData={order as unknown as Record<string, unknown>}
+            />
+
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" iconOnly onClick={() => router.back()}>
@@ -644,10 +687,12 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                                                     className="h-4 w-4 rounded border-gray-300"
                                                 />
                                                 <div className="flex-1 flex items-center justify-between">
-                                                    <div>
-                                                        <span className="font-medium">{line.productName}</span>
-                                                        <span className="text-muted-foreground text-xs ml-2">({line.productSku})</span>
-                                                    </div>
+                                                    <EntityTooltip type="part" id={line.productId}>
+                                                        <div className="cursor-help">
+                                                            <span className="font-medium">{line.productName}</span>
+                                                            <span className="text-muted-foreground text-xs ml-2">({line.productSku})</span>
+                                                        </div>
+                                                    </EntityTooltip>
                                                     {isFullyShipped ? (
                                                         <Badge className="bg-success-100 text-success-800">Đã xuất đủ</Badge>
                                                     ) : (

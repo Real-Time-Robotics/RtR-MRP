@@ -24,7 +24,7 @@ import { RotateCcw } from 'lucide-react';
 import { PartFormData, COUNTRIES } from './part-form-schema';
 import type { TabSectionProps } from './part-form-types';
 
-export interface PartFormComplianceTabProps extends TabSectionProps {}
+export type PartFormComplianceTabProps = TabSectionProps;
 
 export function PartFormComplianceTab({
     isSubmitting,

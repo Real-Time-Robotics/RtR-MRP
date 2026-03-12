@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, Package, Layers, Plus, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { EntityTooltip } from "@/components/entity-tooltip";
 
 interface BomLineItem {
   id: string;
+  partId?: string;
   lineNumber: number;
   partNumber: string;
   name: string;
@@ -84,7 +86,13 @@ function SubAssemblyRows({
             ) : !isNested ? (
               <span className="w-4" />
             ) : null}
-            <span className={`font-mono ${isNested ? "text-xs" : ""}`}>{line.partNumber}</span>
+            {line.partId ? (
+              <EntityTooltip type="part" id={line.partId}>
+                <span className={`font-mono cursor-help ${isNested ? "text-xs" : ""}`}>{line.partNumber}</span>
+              </EntityTooltip>
+            ) : (
+              <span className={`font-mono ${isNested ? "text-xs" : ""}`}>{line.partNumber}</span>
+            )}
             {line.isCritical && (
               <Badge variant="destructive" className="text-xs">
                 Critical

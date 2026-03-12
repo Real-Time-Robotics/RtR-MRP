@@ -341,18 +341,20 @@ export const GET = withAuth(async (req, _context, _session) => {
   const { searchParams } = new URL(req.url);
   const limit = parseInt(searchParams.get('limit') || '20');
 
-  // TODO: ScanLog table does not exist yet in the schema.
-  // Once a ScanLog model is added, replace the empty array below with:
+  // ScanLog table migration pending - scan history currently stored client-side in IndexedDB.
+  // When ScanLog model is added to schema, uncomment the following:
   //   const history = await prisma.scanLog.findMany({
   //     where: { userId: session.user.id },
   //     orderBy: { createdAt: 'desc' },
   //     take: limit,
   //   });
-  // For now, scan history is stored client-side in IndexedDB.
+  //   return NextResponse.json({ success: true, history, limit, source: 'database' });
 
   return NextResponse.json({
     success: true,
     history: [],
     limit,
+    source: 'client-indexeddb',
+    message: 'Server-side scan history will be available after ScanLog migration. Currently using client-side IndexedDB.',
   });
 });

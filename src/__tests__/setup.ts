@@ -2,6 +2,7 @@
 // VITEST GLOBAL SETUP
 // =============================================================================
 
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference types="vitest" />
 import { vi, beforeEach, afterAll } from 'vitest';
 import '@testing-library/jest-dom';

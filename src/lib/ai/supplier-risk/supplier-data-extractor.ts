@@ -20,7 +20,7 @@ type PurchaseOrderWithLines = Prisma.PurchaseOrderGetPayload<{
 }>;
 
 /** PurchaseOrder base (without includes) */
-type PurchaseOrderBase = Prisma.PurchaseOrderGetPayload<{}>;
+type PurchaseOrderBase = Prisma.PurchaseOrderGetPayload<object>;
 
 /** PartSupplier with part (from Prisma query) */
 type PartSupplierWithPart = Prisma.PartSupplierGetPayload<{

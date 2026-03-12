@@ -1,6 +1,7 @@
 // =============================================================================
 // RTR-MRP - DEMO AUTO-SEED API
 // Professional API to automatically create demo users and sample data
+// GATED: Only available when NEXT_PUBLIC_DEMO_MODE=true or NODE_ENV !== 'production'
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,6 +11,16 @@ import bcrypt from 'bcryptjs';
 import { logger } from '@/lib/logger';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 import { withAuth } from '@/lib/api/with-auth';
+
+// Environment gate: block demo routes in production unless explicitly enabled
+const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production';
+
+function demoDisabledResponse() {
+  return NextResponse.json(
+    { success: false, error: 'Demo endpoints are disabled in production. Set NEXT_PUBLIC_DEMO_MODE=true to enable.' },
+    { status: 403 }
+  );
+}
 
 // =============================================================================
 // CONFIGURATION
@@ -529,6 +540,9 @@ async function seedInventory(): Promise<SeedResult> {
 // =============================================================================
 
 export const POST = withAuth(async (request, context, session) => {
+  // Environment gate check
+  if (!isDemoEnabled) return demoDisabledResponse();
+
   // Rate limiting
   const rateLimitResult = await checkWriteEndpointLimit(request);
   if (rateLimitResult) return rateLimitResult;

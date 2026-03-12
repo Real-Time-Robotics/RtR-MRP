@@ -111,8 +111,11 @@ export function DemoFloatingBadge({
   const isDemo = userEmail.includes('@demo.rtr-mrp.com') || userEmail.includes('@demo.');
   const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
 
-  // Don't show if not a demo user
-  if (!isDemo || status !== 'authenticated') {
+  // Environment gate: only show demo badge when demo mode is enabled
+  const isDemoModeEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production';
+
+  // Don't show if not a demo user or demo mode is disabled
+  if (!isDemo || status !== 'authenticated' || !isDemoModeEnabled) {
     return null;
   }
 

@@ -29,6 +29,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { z } from "zod";
 import { clientLogger } from '@/lib/client-logger';
+import { useWorkSession } from '@/hooks/use-work-session';
 
 const orderItemSchema = z.object({
   productId: z.string().min(1, "Vui lòng chọn sản phẩm"),
@@ -73,6 +74,15 @@ export default function NewSalesOrderPage() {
   });
   const [items, setItems] = useState<OrderLine[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Work Session tracking for SO creation
+  const { trackActivity, completeSession } = useWorkSession({
+    entityType: 'SO',
+    entityId: 'new',
+    entityNumber: 'NEW-SO',
+    workflowSteps: ['Chọn khách hàng', 'Thêm sản phẩm', 'Lưu'],
+    currentStep: 1,
+  });
 
   useEffect(() => {
     fetchCustomers();
@@ -179,6 +189,8 @@ export default function NewSalesOrderPage() {
 
       if (res.ok) {
         const order = await res.json();
+        trackActivity('SO_CREATED', `Tạo đơn hàng mới với ${items.length} sản phẩm`);
+        completeSession();
         router.push(`/orders/${order.id}`);
       } else {
         const error = await res.json();

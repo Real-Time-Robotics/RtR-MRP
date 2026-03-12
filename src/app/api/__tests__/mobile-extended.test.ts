@@ -122,9 +122,10 @@ describe('Mobile Extended API Routes', () => {
   });
 
   describe('GET /api/mobile/equipment', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/equipment/route');
       GET = module.GET;
     });
@@ -202,9 +203,10 @@ describe('Mobile Extended API Routes', () => {
   });
 
   describe('POST /api/mobile/equipment', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/equipment/route');
       POST = module.POST;
     });
@@ -296,9 +298,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE PARTS TESTS
   // =============================================================================
   describe('GET /api/mobile/parts', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/parts/route');
       GET = module.GET;
     });
@@ -384,9 +387,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE LOCATIONS TESTS
   // =============================================================================
   describe('GET /api/mobile/locations', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/locations/route');
       GET = module.GET;
     });
@@ -438,9 +442,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE QUALITY TESTS
   // =============================================================================
   describe('GET /api/mobile/quality', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/quality/route');
       GET = module.GET;
     });
@@ -489,9 +494,10 @@ describe('Mobile Extended API Routes', () => {
   });
 
   describe('POST /api/mobile/quality', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/quality/route');
       POST = module.POST;
     });
@@ -560,9 +566,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE PICKING TESTS
   // =============================================================================
   describe('GET /api/mobile/picking', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/picking/route');
       GET = module.GET;
     });
@@ -613,9 +620,10 @@ describe('Mobile Extended API Routes', () => {
   });
 
   describe('POST /api/mobile/picking', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/picking/route');
       POST = module.POST;
     });
@@ -685,9 +693,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE TASKS TESTS
   // =============================================================================
   describe('GET /api/mobile/tasks', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/tasks/route');
       GET = module.GET;
     });
@@ -774,9 +783,10 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE WORK ORDERS TESTS
   // =============================================================================
   describe('GET /api/mobile/work-orders', () => {
-    let GET: Function;
+    let GET: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/work-orders/route');
       GET = module.GET;
     });
@@ -869,13 +879,14 @@ describe('Mobile Extended API Routes', () => {
   // MOBILE SYNC TESTS
   // =============================================================================
   describe('POST /api/mobile/sync', () => {
-    let POST: Function;
+    let POST: (...args: any[]) => Promise<Response>;
 
     beforeEach(async () => {
+      // eslint-disable-next-line @next/next/no-assign-module-variable
       const module = await import('../mobile/sync/route');
       POST = module.POST;
       // Mock $transaction to pass through the callback with prisma as tx
-      (prisma.$transaction as Mock).mockImplementation(async (fn: Function) => {
+      (prisma.$transaction as Mock).mockImplementation(async (fn: (...args: unknown[]) => Promise<Response>) => {
         const tx = {
           inventory: {
             findFirst: vi.fn().mockResolvedValue({ id: 'inv-1', quantity: 50 }),

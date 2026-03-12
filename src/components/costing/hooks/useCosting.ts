@@ -84,19 +84,44 @@ export function useCosting(options: UseCostingOptions = {}): UseCostingReturn {
           setCostings(demoData);
           setSelectedPart(demoData[0] || null);
         } else {
-          // TODO: Integrate with MRP API
-          // const response = await fetch(`/api/costing?partType=${partType}&supplierId=${supplierId}`);
-          // const data = await response.json();
-          // setCostings(data);
+          // Fetch real costing data from MRP Finance API
+          const params = new URLSearchParams();
+          if (partType) params.set('category', partType);
+          if (supplierId) params.set('supplierId', supplierId);
 
-          // For now, use demo data
-          const demoData = generateDemoCostings();
-          setCostings(demoData);
-          setSelectedPart(demoData[0] || null);
+          const response = await fetch(`/api/finance/costing?${params.toString()}`);
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const items = Array.isArray(data) ? data : data.data || data.rows || [];
+
+          if (items.length > 0) {
+            // Map API response to CostingBreakdown format
+            const mapped = items.map((item: Record<string, unknown>) =>
+              calculateCosting({
+                skuId: (item.partNumber as string) || (item.partId as string) || '',
+                partId: (item.partId as string) || '',
+                unitCost: (item.unitCost as number) || (item.materialCost as number) || 0,
+                category: (item.category as string) || 'DEFAULT',
+                srp: (item.srp as number) || (item.sellingPrice as number) || 0,
+                exchangeRate: (item.exchangeRate as number) || DEFAULT_COSTING_PARAMS.exchangeRate,
+              })
+            );
+            setCostings(mapped);
+            setSelectedPart(mapped[0] || null);
+          } else {
+            // No data from API - fall back to demo data
+            const demoData = generateDemoCostings();
+            setCostings(demoData);
+            setSelectedPart(demoData[0] || null);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch costing data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
+        // Graceful fallback to demo data on error
         const demoData = generateDemoCostings();
         setCostings(demoData);
         setSelectedPart(demoData[0] || null);
@@ -147,10 +172,18 @@ export function useCosting(options: UseCostingOptions = {}): UseCostingReturn {
         setSelectedPart(newCosting);
       }
 
-      // TODO: Send to API if not demo mode
-      // if (!useDemoData) {
-      //   await fetch(`/api/costing/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
-      // }
+      // Persist to API if not in demo mode
+      if (!useDemoData) {
+        try {
+          await fetch(`/api/finance/costing`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ partId: id, ...updates, action: 'update' }),
+          });
+        } catch (apiErr) {
+          console.warn('Failed to persist costing update to API, local state updated:', apiErr);
+        }
+      }
 
       return true;
     } catch (err) {

@@ -1,11 +1,14 @@
 // =============================================================================
 // DEMO DIAGNOSTIC API - Check demo users and auth configuration
+// GATED: Only available when NEXT_PUBLIC_DEMO_MODE=true or NODE_ENV !== 'production'
 // =============================================================================
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
+
+const isDemoEnabled = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.NODE_ENV !== 'production';
 
 const DEMO_USERS = [
   { email: 'admin@demo.rtr-mrp.com', role: 'admin' },
@@ -15,6 +18,14 @@ const DEMO_USERS = [
 ];
 
 export async function GET() {
+  // Environment gate check
+  if (!isDemoEnabled) {
+    return NextResponse.json(
+      { success: false, error: 'Demo endpoints are disabled in production.' },
+      { status: 403 }
+    );
+  }
+
   try {
     // Require authentication to access diagnostic endpoint
     const session = await auth();

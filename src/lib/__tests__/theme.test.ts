@@ -23,6 +23,7 @@ describe('Theme', () => {
   describe('chartColors', () => {
     it('should define chart color arrays', () => {
       expect(chartColors).toBeDefined();
+      // @ts-expect-error test data
       expect(Array.isArray(chartColors.primary) || typeof chartColors === 'object').toBe(true);
     });
   });

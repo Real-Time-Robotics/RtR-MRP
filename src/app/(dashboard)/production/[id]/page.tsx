@@ -22,6 +22,9 @@ import { DataTable, Column } from "@/components/ui-v2/data-table";
 import { EntityDiscussions } from "@/components/discussions/entity-discussions";
 import { EntityAuditHistory } from "@/components/audit/entity-audit-history";
 import { clientLogger } from '@/lib/client-logger';
+import { useWorkSession } from '@/hooks/use-work-session';
+import { SmartBreadcrumb } from '@/components/smart-breadcrumb';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface WorkOrderData {
   id: string;
@@ -54,6 +57,7 @@ interface WorkOrderData {
     issuedQty: number;
     status: string;
     part: {
+      id: string;
       partNumber: string;
       name: string;
     };
@@ -116,6 +120,36 @@ export default function WorkOrderDetailPage() {
 
   useAIContextSync('production', data);
 
+  // Work Session tracking
+  const { trackActivity, updateContext } = useWorkSession({
+    entityType: 'WORK_ORDER',
+    entityId: id,
+    entityNumber: data?.woNumber || id,
+    workflowSteps: ['Xem chi tiết', 'Phân bổ vật tư', 'Sản xuất', 'Hoàn thành', 'Nhập kho'],
+    currentStep: 1,
+    enabled: !!id,
+  });
+
+  // Update work session context when WO data loads
+  useEffect(() => {
+    if (!data) return;
+    const totalRequired = data.allocations.reduce((sum, a) => sum + a.requiredQty, 0);
+    const totalAllocated = data.allocations.reduce((sum, a) => sum + a.allocatedQty, 0);
+    const materialReadiness = totalRequired > 0 ? Math.round((totalAllocated / totalRequired) * 100) : 0;
+    updateContext({
+      summary: `WO ${data.woNumber} - ${data.product.name} - ${data.status}`,
+      keyMetrics: {
+        status: data.status,
+        product: data.product.name,
+        quantity: data.quantity,
+        completedQty: data.completedQty,
+        scrapQty: data.scrapQty,
+        progress: `${data.quantity > 0 ? Math.round((data.completedQty / data.quantity) * 100) : 0}%`,
+        materialReadiness: `${materialReadiness}%`,
+      },
+    });
+  }, [data, updateContext]);
+
   const allocations = data?.allocations || [];
 
   const allocationColumns: Column<WorkOrderData['allocations'][0]>[] = useMemo(() => [
@@ -124,10 +158,12 @@ export default function WorkOrderDetailPage() {
       header: 'Part',
       width: '200px',
       render: (_, row) => (
-        <div>
-          <p className="font-medium">{row.part.partNumber}</p>
-          <p className="text-sm text-muted-foreground">{row.part.name}</p>
-        </div>
+        <EntityTooltip type="part" id={row.part.id}>
+          <div className="cursor-help">
+            <p className="font-medium">{row.part.partNumber}</p>
+            <p className="text-sm text-muted-foreground">{row.part.name}</p>
+          </div>
+        </EntityTooltip>
       ),
     },
     {
@@ -169,6 +205,7 @@ export default function WorkOrderDetailPage() {
     setAllocating(true);
     try {
       await fetch(`/api/production/${id}/allocate`, { method: "POST" });
+      trackActivity('WO_ALLOCATE', `Phân bổ vật tư cho ${data?.woNumber}`);
       fetchData();
     } catch (error) {
       clientLogger.error("Failed to allocate:", error);
@@ -189,6 +226,7 @@ export default function WorkOrderDetailPage() {
         toast.error(err.error || err.message || "Không thể cập nhật trạng thái");
         return;
       }
+      trackActivity('WO_STATUS_CHANGE', `Chuyển trạng thái sang "${newStatus}"`, { from: data?.status, to: newStatus });
       fetchData();
     } catch (error) {
       clientLogger.error("Failed to update status:", error);
@@ -212,6 +250,7 @@ export default function WorkOrderDetailPage() {
         toast.error(err.error || err.message || "Không thể hoàn thành Work Order");
         return;
       }
+      trackActivity('WO_COMPLETED', `Hoàn thành ${data?.woNumber}: ${completionData.completedQty} units, scrap: ${completionData.scrapQty}`);
       setCompleteDialogOpen(false);
       fetchData();
     } catch (error) {
@@ -418,6 +457,16 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Smart Breadcrumb with Progress */}
+      <SmartBreadcrumb
+        items={[
+          { label: 'Production', href: '/production' },
+          { label: data.woNumber },
+        ]}
+        entityType="WORK_ORDER"
+        entityData={data as unknown as Record<string, unknown>}
+      />
+
       <PageHeader
         title={`Work Order ${data.woNumber}`}
         description={data.product.name}

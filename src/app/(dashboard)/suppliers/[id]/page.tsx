@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { ConversationPanel } from '@/components/conversations';
 import { EntityAuditHistory } from '@/components/audit/entity-audit-history';
+import { EntityTooltip } from '@/components/entity-tooltip';
 
 interface SupplierDetail {
     id: string;
@@ -209,7 +210,11 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                                 <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No parts assigned</TableCell></TableRow>
                                             ) : supplier.partSuppliers.map((ps) => (
                                                 <TableRow key={ps.part.id}>
-                                                    <TableCell className="font-medium">{ps.part.partNumber}</TableCell>
+                                                    <TableCell>
+                                                        <EntityTooltip type="part" id={ps.part.id}>
+                                                            <span className="font-medium cursor-help">{ps.part.partNumber}</span>
+                                                        </EntityTooltip>
+                                                    </TableCell>
                                                     <TableCell>{ps.part.name}</TableCell>
                                                     <TableCell><Badge variant="outline">{ps.part.category}</Badge></TableCell>
                                                 </TableRow>
@@ -238,7 +243,11 @@ export default function SupplierDetailPage({ params }: { params: { id: string } 
                                                 <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No recent orders</TableCell></TableRow>
                                             ) : supplier.purchaseOrders.map((po) => (
                                                 <TableRow key={po.id}>
-                                                    <TableCell className="font-medium">{po.poNumber}</TableCell>
+                                                    <TableCell>
+                                                        <EntityTooltip type="po" id={po.id}>
+                                                            <span className="font-medium cursor-help">{po.poNumber}</span>
+                                                        </EntityTooltip>
+                                                    </TableCell>
                                                     <TableCell>{new Date(po.orderDate).toLocaleDateString()}</TableCell>
                                                     <TableCell><Badge variant="secondary">{po.status}</Badge></TableCell>
                                                     <TableCell className="text-right">${po.totalAmount?.toLocaleString()}</TableCell>

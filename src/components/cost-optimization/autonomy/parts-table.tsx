@@ -77,20 +77,21 @@ export function PartsTable({ parts }: PartsTableProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Chi tiet parts</CardTitle>
-        <div className="flex items-center gap-2 mt-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <CardHeader className="pb-2 px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-sm font-medium">Chi tiet parts</CardTitle>
+          <div className="flex-1" />
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Tim part..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-8 h-8 text-sm"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs gap-1 px-2.5">
               <SelectValue placeholder="Trang thai" />
             </SelectTrigger>
             <SelectContent>

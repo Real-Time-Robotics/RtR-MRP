@@ -366,6 +366,7 @@ describe('useAIImport', () => {
         );
       });
 
+      // @ts-expect-error test data
       expect(result.current.entitySuggestion?.entity).toBe('parts');
       expect(result.current.columnSuggestions).toHaveLength(1);
       expect(result.current.dataIssues).toEqual([]);

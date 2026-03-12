@@ -885,8 +885,8 @@ export async function deliverReportByEmail(options: EmailDeliveryOptions): Promi
     // nodemailer must be installed separately: pnpm add nodemailer
     let nodemailer: typeof import('nodemailer');
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const moduleName = 'nodemailer';
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       nodemailer = require(moduleName);
     } catch {
       return { success: false, error: 'nodemailer package not installed. Run: pnpm add nodemailer' };

@@ -1,0 +1,191 @@
+# docker-compose.yml
+# RTR MRP System - Quick Start
+#
+# Usage:
+#   Development:  docker compose -f docker-compose.yml -f docker/docker-compose.dev.yml up
+#   Production:   docker compose up -d
+#   With Nginx:   docker compose --profile with-nginx up -d
+#   With tools:   docker compose -f docker-compose.yml -f docker-compose.infrastructure.yml up -d
+#   Backup:       docker compose run --rm backup /scripts/backup-db.sh
+#   Seed DB:      docker compose exec app npx prisma db seed
+#   View logs:    docker compose logs -f app
+
+services:
+  # ==================== Application ====================
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: rtr-mrp-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rtr}:${POSTGRES_PASSWORD:-rtr_secret_2024}@db:5432/${POSTGRES_DB:-rtr_mrp}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production-use-openssl-rand-base64-32}
+      - AUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production-use-openssl-rand-base64-32}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ML_SERVICE_URL=http://ml-service:8000
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rtr-network
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==================== PostgreSQL Database ====================
+  db:
+    image: postgres:15-alpine
+    container_name: rtr-mrp-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-rtr}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rtr_secret_2024}
+      - POSTGRES_DB=${POSTGRES_DB:-rtr_mrp}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d
+    networks:
+      - rtr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rtr} -d ${POSTGRES_DB:-rtr_mrp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==================== Redis Cache & Queue ====================
+  redis:
+    image: redis:7-alpine
+    container_name: rtr-mrp-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - rtr-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==================== ML Service (Python FastAPI) ====================
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: rtr-mrp-ml
+    restart: unless-stopped
+    ports:
+      - "${ML_SERVICE_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rtr}:${POSTGRES_PASSWORD:-rtr_secret_2024}@db:5432/${POSTGRES_DB:-rtr_mrp}
+      - MODEL_DIR=/app/models
+      - DEBUG=${DEBUG:-false}
+      - ALLOWED_ORIGINS=http://localhost:3000,http://app:3000
+    volumes:
+      - ml_models:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rtr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ==================== Nginx Reverse Proxy (Optional) ====================
+  nginx:
+    image: nginx:alpine
+    container_name: rtr-mrp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - rtr-network
+    profiles:
+      - with-nginx
+
+  # ==================== Database Backup (On-demand) ====================
+  backup:
+    image: postgres:15-alpine
+    container_name: rtr-mrp-backup
+    restart: "no"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-rtr}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rtr_secret_2024}
+      - POSTGRES_DB=${POSTGRES_DB:-rtr_mrp}
+      - PGHOST=db
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup:/scripts:ro
+    networks:
+      - rtr-network
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["echo 'Backup service ready. Run: docker compose run --rm backup /scripts/backup-db.sh'"]
+    profiles:
+      - backup
+
+networks:
+  rtr-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ml_models:
+    driver: local

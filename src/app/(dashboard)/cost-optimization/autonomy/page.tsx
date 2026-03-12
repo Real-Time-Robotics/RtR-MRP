@@ -9,6 +9,8 @@ import { AutonomyGauge } from "@/components/cost-optimization/autonomy/autonomy-
 import { AutonomySummaryCards } from "@/components/cost-optimization/autonomy/autonomy-summary-cards";
 import { StatusBreakdown } from "@/components/cost-optimization/autonomy/status-breakdown";
 import { PartsTable } from "@/components/cost-optimization/autonomy/parts-table";
+import { AIQuickAction } from "@/components/cost-optimization/shared/ai-quick-action";
+import { ExportButton } from "@/components/cost-optimization/shared/export-button";
 
 export default function AutonomyPage() {
   const [productId, setProductId] = useState<string | null>(null);
@@ -20,6 +22,12 @@ export default function AutonomyPage() {
         title="Autonomy Tracker"
         description="Theo doi muc do tu chu san xuat"
         backHref="/cost-optimization"
+        actions={
+          <div className="flex items-center gap-2">
+            <ExportButton type="autonomy" label="Export" />
+            <AIQuickAction context={{ type: "general" }} />
+          </div>
+        }
       />
 
       {/* Product filter */}

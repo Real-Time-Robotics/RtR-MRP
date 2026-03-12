@@ -25,8 +25,8 @@ import { ScreenshotButton } from '@/components/ui/screenshot-button';
 
 import { HeaderNav, QuickCreateDropdown } from './header/header-nav';
 import { CommandPalette } from './header/header-search';
-import { HeaderNotifications } from './header/header-notifications';
 import { HeaderUserMenu } from './header/header-user-menu';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 // =============================================================================
 // MAIN HEADER COMPONENT
@@ -34,7 +34,6 @@ import { HeaderUserMenu } from './header/header-user-menu';
 
 export interface ModernHeaderProps {
   user?: { name: string; email: string; role?: string };
-  notifications?: { id: string; title: string; read: boolean }[];
   language?: 'en' | 'vi';
   onLanguageChange?: (lang: 'en' | 'vi') => void;
   darkMode?: boolean;
@@ -45,7 +44,6 @@ export interface ModernHeaderProps {
 
 export function ModernHeader({
   user = { name: 'Admin User', email: 'admin@rtr.vn', role: 'Administrator' },
-  notifications = [],
   language = 'vi',
   onLanguageChange,
   darkMode = false,
@@ -59,8 +57,6 @@ export function ModernHeader({
   const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-
   // Keyboard shortcut for command palette
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -73,8 +69,6 @@ export function ModernHeader({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <>
@@ -170,13 +164,8 @@ export function ModernHeader({
               {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Notifications */}
-            <HeaderNotifications
-              isOpen={showNotifications}
-              onToggle={() => setShowNotifications(!showNotifications)}
-              notifications={notifications}
-              unreadCount={unreadCount}
-            />
+            {/* Notifications - Full NotificationBell with search, filter, real-time */}
+            <NotificationBell className="w-7 h-7" />
 
             {/* User Menu */}
             <HeaderUserMenu

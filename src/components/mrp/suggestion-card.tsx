@@ -17,6 +17,7 @@ import {
   Layers,
 } from "lucide-react";
 import { format } from "date-fns";
+import { EntityTooltip } from "@/components/entity-tooltip";
 
 interface BomChild {
   partId: string;
@@ -34,6 +35,7 @@ interface BomChild {
 interface SuggestionProps {
   suggestion: {
     id: string;
+    partId?: string;
     partNumber: string;
     partName: string;
     actionType: string;
@@ -212,9 +214,11 @@ export function SuggestionCard({
                 )}
               </button>
             )}
-            <span className={`font-mono ${depth > 0 ? "text-[11px]" : "text-xs"}`}>
-              {child.partNumber}
-            </span>
+            <EntityTooltip type="part" id={child.partId}>
+              <span className={`font-mono cursor-help ${depth > 0 ? "text-[11px]" : "text-xs"}`}>
+                {child.partNumber}
+              </span>
+            </EntityTooltip>
             {child.isCritical && (
               <Badge
                 variant="destructive"
@@ -340,7 +344,13 @@ export function SuggestionCard({
             </div>
 
             {/* Part info */}
-            <h3 className="font-semibold">{suggestion.partNumber}</h3>
+            {suggestion.partId ? (
+              <EntityTooltip type="part" id={suggestion.partId}>
+                <h3 className="font-semibold cursor-help">{suggestion.partNumber}</h3>
+              </EntityTooltip>
+            ) : (
+              <h3 className="font-semibold">{suggestion.partNumber}</h3>
+            )}
             <p className="text-sm text-muted-foreground">
               {suggestion.partName}
             </p>
