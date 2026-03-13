@@ -13,6 +13,26 @@ import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
+  // Block in production — setup must use CLI/seed scripts, not a public endpoint
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { success: false, error: 'Setup endpoint is disabled in production. Use CLI seed scripts instead.' },
+      { status: 403 }
+    );
+  }
+
+  // Require SETUP_SECRET if configured (defense-in-depth)
+  const setupSecret = process.env.SETUP_SECRET;
+  if (setupSecret) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader !== `Bearer ${setupSecret}`) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+  }
+
   // Rate limiting
   const rateLimitResult = await checkWriteEndpointLimit(request);
   if (rateLimitResult) return rateLimitResult;

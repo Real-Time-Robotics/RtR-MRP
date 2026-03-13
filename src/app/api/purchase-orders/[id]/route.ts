@@ -225,6 +225,9 @@ async function putHandler(
 
     // If PO is being received, update inventory + create inspections in the SAME transaction
     if (isBeingReceived && receivingWarehouse) {
+      // IMPORTANT: Always use updatedOrder.lines (the current lines after any replacement).
+      // Pre-computed inspectionNumbers keyed by old line IDs won't match new lines,
+      // so we generate inspection numbers on-the-fly for any line missing one.
       const poLines = updatedOrder.lines || existing.lines;
 
       for (const line of poLines) {
@@ -276,10 +279,15 @@ async function putHandler(
         });
 
         // Auto-create receiving inspection
-        if (inspectionNumbers[line.id]) {
+        // Use pre-computed number if available (old lines), otherwise generate new one
+        const existingInspection = await tx.inspection.findFirst({
+          where: { poLineId: line.id, type: 'RECEIVING' },
+        });
+        if (!existingInspection) {
+          const inspNumber = inspectionNumbers[line.id] || await generateInspectionNumber('RECEIVING');
           await tx.inspection.create({
             data: {
-              inspectionNumber: inspectionNumbers[line.id],
+              inspectionNumber: inspNumber,
               type: 'RECEIVING',
               status: 'pending',
               partId: line.partId,

@@ -18,7 +18,13 @@ export async function GET(request: NextRequest) {
 
   try {
     // Verify authorization (skip in development)
-    if (process.env.NODE_ENV === 'production' && CRON_SECRET) {
+    if (process.env.NODE_ENV === 'production') {
+      if (!CRON_SECRET) {
+        return NextResponse.json(
+          { success: false, error: 'CRON_SECRET not configured. Cron endpoints are disabled.' },
+          { status: 503 }
+        );
+      }
       const authHeader = request.headers.get('authorization');
       if (authHeader !== `Bearer ${CRON_SECRET}`) {
         return NextResponse.json(
