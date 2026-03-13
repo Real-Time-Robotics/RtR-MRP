@@ -7,20 +7,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { workflowEngine } from '@/lib/workflow';
 import { logger } from '@/lib/logger';
+import { withAuth, type RouteContext } from '@/lib/api/with-auth';
 
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
-interface RouteParams {
-  params: Promise<{ instanceId: string }>;
-}
 
 // GET /api/workflows/[instanceId] - Get instance details
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export const GET = withAuth(async (request: NextRequest, context: RouteContext) => {
     // Rate limiting
     const rateLimitResult = await checkReadEndpointLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const { instanceId } = await params;
+    const { instanceId } = await context.params;
 
     const instance = await workflowEngine.getWorkflowInstance(instanceId);
 
@@ -39,16 +37,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE /api/workflows/[instanceId] - Cancel workflow
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withAuth(async (request: NextRequest, context: RouteContext) => {
     // Rate limiting
     const rateLimitResult = await checkWriteEndpointLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
   try {
-    const { instanceId } = await params;
+    const { instanceId } = await context.params;
     const body = await request.json();
     const { cancelledBy, reason } = body;
 
@@ -76,4 +74,4 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       { status: 500 }
     );
   }
-}
+});
