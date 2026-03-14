@@ -30,7 +30,7 @@ const updatePOSchema = z.object({
   supplierId: z.string().optional(),
   orderDate: z.string().or(z.date()).optional(),
   expectedDate: z.string().or(z.date()).optional(),
-  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']).optional(),
+  status: z.enum(['draft', 'pending', 'pending_approval', 'approved', 'rejected', 'confirmed', 'in_progress', 'received', 'cancelled']).optional(),
   currency: z.string().optional(), // Added: allow currency update
   notes: z.string().optional().nullable(),
   lines: z.array(POLineSchema).optional(),
@@ -89,7 +89,7 @@ async function putHandler(
 
   // Allow status change to "received" from "confirmed"/"in_progress"
   // But block general edits on already received/cancelled POs
-  if (!['draft', 'pending', 'confirmed', 'in_progress'].includes(existing.status)) {
+  if (!['draft', 'pending', 'pending_approval', 'rejected', 'confirmed', 'in_progress'].includes(existing.status)) {
     return errorResponse('Không thể chỉnh sửa PO ở trạng thái này', 400);
   }
 
@@ -109,6 +109,12 @@ async function putHandler(
       errors[path].push(err.message);
     });
     return validationErrorResponse(errors);
+  }
+
+  // Block direct status manipulation to approval workflow states via PUT
+  // These must go through /submit, /approve, /reject, /cancel routes
+  if (validation.data.status && ['pending_approval', 'approved', 'rejected'].includes(validation.data.status)) {
+    return errorResponse('Sử dụng API workflow (/submit, /approve, /reject) để thay đổi trạng thái duyệt.', 400);
   }
 
   const { lines, ...headerData } = validation.data;

@@ -233,7 +233,7 @@ async function importCustomers(sheet: XLSX.WorkSheet): Promise<void> {
           contactPhone: row['Phone'] ? String(row['Phone']).trim() : null,
           billingAddress: row['Address'] || row['Billing Address'] ? String(row['Address'] || row['Billing Address']).trim() : null,
           paymentTerms: row['Payment Terms'] ? String(row['Payment Terms']).trim() : 'NET30',
-          creditLimit: parseNumber(row['Credit Limit'], null as unknown as number) || null,
+          creditLimit: parseNumber(row['Credit Limit'], 0),
           status: String(row['Status'] || 'active').toLowerCase(),
         },
         update: {
@@ -245,7 +245,7 @@ async function importCustomers(sheet: XLSX.WorkSheet): Promise<void> {
           contactPhone: row['Phone'] ? String(row['Phone']).trim() : null,
           billingAddress: row['Address'] || row['Billing Address'] ? String(row['Address'] || row['Billing Address']).trim() : null,
           paymentTerms: row['Payment Terms'] ? String(row['Payment Terms']).trim() : 'NET30',
-          creditLimit: parseNumber(row['Credit Limit'], null as unknown as number) || null,
+          creditLimit: parseNumber(row['Credit Limit'], 0),
           status: String(row['Status'] || 'active').toLowerCase(),
         },
       });

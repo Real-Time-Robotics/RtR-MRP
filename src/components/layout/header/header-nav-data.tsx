@@ -52,7 +52,8 @@ export const navigationTabs: NavTab[] = [
         items: [
           { id: 'sales', labelKey: 'header.salesOrders', descriptionKey: 'header.desc.salesOrders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', color: 'text-violet-600 bg-violet-50' },
           { id: 'customers', labelKey: 'header.customers', descriptionKey: 'header.desc.customers', icon: <Users className="w-5 h-5" />, href: '/customers', color: 'text-blue-600 bg-blue-50' },
-          { id: 'quotes', labelKey: 'header.quotations', descriptionKey: 'header.desc.quotations', icon: <FileText className="w-5 h-5" />, href: '/orders', color: 'text-indigo-600 bg-indigo-50' },
+          { id: 'quotes', labelKey: 'header.quotations', descriptionKey: 'header.desc.quotations', icon: <FileText className="w-5 h-5" />, href: '/sales/quotations', color: 'text-indigo-600 bg-indigo-50' },
+          { id: 'pricing-rules', labelKey: 'header.pricingRules', descriptionKey: 'header.desc.pricingRules', icon: <DollarSign className="w-5 h-5" />, href: '/sales/pricing-rules', color: 'text-green-600 bg-green-50' },
         ]
       },
       {
@@ -70,6 +71,7 @@ export const navigationTabs: NavTab[] = [
           { id: 'purchasing', labelKey: 'header.purchaseOrders', descriptionKey: 'header.desc.purchaseOrders', icon: <Truck className="w-5 h-5" />, href: '/purchasing', color: 'text-orange-600 bg-orange-50', badge: '3' },
           { id: 'suppliers', labelKey: 'header.suppliers', descriptionKey: 'header.desc.suppliers', icon: <Building2 className="w-5 h-5" />, href: '/suppliers', color: 'text-amber-600 bg-amber-50' },
           { id: 'receiving', labelKey: 'header.receiving', descriptionKey: 'header.desc.receiving', icon: <Download className="w-5 h-5" />, href: '/quality/receiving', color: 'text-lime-600 bg-lime-50' },
+          { id: 'supplier-eval', labelKey: 'header.supplierEvaluation', descriptionKey: 'header.desc.supplierEvaluation', icon: <Target className="w-5 h-5" />, href: '/suppliers/evaluation', color: 'text-rose-600 bg-rose-50' },
         ]
       },
     ],

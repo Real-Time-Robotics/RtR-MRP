@@ -500,7 +500,7 @@ async function processCustomerImportRow(row: Record<string, unknown>, updateMode
     contactPhone: row.contactPhone ? String(row.contactPhone).trim() : null,
     billingAddress: row.billingAddress ? String(row.billingAddress).trim() : null,
     paymentTerms: row.paymentTerms ? String(row.paymentTerms).trim() : null,
-    creditLimit: row.creditLimit ? Number(row.creditLimit) : null,
+    creditLimit: row.creditLimit ? Number(row.creditLimit) : 0,
     status: row.status ? String(row.status).toLowerCase() : "active",
   };
 

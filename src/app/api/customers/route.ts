@@ -36,7 +36,7 @@ const createCustomerSchema = z.object({
   contactPhone: z.string().nullish(),
   billingAddress: z.string().nullish(),
   paymentTerms: z.string().nullish(),
-  creditLimit: z.number().min(0).nullish(),
+  creditLimit: z.number().min(0).optional().default(0),
   status: z.enum(['active', 'inactive', 'pending']).default('active'),
 });
 

@@ -436,7 +436,7 @@ async function importCustomer(
           country: data.country || existing.country,
           contactEmail: data.contactEmail || data.email || existing.contactEmail,
           contactPhone: data.contactPhone || data.phone || existing.contactPhone,
-          creditLimit: data.creditLimit ? (safeParseFloat(data.creditLimit, null) ?? existing.creditLimit) : existing.creditLimit,
+          creditLimit: data.creditLimit ? (safeParseFloat(data.creditLimit, 0) ?? existing.creditLimit) : existing.creditLimit,
           paymentTerms: data.paymentTerms || existing.paymentTerms
         }
       });
@@ -458,7 +458,7 @@ async function importCustomer(
       country: data.country || 'Unknown',
       contactEmail: data.contactEmail || data.email,
       contactPhone: data.contactPhone || data.phone,
-      creditLimit: safeParseFloat(data.creditLimit, null),
+      creditLimit: safeParseFloat(data.creditLimit, 0) ?? 0,
       paymentTerms: data.paymentTerms || 'Net 30',
       status: 'active'
     }

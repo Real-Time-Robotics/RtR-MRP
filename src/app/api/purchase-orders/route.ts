@@ -30,7 +30,7 @@ const createPOSchema = z.object({
   supplierId: z.string().min(1, 'Nhà cung cấp là bắt buộc'),
   orderDate: z.string().or(z.date()),
   expectedDate: z.string().or(z.date()),
-  status: z.enum(['draft', 'pending', 'confirmed', 'in_progress', 'received', 'cancelled']).default('draft'),
+  status: z.enum(['draft', 'pending', 'pending_approval', 'approved', 'rejected', 'confirmed', 'in_progress', 'received', 'cancelled']).default('draft'),
   currency: z.string().default('USD'),
   notes: z.string().optional().nullable(),
   lines: z.array(z.object({

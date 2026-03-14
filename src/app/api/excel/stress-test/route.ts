@@ -275,12 +275,12 @@ export const POST = withAuth(async (request, context, session) => {
               contactPhone: row['Phone'] ? String(row['Phone']).trim() : null,
               billingAddress: row['Address'] ? String(row['Address']).trim() : null,
               paymentTerms: row['Payment Terms'] ? String(row['Payment Terms']).trim() : 'NET30',
-              creditLimit: parseNumber(row['Credit Limit'], 0) || null,
+              creditLimit: parseNumber(row['Credit Limit'], 0),
               status: 'active',
             },
             update: {
               name: String(row['Name'] || row['Customer Name'] || '').trim(),
-              creditLimit: parseNumber(row['Credit Limit'], 0) || null,
+              creditLimit: parseNumber(row['Credit Limit'], 0),
             },
           });
           processed++;
