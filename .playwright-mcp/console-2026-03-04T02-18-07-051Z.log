@@ -1,0 +1,4 @@
+[     303ms] [ERROR] ClientFetchError: Failed to fetch. Read more at https://errors.authjs.dev#autherror
+    at fetchData (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/lib/client.js:49:22)
+    at async getSession (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react.js:121:21)
+    at async __NEXTAUTH._getSession (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react.js:283:43) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32

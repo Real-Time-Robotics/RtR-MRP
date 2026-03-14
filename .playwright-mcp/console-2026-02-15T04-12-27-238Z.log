@@ -1,0 +1,4 @@
+[   23367ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/reports/generate:0
+[   23368ms] [ERROR] Download failed: Error: Generation failed
+    at downloadReport (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/reports/page.tsx:237:32) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   74398ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/reports/generate:0

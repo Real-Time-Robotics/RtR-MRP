@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   RTR-MRP DESIGN SYSTEM v2.0
+   "Industrial Precision" Theme
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. CSS VARIABLES (Root)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ═══ PRIMARY PALETTE ═══ */
+  --steel-dark: #1A1D23;
+  --gunmetal: #2D3139;
+  --slate: #3D4450;
+  --slate-light: #4A5568;
+
+  /* ═══ ACCENT PALETTE (Status-driven) ═══ */
+  --production-green: #22C55E;
+  --production-green-dim: rgba(34, 197, 94, 0.2);
+  --alert-amber: #F59E0B;
+  --alert-amber-dim: rgba(245, 158, 11, 0.2);
+  --urgent-red: #EF4444;
+  --urgent-red-dim: rgba(239, 68, 68, 0.2);
+  --info-cyan: #06B6D4;
+  --info-cyan-dim: rgba(6, 182, 212, 0.2);
+  --neutral-zinc: #71717A;
+
+  /* ═══ TEXT COLORS ═══ */
+  --text-primary: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #71717A;
+  --text-disabled: #52525B;
+
+  /* ═══ BORDER COLORS ═══ */
+  --border-default: #3D4450;
+  --border-light: #52525B;
+  --border-focus: #06B6D4;
+
+  /* ═══ CHART COLORS ═══ */
+  --chart-blue: #3B82F6;
+  --chart-emerald: #10B981;
+  --chart-violet: #8B5CF6;
+  --chart-orange: #F97316;
+
+  /* ═══ SPACING (4px base) ═══ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ═══ TYPOGRAPHY ═══ */
+  --font-display: 'JetBrains Mono', monospace;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  /* ═══ SIZING ═══ */
+  --header-height: 48px;
+  --sidebar-collapsed: 56px;
+  --sidebar-expanded: 200px;
+  --toolbar-height: 40px;
+  --statusbar-height: 24px;
+  --row-height: 36px;
+  --input-height: 32px;
+  --button-height: 32px;
+
+  /* ═══ TRANSITIONS ═══ */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. RESET & BASE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--steel-dark);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. SCROLLBAR STYLING
+   ───────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--steel-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slate-light);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. SELECTION
+   ───────────────────────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--info-cyan);
+  color: var(--steel-dark);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. FOCUS STYLES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 1px solid var(--border-focus);
+  outline-offset: 2px;
+}

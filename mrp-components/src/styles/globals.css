@@ -1,0 +1,91 @@
+@import url('./design-system.css');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RTR-MRP GLOBALS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+body {
+  @apply bg-steel-dark text-mrp-text-primary;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TYPOGRAPHY UTILITIES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.text-label {
+  @apply text-xs font-medium uppercase tracking-wider text-mrp-text-muted;
+}
+
+.text-value {
+  @apply font-mono text-3xl font-semibold text-mrp-text-primary;
+}
+
+.text-mono-data {
+  @apply font-mono text-base;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LINK STYLES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+a {
+  @apply text-info-cyan hover:underline;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TABLE EXCEL-LIKE BASE STYLES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.mrp-table {
+  @apply w-full text-base;
+  border-collapse: collapse;
+}
+
+.mrp-table th {
+  @apply sticky top-0 z-10 bg-gunmetal text-sm font-medium uppercase tracking-wide;
+  @apply text-mrp-text-muted text-left p-2 border border-mrp-border;
+  white-space: nowrap;
+}
+
+.mrp-table td {
+  @apply p-2 border border-mrp-border bg-transparent;
+}
+
+.mrp-table th.sortable {
+  @apply cursor-pointer select-none;
+}
+
+.mrp-table th.sortable:hover {
+  @apply bg-slate;
+}
+
+.mrp-table tr:hover td {
+  background: rgba(61, 68, 80, 0.3);
+}
+
+.mrp-table tr.selected td {
+  @apply bg-info-cyan-dim;
+  border-left: 2px solid var(--info-cyan);
+}
+
+/* Numeric columns - RIGHT ALIGN + MONOSPACE */
+.mrp-table td.numeric,
+.mrp-table th.numeric {
+  @apply text-right font-mono;
+}
+
+/* Action column */
+.mrp-table td.actions {
+  @apply text-center;
+  width: 60px;
+}
+
+/* Checkbox column */
+.mrp-table td.checkbox,
+.mrp-table th.checkbox {
+  @apply text-center;
+  width: 40px;
+}
