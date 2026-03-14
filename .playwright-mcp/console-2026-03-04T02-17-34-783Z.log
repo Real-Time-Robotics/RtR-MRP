@@ -1,0 +1,933 @@
+[     656ms] [ERROR] Warning: React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://reactjs.org/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+%s PurchaseOrderDetailPage 1. useContext                 useContext
+2. useState                   useState
+3. useState                   useState
+4. useEffect                  useEffect
+5. undefined                  useState
+ 
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:49:11)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at Layout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PurchasingLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at AIProvider (webpack-internal:///(app-pages-browser)/./src/lib/ai-context.tsx:77:11)
+    at AIWrapper (webpack-internal:///(app-pages-browser)/./src/components/ai-copilot/ai-wrapper.tsx:28:11)
+    at div
+    at PageTransition (webpack-internal:///(app-pages-browser)/./src/components/layout/page-transition.tsx:11:11)
+    at div
+    at main
+    at div
+    at div
+    at ModernAppShell (webpack-internal:///(app-pages-browser)/./src/components/layout/modern-app-shell.tsx:35:11)
+    at DashboardLayoutClient (webpack-internal:///(app-pages-browser)/./src/components/layout/dashboard-layout-client.tsx:19:11)
+    at DashboardLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PWAProvider (webpack-internal:///(app-pages-browser)/./src/components/pwa/index.tsx:735:11)
+    at LanguageProvider (webpack-internal:///(app-pages-browser)/./src/lib/i18n/language-context.tsx:22:11)
+    at SocketProvider (webpack-internal:///(app-pages-browser)/./src/providers/socket-provider.tsx:17:11)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/providers/theme-provider.tsx:49:11)
+    at SWRConfig (webpack-internal:///(app-pages-browser)/./node_modules/swr/dist/_internal/config-context-12s-Dh3trQsc.mjs:556:13)
+    at SWRProvider (webpack-internal:///(app-pages-browser)/./src/providers/swr-provider.tsx:14:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react.js:262:13)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:18:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[     658ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s HotReload PurchaseOrderDetailPage PurchaseOrderDetailPage 
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:49:11)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at Layout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PurchasingLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at AIProvider (webpack-internal:///(app-pages-browser)/./src/lib/ai-context.tsx:77:11)
+    at AIWrapper (webpack-internal:///(app-pages-browser)/./src/components/ai-copilot/ai-wrapper.tsx:28:11)
+    at div
+    at PageTransition (webpack-internal:///(app-pages-browser)/./src/components/layout/page-transition.tsx:11:11)
+    at div
+    at main
+    at div
+    at div
+    at ModernAppShell (webpack-internal:///(app-pages-browser)/./src/components/layout/modern-app-shell.tsx:35:11)
+    at DashboardLayoutClient (webpack-internal:///(app-pages-browser)/./src/components/layout/dashboard-layout-client.tsx:19:11)
+    at DashboardLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PWAProvider (webpack-internal:///(app-pages-browser)/./src/components/pwa/index.tsx:735:11)
+    at LanguageProvider (webpack-internal:///(app-pages-browser)/./src/lib/i18n/language-context.tsx:22:11)
+    at SocketProvider (webpack-internal:///(app-pages-browser)/./src/providers/socket-provider.tsx:17:11)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/providers/theme-provider.tsx:49:11)
+    at SWRConfig (webpack-internal:///(app-pages-browser)/./node_modules/swr/dist/_internal/config-context-12s-Dh3trQsc.mjs:556:13)
+    at SWRProvider (webpack-internal:///(app-pages-browser)/./src/providers/swr-provider.tsx:14:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react.js:262:13)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:18:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11) @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[     663ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at HTMLUnknownElement.callCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20614:16)
+    at invokeGuardedCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20689:29)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26949:7)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24504:74)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     664ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26927:14)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24504:74)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     671ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26927:14)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24504:74)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     672ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at HTMLUnknownElement.callCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20565:14)
+    at Object.invokeGuardedCallbackImpl (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20614:16)
+    at invokeGuardedCallback (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:20689:29)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26949:7)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24542:26)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     672ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26927:14)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24542:26)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     672ms] Error: Rendered more hooks than during the previous render.
+    at updateWorkInProgressHook (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11435:15)
+    at updateReducer (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11550:14)
+    at updateState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:12093:10)
+    at Object.useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:13592:16)
+    at useState (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react/cjs/react.development.js:2509:21)
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:126:94)
+    at renderWithHooks (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:11121:18)
+    at updateFunctionComponent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:16290:20)
+    at beginWork$1 (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:18472:16)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:26927:14)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25748:12)
+    at workLoopSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25464:5)
+    at renderRootSync (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:25419:7)
+    at recoverFromConcurrentError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24597:20)
+    at performConcurrentWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom.development.js:24542:26)
+    at workLoop (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:256:34)
+    at flushWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:225:14)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:534:21)
+[     662ms] [ERROR] The above error occurred in the <NotFoundErrorBoundary> component:
+
+    at PurchaseOrderDetailPage (webpack-internal:///(app-pages-browser)/./src/app/(dashboard)/purchasing/[id]/page.tsx:49:11)
+    at ClientPageRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/client-page.js:14:11)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at Layout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PurchasingLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at AIProvider (webpack-internal:///(app-pages-browser)/./src/lib/ai-context.tsx:77:11)
+    at AIWrapper (webpack-internal:///(app-pages-browser)/./src/components/ai-copilot/ai-wrapper.tsx:28:11)
+    at div
+    at PageTransition (webpack-internal:///(app-pages-browser)/./src/components/layout/page-transition.tsx:11:11)
+    at div
+    at main
+    at div
+    at div
+    at ModernAppShell (webpack-internal:///(app-pages-browser)/./src/components/layout/modern-app-shell.tsx:35:11)
+    at DashboardLayoutClient (webpack-internal:///(app-pages-browser)/./src/components/layout/dashboard-layout-client.tsx:19:11)
+    at DashboardLayout (Server)
+    at InnerLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:243:11)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at Suspense
+    at LoadingBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:349:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at InnerScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:153:9)
+    at ScrollAndFocusHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:228:11)
+    at RenderFromTemplateContext (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/render-from-template-context.js:16:44)
+    at OuterLayoutRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/layout-router.js:370:11)
+    at PWAProvider (webpack-internal:///(app-pages-browser)/./src/components/pwa/index.tsx:735:11)
+    at LanguageProvider (webpack-internal:///(app-pages-browser)/./src/lib/i18n/language-context.tsx:22:11)
+    at SocketProvider (webpack-internal:///(app-pages-browser)/./src/providers/socket-provider.tsx:17:11)
+    at ThemeProvider (webpack-internal:///(app-pages-browser)/./src/components/providers/theme-provider.tsx:49:11)
+    at SWRConfig (webpack-internal:///(app-pages-browser)/./node_modules/swr/dist/_internal/config-context-12s-Dh3trQsc.mjs:556:13)
+    at SWRProvider (webpack-internal:///(app-pages-browser)/./src/providers/swr-provider.tsx:14:11)
+    at SessionProvider (webpack-internal:///(app-pages-browser)/./node_modules/next-auth/react.js:262:13)
+    at Providers (webpack-internal:///(app-pages-browser)/./src/app/providers.tsx:18:11)
+    at body
+    at html
+    at RootLayout (Server)
+    at RedirectErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:74:9)
+    at RedirectBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/redirect-boundary.js:82:11)
+    at NotFoundErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:76:9)
+    at NotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/not-found-boundary.js:84:11)
+    at DevRootNotFoundBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/dev-root-not-found-boundary.js:33:11)
+    at ReactDevOverlay (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/ReactDevOverlay.js:87:9)
+    at HotReload (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/app/hot-reloader-client.js:321:11)
+    at Router (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:207:11)
+    at ErrorBoundaryHandler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:113:9)
+    at ErrorBoundary (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/error-boundary.js:160:11)
+    at AppRouter (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/app-router.js:585:13)
+    at ServerRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:112:27)
+    at Root (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:117:11)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundaryHandler. @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[     662ms] [ERROR] [ERROR] Page error {name: Error, message: Rendered more hooks than during the previous render., stack: Error: Rendered more hooks than during the previou…ed/scheduler/cjs/scheduler.development.js:534:21)} @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[     662ms] [ERROR] [ERROR] Page error {name: Error, message: Rendered more hooks than during the previous render., stack: Error: Rendered more hooks than during the previou…ed/scheduler/cjs/scheduler.development.js:534:21)} @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   25897ms] [ERROR] ./src/app/(dashboard)/purchasing/[id]/page.tsx
+Error: 
+  x the name `statusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- previous definition of `statusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- `statusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+  x the name `setStatusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- previous definition of `setStatusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- `setStatusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+Import trace for requested module:
+./src/app/(dashboard)/purchasing/[id]/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   25933ms] [ERROR] Loading plugin data from 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBpZD0ic3ZnIj48dGV4dCB4PSIxMCIgeT0iMjAiIGlkPSJzdmctbGluay10ZXh0Ij50ZXh0PC90ZXh0Pjwvc3ZnPg==' violates the following Content Security Policy directive: "object-src 'none'". The action has been blocked. @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/internal/components/Overlay/maintain--tab-focus.js:236
+[   25934ms] [ERROR] Loading plugin data from 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBpZD0ic3ZnIj48dGV4dCB4PSIxMCIgeT0iMjAiIGlkPSJzdmctbGluay10ZXh0Ij50ZXh0PC90ZXh0Pjwvc3ZnPg==' violates the following Content Security Policy directive: "object-src 'none'". The action has been blocked. @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/components/react-dev-overlay/internal/components/Overlay/maintain--tab-focus.js:236
+[   26113ms] [ERROR] ./src/app/(dashboard)/purchasing/[id]/page.tsx
+Error: 
+  x the name `statusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- previous definition of `statusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- `statusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+  x the name `setStatusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- previous definition of `setStatusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- `setStatusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+Import trace for requested module:
+./src/app/(dashboard)/purchasing/[id]/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   28345ms] [ERROR] ./src/app/(dashboard)/purchasing/[id]/page.tsx
+Error: 
+  x the name `statusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- previous definition of `statusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- `statusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+  x the name `setStatusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- previous definition of `setStatusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- `setStatusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+Import trace for requested module:
+./src/app/(dashboard)/purchasing/[id]/page.tsx @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/client/app-index.js:32
+[   28467ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchasing/cmmbemzmo00014g70ng10f9x2?_rsc=1d4nr:0
+[   28526ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchasing/cmmbemzmo00014g70ng10f9x2?_rsc=1d4nr:0
+[   28572ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchasing/cmmbemzmo00014g70ng10f9x2?_rsc=1d4nr:0
+[   28646ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/purchasing/cmmbemzmo00014g70ng10f9x2:0
+[   28953ms] ModuleBuildError: Module build failed (from ./node_modules/next/dist/build/webpack/loaders/next-swc-loader.js):
+Error: 
+  x the name `statusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- previous definition of `statusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :            ^^^^^^|^^^^^^
+     :                  `-- `statusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+  x the name `setStatusLoading` is defined multiple times
+     ,-[/Users/mac/AnhQuocLuong/rtr-mrp/src/app/(dashboard)/purchasing/[id]/page.tsx:62:1]
+  62 |     const router = useRouter();
+  63 |     const [loading, setLoading] = useState(true);
+  64 |     const [po, setPo] = useState<PurchaseOrderDetail | null>(null);
+  65 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- previous definition of `setStatusLoading` here
+  66 | 
+  67 |     const fetchData = async () => {
+  68 |         try {
+  69 |             setLoading(true);
+  70 |             // NOTE: Frontend route is /purchasing/[id] but API is /api/purchase-orders/[id]
+  71 |             const res = await fetch(`/api/purchase-orders/${params.id}`);
+  72 |             if (!res.ok) {
+  73 |                 if (res.status === 404) throw new Error("Không tìm thấy đơn mua hàng (PO).");
+  74 |                 throw new Error("Lỗi tải dữ liệu.");
+  75 |             }
+  76 |             const data = await res.json();
+  77 |             setPo(data.data || data); // Wrapper might return { data: ... }
+  78 |         } catch (error: unknown) {
+  79 |             toast.error(error instanceof Error ? error.message : 'An error occurred');
+  80 |         } finally {
+  81 |             setLoading(false);
+  82 |         }
+  83 |     };
+  84 | 
+  85 |     useEffect(() => {
+  86 |         fetchData();
+  87 |     }, [params.id]);
+  88 | 
+  89 |     if (loading) {
+  90 |         return (
+  91 |             <div className="flex h-full items-center justify-center p-8">
+  92 |                 <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+  93 |             </div>
+  94 |         );
+  95 |     }
+  96 | 
+  97 |     if (!po) {
+  98 |         return (
+  99 |             <div className="p-8 text-center">
+ 100 |                 <h2 className="text-xl font-semibold">Not Found</h2>
+ 101 |                 <Button variant="ghost" onClick={() => router.back()} className="mt-4">Go Back</Button>
+ 102 |             </div>
+ 103 |         );
+ 104 |     }
+ 105 | 
+ 106 |     const totalAmount = po.lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+ 107 | 
+ 108 |     const handlePrintPDF = async () => {
+ 109 |         const { generatePurchaseOrderPDF } = await import('@/lib/documents');
+ 110 |         generatePurchaseOrderPDF(po);
+ 111 |     };
+ 112 | 
+ 113 |     const [statusLoading, setStatusLoading] = useState(false);
+     :                           ^^^^^^^^|^^^^^^^
+     :                                   `-- `setStatusLoading` redefined here
+ 114 | 
+ 115 |     const handleStatusChange = async (newStatus: string, label: string) => {
+ 116 |         if (!confirm(`Bạn có chắc muốn chuyển trạng thái PO sang "${label}"?`)) return;
+     `----
+
+    at processResult (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/compiled/webpack/bundle5.js:28:400590)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/compiled/webpack/bundle5.js:28:402302)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:8645)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:5019)
+    at r.callback (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/compiled/loader-runner/LoaderRunner.js:1:4039)
+[   30411ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_next/static/webpack/b7fec93987227087.webpack.hot-update.json:0
+[   30411ms] [WARNING] [Fast Refresh] performing full reload because your application had an unrecoverable error @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/hot-reloader-client.js:349

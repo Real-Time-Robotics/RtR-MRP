@@ -1,0 +1,56 @@
+[    1370ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/home:0
+[    1589ms] Error: Cannot find module './61682.js'
+Require stack:
+- /Users/mac/AnhQuocLuong/rtr-mrp/.next/server/webpack-runtime.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/.next/server/app/_not-found/page.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/require.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/load-components.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/build/utils.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/dev/hot-middleware.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/dev/hot-reloader-webpack.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/lib/router-utils/setup-dev-bundler.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/lib/router-server.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/lib/start-server.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/dist/server/next.js
+- /Users/mac/AnhQuocLuong/rtr-mrp/server.ts
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1405:15)
+    at Module.call (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/@cspotcode/source-map-support/source-map-support.js:811:30)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/require-hook.ts:51:34)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+    at Module._load (node:internal/modules/cjs/loader:1215:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.call (node:internal/modules/cjs/loader:1491:12)
+    at Module.mod.require (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/require-hook.ts:70:26)
+    at require (node:internal/modules/helpers:135:16)
+    at Object.__webpack_require__.f.require (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/webpack-runtime.js:208:28)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/webpack-runtime.js:116:40)
+    at Array.reduce (<anonymous>)
+    at __webpack_require__.e (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/webpack-runtime.js:115:67)
+    at Array.map (<anonymous>)
+    at __webpack_require__.X (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/webpack-runtime.js:167:22)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/pages/_document.js:1:344)
+    at Object.<anonymous> (file:///Users/mac/AnhQuocLuong/rtr-mrp/.next/server/pages/_document.js:1:388)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Module.m._compile (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/ts-node/src/index.ts:1618:23)
+    at <unknown> (node:internal/modules/cjs/loader:1899:10)
+    at Object.require.extensions.<computed> [as .js] (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/ts-node/src/index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Module._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+    at Module.call (node:internal/modules/cjs/loader:1491:12)
+    at Module.mod.require (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/require-hook.ts:70:26)
+    at require (node:internal/modules/helpers:135:16)
+    at requirePage (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/require.ts:127:9)
+    at <unknown> (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/load-components.ts:141:47)
+    at async loadComponentsImpl (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/load-components.ts:140:30)
+    at async DevServer.findPageComponentsImpl (file:///Users/mac/AnhQuocLuong/rtr-mrp/node_modules/next/src/server/next-server.ts:768:28)
+[    8908ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed:  @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[    9917ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[   10921ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[   11924ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[   12927ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[   14937ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Connection closed before receiving a handshake response @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
+[   20950ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr' failed: Connection closed before receiving a handshake response @ webpack-internal:///./node_modules/next/dist/client/components/react-dev-overlay/pages/websocket.js:63
