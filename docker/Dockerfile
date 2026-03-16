@@ -24,6 +24,7 @@ RUN npx prisma generate
 # Build application
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
+ENV DOCKER true
 RUN npm run build
 
 # ==================== Stage 3: Runner ====================

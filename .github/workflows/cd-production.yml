@@ -64,7 +64,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd /opt/rtr-mrp
+            cd /home/hung/rtr-mrp
             ./scripts/backup/backup-db.sh pre-deploy-${{ steps.version.outputs.version }}
 
       - name: Deploy to Production
@@ -74,16 +74,16 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd /opt/rtr-mrp
+            cd /home/hung/rtr-mrp
 
             # Pull new image
-            docker-compose pull app
+            docker compose pull app
 
             # Deploy with zero-downtime
-            docker-compose up -d --no-deps app
+            docker compose up -d --no-deps app
 
             # Run migrations
-            docker-compose exec -T app npx prisma migrate deploy
+            docker compose exec -T app npx prisma migrate deploy
 
             # Clean up
             docker system prune -f
@@ -113,7 +113,7 @@ jobs:
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
-            cd /opt/rtr-mrp
+            cd /home/hung/rtr-mrp
             ./scripts/deploy/rollback.sh
 
       - name: Notify Success

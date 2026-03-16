@@ -16,12 +16,13 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: rtr-mrp-app
+    container_name: rtr-mrp
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
+      - DOCKER=true
       - DATABASE_URL=postgresql://${POSTGRES_USER:-rtr}:${POSTGRES_PASSWORD:-rtr_secret_2024}@db:5432/${POSTGRES_DB:-rtr_mrp}?schema=public
       - REDIS_URL=redis://redis:6379
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
@@ -40,6 +41,7 @@ services:
         condition: service_healthy
     networks:
       - rtr-network
+      - caddy
     healthcheck:
       test: ["CMD", "/healthcheck.sh"]
       interval: 30s
@@ -181,6 +183,9 @@ services:
 networks:
   rtr-network:
     driver: bridge
+  caddy:
+    external: true
+    name: caddy
 
 volumes:
   postgres_data:
