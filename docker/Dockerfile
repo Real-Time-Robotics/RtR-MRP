@@ -21,11 +21,12 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build application
+# Build Next.js application
+# Skip prisma db push and ensure-warehouses (they require a live DB and run at container startup)
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 ENV DOCKER true
-RUN npm run build
+RUN npx next build
 
 # ==================== Stage 3: Runner ====================
 FROM node:20-alpine AS runner
