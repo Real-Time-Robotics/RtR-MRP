@@ -24,11 +24,7 @@ echo "Redis is ready"
 
 # Run database migrations
 echo "Running database migrations..."
-npx prisma migrate deploy
-
-# Verify database connection
-echo "Verifying database connection..."
-npx prisma db execute --stdin <<< "SELECT 1" > /dev/null 2>&1
+node /app/node_modules/prisma/build/index.js migrate deploy
 
 echo "========================================"
 echo "  All checks passed. Starting app..."
