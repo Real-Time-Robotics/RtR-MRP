@@ -12,6 +12,7 @@ docker/nginx
 docker/docker-compose*.yml
 docker-compose*.yml
 Dockerfile*
+playwright.config.ts
 
 # Git
 .git

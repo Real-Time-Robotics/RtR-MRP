@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "vitest.config.ts", "enterprise", "mrp-components"]
+  "exclude": ["node_modules", "vitest.config.ts", "enterprise", "mrp-components", "playwright.config.ts", "e2e", "load-testing"]
 }
