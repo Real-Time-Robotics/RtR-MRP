@@ -33,7 +33,8 @@ import {
   Truck,
   ClipboardList,
   Clock,
-  TrendingDown
+  TrendingDown,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -73,6 +74,7 @@ const toolItems: SidebarItem[] = [
   { id: 'finance', label: 'FINANCE', labelVi: 'KẾ TOÁN', icon: <FileSpreadsheet className="w-3.5 h-3.5" />, href: '/finance/misa-export' },
   { id: 'reports', label: 'REPORTS', labelVi: 'BÁO CÁO', icon: <BarChart3 className="w-3.5 h-3.5" />, href: '/reports' },
   { id: 'cost-optimization', label: 'COST OPT', labelVi: 'TỐI ƯU CP', icon: <TrendingDown className="w-3.5 h-3.5" />, href: '/cost-optimization' },
+  { id: 'data-setup', label: 'DATA SETUP', labelVi: 'THIẾT LẬP DL', icon: <Database className="w-3.5 h-3.5" />, href: '/data-setup' },
 ];
 
 const utilityItems: SidebarItem[] = [

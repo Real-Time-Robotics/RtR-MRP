@@ -53,6 +53,7 @@ const ImportWizard = dynamic(
 );
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { EntityTooltip } from '@/components/entity-tooltip';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
@@ -438,9 +439,11 @@ export function PartsTable() {
       sticky: 'left',
       render: (value, row) => (
         <div className="flex items-center gap-1">
-          <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline">
-            {value}
-          </Link>
+          <EntityTooltip type="part" id={row.id}>
+            <Link href={`/parts/${row.id}`} className="font-mono font-medium text-primary hover:underline cursor-help">
+              {value}
+            </Link>
+          </EntityTooltip>
           {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
         </div>
       ),

@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDateMedium } from "@/lib/date";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import type { StockStatus } from "@/types";
 
 // =============================================================================
@@ -280,12 +281,14 @@ export default function WarehouseDetailPage() {
       sticky: "left",
       render: (value: string, row: InventoryItem) => (
         <div className="flex items-center gap-2">
-          <Link
-            href={`/inventory/${row.id}`}
-            className="font-mono font-medium text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            {value}
-          </Link>
+          <EntityTooltip type="part" id={row.partId}>
+            <Link
+              href={`/inventory/${row.id}`}
+              className="font-mono font-medium text-primary-600 dark:text-primary-400 hover:underline cursor-help"
+            >
+              {value}
+            </Link>
+          </EntityTooltip>
           {row.isCritical && <AlertTriangle className="h-3 w-3 text-orange-500" />}
         </div>
       ),

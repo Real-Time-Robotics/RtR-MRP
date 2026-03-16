@@ -64,6 +64,18 @@ export async function executeImport(
         case "INVENTORY":
           await importInventory(row, fieldMap);
           break;
+        case "CUSTOMERS":
+          await importCustomer(row, fieldMap, updateExisting, skipDuplicates);
+          break;
+        case "PRODUCTS":
+          await importProduct(row, fieldMap, updateExisting, skipDuplicates);
+          break;
+        case "WAREHOUSES":
+          await importWarehouse(row, fieldMap, updateExisting, skipDuplicates);
+          break;
+        case "PART-SUPPLIERS":
+          await importPartSupplier(row, fieldMap);
+          break;
         default:
           throw new Error(`Unsupported import type: ${targetType}`);
       }
@@ -382,6 +394,235 @@ async function importInventory(
     },
     update: {
       quantity: Math.round(quantity),
+    },
+  });
+}
+
+// ======== CUSTOMERS IMPORT ========
+
+async function importCustomer(
+  row: unknown[],
+  fieldMap: Record<string, number>,
+  updateExisting: boolean,
+  skipDuplicates: boolean
+) {
+  const code = getStringVal(row, fieldMap, "code");
+  if (!code) throw new Error("Mã khách hàng trống");
+
+  const existing = await prisma.customer.findUnique({ where: { code } });
+
+  if (existing) {
+    if (skipDuplicates && !updateExisting) {
+      throw new Error("SKIP: Đã tồn tại");
+    }
+    if (updateExisting) {
+      await prisma.customer.update({
+        where: { id: existing.id },
+        data: buildCustomerData(row, fieldMap),
+      });
+      return;
+    }
+  }
+
+  await prisma.customer.create({
+    data: {
+      code,
+      name: getStringVal(row, fieldMap, "name") || code,
+      ...buildCustomerData(row, fieldMap),
+    },
+  });
+}
+
+function buildCustomerData(row: unknown[], fieldMap: Record<string, number>) {
+  const data: Record<string, unknown> = {};
+
+  const name = getStringVal(row, fieldMap, "name");
+  if (name) data.name = name;
+
+  const type = getStringVal(row, fieldMap, "type");
+  if (type) data.type = type;
+
+  const country = getStringVal(row, fieldMap, "country");
+  if (country) data.country = country;
+
+  const contactName = getStringVal(row, fieldMap, "contactName");
+  if (contactName) data.contactName = contactName;
+
+  const contactEmail = getStringVal(row, fieldMap, "contactEmail");
+  if (contactEmail) data.contactEmail = contactEmail;
+
+  const contactPhone = getStringVal(row, fieldMap, "contactPhone");
+  if (contactPhone) data.contactPhone = contactPhone;
+
+  const paymentTerms = getStringVal(row, fieldMap, "paymentTerms");
+  if (paymentTerms) data.paymentTerms = paymentTerms;
+
+  const creditLimit = getFloatVal(row, fieldMap, "creditLimit");
+  if (creditLimit !== undefined) data.creditLimit = creditLimit;
+
+  const tier = getStringVal(row, fieldMap, "tier");
+  if (tier) data.tier = tier;
+
+  return data;
+}
+
+// ======== PRODUCTS IMPORT ========
+
+async function importProduct(
+  row: unknown[],
+  fieldMap: Record<string, number>,
+  updateExisting: boolean,
+  skipDuplicates: boolean
+) {
+  const sku = getStringVal(row, fieldMap, "sku");
+  if (!sku) throw new Error("Mã SKU trống");
+
+  const existing = await prisma.product.findUnique({ where: { sku } });
+
+  if (existing) {
+    if (skipDuplicates && !updateExisting) {
+      throw new Error("SKIP: Đã tồn tại");
+    }
+    if (updateExisting) {
+      await prisma.product.update({
+        where: { id: existing.id },
+        data: buildProductData(row, fieldMap),
+      });
+      return;
+    }
+  }
+
+  await prisma.product.create({
+    data: {
+      sku,
+      name: getStringVal(row, fieldMap, "name") || sku,
+      ...buildProductData(row, fieldMap),
+    },
+  });
+}
+
+function buildProductData(row: unknown[], fieldMap: Record<string, number>) {
+  const data: Record<string, unknown> = {};
+
+  const name = getStringVal(row, fieldMap, "name");
+  if (name) data.name = name;
+
+  const description = getStringVal(row, fieldMap, "description");
+  if (description) data.description = description;
+
+  const basePrice = getFloatVal(row, fieldMap, "basePrice");
+  if (basePrice !== undefined) data.basePrice = basePrice;
+
+  const assemblyHours = getFloatVal(row, fieldMap, "assemblyHours");
+  if (assemblyHours !== undefined) data.assemblyHours = assemblyHours;
+
+  const testingHours = getFloatVal(row, fieldMap, "testingHours");
+  if (testingHours !== undefined) data.testingHours = testingHours;
+
+  return data;
+}
+
+// ======== WAREHOUSES IMPORT ========
+
+async function importWarehouse(
+  row: unknown[],
+  fieldMap: Record<string, number>,
+  updateExisting: boolean,
+  skipDuplicates: boolean
+) {
+  const code = getStringVal(row, fieldMap, "code");
+  if (!code) throw new Error("Mã kho trống");
+
+  const existing = await prisma.warehouse.findUnique({ where: { code } });
+
+  if (existing) {
+    if (skipDuplicates && !updateExisting) {
+      throw new Error("SKIP: Đã tồn tại");
+    }
+    if (updateExisting) {
+      await prisma.warehouse.update({
+        where: { id: existing.id },
+        data: buildWarehouseData(row, fieldMap),
+      });
+      return;
+    }
+  }
+
+  await prisma.warehouse.create({
+    data: {
+      code,
+      name: getStringVal(row, fieldMap, "name") || code,
+      ...buildWarehouseData(row, fieldMap),
+    },
+  });
+}
+
+function buildWarehouseData(row: unknown[], fieldMap: Record<string, number>) {
+  const data: Record<string, unknown> = {};
+
+  const name = getStringVal(row, fieldMap, "name");
+  if (name) data.name = name;
+
+  const location = getStringVal(row, fieldMap, "location");
+  if (location) data.location = location;
+
+  const type = getStringVal(row, fieldMap, "type");
+  if (type) data.type = type;
+
+  const status = getStringVal(row, fieldMap, "status");
+  if (status) data.status = status;
+
+  const isDefault = getStringVal(row, fieldMap, "isDefault");
+  if (isDefault) data.isDefault = isDefault.toLowerCase() === "true" || isDefault === "1";
+
+  return data;
+}
+
+// ======== PART-SUPPLIERS IMPORT ========
+
+async function importPartSupplier(
+  row: unknown[],
+  fieldMap: Record<string, number>
+) {
+  const partNumber = getStringVal(row, fieldMap, "partNumber");
+  const supplierCode = getStringVal(row, fieldMap, "supplierCode");
+
+  if (!partNumber) throw new Error("Mã vật tư trống");
+  if (!supplierCode) throw new Error("Mã NCC trống");
+
+  const part = await prisma.part.findFirst({ where: { partNumber } });
+  if (!part) throw new Error(`Không tìm thấy vật tư: ${partNumber}`);
+
+  const supplier = await prisma.supplier.findFirst({ where: { code: supplierCode } });
+  if (!supplier) throw new Error(`Không tìm thấy NCC: ${supplierCode}`);
+
+  const unitPrice = getFloatVal(row, fieldMap, "unitPrice") ?? 0;
+  const leadTimeDays = getIntVal(row, fieldMap, "leadTimeDays") ?? 14;
+
+  await prisma.partSupplier.upsert({
+    where: {
+      partId_supplierId: {
+        partId: part.id,
+        supplierId: supplier.id,
+      },
+    },
+    create: {
+      partId: part.id,
+      supplierId: supplier.id,
+      supplierPartNo: getStringVal(row, fieldMap, "supplierPartNo") || undefined,
+      unitPrice,
+      minOrderQty: getIntVal(row, fieldMap, "minOrderQty") ?? 1,
+      leadTimeDays,
+      isPreferred: getStringVal(row, fieldMap, "isPreferred").toLowerCase() === "true" || getStringVal(row, fieldMap, "isPreferred") === "1",
+      currency: getStringVal(row, fieldMap, "currency") || "USD",
+    },
+    update: {
+      supplierPartNo: getStringVal(row, fieldMap, "supplierPartNo") || undefined,
+      unitPrice,
+      minOrderQty: getIntVal(row, fieldMap, "minOrderQty") ?? 1,
+      leadTimeDays,
+      isPreferred: getStringVal(row, fieldMap, "isPreferred").toLowerCase() === "true" || getStringVal(row, fieldMap, "isPreferred") === "1",
+      currency: getStringVal(row, fieldMap, "currency") || "USD",
     },
   });
 }

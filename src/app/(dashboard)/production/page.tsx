@@ -22,6 +22,7 @@ import { usePaginatedData } from "@/hooks/use-paginated-data";
 import { useDebouncedCallback } from "use-debounce";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import { WOExportButton } from "@/components/production/wo-export-button";
+import { EntityTooltip } from "@/components/entity-tooltip";
 
 interface WorkOrder {
   id: string;
@@ -113,13 +114,24 @@ export default function ProductionPage() {
       header: 'WO #',
       width: '120px',
       sortable: true,
-      render: (value) => <span className="font-mono">{value}</span>,
+      render: (value, row) => (
+        <EntityTooltip type="wo" id={row.id}>
+          <span className="font-mono cursor-help">{value}</span>
+        </EntityTooltip>
+      ),
     },
     {
       key: 'product',
       header: 'Product',
       width: '180px',
-      render: (value) => (
+      render: (value) => value?.id ? (
+        <EntityTooltip type="part" id={value.id}>
+          <div className="cursor-help">
+            <p className="font-medium">{value?.name || "-"}</p>
+            <p className="text-sm text-muted-foreground">{value?.sku || "-"}</p>
+          </div>
+        </EntityTooltip>
+      ) : (
         <div>
           <p className="font-medium">{value?.name || "-"}</p>
           <p className="text-sm text-muted-foreground">{value?.sku || "-"}</p>
@@ -138,8 +150,16 @@ export default function ProductionPage() {
       width: '150px',
       render: (value) => value ? (
         <div>
-          <p>{value.orderNumber}</p>
-          <p className="text-sm text-muted-foreground">{value.customer?.name || "-"}</p>
+          <EntityTooltip type="so" id={value.id}>
+            <span className="cursor-help">{value.orderNumber}</span>
+          </EntityTooltip>
+          {value.customer?.id ? (
+            <EntityTooltip type="customer" id={value.customer.id}>
+              <p className="text-sm text-muted-foreground cursor-help">{value.customer.name}</p>
+            </EntityTooltip>
+          ) : (
+            <p className="text-sm text-muted-foreground">{value.customer?.name || "-"}</p>
+          )}
         </div>
       ) : (
         <span className="text-muted-foreground">-</span>

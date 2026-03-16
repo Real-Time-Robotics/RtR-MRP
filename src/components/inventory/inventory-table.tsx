@@ -317,7 +317,11 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
       header: t('inv.warehouse'),
       width: '120px',
       sortable: true,
-      render: (value) => <span className="text-sm">{value || '-'}</span>,
+      render: (value, row) => row.warehouseId ? (
+        <EntityTooltip type="warehouse" id={row.warehouseId}>
+          <span className="text-sm cursor-help">{value || '-'}</span>
+        </EntityTooltip>
+      ) : <span className="text-sm">{value || '-'}</span>,
     },
     {
       key: 'category',

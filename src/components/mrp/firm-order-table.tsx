@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Lock, Unlock, Edit, Trash2, Plus, Package } from "lucide-react";
 import { CompactStatsBar } from "@/components/ui/compact-stats-bar";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
@@ -108,12 +109,14 @@ export function FirmOrderTable({
       header: 'Part',
       width: '150px',
       render: (value, row) => (
-        <div>
-          <div>{value?.partNumber || row.partId}</div>
-          {value?.name && (
-            <div className="text-xs text-muted-foreground">{value.name}</div>
-          )}
-        </div>
+        <EntityTooltip type="part" id={row.partId}>
+          <div className="cursor-help">
+            <div>{value?.partNumber || row.partId}</div>
+            {value?.name && (
+              <div className="text-xs text-muted-foreground">{value.name}</div>
+            )}
+          </div>
+        </EntityTooltip>
       ),
     },
     {

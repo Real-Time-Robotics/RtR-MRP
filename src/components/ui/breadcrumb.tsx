@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronRight, Home, LayoutDashboard } from 'lucide-react';
@@ -30,7 +30,61 @@ const routeLabelKeys: Record<string, string> = {
   new: 'common.createNew',
   edit: 'common.edit',
   wizard: 'common.wizard',
+  customers: 'nav.customers',
+  orders: 'nav.orders',
+  warehouses: 'nav.warehouses',
+  finance: 'nav.finance',
+  costing: 'nav.costing',
+  invoicing: 'nav.invoicing',
+  reports: 'nav.reports',
+  ai: 'nav.ai',
+  compliance: 'nav.compliance',
+  notifications: 'nav.notifications',
+  alerts: 'nav.alerts',
+  audit: 'nav.audit',
+  profile: 'nav.profile',
+  home: 'nav.home',
+  'in-process': 'nav.inProcess',
+  final: 'nav.final',
+  ncr: 'nav.ncr',
+  capa: 'nav.capa',
+  hold: 'nav.hold',
+  scrap: 'nav.scrap',
+  traceability: 'nav.traceability',
+  spc: 'nav.spc',
+  schedule: 'nav.schedule',
+  shortages: 'nav.shortages',
+  'firm-orders': 'nav.firmOrders',
+  'lead-time': 'nav.leadTime',
+  'cost-optimization': 'nav.costOptimization',
+  'make-vs-buy': 'nav.costOptimization.makeVsBuy',
+  'bom-cost': 'nav.costOptimization.bomCost',
+  'analyze': 'nav.costOptimization.analyze',
+  'advisor': 'nav.costOptimization.advisor',
+  'autonomy': 'nav.costOptimization.autonomy',
+  'substitutes': 'nav.costOptimization.substitutes',
+  'roadmap': 'nav.costOptimization.roadmap',
+  'data-migration': 'nav.dataMigration',
 };
+
+// Map parent route to API endpoint + display field for resolving entity IDs
+const ENTITY_RESOLVE_MAP: Record<string, { endpoint: string; displayField: string; codeField?: string }> = {
+  parts: { endpoint: '/api/parts', displayField: 'name', codeField: 'partNumber' },
+  suppliers: { endpoint: '/api/suppliers', displayField: 'name', codeField: 'code' },
+  customers: { endpoint: '/api/customers', displayField: 'name', codeField: 'code' },
+  purchasing: { endpoint: '/api/purchasing', displayField: 'poNumber' },
+  orders: { endpoint: '/api/orders', displayField: 'orderNumber' },
+  production: { endpoint: '/api/production', displayField: 'woNumber' },
+  inventory: { endpoint: '/api/inventory', displayField: 'name', codeField: 'partNumber' },
+  warehouses: { endpoint: '/api/warehouses', displayField: 'name', codeField: 'code' },
+  bom: { endpoint: '/api/bom', displayField: 'name', codeField: 'sku' },
+};
+
+// Check if a string looks like a CUID or UUID (entity ID)
+function isEntityId(segment: string): boolean {
+  // CUID: starts with 'c' + 24+ alphanumeric, or UUID pattern
+  return /^c[a-z0-9]{24,}$/i.test(segment) || /^[0-9a-f]{8}-[0-9a-f]{4}/.test(segment);
+}
 
 interface BreadcrumbItem {
   labelKey: string | null;
@@ -74,7 +128,49 @@ export function Breadcrumb({ className, showHome = true, maxItems = 4 }: Breadcr
   const pathname = usePathname();
   const breadcrumbs = generateBreadcrumbs(pathname);
 
+  // Resolve entity IDs to display names
+  const [resolvedNames, setResolvedNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const segments = pathname.split('/').filter(Boolean);
+    const toResolve: Array<{ id: string; parentRoute: string }> = [];
+
+    segments.forEach((seg, idx) => {
+      if (isEntityId(seg) && idx > 0) {
+        const parentRoute = segments[idx - 1];
+        if (ENTITY_RESOLVE_MAP[parentRoute]) {
+          toResolve.push({ id: seg, parentRoute });
+        }
+      }
+    });
+
+    if (toResolve.length === 0) return;
+
+    toResolve.forEach(({ id, parentRoute }) => {
+      const config = ENTITY_RESOLVE_MAP[parentRoute];
+      fetch(`${config.endpoint}/${id}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data) return;
+          // Handle nested response formats
+          const entity = data.data || data;
+          const code = config.codeField ? entity[config.codeField] : null;
+          const name = entity[config.displayField];
+          const label = code || name || null;
+          if (label) {
+            setResolvedNames((prev) => ({ ...prev, [id]: label }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [pathname]);
+
   const getLabel = (item: BreadcrumbItem) => {
+    // Check if this item's path segment is a resolved entity ID
+    const lastSegment = item.href.split('/').pop() || '';
+    if (resolvedNames[lastSegment]) {
+      return resolvedNames[lastSegment];
+    }
     return item.labelKey ? t(item.labelKey) : item.fallbackLabel;
   };
 

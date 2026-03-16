@@ -324,6 +324,7 @@ function InvoicingContent() {
               summary={arAging.summary}
               details={arAging.details}
               entityLabel="Customer"
+              entityType="customer"
             />
           )}
 
@@ -349,6 +350,7 @@ function InvoicingContent() {
               summary={apAging.summary}
               details={apAging.details}
               entityLabel="Supplier"
+              entityType="supplier"
             />
           )}
 

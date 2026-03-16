@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { clientLogger } from '@/lib/client-logger';
 
 interface HoldInventoryItem {
@@ -243,7 +244,11 @@ export default function HoldManagementPage() {
                 <tbody>
                   {filteredInventory.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="p-3 font-mono font-medium">{item.part.partNumber}</td>
+                      <td className="p-3 font-mono font-medium">
+                        <EntityTooltip type="part" id={item.partId}>
+                          <span className="cursor-help">{item.part.partNumber}</span>
+                        </EntityTooltip>
+                      </td>
                       <td className="p-3">{item.part.name}</td>
                       <td className="p-3">
                         {item.lotNumber ? (

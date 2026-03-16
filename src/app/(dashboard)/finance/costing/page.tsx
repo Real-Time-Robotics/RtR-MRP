@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CostBreakdownChart, CostRollupStatus, VarianceCard } from "@/components/finance";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { clientLogger } from '@/lib/client-logger';
 
 interface CostRollup {
@@ -226,7 +227,9 @@ function CostingContent() {
                               onClick={() => setSelectedPart(rollup)}
                             >
                               <TableCell className="font-mono font-medium">
-                                {rollup.part.partNumber}
+                                <EntityTooltip type="part" id={rollup.partId}>
+                                  <span className="cursor-help">{rollup.part.partNumber}</span>
+                                </EntityTooltip>
                               </TableCell>
                               <TableCell>{rollup.part.name}</TableCell>
                               <TableCell className="text-right">

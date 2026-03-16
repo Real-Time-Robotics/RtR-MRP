@@ -152,6 +152,62 @@ async function getWOTooltip(id: string) {
   };
 }
 
+async function getWarehouseTooltip(id: string) {
+  const warehouse = await prisma.warehouse.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      location: true,
+      type: true,
+      status: true,
+    },
+  });
+
+  if (!warehouse) return null;
+
+  const itemCount = await prisma.inventory.count({
+    where: { warehouseId: id },
+  });
+
+  const stockAgg = await prisma.inventory.aggregate({
+    where: { warehouseId: id },
+    _sum: { quantity: true },
+  });
+
+  return {
+    ...warehouse,
+    itemCount,
+    totalStock: stockAgg._sum.quantity ?? 0,
+  };
+}
+
+async function getProductTooltip(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      sku: true,
+      name: true,
+      basePrice: true,
+      status: true,
+      assemblyHours: true,
+    },
+  });
+
+  if (!product) return null;
+
+  const activeWOCount = await prisma.workOrder.count({
+    where: { productId: id, status: { notIn: ['completed', 'cancelled'] } },
+  });
+
+  return {
+    ...product,
+    activeWOCount,
+  };
+}
+
 async function getCustomerTooltip(id: string) {
   const customer = await prisma.customer.findUnique({
     where: { id },
@@ -210,6 +266,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         break;
       case 'customer':
         data = await getCustomerTooltip(id);
+        break;
+      case 'warehouse':
+        data = await getWarehouseTooltip(id);
+        break;
+      case 'product':
+        data = await getProductTooltip(id);
         break;
       default:
         return NextResponse.json(

@@ -4,6 +4,7 @@ import {
   Package, MapPin, Star, Clock, Truck,
   AlertTriangle, CheckCircle, XCircle, Pause,
   Wrench, ShoppingCart, Hash, User, CreditCard,
+  Warehouse, Box, DollarSign, Factory,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,7 +65,7 @@ export function PartTooltipContent({ data }: { data: Record<string, unknown> }) 
         } icon={Package} />
         <Row label="Khả dụng" value={`${data.quantityAvailable} ${data.unit}`} />
         <Row label="Safety stock" value={data.safetyStock as number} />
-        <Row label="Đơn giá" value={`${(data.unitCost as number).toLocaleString()} VND`} />
+        <Row label="Đơn giá" value={`$${(data.unitCost as number).toLocaleString()}`} />
         <Row label="Thời gian giao" value={`${data.leadTimeDays} ngày`} icon={Clock} />
       </div>
     </div>
@@ -105,7 +106,7 @@ export function POTooltipContent({ data }: { data: Record<string, unknown> }) {
       </div>
       <StatusBadge status={data.status as string} />
       <div className="border-t border-white/20 pt-2 space-y-1">
-        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
+        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'USD'}`} />
         <Row label="Số dòng" value={data.lineCount as number} icon={Hash} />
         {data.expectedDate ? (
           <Row label="Giao hàng" value={new Date(data.expectedDate as string).toLocaleDateString('vi-VN')} icon={Truck} />
@@ -124,7 +125,7 @@ export function SOTooltipContent({ data }: { data: Record<string, unknown> }) {
       </div>
       <StatusBadge status={data.status as string} />
       <div className="border-t border-white/20 pt-2 space-y-1">
-        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'VND'}`} />
+        <Row label="Tổng tiền" value={`${(data.totalAmount as number)?.toLocaleString()} ${data.currency || 'USD'}`} />
         <Row label="Số dòng" value={data.lineCount as number} icon={Hash} />
         {data.requiredDate ? (
           <Row label="Yêu cầu" value={new Date(data.requiredDate as string).toLocaleDateString('vi-VN')} icon={Clock} />
@@ -168,6 +169,51 @@ export function WOTooltipContent({ data }: { data: Record<string, unknown> }) {
   );
 }
 
+export function WarehouseTooltipContent({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-2 min-w-[200px]">
+      <div>
+        <div className="font-semibold text-sm text-white">{data.name as string}</div>
+        <div className="text-xs text-yellow-200">{data.code as string}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusBadge status={data.status as string} />
+        {data.type ? (
+          <span className="text-[10px] text-yellow-200">{data.type as string}</span>
+        ) : null}
+      </div>
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        {data.location ? (
+          <Row label="Vị trí" value={data.location as string} icon={MapPin} />
+        ) : null}
+        <Row label="Số items" value={data.itemCount as number} icon={Package} />
+        <Row label="Tổng tồn" value={(data.totalStock as number).toLocaleString()} icon={Warehouse} />
+      </div>
+    </div>
+  );
+}
+
+export function ProductTooltipContent({ data }: { data: Record<string, unknown> }) {
+  return (
+    <div className="space-y-2 min-w-[200px]">
+      <div>
+        <div className="font-semibold text-sm text-white">{data.name as string}</div>
+        <div className="text-xs text-yellow-200">{data.sku as string}</div>
+      </div>
+      <StatusBadge status={data.status as string} />
+      <div className="border-t border-white/20 pt-2 space-y-1">
+        {data.basePrice != null && (
+          <Row label="Giá" value={`$${(data.basePrice as number).toLocaleString()}`} icon={DollarSign} />
+        )}
+        {data.assemblyHours != null && (
+          <Row label="Lắp ráp" value={`${data.assemblyHours} giờ`} icon={Wrench} />
+        )}
+        <Row label="WO đang xử lý" value={data.activeWOCount as number} icon={Factory} />
+      </div>
+    </div>
+  );
+}
+
 export function CustomerTooltipContent({ data }: { data: Record<string, unknown> }) {
   return (
     <div className="space-y-2 min-w-[200px]">
@@ -187,7 +233,7 @@ export function CustomerTooltipContent({ data }: { data: Record<string, unknown>
           <Row label="Thanh toán" value={data.paymentTerms as string} />
         ) : null}
         {data.creditLimit != null && (
-          <Row label="Hạn mức" value={`${(data.creditLimit as number).toLocaleString()} VND`} icon={CreditCard} />
+          <Row label="Hạn mức" value={`$${(data.creditLimit as number).toLocaleString()}`} icon={CreditCard} />
         )}
         <Row label="SO đang xử lý" value={data.activeSOCount as number} icon={ShoppingCart} />
       </div>

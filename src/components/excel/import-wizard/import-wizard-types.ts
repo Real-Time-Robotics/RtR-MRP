@@ -75,6 +75,8 @@ export const ENTITY_TYPES: EntityType[] = [
   { value: "suppliers", label: "Nhà cung cấp", description: "Import thông tin nhà cung cấp" },
   { value: "products", label: "Sản phẩm", description: "Import danh mục sản phẩm" },
   { value: "customers", label: "Khách hàng", description: "Import dữ liệu khách hàng" },
+  { value: "warehouses", label: "Kho hàng", description: "Import dữ liệu kho hàng" },
   { value: "inventory", label: "Tồn kho", description: "Import số liệu tồn kho" },
   { value: "bom", label: "BOM", description: "Import định mức vật tư (BOM)" },
+  { value: "part-suppliers", label: "NCC-Vật tư", description: "Import quan hệ nhà cung cấp - vật tư" },
 ];

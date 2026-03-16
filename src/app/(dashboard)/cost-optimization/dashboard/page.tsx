@@ -1,7 +1,9 @@
 "use client";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { Loader2 } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useSavingsDashboard } from "@/hooks/cost-optimization/use-savings-dashboard";
 import { SavingsKPICards } from "@/components/cost-optimization/dashboard/savings-kpi-cards";
 import { SavingsBySourceChart } from "@/components/cost-optimization/dashboard/savings-by-source-chart";
@@ -23,6 +25,12 @@ export default function SavingsDashboardPage() {
         backHref="/cost-optimization"
         actions={
           <div className="flex items-center gap-2">
+            <Button asChild size="sm" className="text-xs">
+              <Link href="/cost-optimization/analyze">
+                <Play className="h-3.5 w-3.5 mr-1.5" />
+                Run Analysis
+              </Link>
+            </Button>
             <ExportButton type="savings" label="Export Savings" />
             <AIQuickAction context={{ type: "general" }} />
           </div>

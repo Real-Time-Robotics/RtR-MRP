@@ -16,10 +16,12 @@ import {
   SOTooltipContent,
   WOTooltipContent,
   CustomerTooltipContent,
+  WarehouseTooltipContent,
+  ProductTooltipContent,
 } from './tooltip-contents';
 
 interface EntityTooltipProps {
-  type: 'part' | 'supplier' | 'po' | 'so' | 'wo' | 'customer';
+  type: 'part' | 'supplier' | 'po' | 'so' | 'wo' | 'customer' | 'warehouse' | 'product';
   id: string;
   children: React.ReactNode;
   side?: 'top' | 'bottom' | 'left' | 'right';
@@ -32,6 +34,8 @@ const CONTENT_MAP: Record<string, React.ComponentType<{ data: Record<string, unk
   so: SOTooltipContent,
   wo: WOTooltipContent,
   customer: CustomerTooltipContent,
+  warehouse: WarehouseTooltipContent,
+  product: ProductTooltipContent,
 };
 
 export function EntityTooltip({ type, id, children, side = 'top' }: EntityTooltipProps) {

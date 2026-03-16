@@ -114,7 +114,7 @@ export const GET = withRoleAuth(['admin', 'manager'], async (request, context, s
       where,
       include: {
         customer: {
-          select: { code: true, name: true },
+          select: { id: true, code: true, name: true },
         },
       },
       orderBy: { invoiceDate: "desc" },

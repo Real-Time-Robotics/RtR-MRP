@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { TrendIndicator } from "@/components/ai/trend-indicator";
 import { compareSupplierLeadTimes } from "@/lib/ai/lead-time-predictor";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { clientLogger } from '@/lib/client-logger';
 
 interface Supplier {
@@ -74,7 +75,11 @@ export default function LeadTimePage() {
       header: 'Supplier',
       width: '180px',
       sortable: true,
-      render: (value) => <span className="font-medium">{value}</span>,
+      render: (value, row) => (
+        <EntityTooltip type="supplier" id={row.supplierId}>
+          <span className="font-medium cursor-help">{value}</span>
+        </EntityTooltip>
+      ),
     },
     {
       key: 'statedDays',

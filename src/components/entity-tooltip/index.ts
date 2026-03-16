@@ -7,4 +7,6 @@ export {
   SOTooltipContent,
   WOTooltipContent,
   CustomerTooltipContent,
+  WarehouseTooltipContent,
+  ProductTooltipContent,
 } from './tooltip-contents';

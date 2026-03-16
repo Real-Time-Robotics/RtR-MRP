@@ -106,6 +106,7 @@ export const GET = withAuth(async (request, context, session) => {
 
         shortages.push({
           id: part.id,
+          partId: part.id,
           partNumber: part.partNumber,
           partName: part.name,
           currentStock,
@@ -116,6 +117,7 @@ export const GET = withAuth(async (request, context, session) => {
           affectedOrders: orderIds.size,
           priority,
           supplier: part.partSuppliers[0]?.supplier.name || null,
+          supplierId: part.partSuppliers[0]?.supplier.id || null,
           leadTimeDays,
         });
       }

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 
 interface AgingBucket {
@@ -28,9 +29,10 @@ interface AgingReportProps {
   summary: AgingBucket;
   details: AgingItem[];
   entityLabel: string;
+  entityType?: 'customer' | 'supplier';
 }
 
-export function AgingReport({ title, summary, details, entityLabel }: AgingReportProps) {
+export function AgingReport({ title, summary, details, entityLabel, entityType }: AgingReportProps) {
   const formatCurrency = (value: number) => {
     return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
@@ -40,7 +42,14 @@ export function AgingReport({ title, summary, details, entityLabel }: AgingRepor
       key: 'entity',
       header: entityLabel,
       width: '200px',
-      render: (_, row) => (
+      render: (_, row) => entityType ? (
+        <EntityTooltip type={entityType} id={row.entityId}>
+          <div className="cursor-help">
+            <div className="font-medium">{row.entityCode}</div>
+            <div className="text-sm text-muted-foreground">{row.entityName}</div>
+          </div>
+        </EntityTooltip>
+      ) : (
         <div>
           <div className="font-medium">{row.entityCode}</div>
           <div className="text-sm text-muted-foreground">{row.entityName}</div>

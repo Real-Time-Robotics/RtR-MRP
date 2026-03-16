@@ -13,6 +13,7 @@ import {
 import { Eye, CreditCard, Search } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { EntityTooltip } from "@/components/entity-tooltip";
 
 interface Invoice {
   id: string;
@@ -22,8 +23,8 @@ interface Invoice {
   status: string;
   totalAmount: number;
   paidAmount: number;
-  customer?: { code: string; name: string };
-  supplier?: { code: string; name: string };
+  customer?: { id?: string; code: string; name: string };
+  supplier?: { id?: string; code: string; name: string };
 }
 
 interface InvoiceListProps {
@@ -68,7 +69,18 @@ export function InvoiceList({
       key: 'entity',
       header: entityLabel,
       width: '150px',
-      render: (_, row) => row.customer?.name || row.supplier?.name || "-",
+      render: (_, row) => {
+        const entity = row.customer || row.supplier;
+        const tooltipType = row.customer ? 'customer' as const : 'supplier' as const;
+        if (entity?.id) {
+          return (
+            <EntityTooltip type={tooltipType} id={entity.id}>
+              <span className="cursor-help">{entity.name}</span>
+            </EntityTooltip>
+          );
+        }
+        return entity?.name || "-";
+      },
     },
     {
       key: 'invoiceDate',

@@ -49,7 +49,17 @@ import {
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { EntityTooltip } from '@/components/entity-tooltip';
 import { clientLogger } from '@/lib/client-logger';
+
+const ENTITY_TYPE_TO_TOOLTIP: Record<string, 'part' | 'supplier' | 'po' | 'so' | 'wo' | 'customer'> = {
+  PART: 'part',
+  PURCHASE_ORDER: 'po',
+  SALES_ORDER: 'so',
+  WORK_ORDER: 'wo',
+  CUSTOMER: 'customer',
+  SUPPLIER: 'supplier',
+};
 
 interface AuditEntry {
   id: string;
@@ -538,11 +548,17 @@ export default function AuditPage() {
                         <TableCell>
                           <div className="text-sm">
                             <span className="font-medium">{entry.entityType}</span>
-                            {entry.entityId && (
+                            {entry.entityId && ENTITY_TYPE_TO_TOOLTIP[entry.entityType] ? (
+                              <EntityTooltip type={ENTITY_TYPE_TO_TOOLTIP[entry.entityType]} id={entry.entityId}>
+                                <span className="text-muted-foreground block text-xs truncate max-w-[100px] cursor-help">
+                                  {entry.entityId}
+                                </span>
+                              </EntityTooltip>
+                            ) : entry.entityId ? (
                               <span className="text-muted-foreground block text-xs truncate max-w-[100px]">
                                 {entry.entityId}
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </TableCell>
                         <TableCell>

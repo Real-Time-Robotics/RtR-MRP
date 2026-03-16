@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BOMHeader, BOMTableHeader } from "@/components/bom/bom-content";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { clientLogger } from '@/lib/client-logger';
 import { toast } from "sonner";
 
@@ -97,7 +98,11 @@ export default function BOMPage() {
       header: 'SKU',
       width: '120px',
       sortable: true,
-      render: (value) => <span className="font-mono font-medium">{value}</span>,
+      render: (value, row) => (
+        <EntityTooltip type="product" id={row.id}>
+          <span className="font-mono font-medium cursor-help">{value}</span>
+        </EntityTooltip>
+      ),
     },
     {
       key: 'name',

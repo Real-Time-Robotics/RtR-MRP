@@ -10,6 +10,7 @@ import { DeleteCustomerDialog, Customer } from '@/components/forms/customer-form
 import { useDataExport } from '@/hooks/use-data-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { EntityTooltip } from '@/components/entity-tooltip';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { useApiData } from '@/hooks/use-api-data';
@@ -138,7 +139,11 @@ export function CustomersTable({ initialData = [] }: CustomersTableProps) {
       width: '100px',
       sortable: true,
       sticky: 'left',
-      render: (value) => <span className="font-mono font-medium">{value}</span>,
+      render: (value, row) => (
+        <EntityTooltip type="customer" id={row.id}>
+          <span className="font-mono font-medium cursor-help">{value}</span>
+        </EntityTooltip>
+      ),
     },
     {
       key: 'name',

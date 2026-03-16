@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
+import { EntityTooltip } from "@/components/entity-tooltip";
 import { clientLogger } from '@/lib/client-logger';
 
 interface ShortageItem {
   id: string;
+  partId: string;
   partNumber: string;
   partName: string;
   currentStock: number;
@@ -21,6 +23,7 @@ interface ShortageItem {
   affectedOrders: number;
   priority: string;
   supplier: string | null;
+  supplierId: string | null;
   leadTimeDays: number;
 }
 
@@ -53,10 +56,12 @@ export default function ShortagesPage() {
       header: 'Part',
       width: '200px',
       render: (_, row) => (
-        <div>
-          <p className="font-medium">{row.partNumber}</p>
-          <p className="text-sm text-muted-foreground">{row.partName}</p>
-        </div>
+        <EntityTooltip type="part" id={row.partId}>
+          <div className="cursor-help">
+            <p className="font-medium">{row.partNumber}</p>
+            <p className="text-sm text-muted-foreground">{row.partName}</p>
+          </div>
+        </EntityTooltip>
       ),
     },
     {
@@ -98,10 +103,19 @@ export default function ShortagesPage() {
       header: 'Supplier',
       width: '150px',
       render: (value, row) => value ? (
-        <div>
-          <p>{value}</p>
-          <p className="text-sm text-muted-foreground">{row.leadTimeDays} days lead time</p>
-        </div>
+        row.supplierId ? (
+          <EntityTooltip type="supplier" id={row.supplierId}>
+            <div className="cursor-help">
+              <p>{value}</p>
+              <p className="text-sm text-muted-foreground">{row.leadTimeDays} days lead time</p>
+            </div>
+          </EntityTooltip>
+        ) : (
+          <div>
+            <p>{value}</p>
+            <p className="text-sm text-muted-foreground">{row.leadTimeDays} days lead time</p>
+          </div>
+        )
       ) : (
         <span className="text-muted-foreground">-</span>
       ),
