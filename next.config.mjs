@@ -150,6 +150,9 @@ const nextConfig = {
   // Enable standalone output for Docker deployment (auto-detect)
   ...(process.env.DOCKER === "true" ? { output: "standalone" } : {}),
 
+  // Disable font optimization during Docker builds (no internet access to Google Fonts)
+  optimizeFonts: process.env.DOCKER !== "true",
+
   // Server-side packages that should not be bundled by webpack
   experimental: {
     serverComponentsExternalPackages: ['pdfkit'],
