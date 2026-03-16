@@ -12,6 +12,7 @@ RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # ==================== Stage 2: Builder ====================
 FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 # Copy deps
@@ -32,8 +33,8 @@ RUN npx next build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Install netcat for health checks
-RUN apk add --no-cache netcat-openbsd
+# Install netcat for health checks and openssl for Prisma
+RUN apk add --no-cache netcat-openbsd openssl
 
 # Security: Run as non-root user
 RUN addgroup --system --gid 1001 nodejs
