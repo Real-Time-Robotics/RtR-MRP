@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
+export const dynamic = 'force-dynamic';
+
 // =============================================================================
 // HEALTH CHECK API - Gate 5.4 Compliant
 // Must include DB proof: dbElapsedMs + dbCheckedAt
