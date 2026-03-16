@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json* .npmrc* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # ==================== Stage 2: Builder ====================
 FROM node:20-alpine AS builder
