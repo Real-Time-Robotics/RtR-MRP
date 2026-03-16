@@ -29,7 +29,7 @@ export function SpendBySupplierChart({ data }: SpendBySupplierChartProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
               <XAxis
