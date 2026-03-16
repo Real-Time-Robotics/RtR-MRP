@@ -7,8 +7,9 @@ npm-debug.log*
 dist
 out
 
-# Docker
-docker
+# Docker (exclude everything except scripts needed by Dockerfile)
+docker/nginx
+docker/docker-compose*.yml
 docker-compose*.yml
 Dockerfile*
 
