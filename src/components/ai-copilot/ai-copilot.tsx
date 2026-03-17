@@ -55,7 +55,7 @@ export default function AICopilot({
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMode, setActiveMode] = useState<PanelMode>('chat');
-  const [insightsCount, setInsightsCount] = useState(5);
+  const [insightsCount, setInsightsCount] = useState(0);
   const [pendingAction, setPendingAction] = useState<AIAction | null>(null);
   const [aiEnabled, setAiEnabled] = useState(true);
 
@@ -74,11 +74,10 @@ export default function AICopilot({
     language,
   };
 
-  // Simulate proactive insights when selection changes
+  // Update insights count when selection changes
   useEffect(() => {
     if (selectedItem) {
-      setInsightsCount(prev => prev + 2); // Pretend we found 2 new insights
-      // In real app, we would fetchAIInsights(selectedItem.id)
+      // Future: fetch real insights count from API
     }
   }, [selectedItem]);
 

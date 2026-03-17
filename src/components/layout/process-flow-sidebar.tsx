@@ -110,7 +110,7 @@ const stages: NavStage[] = [
     bgColor: 'bg-green-50 dark:bg-green-900/20',
     borderColor: 'border-green-500',
     items: [
-      { id: 'sales', labelKey: 'sidebar.orders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales', badge: 5 },
+      { id: 'sales', labelKey: 'sidebar.orders', icon: <ShoppingCart className="w-5 h-5" />, href: '/sales' },
       { id: 'inventory', labelKey: 'sidebar.inventory', icon: <ClipboardList className="w-5 h-5" />, href: '/inventory' },
       { id: 'mrp', labelKey: 'sidebar.mrp', icon: <Calculator className="w-5 h-5" />, href: '/mrp' },
       { id: 'mrp-wizard', labelKey: 'sidebar.mrpWizard', icon: <Wand2 className="w-5 h-5" />, href: '/mrp/wizard' },
@@ -123,7 +123,7 @@ const stages: NavStage[] = [
     bgColor: 'bg-orange-50 dark:bg-orange-900/20',
     borderColor: 'border-orange-500',
     items: [
-      { id: 'purchasing', labelKey: 'sidebar.purchasing', icon: <Truck className="w-5 h-5" />, href: '/purchasing', badge: 3 },
+      { id: 'purchasing', labelKey: 'sidebar.purchasing', icon: <Truck className="w-5 h-5" />, href: '/purchasing' },
       { id: 'production', labelKey: 'sidebar.production', icon: <Factory className="w-5 h-5" />, href: '/production' },
       { id: 'oee', labelKey: 'sidebar.oee', icon: <Gauge className="w-5 h-5" />, href: '/production/oee' },
       { id: 'quality', labelKey: 'sidebar.quality', icon: <CheckCircle className="w-5 h-5" />, href: '/quality' },

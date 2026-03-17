@@ -58,7 +58,7 @@ interface SidebarItem {
 // COMPACT: w-4 h-4 → w-3.5 h-3.5 (16px → 14px)
 const mainNavItems: SidebarItem[] = [
   { id: 'dashboard', label: 'DASHBOARD', labelVi: 'TỔNG QUAN', icon: <LayoutDashboard className="w-3.5 h-3.5" />, href: '/home' },
-  { id: 'sales', label: 'ORDERS', labelVi: 'ĐƠN HÀNG', icon: <ShoppingCart className="w-3.5 h-3.5" />, href: '/orders', badge: 5 },
+  { id: 'sales', label: 'ORDERS', labelVi: 'ĐƠN HÀNG', icon: <ShoppingCart className="w-3.5 h-3.5" />, href: '/orders' },
   { id: 'inventory', label: 'INVENTORY', labelVi: 'TỒN KHO', icon: <Package className="w-3.5 h-3.5" />, href: '/inventory' },
   { id: 'production', label: 'PRODUCTION', labelVi: 'SẢN XUẤT', icon: <Factory className="w-3.5 h-3.5" />, href: '/production' },
   { id: 'mrp', label: 'MRP', labelVi: 'MRP', icon: <Calculator className="w-3.5 h-3.5" />, href: '/mrp' },

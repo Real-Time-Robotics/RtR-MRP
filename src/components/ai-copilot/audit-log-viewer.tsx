@@ -54,69 +54,9 @@ interface AuditLogViewerProps {
   dateRange?: { start: Date; end: Date };
 }
 
-// Mock data generator
-function generateMockAuditLogs(count: number = 50): AuditLogEntry[] {
-  const intents = ['low_stock_query', 'sales_summary', 'supplier_query', 'production_status', 'quality_issues'];
-  const modules = ['inventory', 'sales', 'procurement', 'production', 'quality'];
-  const actions: (AuditLogEntry['userAction'])[] = ['approved', 'rejected', 'modified', 'ignored', undefined];
-  const users = [
-    { id: 'user_1', name: 'Nguyễn Văn A', role: 'manager' },
-    { id: 'user_2', name: 'Trần Thị B', role: 'user' },
-    { id: 'user_3', name: 'Lê Văn C', role: 'admin' },
-  ];
-
-  const queries = [
-    'Linh kiện nào sắp hết hàng?',
-    'Doanh thu tháng này là bao nhiêu?',
-    'Hiệu suất nhà cung cấp thế nào?',
-    'Work order nào đang chạy?',
-    'Có NCR nào đang mở không?',
-    'Show low stock items',
-    'Sales this month',
-    'Supplier performance report',
-    'Production status update',
-    'Open quality issues',
-  ];
-
-  return Array.from({ length: count }, (_, i) => {
-    const user = users[Math.floor(Math.random() * users.length)];
-    const selectedModule = modules[Math.floor(Math.random() * modules.length)];
-    const timestamp = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-    
-    return {
-      id: `audit_${Date.now()}_${i}`,
-      timestamp,
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      sessionId: `sess_${Math.random().toString(36).substr(2, 9)}`,
-      input: {
-        type: 'text' as const,
-        content: queries[Math.floor(Math.random() * queries.length)],
-        context: {
-          page: selectedModule.charAt(0).toUpperCase() + selectedModule.slice(1),
-          module: selectedModule,
-        },
-      },
-      processing: {
-        intent: intents[Math.floor(Math.random() * intents.length)],
-        agent: `${selectedModule}_agent`,
-        tokensUsed: Math.floor(Math.random() * 2000) + 500,
-        latencyMs: Math.floor(Math.random() * 2000) + 200,
-      },
-      output: {
-        confidence: Math.random() * 0.4 + 0.6, // 0.6 - 1.0
-        suggestedActions: Math.random() > 0.5 ? ['action_1', 'action_2'] : [],
-        responseLength: Math.floor(Math.random() * 1000) + 200,
-        hadWarnings: Math.random() > 0.8,
-      },
-      userAction: actions[Math.floor(Math.random() * actions.length)],
-      feedback: Math.random() > 0.7 ? {
-        rating: Math.floor(Math.random() * 5) + 1,
-        comment: Math.random() > 0.5 ? 'Helpful response' : undefined,
-      } : undefined,
-    };
-  }).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+// Returns empty array — audit logs will come from API when available
+function generateMockAuditLogs(_count: number = 50): AuditLogEntry[] {
+  return [];
 }
 
 // Confidence badge component
