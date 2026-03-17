@@ -81,9 +81,12 @@ export default function AIChatPanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: content.trim(),
-          context,
-          history: messages.slice(-10),
+          message: content.trim(),
+          context: context ? JSON.stringify(context) : undefined,
+          conversationHistory: messages
+            .filter(m => !m.isLoading)
+            .slice(-10)
+            .map(m => ({ role: m.role, content: m.content })),
         }),
       });
 
