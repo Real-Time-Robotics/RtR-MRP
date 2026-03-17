@@ -39,6 +39,10 @@ const SECTION_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: 
 
 // Professional markdown renderer - clean minimalist design
 export function renderMessageContent(content: string, isUserMessage: boolean = false): React.ReactNode {
+  if (!content) {
+    return <span className="text-gray-400 italic">Không có phản hồi</span>;
+  }
+
   // For user messages, just return plain text with white color
   if (isUserMessage) {
     return <span className="text-white">{content}</span>;
