@@ -1,7 +1,7 @@
 // =============================================================================
 // AI PROVIDER SERVICE
 // Multi-provider AI integration with automatic fallback
-// Primary: OpenAI (GPT-4) | Fallback: Anthropic (Claude)
+// Primary: Anthropic (Claude) | Fallback: OpenAI (GPT-4)
 // =============================================================================
 
 import { EventEmitter } from 'events';
@@ -84,7 +84,7 @@ export class AIProviderService extends EventEmitter {
       },
       anthropic: {
         apiKey: config?.anthropic?.apiKey || process.env.ANTHROPIC_API_KEY || '',
-        model: config?.anthropic?.model || 'claude-3-sonnet-20240229',
+        model: config?.anthropic?.model || 'claude-sonnet-4-20250514',
         baseUrl: config?.anthropic?.baseUrl || 'https://api.anthropic.com/v1',
       },
     };
@@ -265,7 +265,7 @@ export class AIProviderService extends EventEmitter {
   async chat(options: AIRequestOptions): Promise<AIResponse> {
     const providers: AIProvider[] = options.provider 
       ? [options.provider]
-      : ['openai', 'anthropic']; // Priority order
+      : ['anthropic', 'openai']; // Priority: Claude first, OpenAI fallback
 
     let lastError: Error | null = null;
 

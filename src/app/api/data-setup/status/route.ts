@@ -26,7 +26,7 @@ export const GET = withAuth(async () => {
     prisma.inventory.count(),
   ]);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     warehouses,
     suppliers,
     customers,
@@ -36,4 +36,6 @@ export const GET = withAuth(async () => {
     bom,
     inventory,
   });
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return response;
 });

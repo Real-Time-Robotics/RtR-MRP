@@ -109,7 +109,9 @@ export default function DataSetupPage() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const res = await fetch("/api/data-setup/status");
+      const res = await fetch(`/api/data-setup/status?t=${Date.now()}`, {
+        cache: 'no-store',
+      });
       if (res.ok) {
         setCounts(await res.json());
       }
