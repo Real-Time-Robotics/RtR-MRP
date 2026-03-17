@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 const publicRoutes = [
   '/',
   '/login',
-  '/demo',
+  '/register',
   '/forgot-password',
   '/reset-password',
   '/api/auth',

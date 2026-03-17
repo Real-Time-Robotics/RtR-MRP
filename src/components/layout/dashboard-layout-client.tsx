@@ -3,7 +3,6 @@
 import { useSession } from 'next-auth/react';
 import { ModernAppShell } from '@/components/layout/modern-app-shell';
 import AIWrapper from '@/components/ai-copilot/ai-wrapper';
-import { DemoFloatingBadge } from '@/components/demo/demo-floating-badge';
 import { WorkSessionPanel } from '@/components/work-session/work-session-panel';
 import { ContextAssistantDialog } from '@/components/work-session/context-assistant-dialog';
 import { CommandPalette } from '@/components/command-palette';
@@ -35,8 +34,6 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
       <ContextAssistantDialog />
       {/* Command Palette - Cmd+K */}
       <CommandPalette />
-      {/* Demo Mode Badge - only visible for demo users */}
-      <DemoFloatingBadge position="bottom-left" />
     </ModernAppShell>
   );
 }

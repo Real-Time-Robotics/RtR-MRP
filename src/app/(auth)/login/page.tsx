@@ -36,6 +36,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams?.get('callbackUrl') || '/home';
   const error = searchParams?.get('error');
+  const registered = searchParams?.get('registered');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -186,6 +187,16 @@ function LoginContent() {
               }
             </p>
           </div>
+
+          {/* Registration Success */}
+          {registered === 'true' && !loginError && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                Đăng ký thành công! Hãy đăng nhập.
+              </p>
+            </div>
+          )}
 
           {/* Error Alert */}
           {loginError && (
@@ -402,52 +413,17 @@ function LoginContent() {
             </div>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                {t('login.demoAvailable')}
-              </p>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between p-2 bg-white/60 dark:bg-gray-800/60 rounded-lg">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('login.email')}</p>
-                  <p className="font-mono text-gray-900 dark:text-gray-100">admin@demo.rtr-mrp.com</p>
-                </div>
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">{t('login.password')}</p>
-                  <p className="font-mono text-gray-900 dark:text-gray-100">Admin@Demo2026!</p>
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('admin@demo.rtr-mrp.com');
-                setPassword('Admin@Demo2026!');
-              }}
-              className="mt-3 w-full py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors"
-            >
-              {t('login.useDemoAccount')}
-            </button>
-          </div>
-
-          {/* Demo Page Link */}
-          <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800/30">
-            <div className="text-center">
-              <p className="text-sm text-green-800 dark:text-green-200 mb-2">
-                {t('login.tryRoles')}
-              </p>
+          {/* Register Link */}
+          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+            <p>
+              Chưa có tài khoản?{' '}
               <Link
-                href="/demo"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                href="/register"
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
               >
-                {t('login.tryDemoRoles')}
-                <ArrowRight className="w-4 h-4" />
+                Đăng ký
               </Link>
-            </div>
+            </p>
           </div>
 
           {/* Footer Links */}
