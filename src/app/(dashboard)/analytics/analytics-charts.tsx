@@ -221,7 +221,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
   const supplierPerformanceColumns: Column<{ name: string; onTime: number; quality: number; score: number }>[] = useMemo(() => [
     {
       key: 'name',
-      header: 'Nha cung cap',
+      header: 'Nhà cung cấp',
       width: '120px',
       sortable: true,
       render: (value) => <span className="font-medium text-gray-900 dark:text-white">{value}</span>,
@@ -357,7 +357,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
             <MetricCard
               title="Work Orders Active"
               value={metrics.production.activeWorkOrders}
-              subtitle={`${metrics.production.completedThisMonth} hoan thanh thang nay`}
+              subtitle={`${metrics.production.completedThisMonth} hoàn thành tháng này`}
               icon={Factory}
               color={COLORS.purple}
               trend="up"
@@ -366,7 +366,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
             <MetricCard
               title="First Pass Yield"
               value={`${metrics.quality.firstPassYield}%`}
-              subtitle={`${metrics.quality.openNCRs} NCR dang mo`}
+              subtitle={`${metrics.quality.openNCRs} NCR đang mở`}
               icon={Award}
               color={COLORS.warning}
               trend={metrics.quality.changePercent < 0 ? 'down' : 'up'}
@@ -476,7 +476,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
           {/* Charts Row 2 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Production Trend */}
-            <ChartCard title="Tien do san xuat (Thang nay)">
+            <ChartCard title="Tiến độ sản xuất (Tháng này)">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={charts.productionTrend}>
@@ -535,7 +535,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
             </ChartCard>
 
             {/* Supplier Performance */}
-            <ChartCard title="Hieu suat nha cung cap">
+            <ChartCard title="Hiệu suất nhà cung cấp">
               <DataTable
                 data={charts.supplierPerformance}
                 columns={supplierPerformanceColumns}
@@ -725,7 +725,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
               color={COLORS.warning}
             />
             <MetricCard
-              title="Hoan thanh"
+              title="Hoàn thành"
               value={metrics.sales.completedOrders}
               icon={CheckCircle}
               color={COLORS.success}
@@ -775,13 +775,13 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <MetricCard
-              title="WO Dang chay"
+              title="WO Đang chạy"
               value={metrics.production.activeWorkOrders}
               icon={Factory}
               color={COLORS.info}
             />
             <MetricCard
-              title="Hoan thanh thang nay"
+              title="Hoàn thành tháng này"
               value={metrics.production.completedThisMonth}
               icon={CheckCircle}
               color={COLORS.success}
@@ -793,7 +793,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
               color={COLORS.success}
             />
             <MetricCard
-              title="Hieu suat"
+              title="Hiệu suất"
               value={`${metrics.production.efficiency}%`}
               icon={Zap}
               color={COLORS.warning}
@@ -806,7 +806,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
             />
           </div>
 
-          <ChartCard title="Tien do san xuat theo tuan">
+          <ChartCard title="Tiến độ sản xuất theo tuần">
             <div className="h-80">
               <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={charts.productionTrend}>
@@ -818,7 +818,7 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
                   <Legend />
                   <Bar yAxisId="left" dataKey="planned" name="Ke hoach" fill={COLORS.secondary} radius={[4, 4, 0, 0]} />
                   <Bar yAxisId="left" dataKey="actual" name="Thuc te" fill={COLORS.success} radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="efficiency" name="Hieu suat %" stroke={COLORS.warning} strokeWidth={2} />
+                  <Line yAxisId="right" type="monotone" dataKey="efficiency" name="Hiệu suất %" stroke={COLORS.warning} strokeWidth={2} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -837,13 +837,13 @@ export default function AnalyticsChartsContent({ data, activeTab }: AnalyticsCha
               color={COLORS.info}
             />
             <MetricCard
-              title="NCR Dang mo"
+              title="NCR Đang mở"
               value={metrics.quality.openNCRs}
               icon={AlertCircle}
               color={COLORS.danger}
             />
             <MetricCard
-              title="CAPA Dang mo"
+              title="CAPA Đang mở"
               value={metrics.quality.openCAPAs}
               icon={Wrench}
               color={COLORS.warning}

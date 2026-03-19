@@ -154,7 +154,7 @@ export function OpportunitiesList({
 
       {filtered.length === 0 && (
         <div className="text-center py-8 text-muted-foreground">
-          Khong tim thay co hoi toi uu
+          Không tìm thấy cơ hội tối ưu
         </div>
       )}
     </div>

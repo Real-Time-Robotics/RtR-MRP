@@ -171,11 +171,11 @@ vi.mock('@/lib/spc', () => ({
 // Mock report engine
 vi.mock('@/lib/reports/report-engine', () => ({
   REPORT_TEMPLATES: [
-    { type: 'PRODUCTION_SUMMARY', category: 'PRODUCTION', name: 'Production Summary', nameVi: 'Tong hop san xuat', description: 'Desc', descriptionVi: 'Mo ta', icon: 'icon' },
-    { type: 'INVENTORY_STATUS', category: 'INVENTORY', name: 'Inventory Status', nameVi: 'Trang thai kho', description: 'Desc', descriptionVi: 'Mo ta', icon: 'icon' },
+    { type: 'PRODUCTION_SUMMARY', category: 'PRODUCTION', name: 'Production Summary', nameVi: 'Tổng hợp sản xuất', description: 'Desc', descriptionVi: 'Mô tả', icon: 'icon' },
+    { type: 'INVENTORY_STATUS', category: 'INVENTORY', name: 'Inventory Status', nameVi: 'Trạng thái kho', description: 'Desc', descriptionVi: 'Mô tả', icon: 'icon' },
   ],
   CATEGORY_CONFIG: {
-    PRODUCTION: { label: 'Production', labelVi: 'San xuat', color: '#000', bgColor: '#fff' },
+    PRODUCTION: { label: 'Production', labelVi: 'Sản xuất', color: '#000', bgColor: '#fff' },
     INVENTORY: { label: 'Inventory', labelVi: 'Kho', color: '#000', bgColor: '#fff' },
   },
   getTemplate: vi.fn().mockReturnValue({ type: 'PRODUCTION_SUMMARY', name: 'Production Summary' }),

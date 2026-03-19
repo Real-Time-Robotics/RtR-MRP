@@ -307,7 +307,7 @@ export function ReorderAlertPanel({
                 {!compact && (
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className="text-gray-600 dark:text-gray-400">
-                      De xuat: <strong>{item.suggestedOrderQty}</strong> units
+                      Đề xuất: <strong>{item.suggestedOrderQty}</strong> units
                     </span>
                     <span className="font-medium text-gray-900 dark:text-white">
                       ~{new Intl.NumberFormat('vi-VN').format(item.estimatedCost)} VND
@@ -360,7 +360,7 @@ export function ReorderAlertPanel({
 
       {/* Last checked */}
       <p className="text-xs text-gray-400 text-center">
-        Cap nhat: {new Date(summary.lastChecked).toLocaleString('vi-VN')}
+        Cập nhật: {new Date(summary.lastChecked).toLocaleString('vi-VN')}
       </p>
     </div>
   );

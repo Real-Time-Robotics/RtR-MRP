@@ -73,7 +73,7 @@ export async function startSession(userId: string, input: StartSessionInput) {
   });
 
   if (existing) {
-    // Resume the existing session
+    // Resume the existing session and update entityNumber if changed
     const updated = await prisma.workSession.update({
       where: { id: existing.id },
       data: {
@@ -81,6 +81,9 @@ export async function startSession(userId: string, input: StartSessionInput) {
         lastActivityAt: new Date(),
         pausedAt: null,
         resumeUrl: input.resumeUrl,
+        ...(input.entityNumber && input.entityNumber !== existing.entityNumber
+          ? { entityNumber: input.entityNumber }
+          : {}),
       },
     });
     return serializeSession(updated);

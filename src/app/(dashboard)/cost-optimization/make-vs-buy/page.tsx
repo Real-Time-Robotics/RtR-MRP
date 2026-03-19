@@ -9,7 +9,7 @@ export default function MakeVsBuyPage() {
     <div className="space-y-4">
       <PageHeader
         title="Make vs Buy Analysis"
-        description="Phan tich quyet dinh tu san xuat hay mua ngoai"
+        description="Phân tích quyết định tự sản xuất hay mua ngoài"
         backHref="/cost-optimization"
         actions={<AIQuickAction context={{ type: "general" }} />}
       />

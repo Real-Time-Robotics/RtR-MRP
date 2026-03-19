@@ -271,7 +271,7 @@ export function EvaluationDetail({ evaluation, onUpdate }: EvaluationDetailProps
             <div className="flex gap-2">
               <Button onClick={handleAdvanceStatus} disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
-                Bat dau danh gia
+                Bắt đầu đánh giá
               </Button>
             </div>
           )}
@@ -321,7 +321,7 @@ export function EvaluationDetail({ evaluation, onUpdate }: EvaluationDetailProps
 
           {evaluation.status === "SUB_APPROVED" && (
             <Button onClick={handleMarkImplemented} disabled={loading}>
-              Danh dau da trien khai
+              Đánh dấu đã triển khai
             </Button>
           )}
 
@@ -336,7 +336,7 @@ export function EvaluationDetail({ evaluation, onUpdate }: EvaluationDetailProps
             <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
               <span className="text-sm font-medium text-green-800 dark:text-green-400">
-                Da trien khai thanh cong
+                Đã triển khai thành công
               </span>
             </div>
           )}

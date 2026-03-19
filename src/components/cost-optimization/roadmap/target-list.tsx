@@ -53,12 +53,12 @@ export function TargetList() {
             Chua co muc tieu nao
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Tao muc tieu giam chi phi dau tien
+            Tạo mục tiêu giảm chi phí đầu tiên
           </p>
           <Button className="mt-4" asChild>
             <Link href="/cost-optimization/roadmap/new">
               <Plus className="w-4 h-4 mr-1" />
-              Tao muc tieu
+              Tạo mục tiêu
             </Link>
           </Button>
         </CardContent>
@@ -75,7 +75,7 @@ export function TargetList() {
         <Button asChild>
           <Link href="/cost-optimization/roadmap/new">
             <Plus className="w-4 h-4 mr-1" />
-            Tao muc tieu
+            Tạo mục tiêu
           </Link>
         </Button>
       </div>

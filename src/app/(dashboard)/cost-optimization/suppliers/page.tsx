@@ -21,7 +21,7 @@ export default function SupplierOptimizationPage() {
     <div className="space-y-4">
       <PageHeader
         title="Supplier Optimization"
-        description="Phan tich va toi uu chi phi tu nha cung cap"
+        description="Phân tích và tối ưu hóa chi phí từ nhà cung cấp"
         backHref="/cost-optimization"
         actions={<AIQuickAction context={{ type: "supplier" }} />}
       />

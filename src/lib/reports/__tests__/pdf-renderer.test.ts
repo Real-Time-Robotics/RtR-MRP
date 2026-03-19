@@ -43,15 +43,15 @@ function makeReportData(overrides?: Partial<ReportData>): ReportData {
     template: {
       id: 'test-report',
       name: 'Test Report',
-      nameVi: 'Bao cao Test',
+      nameVi: 'Báo cáo Test',
       description: 'Test desc',
-      descriptionVi: 'Mo ta test',
+      descriptionVi: 'Mô tả test',
       icon: 'Package',
       category: 'inventory',
       columns: [
-        { key: 'partNumber', label: 'Part Number', labelVi: 'Ma SP', type: 'string' },
-        { key: 'quantity', label: 'Quantity', labelVi: 'So luong', type: 'number' },
-        { key: 'value', label: 'Value', labelVi: 'Gia tri', type: 'currency' },
+        { key: 'partNumber', label: 'Part Number', labelVi: 'Mã SP', type: 'string' },
+        { key: 'quantity', label: 'Quantity', labelVi: 'Số lượng', type: 'number' },
+        { key: 'value', label: 'Value', labelVi: 'Giá trị', type: 'currency' },
       ],
       defaultFrequency: 'DAILY',
       defaultTime: '07:00',
@@ -101,7 +101,7 @@ describe('pdf-renderer', () => {
       data.template.columns.push({
         key: 'rate',
         label: 'Rate',
-        labelVi: 'Ty le',
+        labelVi: 'Tỷ lệ',
         type: 'percent',
       });
       data.rows = [{ partNumber: 'P001', quantity: 10, value: 100, rate: 95.5 }];
@@ -115,7 +115,7 @@ describe('pdf-renderer', () => {
       data.template.columns.push({
         key: 'createdAt',
         label: 'Date',
-        labelVi: 'Ngay',
+        labelVi: 'Ngày',
         type: 'date',
       });
       data.rows = [{ partNumber: 'P001', quantity: 10, value: 100, createdAt: '2025-01-15' }];
@@ -137,7 +137,7 @@ describe('pdf-renderer', () => {
       data.template.columns = Array.from({ length: 10 }, (_, i) => ({
         key: `col${i}`,
         label: `Col ${i}`,
-        labelVi: `Cot ${i}`,
+        labelVi: `Cột ${i}`,
         type: 'string' as const,
       }));
       data.rows = [Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`col${i}`, `val${i}`]))];

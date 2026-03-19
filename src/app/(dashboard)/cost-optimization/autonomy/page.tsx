@@ -20,7 +20,7 @@ export default function AutonomyPage() {
     <div className="space-y-4">
       <PageHeader
         title="Autonomy Tracker"
-        description="Theo doi muc do tu chu san xuat"
+        description="Theo dõi mức độ tự chủ sản xuất"
         backHref="/cost-optimization"
         actions={
           <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export default function AutonomyPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <AutonomyGauge
               percent={data.summary.autonomyPercent}
-              label="Tu chu san xuat"
+              label="Tự chủ sản xuất"
               size="lg"
             />
             <AutonomyGauge

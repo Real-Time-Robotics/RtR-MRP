@@ -167,9 +167,9 @@ const generateMockData = (): { metrics: DashboardMetrics; charts: ChartData } =>
         { category: 'Sensors', value: 120000, quantity: 380 },
       ],
       ordersByStatus: [
-        { status: 'Hoan thanh', count: 144, color: COLORS.success },
-        { status: 'Dang xu ly', count: 8, color: COLORS.info },
-        { status: 'Cho xac nhan', count: 4, color: COLORS.warning },
+        { status: 'Hoàn thành', count: 144, color: COLORS.success },
+        { status: 'Đang xử lý', count: 8, color: COLORS.info },
+        { status: 'Chờ xác nhận', count: 4, color: COLORS.warning },
         { status: 'Huy', count: 2, color: COLORS.danger },
       ],
       productionTrend: [
@@ -233,7 +233,7 @@ export default function AnalyticsDashboard() {
       <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-neutral-400">Dang tai du lieu...</p>
+          <p className="text-gray-600 dark:text-neutral-400">Đang tải dữ liệu...</p>
         </div>
       </div>
     );

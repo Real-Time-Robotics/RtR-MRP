@@ -21,7 +21,7 @@ export default function BomCostAnalysisPage() {
     <div className="space-y-6">
       <PageHeader
         title="BOM Cost Analysis"
-        description="Phan tich chi phi chi tiet theo linh kien, nguon goc Make vs Buy"
+        description="Phân tích chi phí chi tiết theo linh kiện, nguồn gốc Make vs Buy"
         backHref="/cost-optimization"
         actions={
           <div className="flex items-center gap-2">
@@ -64,7 +64,7 @@ export default function BomCostAnalysisPage() {
       {/* Error state */}
       {error && (
         <div className="text-center py-20 text-red-600">
-          Khong the tai du lieu. Vui long thu lai.
+          Không thể tải dữ liệu. Vui lòng thử lại.
         </div>
       )}
 

@@ -253,7 +253,7 @@ export function AnalysisForm() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Factory className="w-4 h-4 text-blue-500" />
-                Tu san xuat (Make)
+                Tự sản xuất (Make)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -283,7 +283,7 @@ export function AnalysisForm() {
                 />
               </div>
               <div>
-                <Label className="text-xs">Timeline trien khai (thang)</Label>
+                <Label className="text-xs">Timeline triển khai (tháng)</Label>
                 <Input
                   type="number"
                   value={makeTimelineMonths || ""}

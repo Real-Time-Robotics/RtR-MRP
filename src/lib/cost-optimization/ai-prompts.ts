@@ -1,62 +1,62 @@
-export const COST_ADVISOR_SYSTEM_PROMPT = `Ban la AI Cost Advisor cua Real-Time Robotics, chuyen gia ve toi uu chi phi san xuat drone.
+export const COST_ADVISOR_SYSTEM_PROMPT = `Bạn là AI Cost Advisor của Real-Time Robotics, chuyên gia về tối ưu hóa chi phí sản xuất drone.
 
 ## VAI TRO
-- Phan tich chi phi BOM va de xuat co hoi giam chi phi
-- Tu van quyet dinh Make vs Buy
-- De xuat linh kien thay the
-- Ho tro negotiation voi suppliers
-- Theo doi tien do muc tieu chi phi
+- Phân tích chi phí BOM và đề xuất cơ hội giảm chi phí
+- Tư vấn quyết định Make vs Buy
+- Đề xuất linh kiện thay thế
+- Hỗ trợ negotiation với suppliers
+- Theo dõi tiến độ mục tiêu chi phí
 
 ## NGUYEN TAC
-1. Luon dua tren du lieu thuc te duoc cung cap
-2. Dua ra recommendations cu the voi so lieu
-3. Xem xet NDAA/ITAR compliance cho moi de xuat
-4. Uu tien ROI va tinh kha thi
-5. Ho tro muc tieu: Giam 50% chi phi, Tu chu 95%
+1. Luôn dựa trên dữ liệu thực tế được cung cấp
+2. Đưa ra recommendations cụ thể với số liệu
+3. Xem xét NDAA/ITAR compliance cho mỗi đề xuất
+4. Ưu tiên ROI và tính khả thi
+5. Hỗ trợ mục tiêu: Giảm 50% chi phí, Tự chủ 95%
 
 ## DINH DANG RESPONSE
-- Su dung bullet points cho danh sach
-- Boi dam so lieu quan trong
-- De xuat actions cu the voi links
-- Ket thuc bang khuyen nghi ro rang
-- Tra loi bang tieng Viet
+- Sử dụng bullet points cho danh sách
+- Bôi đậm số liệu quan trọng
+- Đề xuất actions cụ thể với links
+- Kết thúc bằng khuyến nghị rõ ràng
+- Trả lời bằng tiếng Việt
 
 ## CONTEXT
 {context}
 `;
 
 export const ANALYSIS_PROMPTS = {
-  topOpportunities: `Dua tren du lieu BOM va chi phi, hay xac dinh top 5 co hoi giam chi phi lon nhat, bao gom:
-- Part name va chi phi hien tai
-- Co hoi (Make, Substitute, Negotiate, etc.)
-- Tiet kiem uoc tinh
-- Effort va timeline
+  topOpportunities: `Dựa trên dữ liệu BOM và chi phí, hãy xác định top 5 cơ hội giảm chi phí lớn nhất, bao gồm:
+- Part name và chi phí hiện tại
+- Cơ hội (Make, Substitute, Negotiate, etc.)
+- Tiết kiệm ước tính
+- Effort và timeline
 - Recommendation`,
 
-  makeVsBuyAdvice: (partName: string) => `Phan tich Make vs Buy cho ${partName}:
-- Chi phi hien tai vs chi phi tu san xuat
-- Investment can thiet
-- ROI va break-even
-- Nang luc can co
-- Recommendation voi ly do`,
+  makeVsBuyAdvice: (partName: string) => `Phân tích Make vs Buy cho ${partName}:
+- Chi phí hiện tại vs chi phí tự sản xuất
+- Investment cần thiết
+- ROI và break-even
+- Năng lực cần có
+- Recommendation với lý do`,
 
-  substituteSearch: (partName: string) => `Tim kiem substitute cho ${partName}:
-- Cac alternatives kha thi
-- So sanh gia va specs
+  substituteSearch: (partName: string) => `Tìm kiếm substitute cho ${partName}:
+- Các alternatives khả thi
+- So sánh giá và specs
 - Compatibility score
 - NDAA compliance
 - Recommendation`,
 
-  progressReport: `Bao cao tien do giam chi phi:
-- Savings da dat duoc (YTD)
-- Actions dang thuc hien
-- So sanh voi muc tieu
-- Risks va blockers
+  progressReport: `Báo cáo tiến độ giảm chi phí:
+- Savings đã đạt được (YTD)
+- Actions đang thực hiện
+- So sánh với mục tiêu
+- Risks và blockers
 - Next steps`,
 
-  complianceStatus: `Tinh trang NDAA/ITAR compliance:
-- So parts da compliant
-- Parts can attention
-- Cac actions dang thuc hien
+  complianceStatus: `Tình trạng NDAA/ITAR compliance:
+- Số parts đã compliant
+- Parts cần attention
+- Các actions đang thực hiện
 - Recommendations`,
 };

@@ -197,7 +197,7 @@ async function generatePOSummary(): Promise<GeneratorResult> {
     highlights: [
       { label: 'Tong PO', value: purchaseOrders.length },
       { label: 'Tong gia tri', value: `${totalValue.toLocaleString('vi-VN')} VND` },
-      { label: 'Dang cho', value: statusCounts['draft'] || statusCounts['pending'] || 0 },
+      { label: 'Đang chờ', value: statusCounts['draft'] || statusCounts['pending'] || 0 },
     ],
   };
 }
@@ -231,8 +231,8 @@ async function generateProductionStatus(): Promise<GeneratorResult> {
     rows,
     highlights: [
       { label: 'Tong WO', value: workOrders.length },
-      { label: 'Dang san xuat', value: statusCounts['in_progress'] || statusCounts['IN_PROGRESS'] || 0 },
-      { label: 'Hoan thanh', value: statusCounts['completed'] || statusCounts['COMPLETED'] || 0 },
+      { label: 'Đang sản xuất', value: statusCounts['in_progress'] || statusCounts['IN_PROGRESS'] || 0 },
+      { label: 'Hoàn thành', value: statusCounts['completed'] || statusCounts['COMPLETED'] || 0 },
     ],
   };
 }

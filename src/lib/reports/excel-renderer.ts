@@ -36,7 +36,7 @@ export function renderToExcel(data: ReportData): Buffer {
   // --- Summary sheet ---
   const summaryData = [
     ['Bao cao', data.template.nameVi],
-    ['Ngay tao', data.generatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
+    ['Ngày tạo', data.generatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })],
     ['Tong dong', data.summary.totalRows],
     [],
     ...data.summary.highlights.map((h) => [h.label, h.value]),

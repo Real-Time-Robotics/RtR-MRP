@@ -12,7 +12,7 @@ export default function AIAdvisorPage() {
     <div className="space-y-4">
       <PageHeader
         title="AI Cost Advisor"
-        description="Tu van AI ve co hoi giam chi phi san xuat"
+        description="Tư vấn AI về cơ hội giảm chi phí sản xuất"
         backHref="/cost-optimization"
       />
       <ChatInterface initialQuestion={initialQuestion} />

@@ -21,9 +21,9 @@ interface ChatInterfaceProps {
 }
 
 const SUGGESTIONS = [
-  "Top 5 co hoi giam chi phi lon nhat?",
-  "Nen tu san xuat gi tiep theo?",
-  "Tien do giam chi phi the nao?",
+  "Top 5 cơ hội giảm chi phí lớn nhất?",
+  "Nên tự sản xuất gì tiếp theo?",
+  "Tiến độ giảm chi phí thế nào?",
   "Tinh trang NDAA compliance?",
   "So sanh cac GPS module",
 ];
@@ -95,7 +95,7 @@ export function ChatInterface({ initialQuestion }: ChatInterfaceProps) {
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "Xin loi, co loi xay ra. Vui long thu lai.",
+        content: "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.",
         timestamp: new Date(),
       };
 
@@ -141,7 +141,7 @@ export function ChatInterface({ initialQuestion }: ChatInterfaceProps) {
               <h3 className="font-semibold mb-2">AI Cost Advisor</h3>
               <p className="text-sm text-muted-foreground max-w-md mb-6">
                 Hoi toi ve chi phi, co hoi tiet kiem, Make vs Buy, substitutes,
-                hoac bat ky cau hoi nao ve toi uu chi phi san xuat.
+                hoặc bất kỳ câu hỏi nào về tối ưu hóa chi phí sản xuất.
               </p>
 
               <div className="flex flex-col gap-2">
@@ -164,7 +164,7 @@ export function ChatInterface({ initialQuestion }: ChatInterfaceProps) {
               {isLoading && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Dang suy nghi...</span>
+                  <span className="text-sm">Đang suy nghĩ...</span>
                 </div>
               )}
             </div>
@@ -188,7 +188,7 @@ export function ChatInterface({ initialQuestion }: ChatInterfaceProps) {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Hoi AI ve chi phi va toi uu..."
+              placeholder="Hỏi AI về chi phí và tối ưu..."
               disabled={isLoading}
               className="flex-1"
             />

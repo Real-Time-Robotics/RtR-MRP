@@ -33,7 +33,7 @@ export function createNavigationCommands(router: AppRouterInstance): Command[] {
     {
       id: 'nav-purchasing',
       name: 'Purchasing',
-      description: 'Quan ly mua hang',
+      description: 'Quản lý mua hàng',
       icon: Package,
       group: 'navigation',
       keywords: ['mua hang', 'po', 'purchase'],
@@ -42,7 +42,7 @@ export function createNavigationCommands(router: AppRouterInstance): Command[] {
     {
       id: 'nav-sales',
       name: 'Sales Orders',
-      description: 'Quan ly ban hang',
+      description: 'Quản lý bán hàng',
       icon: ShoppingCart,
       group: 'navigation',
       keywords: ['ban hang', 'so', 'don hang', 'orders'],
@@ -51,7 +51,7 @@ export function createNavigationCommands(router: AppRouterInstance): Command[] {
     {
       id: 'nav-inventory',
       name: 'Inventory',
-      description: 'Quan ly ton kho',
+      description: 'Quản lý tồn kho',
       icon: Warehouse,
       group: 'navigation',
       keywords: ['ton kho', 'kho', 'warehouse'],
@@ -60,7 +60,7 @@ export function createNavigationCommands(router: AppRouterInstance): Command[] {
     {
       id: 'nav-mrp',
       name: 'MRP',
-      description: 'Hoach dinh san xuat',
+      description: 'Hoạch định sản xuất',
       icon: BarChart3,
       group: 'navigation',
       keywords: ['mrp', 'hoach dinh', 'planning'],
@@ -69,7 +69,7 @@ export function createNavigationCommands(router: AppRouterInstance): Command[] {
     {
       id: 'nav-production',
       name: 'Production',
-      description: 'Quan ly san xuat',
+      description: 'Quản lý sản xuất',
       icon: Wrench,
       group: 'navigation',
       keywords: ['san xuat', 'work order', 'wo'],
@@ -104,7 +104,7 @@ export function createActionCommands(router: AppRouterInstance): Command[] {
       description: 'Tao Purchase Order moi',
       icon: Plus,
       group: 'actions',
-      keywords: ['tao po', 'new po', 'mua hang moi'],
+      keywords: ['tạo PO', 'new po', 'mua hàng mới'],
       action: () => router.push('/purchasing/new'),
     },
     {
@@ -113,7 +113,7 @@ export function createActionCommands(router: AppRouterInstance): Command[] {
       description: 'Tao Sales Order moi',
       icon: Plus,
       group: 'actions',
-      keywords: ['tao so', 'new so', 'don hang moi'],
+      keywords: ['tạo SO', 'new so', 'đơn hàng mới'],
       action: () => router.push('/orders/new'),
     },
     {
@@ -131,7 +131,7 @@ export function createActionCommands(router: AppRouterInstance): Command[] {
 export function createAICommand(openAIAssistant: () => void): Command {
   return {
     id: 'ai-assistant',
-    name: 'Hoi AI',
+    name: 'Hỏi AI',
     description: '"Toi dang lam gi do?"',
     icon: Bot,
     shortcut: 'Cmd+J',

@@ -7,8 +7,8 @@ export default function NewTargetPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Tao muc tieu chi phi"
-        description="Thiet lap muc tieu giam chi phi cho san pham"
+        title="Tạo mục tiêu chi phí"
+        description="Thiết lập mục tiêu giảm chi phí cho sản phẩm"
         backHref="/cost-optimization/roadmap"
       />
       <TargetForm />

@@ -76,7 +76,7 @@ export function PartSelector({ value, onChange, excludeIds = [] }: PartSelectorP
         }}
       >
         <SelectTrigger>
-          <SelectValue placeholder={loading ? "Dang tai..." : "Chon part"} />
+          <SelectValue placeholder={loading ? "Đang tải..." : "Chọn part"} />
         </SelectTrigger>
         <SelectContent>
           {parts.map((part) => (

@@ -67,7 +67,7 @@ export const POST = withAuth(async (request, _context, _session) => {
         );
     }
 
-    const systemPrompt = `Ban la AI Cost Advisor cua Real-Time Robotics. Dua tren du lieu thuc te duoc cung cap, hay phan tich va dua ra khuyen nghi cu the.
+    const systemPrompt = `Bạn là AI Cost Advisor của Real-Time Robotics. Dựa trên dữ liệu thực tế được cung cấp, hãy phân tích và đưa ra khuyến nghị cụ thể.
 
 ## CONTEXT
 ${contextString}`;

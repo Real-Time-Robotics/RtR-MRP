@@ -96,8 +96,8 @@ export function PartsTable({ parts }: PartsTableProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tat ca</SelectItem>
-              <SelectItem value="MAKE">Tu san xuat</SelectItem>
-              <SelectItem value="IN_DEVELOPMENT">Dang phat trien</SelectItem>
+              <SelectItem value="MAKE">Tự sản xuất</SelectItem>
+              <SelectItem value="IN_DEVELOPMENT">Đang phát triển</SelectItem>
               <SelectItem value="EVALUATE">Danh gia</SelectItem>
               <SelectItem value="BUY_STRATEGIC">Mua chien luoc</SelectItem>
               <SelectItem value="BUY_REQUIRED">Phai mua</SelectItem>

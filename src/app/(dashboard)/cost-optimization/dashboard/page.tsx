@@ -21,7 +21,7 @@ export default function SavingsDashboardPage() {
     <div className="space-y-4">
       <PageHeader
         title="Savings Dashboard"
-        description="Theo doi savings da dat duoc va dang tien hanh"
+        description="Theo dõi savings đã đạt được và đang tiến hành"
         backHref="/cost-optimization"
         actions={
           <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export default function SavingsDashboardPage() {
         </>
       ) : (
         <div className="py-20 text-center text-muted-foreground">
-          Khong the tai du lieu
+          Không thể tải dữ liệu
         </div>
       )}
     </div>

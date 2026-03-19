@@ -109,7 +109,7 @@ function buildDigestHtml(data: DigestData): string {
 
     <!-- Greeting -->
     <div style="padding:20px 24px 0;">
-      <p style="margin:0;font-size:14px;color:#333;">Xin chao <strong>${data.user.name || 'User'}</strong>,</p>
+      <p style="margin:0;font-size:14px;color:#333;">Xin chào <strong>${data.user.name || 'User'}</strong>,</p>
       <p style="margin:8px 0 0;font-size:13px;color:#666;">Day la tom tat hoat dong cua ban trong 24 gio qua.</p>
     </div>
 
@@ -121,7 +121,7 @@ function buildDigestHtml(data: DigestData): string {
       </div>
       <div style="flex:1;background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;">
         <div style="font-size:24px;font-weight:bold;color:#15803d;">${data.activeSessions}</div>
-        <div style="font-size:11px;color:#666;margin-top:2px;">Phien dang mo</div>
+        <div style="font-size:11px;color:#666;margin-top:2px;">Phiên đang mở</div>
       </div>
       <div style="flex:1;background:#fefce8;border-radius:8px;padding:12px;text-align:center;">
         <div style="font-size:24px;font-weight:bold;color:#a16207;">${data.pendingPOs}</div>
@@ -173,10 +173,10 @@ function buildDigestText(data: DigestData): string {
   const lines = [
     `RTR-MRP Daily Digest - ${new Date().toLocaleDateString('vi-VN')}`,
     '',
-    `Xin chao ${data.user.name || 'User'},`,
+    `Xin chào ${data.user.name || 'User'},`,
     '',
     `Thong bao chua doc: ${data.unreadNotifications}`,
-    `Phien dang mo: ${data.activeSessions}`,
+    `Phiên đang mở: ${data.activeSessions}`,
     `PO cho duyet: ${data.pendingPOs}`,
   ];
 

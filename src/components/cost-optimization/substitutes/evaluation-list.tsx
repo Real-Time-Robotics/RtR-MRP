@@ -19,11 +19,11 @@ import { useSubstituteList } from "@/hooks/cost-optimization/use-substitutes";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   IDENTIFIED: { label: "Da tim thay", variant: "outline" },
-  EVALUATING: { label: "Dang danh gia", variant: "secondary" },
-  SUB_TESTING: { label: "Dang test", variant: "default" },
+  EVALUATING: { label: "Đang đánh giá", variant: "secondary" },
+  SUB_TESTING: { label: "Đang test", variant: "default" },
   SUB_APPROVED: { label: "Da duyet", variant: "default" },
   SUB_REJECTED: { label: "Tu choi", variant: "destructive" },
-  IMPLEMENTED: { label: "Da trien khai", variant: "default" },
+  IMPLEMENTED: { label: "Đã triển khai", variant: "default" },
 };
 
 const riskColors: Record<string, string> = {
@@ -80,18 +80,18 @@ export function EvaluationList() {
             <SelectContent>
               <SelectItem value="all">Tat ca</SelectItem>
               <SelectItem value="IDENTIFIED">Da tim thay</SelectItem>
-              <SelectItem value="EVALUATING">Dang danh gia</SelectItem>
-              <SelectItem value="SUB_TESTING">Dang test</SelectItem>
+              <SelectItem value="EVALUATING">Đang đánh giá</SelectItem>
+              <SelectItem value="SUB_TESTING">Đang test</SelectItem>
               <SelectItem value="SUB_APPROVED">Da duyet</SelectItem>
               <SelectItem value="SUB_REJECTED">Tu choi</SelectItem>
-              <SelectItem value="IMPLEMENTED">Da trien khai</SelectItem>
+              <SelectItem value="IMPLEMENTED">Đã triển khai</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground">Dang tai...</div>
+          <div className="py-12 text-center text-muted-foreground">Đang tải...</div>
         ) : evaluations.length === 0 ? (
           <div className="py-12 text-center">
             <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
@@ -99,7 +99,7 @@ export function EvaluationList() {
             <Link href="/cost-optimization/substitutes/new">
               <Button variant="outline" className="mt-3" size="sm">
                 <Plus className="w-4 h-4 mr-1" />
-                Tim linh kien thay the
+                Tìm linh kiện thay thế
               </Button>
             </Link>
           </div>

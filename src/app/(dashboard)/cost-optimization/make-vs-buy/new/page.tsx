@@ -8,7 +8,7 @@ export default function NewAnalysisPage() {
     <div className="space-y-4">
       <PageHeader
         title="Tao phan tich Make vs Buy"
-        description="Nhap du lieu de phan tich ROI va khuyen nghi tu dong"
+        description="Nhập dữ liệu để phân tích ROI và khuyến nghị tự động"
         backHref="/cost-optimization/make-vs-buy"
       />
       <AnalysisForm />

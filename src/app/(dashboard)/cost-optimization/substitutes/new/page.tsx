@@ -45,8 +45,8 @@ export default function NewSubstitutePage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Tim linh kien thay the"
-        description="Chon part goc de tim cac phuong an thay the re hon"
+        title="Tìm linh kiện thay thế"
+        description="Chọn part gốc để tìm các phương án thay thế rẻ hơn"
         backHref="/cost-optimization/substitutes"
       />
 
@@ -85,7 +85,7 @@ export default function NewSubstitutePage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
-              Ket qua tim kiem
+              Kết quả tìm kiếm
               {searchData && (
                 <span className="text-sm font-normal text-muted-foreground ml-2">
                   ({searchData.count} ket qua)
@@ -108,7 +108,7 @@ export default function NewSubstitutePage() {
             {creating && (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                <span className="text-sm">Dang tao danh gia...</span>
+                <span className="text-sm">Đang tạo đánh giá...</span>
               </div>
             )}
           </CardContent>

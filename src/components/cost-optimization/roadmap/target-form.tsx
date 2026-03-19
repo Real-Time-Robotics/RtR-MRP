@@ -84,7 +84,7 @@ export function TargetForm({ initialData }: TargetFormProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {initialData ? "Chinh sua muc tieu" : "Tao muc tieu moi"}
+            {initialData ? "Chỉnh sửa mục tiêu" : "Tạo mục tiêu mới"}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -159,7 +159,7 @@ export function TargetForm({ initialData }: TargetFormProps) {
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
               <Save className="w-4 h-4 mr-1" />
-              {initialData ? "Cap nhat" : "Tao muc tieu"}
+              {initialData ? "Cập nhật" : "Tạo mục tiêu"}
             </Button>
           </div>
         </CardContent>

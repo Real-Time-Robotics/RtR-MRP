@@ -27,7 +27,7 @@ import { useMakeVsBuyList } from "@/hooks/cost-optimization/use-make-vs-buy";
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   ANALYSIS_DRAFT: { label: "Nhap", variant: "outline" },
   ANALYSIS_SUBMITTED: { label: "Da nop", variant: "secondary" },
-  ANALYSIS_UNDER_REVIEW: { label: "Dang xem xet", variant: "default" },
+  ANALYSIS_UNDER_REVIEW: { label: "Đang xem xét", variant: "default" },
   ANALYSIS_DECIDED: { label: "Da quyet dinh", variant: "default" },
   ANALYSIS_ARCHIVED: { label: "Luu tru", variant: "secondary" },
 };
@@ -41,7 +41,7 @@ const recommendationColors: Record<string, string> = {
 };
 
 const recommendationLabels: Record<string, string> = {
-  STRONG_MAKE: "Tu san xuat",
+  STRONG_MAKE: "Tự sản xuất",
   CONSIDER_MAKE: "Can nhac tu lam",
   NEUTRAL: "Trung lap",
   CONSIDER_BUY: "Can nhac mua",
@@ -107,7 +107,7 @@ export function AnalysisList() {
               <SelectItem value="all">Tat ca</SelectItem>
               <SelectItem value="ANALYSIS_DRAFT">Nhap</SelectItem>
               <SelectItem value="ANALYSIS_SUBMITTED">Da nop</SelectItem>
-              <SelectItem value="ANALYSIS_UNDER_REVIEW">Dang xem xet</SelectItem>
+              <SelectItem value="ANALYSIS_UNDER_REVIEW">Đang xem xét</SelectItem>
               <SelectItem value="ANALYSIS_DECIDED">Da quyet dinh</SelectItem>
             </SelectContent>
           </Select>
@@ -121,7 +121,7 @@ export function AnalysisList() {
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground">Dang tai...</div>
+          <div className="py-12 text-center text-muted-foreground">Đang tải...</div>
         ) : analyses.length === 0 ? (
           <div className="py-12 text-center">
             <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3" />

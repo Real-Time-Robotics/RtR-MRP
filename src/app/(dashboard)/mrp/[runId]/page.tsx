@@ -125,7 +125,7 @@ export default function MrpRunDetailPage() {
   const { trackActivity, updateContext } = useWorkSession({
     entityType: 'MRP_RUN',
     entityId: runId,
-    entityNumber: data?.runNumber || runId,
+    entityNumber: data?.runNumber || `MRP-${runId.substring(0, 8)}`,
     workflowSteps: ['Xem kết quả', 'Duyệt đề xuất', 'Tạo PO'],
     currentStep: 1,
     enabled: !!runId,

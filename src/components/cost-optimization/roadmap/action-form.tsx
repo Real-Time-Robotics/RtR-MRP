@@ -122,11 +122,11 @@ export function ActionForm({ targetId, phaseId, phaseName }: ActionFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Mo ta</Label>
+            <Label>Mô tả</Label>
             <Textarea
               value={form.description}
               onChange={(e) => updateField("description", e.target.value)}
-              placeholder="Mo ta chi tiet action..."
+              placeholder="Mô tả chi tiết action..."
               required
             />
           </div>

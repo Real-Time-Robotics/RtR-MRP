@@ -73,7 +73,7 @@ export function useAIAdvisor(productId?: string) {
         const errorMessage: Message = {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: "Xin loi, co loi xay ra. Vui long thu lai.",
+          content: "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại.",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMessage]);

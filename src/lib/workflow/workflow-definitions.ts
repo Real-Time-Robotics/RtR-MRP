@@ -18,11 +18,11 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
   PO: {
     entityType: 'PO',
     steps: [
-      { id: 'info', name: 'Thong tin', description: 'Thong tin co ban' },
-      { id: 'items', name: 'Line Items', description: 'Them san pham' },
-      { id: 'approval', name: 'Phe duyet', description: 'Gui de phe duyet' },
-      { id: 'delivery', name: 'Giao hang', description: 'Cho nhan hang' },
-      { id: 'complete', name: 'Hoan thanh', description: 'Da nhan hang' },
+      { id: 'info', name: 'Thông tin', description: 'Thông tin cơ bản' },
+      { id: 'items', name: 'Line Items', description: 'Thêm sản phẩm' },
+      { id: 'approval', name: 'Phê duyệt', description: 'Gửi để phê duyệt' },
+      { id: 'delivery', name: 'Giao hàng', description: 'Chờ nhận hàng' },
+      { id: 'complete', name: 'Hoàn thành', description: 'Đã nhận hàng' },
     ],
     detectCurrentStep: (po) => {
       const status = String(po.status || '').toLowerCase();
@@ -36,10 +36,10 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
     },
     getNextStepHint: (po, currentStep) => {
       const status = String(po.status || '').toLowerCase();
-      if (currentStep === 1) return 'Them line items vao PO';
-      if (currentStep === 2) return 'Gui PO de phe duyet';
-      if (currentStep === 3) return 'Cho xac nhan tu supplier';
-      if (currentStep === 4) return 'Cho nhan hang tu supplier';
+      if (currentStep === 1) return 'Thêm line items vào PO';
+      if (currentStep === 2) return 'Gửi PO để phê duyệt';
+      if (currentStep === 3) return 'Chờ xác nhận từ supplier';
+      if (currentStep === 4) return 'Chờ nhận hàng từ supplier';
       return null;
     },
   },
@@ -47,11 +47,11 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
   SO: {
     entityType: 'SO',
     steps: [
-      { id: 'create', name: 'Tao don', description: 'Tao don hang' },
-      { id: 'confirm', name: 'Xac nhan', description: 'Xac nhan don hang' },
-      { id: 'shipping', name: 'Xuat kho', description: 'Xuat kho giao hang' },
-      { id: 'delivery', name: 'Giao hang', description: 'Giao hang cho khach' },
-      { id: 'complete', name: 'Hoan thanh', description: 'Don hang hoan tat' },
+      { id: 'create', name: 'Tạo đơn', description: 'Tạo đơn hàng' },
+      { id: 'confirm', name: 'Xác nhận', description: 'Xác nhận đơn hàng' },
+      { id: 'shipping', name: 'Xuất kho', description: 'Xuất kho giao hàng' },
+      { id: 'delivery', name: 'Giao hàng', description: 'Giao hàng cho khách' },
+      { id: 'complete', name: 'Hoàn thành', description: 'Đơn hàng hoàn tất' },
     ],
     detectCurrentStep: (so) => {
       const status = String(so.status || '').toLowerCase();
@@ -63,15 +63,15 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
       return 1;
     },
     getNextStepHint: (so, currentStep) => {
-      if (currentStep === 1) return 'Them san pham va xac nhan don hang';
-      if (currentStep === 2) return 'Xac nhan va chuan bi xuat kho';
+      if (currentStep === 1) return 'Thêm sản phẩm và xác nhận đơn hàng';
+      if (currentStep === 2) return 'Xác nhận và chuẩn bị xuất kho';
       if (currentStep === 3) {
         const lines = so.lines as Array<{ shippedQty?: number; quantity?: number }> | undefined;
         const unshipped = lines?.filter(l => (l.shippedQty || 0) < (l.quantity || 0)).length || 0;
-        if (unshipped > 0) return `Con ${unshipped} dong chua xuat kho`;
-        return 'Xuat kho va tao shipment';
+        if (unshipped > 0) return `Còn ${unshipped} dòng chưa xuất kho`;
+        return 'Xuất kho và tạo shipment';
       }
-      if (currentStep === 4) return 'Xac nhan giao hang thanh cong';
+      if (currentStep === 4) return 'Xác nhận giao hàng thành công';
       return null;
     },
   },
@@ -79,9 +79,9 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
   MRP_RUN: {
     entityType: 'MRP_RUN',
     steps: [
-      { id: 'results', name: 'Ket qua', description: 'Xem ket qua MRP' },
-      { id: 'review', name: 'Review', description: 'Duyet suggestions' },
-      { id: 'complete', name: 'Hoan thanh', description: 'Da xu ly het' },
+      { id: 'results', name: 'Kết quả', description: 'Xem kết quả MRP' },
+      { id: 'review', name: 'Review', description: 'Duyệt suggestions' },
+      { id: 'complete', name: 'Hoàn thành', description: 'Đã xử lý hết' },
     ],
     detectCurrentStep: (run) => {
       const suggestions = run.suggestions as Array<{ status?: string }> | undefined;
@@ -92,11 +92,11 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
       return 1;
     },
     getNextStepHint: (run, currentStep) => {
-      if (currentStep === 1) return 'Review cac suggestions';
+      if (currentStep === 1) return 'Review các suggestions';
       if (currentStep === 2) {
         const suggestions = run.suggestions as Array<{ status?: string }> | undefined;
         const pending = suggestions?.filter(s => s.status === 'pending').length || 0;
-        return `Con ${pending} suggestions can review`;
+        return `Còn ${pending} suggestions cần review`;
       }
       return null;
     },
@@ -105,11 +105,11 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
   WORK_ORDER: {
     entityType: 'WORK_ORDER',
     steps: [
-      { id: 'created', name: 'Tao', description: 'WO da tao' },
-      { id: 'materials', name: 'Vat tu', description: 'Chuan bi vat tu' },
-      { id: 'production', name: 'San xuat', description: 'Dang san xuat' },
-      { id: 'complete', name: 'Hoan thanh', description: 'Da hoan thanh' },
-      { id: 'receive', name: 'Nhap kho', description: 'Nhap kho thanh pham' },
+      { id: 'created', name: 'Tạo', description: 'WO đã tạo' },
+      { id: 'materials', name: 'Vật tư', description: 'Chuẩn bị vật tư' },
+      { id: 'production', name: 'Sản xuất', description: 'Đang sản xuất' },
+      { id: 'complete', name: 'Hoàn thành', description: 'Đã hoàn thành' },
+      { id: 'receive', name: 'Nhập kho', description: 'Nhập kho thành phẩm' },
     ],
     detectCurrentStep: (wo) => {
       const status = String(wo.status || '').toLowerCase();
@@ -121,15 +121,15 @@ export const WORKFLOW_DEFINITIONS: Record<string, WorkflowDefinition> = {
     },
     getNextStepHint: (wo, currentStep) => {
       const status = String(wo.status || '').toLowerCase();
-      if (currentStep === 1) return 'Release WO va allocate vat tu';
-      if (currentStep === 2) return 'Bat dau san xuat';
+      if (currentStep === 1) return 'Release WO và allocate vật tư';
+      if (currentStep === 2) return 'Bắt đầu sản xuất';
       if (currentStep === 3) {
         const completedQty = Number(wo.completedQty || 0);
         const quantity = Number(wo.quantity || 0);
         const progress = quantity > 0 ? Math.round((completedQty / quantity) * 100) : 0;
-        return `Tien do: ${progress}% - Hoan thanh de nhap kho`;
+        return `Tiến độ: ${progress}% - Hoàn thành để nhập kho`;
       }
-      if (currentStep === 4) return 'Nhap kho thanh pham';
+      if (currentStep === 4) return 'Nhập kho thành phẩm';
       return null;
     },
   },

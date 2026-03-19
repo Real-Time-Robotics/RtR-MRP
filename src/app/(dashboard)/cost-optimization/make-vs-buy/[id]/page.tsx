@@ -46,13 +46,13 @@ function formatCurrency(value: number): string {
 const statusLabels: Record<string, string> = {
   ANALYSIS_DRAFT: "Nhap",
   ANALYSIS_SUBMITTED: "Da nop",
-  ANALYSIS_UNDER_REVIEW: "Dang xem xet",
-  ANALYSIS_DECIDED: "Da quyet dinh",
+  ANALYSIS_UNDER_REVIEW: "Đang xem xét",
+  ANALYSIS_DECIDED: "Đã quyết định",
   ANALYSIS_ARCHIVED: "Luu tru",
 };
 
 const decisionLabels: Record<string, string> = {
-  DECIDE_MAKE: "Tu san xuat",
+  DECIDE_MAKE: "Tự sản xuất",
   DECIDE_BUY: "Mua ngoai",
   DECIDE_HYBRID: "Ket hop",
   DECIDE_DEFER: "Hoan lai",
@@ -143,7 +143,7 @@ export default function AnalysisDetailPage({
   return (
     <div className="space-y-4">
       <PageHeader
-        title={`Phan tich: ${analysis.part.partNumber}`}
+        title={`Phân tích: ${analysis.part.partNumber}`}
         description={analysis.part.name}
         backHref="/cost-optimization/make-vs-buy"
       />
@@ -170,10 +170,10 @@ export default function AnalysisDetailPage({
                   {!analysis.decision && (
                     <Select onValueChange={handleDecision} disabled={deciding}>
                       <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Ra quyet dinh..." />
+                        <SelectValue placeholder="Ra quyết định..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="DECIDE_MAKE">Tu san xuat</SelectItem>
+                        <SelectItem value="DECIDE_MAKE">Tự sản xuất</SelectItem>
                         <SelectItem value="DECIDE_BUY">Mua ngoai</SelectItem>
                         <SelectItem value="DECIDE_HYBRID">Ket hop</SelectItem>
                         <SelectItem value="DECIDE_DEFER">Hoan lai</SelectItem>
@@ -223,7 +223,7 @@ export default function AnalysisDetailPage({
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Factory className="w-4 h-4 text-blue-500" />
-                  Tu san xuat
+                  Tự sản xuất
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">

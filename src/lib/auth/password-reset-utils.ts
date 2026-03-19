@@ -51,14 +51,14 @@ export async function validateResetToken(token: string): Promise<ValidatedToken>
 
   if (!resetToken) {
     throw new TokenValidationError(
-      'Token khong ton tai hoac da het han',
+      'Token không tồn tại hoặc đã hết hạn',
       'NOT_FOUND'
     );
   }
 
   if (resetToken.usedAt) {
     throw new TokenValidationError(
-      'Token da duoc su dung',
+      'Token đã được sử dụng',
       'ALREADY_USED'
     );
   }
@@ -87,14 +87,14 @@ export async function validateResetTokenWithUser(
 
   if (!resetToken) {
     throw new TokenValidationError(
-      'Token khong ton tai',
+      'Token không tồn tại',
       'NOT_FOUND'
     );
   }
 
   if (resetToken.usedAt) {
     throw new TokenValidationError(
-      'Token da duoc su dung',
+      'Token đã được sử dụng',
       'ALREADY_USED'
     );
   }

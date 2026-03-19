@@ -219,7 +219,7 @@ export default function ActionDetailPage({
 
               <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
                 <div>
-                  <div className="text-sm text-muted-foreground">Bat dau</div>
+                  <div className="text-sm text-muted-foreground">Bắt đầu</div>
                   <div className="font-medium">
                     {action.startDate ? formatDate(action.startDate) : "—"}
                   </div>
@@ -292,7 +292,7 @@ export default function ActionDetailPage({
                   >
                     {updating && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
                     <Save className="w-3 h-3 mr-1" />
-                    Cap nhat {progressValue}%
+                    Cập nhật {progressValue}%
                   </Button>
                 )}
               </div>

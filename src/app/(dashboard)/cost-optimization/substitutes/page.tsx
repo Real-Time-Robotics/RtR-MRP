@@ -9,7 +9,7 @@ export default function SubstitutesPage() {
     <div className="space-y-4">
       <PageHeader
         title="Substitute Finder"
-        description="Tim kiem va danh gia linh kien thay the re hon"
+        description="Tìm kiếm và đánh giá linh kiện thay thế rẻ hơn"
         backHref="/cost-optimization"
         actions={<AIQuickAction context={{ type: "general" }} />}
       />

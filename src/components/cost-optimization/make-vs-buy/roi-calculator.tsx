@@ -69,7 +69,7 @@ export function ROICalculator({ roi }: ROICalculatorProps) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <BarChart3 className="w-4 h-4" />
-          Ket qua ROI
+          Kết quả ROI
         </CardTitle>
       </CardHeader>
       <CardContent>

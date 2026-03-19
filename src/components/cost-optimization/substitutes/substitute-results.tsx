@@ -81,7 +81,7 @@ export function SubstituteResults({
           {results.length === 0 ? (
             <TableRow>
               <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                Khong tim thay linh kien thay the phu hop
+                Không tìm thấy linh kiện thay thế phù hợp
               </TableCell>
             </TableRow>
           ) : (

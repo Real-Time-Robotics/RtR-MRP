@@ -101,13 +101,13 @@ function generateRecommendation(
   if (overall >= 7.5) {
     recommendation = "STRONG_MAKE";
     rationale =
-      "ROI tot, nang luc san xuat san sang va phu hop chien luoc tu chu.";
+      "ROI tốt, năng lực sản xuất sẵn sàng và phù hợp chiến lược tự chủ.";
   } else if (overall >= 6.0) {
     recommendation = "CONSIDER_MAKE";
     rationale =
       "ROI kha quan nhung can giai quyet mot so gap ve nang luc.";
     if (capability < 6) {
-      conditions.push("Giai quyet capability gaps truoc khi trien khai");
+      conditions.push("Giải quyết capability gaps trước khi triển khai");
     }
     if (input.breakEvenMonths > 12) {
       conditions.push("Can nhac dau tu theo giai doan de giam rui ro");
@@ -115,7 +115,7 @@ function generateRecommendation(
   } else if (overall >= 4.5) {
     recommendation = "NEUTRAL";
     rationale =
-      "Ket qua chua ro rang, can them du lieu de quyet dinh.";
+      "Kết quả chưa rõ ràng, cần thêm dữ liệu để quyết định.";
     conditions.push("Thu thap chi phi chinh xac hon");
     conditions.push("Xac nhan du bao san luong");
   } else if (overall >= 3.0) {
@@ -125,7 +125,7 @@ function generateRecommendation(
   } else {
     recommendation = "STRONG_BUY";
     rationale =
-      "Khong co loi the tai chinh hoac rao can nang luc qua lon.";
+      "Không có lợi thế tài chính hoặc rào cản năng lực quá lớn.";
   }
 
   if (financial < 5 && recommendation !== "STRONG_BUY") {

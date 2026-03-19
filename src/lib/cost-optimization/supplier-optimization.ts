@@ -52,7 +52,7 @@ export function detectConsolidationOpportunities(
         supplierId: supplier.supplierId,
         supplierName: supplier.supplierName,
         title: `Consolidate Orders — ${supplier.supplierName}`,
-        description: `Gop ${supplier.orderCount} PO nho thanh PO lon de dat volume discount ~${estimatedDiscount}%`,
+        description: `Gộp ${supplier.orderCount} PO nhỏ thành PO lớn để đạt volume discount ~${estimatedDiscount}%`,
         affectedParts: supplier.parts.map((p) => ({
           partId: p.partId,
           partNumber: p.partNumber,
@@ -63,10 +63,10 @@ export function detectConsolidationOpportunities(
         effort: "LOW",
         confidence: "HIGH",
         actionSteps: [
-          "Review lich dat hang hien tai",
-          "Xac dinh parts co the gop don",
-          "Tao lich dat hang hop nhat",
-          "Thuong luong xac nhan volume discount",
+          "Review lịch đặt hàng hiện tại",
+          "Xác định parts có thể gộp đơn",
+          "Tạo lịch đặt hàng hợp nhất",
+          "Thương lượng xác nhận volume discount",
         ],
       });
     }
@@ -118,7 +118,7 @@ export function detectSwitchSupplierOpportunities(
         supplierId: bestAlternative.supplierId,
         supplierName: bestAlternative.supplierName,
         title: `Switch Supplier — ${part.partNumber}`,
-        description: `Chuyen tu ${part.currentSupplierName} sang ${bestAlternative.supplierName} de tiet kiem ${savingsPercent.toFixed(0)}%`,
+        description: `Chuyển từ ${part.currentSupplierName} sang ${bestAlternative.supplierName} để tiết kiệm ${savingsPercent.toFixed(0)}%`,
         affectedParts: [{ partId: part.partId, partNumber: part.partNumber }],
         currentSpend: part.currentPrice * part.annualVolume,
         potentialSavings: Math.round(annualSavings),
@@ -126,11 +126,11 @@ export function detectSwitchSupplierOpportunities(
         effort: "MEDIUM",
         confidence: "MEDIUM",
         actionSteps: [
-          "Yeu cau mau tu NCC moi",
-          "Thuc hien kiem tra chat luong",
-          "Thuong luong gia va dieu khoan",
-          "Lap ke hoach chuyen doi",
-          "Cap nhat danh sach NCC duyet",
+          "Yêu cầu mẫu từ NCC mới",
+          "Thực hiện kiểm tra chất lượng",
+          "Thương lượng giá và điều khoản",
+          "Lập kế hoạch chuyển đổi",
+          "Cập nhật danh sách NCC duyệt",
         ],
       });
     }
@@ -156,7 +156,7 @@ export function detectNegotiationOpportunities(
         supplierId: supplier.supplierId,
         supplierName: supplier.supplierName,
         title: `Negotiate Pricing — ${supplier.supplierName}`,
-        description: `Spend $${(supplier.totalSpend / 1000).toFixed(0)}k/nam — co the thuong luong giam ${estimatedDiscount}%`,
+        description: `Spend $${(supplier.totalSpend / 1000).toFixed(0)}k/năm — có thể thương lượng giảm ${estimatedDiscount}%`,
         affectedParts: supplier.parts.map((p) => ({
           partId: p.partId,
           partNumber: p.partNumber,
@@ -167,10 +167,10 @@ export function detectNegotiationOpportunities(
         effort: "LOW",
         confidence: "MEDIUM",
         actionSteps: [
-          "Phan tich du bao nhu cau",
-          "Chuan bi de xuat thuong luong",
-          "Hen hop voi NCC",
-          "Thuong luong dieu khoan moi",
+          "Phân tích dự báo nhu cầu",
+          "Chuẩn bị đề xuất thương lượng",
+          "Hẹn họp với NCC",
+          "Thương lượng điều khoản mới",
         ],
       });
     }
@@ -196,7 +196,7 @@ export function detectLocalSourceOpportunities(
         supplierId: supplier.supplierId,
         supplierName: supplier.supplierName,
         title: `Local Source — ${supplier.supplierName}`,
-        description: `Thay NCC import (${country}) bang NCC noi dia de giam chi phi van chuyen va lead time`,
+        description: `Thay NCC import (${country}) bằng NCC nội địa để giảm chi phí vận chuyển và lead time`,
         affectedParts: supplier.parts.map((p) => ({
           partId: p.partId,
           partNumber: p.partNumber,
@@ -207,11 +207,11 @@ export function detectLocalSourceOpportunities(
         effort: "HIGH",
         confidence: "LOW",
         actionSteps: [
-          "Tim kiem NCC noi dia tuong tu",
-          "So sanh chat luong va gia",
-          "Dat mau thu nghiem",
-          "Danh gia NDAA compliance",
-          "Lap ke hoach chuyen doi",
+          "Tìm kiếm NCC nội địa tương tự",
+          "So sánh chất lượng và giá",
+          "Đặt mẫu thử nghiệm",
+          "Đánh giá NDAA compliance",
+          "Lập kế hoạch chuyển đổi",
         ],
       });
     }

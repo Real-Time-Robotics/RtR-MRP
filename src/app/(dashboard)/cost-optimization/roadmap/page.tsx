@@ -10,7 +10,7 @@ export default function CostRoadmapPage() {
     <div className="space-y-4">
       <PageHeader
         title="Cost Target Roadmap"
-        description="Lo trinh giam chi phi voi phases va actions"
+        description="Lộ trình giảm chi phí với phases và actions"
         backHref="/cost-optimization"
         actions={
           <div className="flex items-center gap-2">

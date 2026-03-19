@@ -16,9 +16,9 @@ interface StatusBreakdownProps {
 }
 
 const statusConfig = [
-  { key: "MAKE", label: "Tu san xuat", color: "#22c55e" },
-  { key: "IN_DEVELOPMENT", label: "Dang phat trien", color: "#3b82f6" },
-  { key: "EVALUATE", label: "Dang danh gia", color: "#eab308" },
+  { key: "MAKE", label: "Tự sản xuất", color: "#22c55e" },
+  { key: "IN_DEVELOPMENT", label: "Đang phát triển", color: "#3b82f6" },
+  { key: "EVALUATE", label: "Đang đánh giá", color: "#eab308" },
   { key: "BUY_STRATEGIC", label: "Mua chien luoc", color: "#f97316" },
   { key: "BUY_REQUIRED", label: "Phai mua", color: "#ef4444" },
 ];

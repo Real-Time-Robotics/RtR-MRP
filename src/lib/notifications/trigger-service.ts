@@ -46,8 +46,8 @@ async function checkAbandonedSessions(): Promise<TriggerResult> {
         await createNotification({
           userId: session.userId,
           type: 'session_abandoned',
-          title: `Phien lam viec chua dong: ${session.entityNumber}`,
-          message: `Ban co phien lam viec dang mo cho ${session.entityNumber} nhung chua co hoat dong trong 2 gio qua. Hay dong hoac tiep tuc.`,
+          title: `Phiên làm việc chưa đóng: ${session.entityNumber}`,
+          message: `Bạn có phiên làm việc đang mở cho ${session.entityNumber} nhưng chưa có hoạt động trong 2 giờ qua. Hãy đóng hoặc tiếp tục.`,
           priority: 'normal',
           link: session.resumeUrl,
           sourceType: 'WorkSession',
@@ -225,8 +225,8 @@ async function checkMRPSuggestions(): Promise<TriggerResult> {
           await createNotification({
             userId: targetUserId,
             type: 'mrp_suggestion',
-            title: `MRP ${run.runNumber}: ${run.purchaseSuggestions} de xuat mua hang`,
-            message: `Ket qua MRP ${run.runNumber} co ${run.purchaseSuggestions} de xuat mua hang can xu ly.`,
+            title: `MRP ${run.runNumber}: ${run.purchaseSuggestions} đề xuất mua hàng`,
+            message: `Kết quả MRP ${run.runNumber} có ${run.purchaseSuggestions} đề xuất mua hàng cần xử lý.`,
             priority: 'normal',
             link: `/mrp/${run.id}`,
             sourceType: 'MrpRun',

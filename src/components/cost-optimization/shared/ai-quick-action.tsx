@@ -25,7 +25,7 @@ export function AIQuickAction({ context }: AIQuickActionProps) {
     switch (context.type) {
       case "part":
         return [
-          `Lam sao giam chi phi ${context.name}?`,
+          `Làm sao giảm chi phí ${context.name}?`,
           `Co substitute nao cho ${context.name}?`,
           `Nen Make hay Buy ${context.name}?`,
         ];
@@ -36,13 +36,13 @@ export function AIQuickAction({ context }: AIQuickActionProps) {
         ];
       case "bom":
         return [
-          "Top 5 co hoi giam chi phi?",
-          "Phan tich Make vs Buy tong the?",
+          "Top 5 cơ hội giảm chi phí?",
+          "Phân tích Make vs Buy tổng thể?",
         ];
       default:
         return [
-          "Top 5 co hoi giam chi phi?",
-          "Tien do giam chi phi the nao?",
+          "Top 5 cơ hội giảm chi phí?",
+          "Tiến độ giảm chi phí thế nào?",
         ];
     }
   };

@@ -31,7 +31,7 @@ export async function renderToPDF(data: ReportData): Promise<Buffer> {
       .font('Helvetica')
       .fillColor('#666666')
       .text(
-        `Ngay tao: ${data.generatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`,
+        `Ngày tạo: ${data.generatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`,
         { align: 'center' }
       );
     doc.moveDown(1);
