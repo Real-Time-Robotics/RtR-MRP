@@ -32,7 +32,7 @@ const routeLabelKeys: Record<string, string> = {
   wizard: 'common.wizard',
   customers: 'nav.customers',
   orders: 'nav.orders',
-  warehouses: 'nav.warehouses',
+  warehouses: 'nav.warehouse',
   finance: 'nav.finance',
   costing: 'nav.costing',
   invoicing: 'nav.invoicing',
