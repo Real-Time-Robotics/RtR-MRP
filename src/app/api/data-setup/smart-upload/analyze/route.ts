@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import {
   detectCompositeStructure,
   splitCompositeData,
+  findBestHeaderRow,
 } from "@/lib/import/composite-bom-parser";
 
 export const POST = withAuth(async (request: NextRequest, _context, session) => {
@@ -37,19 +38,8 @@ export const POST = withAuth(async (request: NextRequest, _context, session) => 
       );
     }
 
-    // Find the real header row — skip leading empty rows
-    let headerRowIdx = 0;
-    for (let i = 0; i < Math.min(data.length, 10); i++) {
-      const row = data[i];
-      const nonEmpty = row.filter(
-        (cell) => cell !== null && cell !== undefined && String(cell).trim() !== ""
-      );
-      // Header row should have multiple non-empty cells that look like text
-      if (nonEmpty.length >= 3) {
-        headerRowIdx = i;
-        break;
-      }
-    }
+    // Find the real header row — score candidates by BOM keyword matches
+    const headerRowIdx = findBestHeaderRow(data, 15);
 
     const headers = data[headerRowIdx].map((h) => String(h || "").trim());
     const rows = data.slice(headerRowIdx + 1).filter((row) =>

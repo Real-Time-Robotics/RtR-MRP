@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    logger.log("info", "Web vital recorded", {
+    logger.info("Web vital recorded", {
       name: body.name,
       value: body.value,
       rating: body.rating,

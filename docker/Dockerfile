@@ -27,6 +27,7 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 ENV DOCKER true
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npx next build
 
 # ==================== Stage 3: Runner ====================

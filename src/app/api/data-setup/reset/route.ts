@@ -55,7 +55,27 @@ export const POST = withRoleAuth(["admin"], async (request: NextRequest) => {
       }
     }
 
-    return NextResponse.json({ success: true, message: "All data reset successfully" });
+    // Recreate standard warehouses (they are infrastructure, not user data)
+    const STANDARD_WAREHOUSES = [
+      { code: "WH-RECEIVING", name: "Receiving Area", type: "RECEIVING", location: "Khu nhận hàng - Chờ kiểm tra QC", status: "active" },
+      { code: "WH-QUARANTINE", name: "Quarantine", type: "QUARANTINE", location: "Khu cách ly - Hàng lỗi chờ xử lý", status: "active" },
+      { code: "WH-MAIN", name: "Main Warehouse", type: "MAIN", location: "Austin, TX", status: "active" },
+      { code: "WH-WIP", name: "Work-in-Progress", type: "WIP", location: "Khu sản xuất - Hàng đang gia công", status: "active" },
+      { code: "WH-FG", name: "Finished Goods", type: "FINISHED_GOODS", location: "Kho thành phẩm - Hàng hoàn thành", status: "active" },
+      { code: "WH-SHIP", name: "Shipping Area", type: "SHIPPING", location: "Khu xuất hàng - Chờ vận chuyển", status: "active" },
+      { code: "WH-HOLD", name: "Hold Area", type: "HOLD", location: "Khu chờ xử lý - Hàng conditional", status: "active" },
+      { code: "WH-SCRAP", name: "Scrap Area", type: "SCRAP", location: "Khu phế liệu - Hàng hủy chờ xử lý", status: "active" },
+    ];
+
+    for (const wh of STANDARD_WAREHOUSES) {
+      await prisma.warehouse.upsert({
+        where: { code: wh.code },
+        create: wh,
+        update: {},
+      });
+    }
+
+    return NextResponse.json({ success: true, message: "All data reset successfully. 8 standard warehouses recreated." });
   } catch (error) {
     console.error("Reset failed:", error);
     return NextResponse.json(
