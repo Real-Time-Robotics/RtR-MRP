@@ -10,7 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <SWRProvider>
-        <ThemeProvider>
+        <ThemeProvider defaultTheme="light">
           <SocketProvider>
             <LanguageProvider>{children}</LanguageProvider>
           </SocketProvider>

@@ -72,6 +72,74 @@ function inferColumnType(
   return "mixed";
 }
 
+// Score a row as a potential header: count cells that look like text column names
+function scoreAsHeaderRow(row: unknown[]): number {
+  let score = 0;
+  const knownHeaders = [
+    "no", "no.", "stt", "module", "qty", "quantity", "unit", "part number",
+    "part name", "part no", "name", "desc", "description", "category", "type",
+    "group", "cost", "price", "method", "material", "status", "code", "sku",
+    "level", "lvl", "rev", "yield", "scrap", "date",
+    // Vietnamese (without diacritics for matching)
+    "ma sp", "ten sp", "don vi", "dvt", "don gia", "so luong", "sl",
+    "dinh muc", "nhom", "loai", "phuong phap", "hao hut", "hieu suat",
+    "ma", "ten", "ghi chu", "trang thai",
+  ];
+
+  for (const cell of row) {
+    if (cell === null || cell === undefined) continue;
+    const val = String(cell).trim();
+    if (val === "") continue;
+
+    // Text cells score higher (numbers are likely data, not headers)
+    if (typeof cell === "number") continue;
+
+    const norm = val
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/gi, "d");
+
+    for (const kw of knownHeaders) {
+      if (norm === kw || (kw.length >= 3 && norm.includes(kw))) {
+        score += 2;
+        break;
+      }
+    }
+    // Even non-keyword text cells get a small score (headers are text-heavy)
+    if (typeof cell === "string" && cell.trim().length > 0 && isNaN(Number(cell))) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+// Find the best header row among the first N rows
+function findHeaderRowIndex(rawData: unknown[][]): number {
+  const maxScan = Math.min(rawData.length, 15);
+  let bestIdx = 0;
+  let bestScore = -1;
+
+  for (let i = 0; i < maxScan; i++) {
+    const row = rawData[i] as unknown[];
+    if (!row) continue;
+
+    const nonEmpty = row.filter(
+      (c) => c !== null && c !== undefined && String(c).trim() !== ""
+    );
+    if (nonEmpty.length < 3) continue;
+
+    const s = scoreAsHeaderRow(row);
+    if (s > bestScore) {
+      bestScore = s;
+      bestIdx = i;
+    }
+  }
+
+  return bestIdx;
+}
+
 // Parse a worksheet
 function parseSheet(worksheet: XLSX.WorkSheet, sheetName: string): ParsedSheet {
   const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
@@ -85,14 +153,15 @@ function parseSheet(worksheet: XLSX.WorkSheet, sheetName: string): ParsedSheet {
     raw: true,
   });
 
-  // Extract headers (first row)
-  const headerRow = (rawData[0] || []) as (string | number | null)[];
+  // Find the real header row — score candidates by keyword matches
+  const headerRowIdx = findHeaderRowIndex(rawData);
+  const headerRow = (rawData[headerRowIdx] || []) as (string | number | null)[];
   const headers = headerRow.map((h, i) =>
     h !== null && h !== undefined ? String(h) : `Column_${i + 1}`
   );
 
-  // Get data rows (skip header)
-  const dataRows = rawData.slice(1);
+  // Get data rows (skip everything up to and including header)
+  const dataRows = rawData.slice(headerRowIdx + 1);
 
   // Analyze columns
   const columns: ParsedColumn[] = headers.map((header, index) => {
@@ -112,20 +181,30 @@ function parseSheet(worksheet: XLSX.WorkSheet, sheetName: string): ParsedSheet {
     };
   });
 
-  // Convert to array of objects
-  const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
-    defval: null,
-    raw: true,
-  });
+  // Convert data rows to array of objects using detected headers
+  const data: Record<string, unknown>[] = dataRows
+    .filter((row) =>
+      (row as unknown[]).some(
+        (c) => c !== null && c !== undefined && String(c).trim() !== ""
+      )
+    )
+    .map((row) => {
+      const obj: Record<string, unknown> = {};
+      const cells = row as unknown[];
+      for (let c = 0; c < headers.length; c++) {
+        obj[headers[c]] = cells[c] ?? null;
+      }
+      return obj;
+    });
 
   return {
     name: sheetName,
-    rowCount,
+    rowCount: dataRows.length,
     columnCount,
     columns,
     headers,
     data,
-    rawData,
+    rawData: dataRows,
   };
 }
 

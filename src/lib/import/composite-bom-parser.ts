@@ -87,6 +87,113 @@ const COLUMN_ALIASES: Record<string, string[]> = {
 };
 
 // ============================================
+// HEADER ROW DETECTION
+// ============================================
+
+/**
+ * Known BOM header keywords — used to score candidate rows.
+ * Higher weight = more distinctive for BOM files.
+ */
+const HEADER_KEYWORDS: { keyword: string; weight: number }[] = [
+  // BOM-specific (high weight)
+  { keyword: "no.", weight: 3 },
+  { keyword: "no", weight: 1 },
+  { keyword: "stt", weight: 3 },
+  { keyword: "module", weight: 3 },
+  { keyword: "qty", weight: 3 },
+  { keyword: "quantity", weight: 3 },
+  { keyword: "yield", weight: 3 },
+  { keyword: "scrap", weight: 3 },
+  { keyword: "method", weight: 2 },
+  { keyword: "unit", weight: 2 },
+  { keyword: "part number", weight: 3 },
+  { keyword: "part name", weight: 2 },
+  { keyword: "p name", weight: 2 },
+  { keyword: "desc", weight: 1 },
+  { keyword: "category", weight: 1 },
+  { keyword: "material", weight: 2 },
+  { keyword: "lvl", weight: 2 },
+  { keyword: "level", weight: 2 },
+  { keyword: "rev", weight: 1 },
+  { keyword: "status", weight: 1 },
+  // Vietnamese BOM headers (normalized matching)
+  { keyword: "so luong", weight: 3 },
+  { keyword: "dinh muc", weight: 3 },
+  { keyword: "don vi", weight: 2 },
+  { keyword: "dvt", weight: 2 },
+  { keyword: "don gia", weight: 2 },
+  { keyword: "ma sp", weight: 3 },
+  { keyword: "ten sp", weight: 2 },
+  { keyword: "phuong phap", weight: 2 },
+  { keyword: "hao hut", weight: 3 },
+  { keyword: "hieu suat", weight: 3 },
+  { keyword: "nhom", weight: 1 },
+  { keyword: "loai", weight: 1 },
+];
+
+/**
+ * Score a single row as a potential header row.
+ * Returns total weight of matched keywords.
+ */
+function scoreHeaderRow(row: unknown[]): number {
+  let score = 0;
+  const cells = row
+    .map((cell) => normalizeVietnamese(String(cell ?? "").trim()))
+    .filter((c) => c.length > 0);
+
+  if (cells.length < 3) return 0;
+
+  for (const cell of cells) {
+    for (const { keyword, weight } of HEADER_KEYWORDS) {
+      const nk = normalizeVietnamese(keyword);
+      if (cell === nk || (nk.length >= 3 && cell.includes(nk))) {
+        score += weight;
+        break; // one keyword match per cell is enough
+      }
+    }
+  }
+
+  return score;
+}
+
+/**
+ * Find the best header row among the first N rows of the sheet.
+ * Tries each candidate row as header, scores it, and returns the index
+ * of the row with the highest keyword score.
+ *
+ * Falls back to composite detection confidence if keyword scores are tied.
+ */
+export function findBestHeaderRow(
+  data: unknown[][],
+  maxScan: number = 15
+): number {
+  const limit = Math.min(data.length, maxScan);
+  let bestIdx = 0;
+  let bestScore = -1;
+
+  for (let i = 0; i < limit; i++) {
+    const row = data[i];
+    if (!row) continue;
+
+    const nonEmpty = row.filter(
+      (cell) => cell !== null && cell !== undefined && String(cell).trim() !== ""
+    );
+    // Candidate must have at least 3 non-empty cells
+    if (nonEmpty.length < 3) continue;
+
+    const kwScore = scoreHeaderRow(row);
+
+    // If this row has more keyword hits, it's a better header candidate
+    if (kwScore > bestScore) {
+      bestScore = kwScore;
+      bestIdx = i;
+    }
+  }
+
+  return bestIdx;
+}
+
+// ============================================
 // DETECTION
 // ============================================
 
