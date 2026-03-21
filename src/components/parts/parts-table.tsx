@@ -230,6 +230,7 @@ export function PartsTable() {
       lifecycleStatus: filters.lifecycle,
       makeOrBuy: filters.makeOrBuy,
       includeRelations: 'true',
+      pageSize: '1000',
     },
     { debounce: search ? 300 : 0, transform: transformParts }
   );
