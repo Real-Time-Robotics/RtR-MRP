@@ -53,6 +53,7 @@ interface EntityDef {
   importType: string;
   icon: React.ReactNode;
   deps: string[]; // keys of entities this depends on
+  system?: boolean; // auto-managed infrastructure, excluded from import progress
 }
 
 const TIERS: { label: string; labelVi: string; description: string; entities: EntityDef[] }[] = [
@@ -61,7 +62,7 @@ const TIERS: { label: string; labelVi: string; description: string; entities: En
     labelVi: "Tier 1 — Nền tảng",
     description: "Independent entities, no dependencies",
     entities: [
-      { key: "warehouses", label: "Warehouses", labelVi: "Kho hàng", importType: "warehouses", icon: <Warehouse className="w-4 h-4" />, deps: [] },
+      { key: "warehouses", label: "Warehouses", labelVi: "Kho hàng", importType: "warehouses", icon: <Warehouse className="w-4 h-4" />, deps: [], system: true },
       { key: "suppliers", label: "Suppliers", labelVi: "Nhà cung cấp", importType: "suppliers", icon: <Building2 className="w-4 h-4" />, deps: [] },
       { key: "customers", label: "Customers", labelVi: "Khách hàng", importType: "customers", icon: <Users className="w-4 h-4" />, deps: [] },
     ],
@@ -157,15 +158,18 @@ export default function DataSetupPage() {
     return entity.deps.some((dep) => getCount(dep) === 0);
   };
 
-  const getStatus = (entity: EntityDef): "done" | "empty" | "locked" => {
+  const getStatus = (entity: EntityDef): "done" | "empty" | "locked" | "system" => {
+    if (entity.system) return "system";
     if (isLocked(entity)) return "locked";
     return getCount(entity.key) > 0 ? "done" : "empty";
   };
 
-  const statusIcon = (status: "done" | "empty" | "locked") => {
+  const statusIcon = (status: "done" | "empty" | "locked" | "system") => {
     switch (status) {
       case "done":
         return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+      case "system":
+        return <CheckCircle2 className="w-4 h-4 text-blue-400" />;
       case "empty":
         return <Circle className="w-4 h-4 text-gray-400" />;
       case "locked":
@@ -173,10 +177,9 @@ export default function DataSetupPage() {
     }
   };
 
-  const totalEntities = TIERS.flatMap((t) => t.entities).length;
-  const doneEntities = TIERS.flatMap((t) => t.entities).filter(
-    (e) => getCount(e.key) > 0
-  ).length;
+  const userEntities = TIERS.flatMap((t) => t.entities).filter((e) => !e.system);
+  const totalEntities = userEntities.length;
+  const doneEntities = userEntities.filter((e) => getCount(e.key) > 0).length;
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
