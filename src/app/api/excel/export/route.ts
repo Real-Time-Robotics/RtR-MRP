@@ -193,7 +193,7 @@ async function fetchExportData(
         where,
         select: {
           code: true, name: true, category: true, status: true, rating: true,
-          email: true, phone: true, contactName: true, country: true,
+          contactEmail: true, contactPhone: true, contactName: true, country: true,
           paymentTerms: true, leadTimeDays: true,
         },
         orderBy: { code: "asc" },
@@ -204,8 +204,9 @@ async function fetchExportData(
       return prisma.product.findMany({
         where,
         select: {
-          sku: true, name: true, description: true, category: true,
-          basePrice: true, status: true, unit: true,
+          sku: true, name: true, description: true,
+          basePrice: true, status: true,
+          assemblyHours: true, testingHours: true,
         },
         orderBy: { sku: "asc" },
         take: 10000,
@@ -215,8 +216,8 @@ async function fetchExportData(
       return prisma.customer.findMany({
         where,
         select: {
-          code: true, name: true, contactName: true, email: true,
-          phone: true, tier: true, status: true, country: true,
+          code: true, name: true, contactName: true, contactEmail: true,
+          contactPhone: true, tier: true, status: true, country: true,
           paymentTerms: true, creditLimit: true,
         },
         orderBy: { code: "asc" },
