@@ -238,6 +238,7 @@ export class MrpEngine {
                 order: { status: { in: ['confirmed', 'in_production'] } }
             },
             select: {
+                productId: true,
                 quantity: true,
                 order: { select: { orderNumber: true, requiredDate: true } },
                 product: { select: { sku: true } },
