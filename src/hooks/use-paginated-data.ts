@@ -99,7 +99,7 @@ export function usePaginatedData<T extends { id: string }>(
         setPagination(result.pagination);
         setMeta(result.meta);
         // Capture extra fields (e.g., summary) from the response
-        const { data: _d, pagination: _p, meta: _m, success: _s, ...rest } = result as Record<string, unknown>;
+        const { data: _d, pagination: _p, meta: _m, success: _s, ...rest } = result as unknown as Record<string, unknown>;
         if (Object.keys(rest).length > 0) setExtra(rest);
         setPage(pageNum);
       } catch (err) {
