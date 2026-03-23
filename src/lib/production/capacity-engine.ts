@@ -76,6 +76,23 @@ export async function calculateRCCP(
     where: { status: "active" },
   });
 
+  // Batch: fetch ALL scheduled operations for the entire date range at once
+  const allScheduledOps = await prisma.scheduledOperation.findMany({
+    where: {
+      workCenterId: { in: workCenters.map(wc => wc.id) },
+      scheduledStart: { gte: startDate },
+      scheduledEnd: { lte: endDate },
+    },
+    select: {
+      workCenterId: true,
+      scheduledStart: true,
+      scheduledEnd: true,
+      workOrderOperation: {
+        select: { workOrder: { select: { woNumber: true } } },
+      },
+    },
+  });
+
   let periodStart = new Date(startDate);
   while (periodStart < endDate) {
     let periodEnd: Date;
@@ -97,6 +114,11 @@ export async function calculateRCCP(
 
     if (periodEnd > endDate) periodEnd = endDate;
 
+    // Filter in-memory for this period
+    const periodOps = allScheduledOps.filter(
+      op => op.scheduledStart >= periodStart && op.scheduledEnd <= periodEnd
+    );
+
     const wcCapacities: CapacityOverview[] = [];
     const overCapacityItems: Array<{
       workCenterId: string;
@@ -111,20 +133,9 @@ export async function calculateRCCP(
     for (const wc of workCenters) {
       const availableHours = calculateAvailableHours(wc, periodStart, periodEnd);
 
-      const scheduledOps = await prisma.scheduledOperation.findMany({
-        where: {
-          workCenterId: wc.id,
-          scheduledStart: { gte: periodStart },
-          scheduledEnd: { lte: periodEnd },
-        },
-        include: {
-          workOrderOperation: {
-            include: { workOrder: true },
-          },
-        },
-      });
+      const wcOps = periodOps.filter(op => op.workCenterId === wc.id);
 
-      const scheduledHours = scheduledOps.reduce((sum, op) => {
+      const scheduledHours = wcOps.reduce((sum, op) => {
         const duration =
           (op.scheduledEnd.getTime() - op.scheduledStart.getTime()) /
           (1000 * 60 * 60);
@@ -160,9 +171,7 @@ export async function calculateRCCP(
           workCenterName: wc.name,
           excessHours: scheduledHours - availableHours,
           affectedWorkOrders: Array.from(
-            new Set(
-              scheduledOps.map((op) => op.workOrderOperation.workOrder.woNumber)
-            )
+            new Set(wcOps.map((op) => op.workOrderOperation.workOrder.woNumber))
           ),
         });
       }

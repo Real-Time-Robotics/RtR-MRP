@@ -30,11 +30,33 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
       prisma.warehouse.count(),
       prisma.warehouse.findMany({
         ...buildOffsetPaginationQuery(params),
+        include: {
+          _count: { select: { inventory: true } },
+          inventory: {
+            select: { quantity: true, reservedQty: true },
+          },
+        },
       }),
     ]);
 
+    // Compute stats per warehouse and strip heavy inventory array
+    const warehousesWithStats = warehouses.map(wh => {
+      const totalQuantity = wh.inventory.reduce((sum, inv) => sum + inv.quantity, 0);
+      const criticalCount = wh.inventory.filter(inv => {
+        const available = inv.quantity - inv.reservedQty;
+        return available <= 0;
+      }).length;
+      const { inventory: _inv, ...rest } = wh;
+      return {
+        ...rest,
+        itemCount: wh._count.inventory,
+        totalQuantity,
+        criticalCount,
+      };
+    });
+
     // Sort by material flow order (Receiving -> Quarantine -> Main -> WIP -> FG -> Shipping -> Hold -> Scrap)
-    const sorted = warehouses.sort((a, b) => {
+    const sorted = warehousesWithStats.sort((a, b) => {
       const orderA = WAREHOUSE_FLOW_ORDER[a.type || 'MAIN'] ?? 99;
       const orderB = WAREHOUSE_FLOW_ORDER[b.type || 'MAIN'] ?? 99;
       return orderA - orderB;

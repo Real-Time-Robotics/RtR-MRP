@@ -38,6 +38,11 @@ const { searchParams } = new URL(request.url);
       );
     }
 
+    // Require minimum 2 characters to avoid expensive full table scans
+    if (query.length < 2) {
+      return NextResponse.json({ data: [] });
+    }
+
     let results: EntitySearchResult[] = [];
 
     switch (type) {

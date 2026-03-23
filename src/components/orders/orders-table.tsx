@@ -15,7 +15,7 @@ import { formatDateShort } from '@/lib/date';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/export';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency';
-import { useApiData } from '@/hooks/use-api-data';
+import { usePaginatedData } from '@/hooks/use-paginated-data';
 import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 import { EntityTooltip } from '@/components/entity-tooltip';
 
@@ -28,13 +28,15 @@ interface OrdersTableProps {
 }
 
 
+const orderCurrencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return orderCurrencyFormatter.format(amount);
 }
 
 // =============================================================================
@@ -58,12 +60,46 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
     priority: 'all',
   });
 
-  // SWR-based data fetching with debounced search
-  const { data: orders, loading, refresh } = useApiData<SalesOrder>(
-    '/api/sales-orders',
-    { search, status: filters.status, priority: filters.priority },
-    { debounce: search ? 300 : 0 }
-  );
+  // Server-side paginated data fetching
+  const {
+    data: orders,
+    loading,
+    pagination,
+    refresh,
+    setSearch: setPaginatedSearch,
+    setFilters: setPaginatedFilters,
+    fetchPage,
+  } = usePaginatedData<SalesOrder>({
+    endpoint: '/api/sales-orders',
+    initialPageSize: 50,
+  });
+
+  // Sync search with debounce
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setPaginatedSearch(value);
+    }, 300);
+  }, [setPaginatedSearch]);
+
+  // Sync filters
+  const handleFilterChange = React.useCallback((key: string, value: string) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev, [key]: value };
+      const apiFilters: Record<string, string> = {};
+      if (newFilters.status && newFilters.status !== 'all') apiFilters.status = newFilters.status;
+      if (newFilters.priority && newFilters.priority !== 'all') apiFilters.priority = newFilters.priority;
+      setPaginatedFilters(apiFilters);
+      return newFilters;
+    });
+  }, [setPaginatedFilters]);
+
+  const handleClearFilters = React.useCallback(() => {
+    setFilters({ status: 'all', priority: 'all' });
+    setPaginatedFilters({});
+  }, [setPaginatedFilters]);
 
   // Handlers
   const handleAdd = () => {
@@ -365,8 +401,9 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
       {/* Stats - CompactStatsBar */}
       <CompactStatsBar stats={(() => {
         const totalValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const totalFromServer = pagination?.totalItems ?? orders.length;
         return [
-          { label: t('orders.totalOrders'), value: orders.length },
+          { label: t('orders.totalOrders'), value: totalFromServer },
           { label: t('orders.totalValue'), value: formatCurrency(totalValue), color: 'text-green-600' },
           { label: t('orders.inProduction'), value: orders.filter(o => o.status === 'in_progress').length, color: 'text-blue-600' },
           { label: t('orders.pendingCount'), value: orders.filter(o => o.status === 'pending').length, color: 'text-amber-600' },
@@ -378,7 +415,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
         <CardHeader className="px-3 py-2 shrink-0">
           <DataTableToolbar
             searchValue={search}
-            onSearchChange={setSearch}
+            onSearchChange={handleSearchChange}
             searchPlaceholder={t('orders.searchPlaceholder')}
             onAdd={handleAdd}
             onImport={handleImport}
@@ -418,10 +455,8 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
               },
             ]}
             activeFilters={filters}
-            onFilterChange={(key, value) =>
-              setFilters((prev) => ({ ...prev, [key]: value }))
-            }
-            onClearFilters={() => setFilters({ status: 'all', priority: 'all' })}
+            onFilterChange={handleFilterChange}
+            onClearFilters={handleClearFilters}
           />
         </CardHeader>
         <CardContent className="p-0 flex-1 flex flex-col min-h-0">
@@ -434,8 +469,7 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
             selectable
             selectedKeys={selectedIds}
             onSelectionChange={setSelectedIds}
-            pagination
-            pageSize={50}
+            pagination={false}
             searchable={false}
             stickyHeader
             columnToggle
@@ -451,6 +485,30 @@ export function OrdersTable({ initialData = [] }: OrdersTableProps) {
               compactMode: true,
             }}
           />
+          {/* Server-side pagination controls */}
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between px-3 py-2 border-t text-xs text-muted-foreground">
+              <span>
+                Trang {pagination.page}/{pagination.totalPages} ({pagination.totalItems} mục)
+              </span>
+              <div className="flex gap-1">
+                <button
+                  className="px-2 py-1 rounded border text-xs disabled:opacity-50 hover:bg-muted"
+                  disabled={!pagination.hasPrevPage}
+                  onClick={() => fetchPage(pagination.page - 1)}
+                >
+                  ← {t('common.prev') || 'Trước'}
+                </button>
+                <button
+                  className="px-2 py-1 rounded border text-xs disabled:opacity-50 hover:bg-muted"
+                  disabled={!pagination.hasNextPage}
+                  onClick={() => fetchPage(pagination.page + 1)}
+                >
+                  {t('common.next') || 'Sau'} →
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

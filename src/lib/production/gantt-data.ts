@@ -56,10 +56,21 @@ export async function getGanttData(
 
   const workOrders = await prisma.workOrder.findMany({
     where,
-    include: {
-      product: true,
+    select: {
+      id: true,
+      woNumber: true,
+      status: true,
+      priority: true,
+      quantity: true,
+      completedQty: true,
+      plannedStart: true,
+      plannedEnd: true,
+      actualStart: true,
+      actualEnd: true,
+      product: { select: { name: true } },
     },
     orderBy: [{ plannedStart: 'asc' }, { woNumber: 'asc' }],
+    take: 500,
   });
 
   const now = new Date();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Eye, ArrowRight, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BOMHeader, BOMTableHeader } from "@/components/bom/bom-content";
 import { DataTable, Column } from "@/components/ui-v2/data-table";
 import { EntityTooltip } from "@/components/entity-tooltip";
-import { clientLogger } from '@/lib/client-logger';
+import { useApiData } from "@/hooks/use-api-data";
 import { toast } from "sonner";
 
 interface ProductWithBOM {
@@ -24,35 +24,24 @@ interface ProductWithBOM {
   hasBom: boolean;
 }
 
+const bomCurrencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return bomCurrencyFormatter.format(amount);
 }
 
 export default function BOMPage() {
-  const [products, setProducts] = useState<ProductWithBOM[]>([]);
-  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await fetch("/api/bom/products");
-      const data = await res.json();
-      setProducts(data.data || []);
-    } catch (error) {
-      clientLogger.error("Failed to fetch products:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // SWR-backed fetch with caching and deduplication
+  const { data: products, loading, refresh: fetchProducts } = useApiData<ProductWithBOM>(
+    '/api/bom/products',
+  );
 
   const handleDelete = useCallback(async (row: ProductWithBOM) => {
     const label = row.hasBom

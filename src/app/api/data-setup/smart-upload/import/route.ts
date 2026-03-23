@@ -211,7 +211,7 @@ async function importBomLines(bomLines: ParsedBomLine[]): Promise<PhaseResult> {
   // Cache lookups to avoid repeated queries
   const productCache = new Map<string, string>(); // sku → id
   const partCache = new Map<string, string>(); // partNumber → id
-  const bomHeaderCache = new Map<string, { id: string; maxLine: number }>(); // productId → bomHeader
+  const bomHeaderCache = new Map<string, { id: string; maxLine: number; existingLines: Map<string, string> }>(); // productId → bomHeader + partId→lineId map
 
   for (const line of bomLines) {
     try {
@@ -274,14 +274,16 @@ async function importBomLines(bomLines: ParsedBomLine[]): Promise<PhaseResult> {
           (max, l) => Math.max(max, l.lineNumber),
           0
         );
-        headerInfo = { id: bomHeader.id, maxLine };
+        // Cache header with existing line partId→id map for O(1) duplicate check
+        const existingLinesMap = new Map(bomHeader.bomLines.map(l => [l.partId, l.id]));
+        headerInfo = { id: bomHeader.id, maxLine, existingLines: existingLinesMap };
         bomHeaderCache.set(productId, headerInfo);
 
         // Check for existing line with same part
-        const existingLine = bomHeader.bomLines.find((l) => l.partId === partId);
-        if (existingLine) {
+        const existingLineId = existingLinesMap.get(partId);
+        if (existingLineId) {
           await prisma.bomLine.update({
-            where: { id: existingLine.id },
+            where: { id: existingLineId },
             data: {
               quantity: line.quantity,
               scrapRate: line.scrapRate,
@@ -292,14 +294,12 @@ async function importBomLines(bomLines: ParsedBomLine[]): Promise<PhaseResult> {
         }
       }
 
-      // Check if line already exists (for cached headers we didn't check)
-      const existingBomLine = await prisma.bomLine.findFirst({
-        where: { bomId: headerInfo.id, partId },
-      });
+      // Check from cached existing lines — no DB query needed
+      const existingLineId = headerInfo.existingLines?.get(partId);
 
-      if (existingBomLine) {
+      if (existingLineId) {
         await prisma.bomLine.update({
-          where: { id: existingBomLine.id },
+          where: { id: existingLineId },
           data: {
             quantity: line.quantity,
             scrapRate: line.scrapRate,
@@ -307,7 +307,7 @@ async function importBomLines(bomLines: ParsedBomLine[]): Promise<PhaseResult> {
         });
       } else {
         headerInfo.maxLine++;
-        await prisma.bomLine.create({
+        const newLine = await prisma.bomLine.create({
           data: {
             bomId: headerInfo.id,
             lineNumber: headerInfo.maxLine,
@@ -316,6 +316,8 @@ async function importBomLines(bomLines: ParsedBomLine[]): Promise<PhaseResult> {
             scrapRate: line.scrapRate,
           },
         });
+        // Track new line in cache to avoid duplicate on subsequent rows
+        headerInfo.existingLines?.set(partId, newLine.id);
       }
 
       result.success++;

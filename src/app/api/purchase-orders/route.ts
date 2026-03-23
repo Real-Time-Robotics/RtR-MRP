@@ -78,7 +78,17 @@ export const GET = withAuth(async (request, context, session) => {
           : { orderDate: "desc" },
         include: {
           supplier: { select: { id: true, code: true, name: true } },
-          lines: { include: { part: { select: { id: true, partNumber: true, name: true } } } },
+          lines: {
+            take: 10,
+            select: {
+              id: true,
+              lineNumber: true,
+              quantity: true,
+              unitPrice: true,
+              receivedQty: true,
+              part: { select: { id: true, partNumber: true, name: true } },
+            },
+          },
           _count: { select: { lines: true } },
         },
       }),

@@ -30,8 +30,11 @@ export const prismaDataFetcher: DataFetcher = {
     try {
       const parts = await prisma.part.findMany({
         where: { status: 'active' },
-        include: {
-          inventory: true,
+        select: {
+          unitCost: true,
+          minStockLevel: true,
+          safetyStock: true,
+          inventory: { select: { quantity: true } },
         },
       });
 
@@ -88,10 +91,17 @@ export const prismaDataFetcher: DataFetcher = {
     try {
       const parts = await prisma.part.findMany({
         where: { status: 'active' },
-        include: {
-          inventory: true,
+        select: {
+          partNumber: true,
+          name: true,
+          minStockLevel: true,
+          safetyStock: true,
+          reorderPoint: true,
+          unitCost: true,
+          inventory: { select: { quantity: true } },
         },
         orderBy: { partNumber: 'asc' },
+        take: 1000,
       });
 
       const alerts = parts.map(part => {

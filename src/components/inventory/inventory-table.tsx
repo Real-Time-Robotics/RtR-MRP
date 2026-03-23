@@ -48,6 +48,7 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     loading,
     pagination,
     meta,
+    extra,
     refresh,
     setSearch,
     setFilters,
@@ -100,26 +101,12 @@ export function InventoryTable({ initialData = [] }: InventoryTableProps) {
     })) as InventoryItem[];
   }, [rawInventory]);
 
-  // Summary counts from API response (stored alongside pagination)
-  const [summary, setSummary] = useState({ total: 0, critical: 0, reorder: 0, ok: 0 });
-
-  // Fetch summary from the raw API response
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const res = await fetch('/api/inventory?page=1&pageSize=1');
-        const result = await res.json();
-        if (result.summary) {
-          setSummary(result.summary);
-        } else if (result.pagination) {
-          setSummary(prev => ({ ...prev, total: result.pagination.totalItems }));
-        }
-      } catch {
-        // Fallback: use local data
-      }
-    };
-    fetchSummary();
-  }, [rawInventory]);
+  // Summary counts from API response — included in paginated response as `extra.summary`
+  const summary = useMemo(() => {
+    const s = (extra as { summary?: { total: number; critical: number; reorder: number; ok: number } })?.summary;
+    if (s) return s;
+    return { total: pagination?.totalItems || 0, critical: 0, reorder: 0, ok: 0 };
+  }, [extra, pagination]);
 
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [adjustData, setAdjustData] = useState<AdjustData>(DEFAULT_ADJUST_DATA);

@@ -66,12 +66,22 @@ class InventoryAlertService {
   private cachedAlerts: InventoryAlertItem[] = [];
   private alertCooldown: Map<string, Date> = new Map(); // Prevent duplicate alerts
   private cooldownMinutes = 60; // Don't create same alert within 60 minutes
+  private cacheTTLMs = 5 * 60 * 1000; // 5 minutes cache TTL for inventory check
 
   // ===========================================================================
   // CHECK INVENTORY LEVELS
   // ===========================================================================
 
   async checkInventoryLevels(): Promise<InventoryAlertItem[]> {
+    // Return cached results if within TTL (avoid full table scan on every call)
+    if (
+      this.lastCheckTime &&
+      this.cachedAlerts.length > 0 &&
+      Date.now() - this.lastCheckTime.getTime() < this.cacheTTLMs
+    ) {
+      return this.cachedAlerts;
+    }
+
     // Get all parts with inventory info
     const parts = await prisma.part.findMany({
       where: {

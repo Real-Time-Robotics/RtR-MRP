@@ -46,6 +46,7 @@ ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 ENV HOSTNAME 0.0.0.0
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Copy necessary files
 COPY --from=builder /app/public ./public

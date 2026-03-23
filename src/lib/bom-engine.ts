@@ -20,20 +20,40 @@ export async function explodeBOM(
     totalLevels: number;
   };
 }> {
-  // Pre-fetch all products with active BOMs to build SKU->ProductId map
-  const productsWithBom = await prisma.product.findMany({
-    where: {
-      bomHeaders: { some: { status: "active" } },
-    },
-    select: { id: true, sku: true },
-  });
+  // Pre-fetch ALL active BOMs and products in batch to eliminate per-node queries
+  const [productsWithBom, allActiveBoms] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        bomHeaders: { some: { status: "active" } },
+      },
+      select: { id: true, sku: true },
+    }),
+    prisma.bomHeader.findMany({
+      where: { status: "active" },
+      include: {
+        bomLines: {
+          include: { part: { select: { id: true, partNumber: true, name: true, unit: true, unitCost: true, costs: { take: 1, orderBy: { updatedAt: 'desc' } } } } },
+          orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
+        },
+      },
+    }),
+  ]);
+
   const skuToProductId = new Map(productsWithBom.map((p) => [p.sku, p.id]));
+
+  // Build lookup: productId -> BOM (first active BOM)
+  const bomByProductId = new Map<string, typeof allActiveBoms[0]>();
+  for (const bom of allActiveBoms) {
+    if (!bomByProductId.has(bom.productId)) {
+      bomByProductId.set(bom.productId, bom);
+    }
+  }
 
   // Collect all partIds across all levels for batch inventory lookup
   const allPartIds = new Set<string>();
   const visitedProductIds = new Set<string>();
 
-  // Recursive function to explode BOM
+  // Recursive function to explode BOM — no more DB queries per node
   async function explodeRecursive(
     currentProductId: string,
     parentQuantity: number,
@@ -48,15 +68,8 @@ export async function explodeBOM(
 
     visitedProductIds.add(currentProductId);
 
-    const bomHeader = await prisma.bomHeader.findFirst({
-      where: { productId: currentProductId, status: "active" },
-      include: {
-        bomLines: {
-          include: { part: { include: { costs: true } } },
-          orderBy: [{ moduleCode: "asc" }, { lineNumber: "asc" }],
-        },
-      },
-    });
+    // Lookup from pre-fetched cache instead of hitting DB
+    const bomHeader = bomByProductId.get(currentProductId) || null;
 
     if (!bomHeader) {
       visitedProductIds.delete(currentProductId);

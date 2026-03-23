@@ -101,40 +101,18 @@ export default function WarehousesPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // 1. Fetch all warehouses
-        const whRes = await fetch("/api/warehouses");
+        // Single API call — warehouses API now includes stats (itemCount, totalQuantity, criticalCount)
+        const whRes = await fetch("/api/warehouses?pageSize=100");
         if (!whRes.ok) throw new Error("Failed to fetch warehouses");
         const whJson = await whRes.json();
 
-        const warehouseList: WarehouseData[] = whJson.data;
-
-        // 2. Fetch inventory for each warehouse in parallel
-        const inventoryPromises = warehouseList.map((wh) =>
-          fetch(`/api/inventory?warehouseId=${wh.id}`)
-            .then((r) => r.json())
-            .then((json) => ({
-              warehouseId: wh.id,
-              items: (json.data || []) as InventoryItem[],
-            }))
-        );
-
-        const inventoryResults = await Promise.all(inventoryPromises);
-
-        // 3. Merge stats
-        const merged: WarehouseWithStats[] = warehouseList.map((wh) => {
-          const inv = inventoryResults.find((r) => r.warehouseId === wh.id);
-          const items = inv?.items || [];
-          return {
-            ...wh,
-            itemCount: items.length,
-            totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
-            criticalCount: items.filter(
-              (i) => i.status === "CRITICAL" || i.status === "OUT_OF_STOCK"
-            ).length,
-          };
-        });
-
-        setWarehouses(merged);
+        const warehouseList = whJson.data as WarehouseWithStats[];
+        setWarehouses(warehouseList.map(wh => ({
+          ...wh,
+          itemCount: wh.itemCount || 0,
+          totalQuantity: wh.totalQuantity || 0,
+          criticalCount: wh.criticalCount || 0,
+        })));
       } catch (err) {
         setError(err instanceof Error ? err.message : t("warehouse.errorLoading"));
       } finally {

@@ -5,6 +5,7 @@ import {
   calculateOEE,
   getOEETrend,
 } from "@/lib/production/oee-calculator";
+import { cacheAside } from '@/lib/cache';
 
 import { checkReadEndpointLimit } from '@/lib/rate-limit';
 import { withAuth } from '@/lib/api/with-auth';
@@ -42,9 +43,11 @@ export const GET = withAuth(async (request, context, session) => {
       return NextResponse.json(oee);
     }
 
-    // Return dashboard data
-    const dashboard = await getOEEDashboard();
-    return NextResponse.json(dashboard);
+    // Return dashboard data — cache for 120 seconds (OEE doesn't change rapidly)
+    const dashboard = await cacheAside('oee:dashboard', () => getOEEDashboard(), 120);
+    return NextResponse.json(dashboard, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' },
+    });
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/production/oee' });
     return NextResponse.json(

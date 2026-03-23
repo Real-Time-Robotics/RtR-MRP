@@ -86,18 +86,17 @@ export class MrpEngine {
         // Create helper map for quick part lookup
         const partMap = new Map<string, MrpPartRow>(parts.map(p => [p.id, p]));
 
-        // Fetch all BOMs to build the graph
-        const boms = await prisma.bomHeader.findMany({
-            where: { status: 'active' },
-            include: {
-                bomLines: true
+        // Fetch all BOMs in a single query — active ones get full bomLines,
+        // and we also detect products with only draft BOMs (B-01)
+        const allBoms = await prisma.bomHeader.findMany({
+            select: {
+                id: true,
+                productId: true,
+                status: true,
+                bomLines: true,
             }
         });
-
-        // Fetch all BOMs (including draft) to detect products with only draft BOMs (B-01)
-        const allBoms = await prisma.bomHeader.findMany({
-            select: { id: true, productId: true, status: true }
-        });
+        const boms = allBoms.filter(b => b.status === 'active');
         // Track products that have BOMs but none are active
         const productBomStatuses = new Map<string, Set<string>>();
         for (const b of allBoms) {
@@ -128,15 +127,17 @@ export class MrpEngine {
         // Map SKU to Part ID for bridging
         const skuToPartId = new Map(parts.map(p => [p.partNumber, p.id]));
 
-        // Auto-create missing Part records for Products that have no matching Part
-        for (const product of products) {
-            if (!skuToPartId.has(product.sku)) {
-                logger.warn('MRP auto-creating Part for Product without matching Part record', {
-                    context: 'mrp-core',
-                    productId: product.id,
-                    productSku: product.sku,
-                    mrpRunId: this.runId,
-                });
+        // Batch auto-create missing Part records for Products that have no matching Part
+        const missingProducts = products.filter(p => !skuToPartId.has(p.sku));
+        if (missingProducts.length > 0) {
+            logger.warn(`MRP auto-creating ${missingProducts.length} Parts for Products without matching Part record`, {
+                context: 'mrp-core',
+                mrpRunId: this.runId,
+                skus: missingProducts.map(p => p.sku).slice(0, 10),
+            });
+
+            // Use createManyAndReturn if available, otherwise create sequentially
+            for (const product of missingProducts) {
                 const newPart = await prisma.part.create({
                     data: {
                         partNumber: product.sku,
@@ -236,7 +237,11 @@ export class MrpEngine {
             where: {
                 order: { status: { in: ['confirmed', 'in_production'] } }
             },
-            include: { order: true, product: true }
+            select: {
+                quantity: true,
+                order: { select: { orderNumber: true, requiredDate: true } },
+                product: { select: { sku: true } },
+            },
         });
 
         // 6. Process Levels (0 to maxLevel)

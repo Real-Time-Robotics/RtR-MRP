@@ -177,6 +177,13 @@ async function fetchExportData(
     case "parts":
       return prisma.part.findMany({
         where,
+        select: {
+          partNumber: true, name: true, description: true, category: true,
+          unit: true, unitCost: true, makeOrBuy: true, status: true,
+          lifecycleStatus: true, reorderPoint: true, minStockLevel: true,
+          safetyStock: true, moq: true, leadTimeDays: true,
+          manufacturer: true, manufacturerPn: true,
+        },
         orderBy: { partNumber: "asc" },
         take: 10000,
       });
@@ -184,6 +191,11 @@ async function fetchExportData(
     case "suppliers":
       return prisma.supplier.findMany({
         where,
+        select: {
+          code: true, name: true, category: true, status: true, rating: true,
+          email: true, phone: true, contactName: true, country: true,
+          paymentTerms: true, leadTimeDays: true,
+        },
         orderBy: { code: "asc" },
         take: 10000,
       });
@@ -191,6 +203,10 @@ async function fetchExportData(
     case "products":
       return prisma.product.findMany({
         where,
+        select: {
+          sku: true, name: true, description: true, category: true,
+          basePrice: true, status: true, unit: true,
+        },
         orderBy: { sku: "asc" },
         take: 10000,
       });
@@ -198,6 +214,11 @@ async function fetchExportData(
     case "customers":
       return prisma.customer.findMany({
         where,
+        select: {
+          code: true, name: true, contactName: true, email: true,
+          phone: true, tier: true, status: true, country: true,
+          paymentTerms: true, creditLimit: true,
+        },
         orderBy: { code: "asc" },
         take: 10000,
       });
@@ -218,10 +239,18 @@ async function fetchExportData(
         where,
         include: {
           customer: { select: { code: true, name: true } },
-          lines: { include: { product: true } },
+          lines: {
+            select: {
+              lineNumber: true,
+              quantity: true,
+              unitPrice: true,
+              totalPrice: true,
+              product: { select: { sku: true, name: true } },
+            },
+          },
         },
         orderBy: { orderDate: "desc" },
-        take: 10000,
+        take: 5000,
       });
 
     case "purchaseOrders":
@@ -229,10 +258,18 @@ async function fetchExportData(
         where,
         include: {
           supplier: { select: { code: true, name: true } },
-          lines: { include: { part: true } },
+          lines: {
+            select: {
+              lineNumber: true,
+              quantity: true,
+              unitPrice: true,
+              receivedQty: true,
+              part: { select: { partNumber: true, name: true } },
+            },
+          },
         },
         orderBy: { orderDate: "desc" },
-        take: 10000,
+        take: 5000,
       });
 
     case "workOrders":

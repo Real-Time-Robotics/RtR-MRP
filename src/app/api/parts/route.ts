@@ -113,7 +113,8 @@ export const GET = withAuth(async (request, context, session) => {
     ]);
 
     return paginatedSuccess(
-      buildPaginatedResponse(parts, totalCount, params, startTime)
+      buildPaginatedResponse(parts, totalCount, params, startTime),
+      { cacheControl: 'private, max-age=30, stale-while-revalidate=60' }
     );
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/parts' });

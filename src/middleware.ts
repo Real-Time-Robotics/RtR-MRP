@@ -6,7 +6,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { v4 as uuidv4 } from 'uuid';
 
 // =============================================================================
 // CONFIGURATION
@@ -89,16 +88,10 @@ function hasRole(userRole: string, requiredRoles: string[]): boolean {
   return requiredRoles.some(role => hasPermission(userRole, role as UserRole));
 }
 
+// Security headers are primarily set by next.config.mjs headers().
+// Middleware only adds headers that need dynamic values or aren't covered by config.
 function addSecurityHeaders(response: NextResponse): NextResponse {
-  // Security headers
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-
-  // Content Security Policy
-  // Next.js requires 'unsafe-inline' for script hydration and style injection
+  // CSP with dynamic connect-src for dev mode
   response.headers.set(
     'Content-Security-Policy',
     [
@@ -107,21 +100,13 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://cloudflareinsights.com wss:",
+      `connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://cloudflareinsights.com wss: ${process.env.NODE_ENV === 'development' ? 'ws:' : ''}`,
       "frame-ancestors 'none'",
       "form-action 'self'",
       "base-uri 'self'",
       "object-src 'none'",
-    ].join('; ')
+    ].filter(Boolean).join('; ')
   );
-
-  // HSTS (only in production with HTTPS)
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set(
-      'Strict-Transport-Security',
-      'max-age=31536000; includeSubDomains'
-    );
-  }
 
   return response;
 }
@@ -187,8 +172,8 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown';
 
-  // Generate or preserve request ID (Gate 5.3 requirement)
-  const requestId = request.headers.get('x-request-id') ?? uuidv4();
+  // Preserve existing request ID or generate one (Gate 5.3 requirement)
+  const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
 
   // SSO: Detect Supabase auth cookie and redirect to SSO callback if no NextAuth session
   if (process.env.ENABLE_SUPABASE_SSO === 'true' && !isPublicRoute(pathname) && pathname !== '/api/auth/sso-callback') {

@@ -641,9 +641,10 @@ class KPIService {
   private async calculateTrend(definition: KPIDefinition, params: KPICalculationParams): Promise<KPITrend> {
     const periods = params.trendPeriods || 6;
     const trendPeriod = definition.trendPeriod;
-    const data: KPITrendPoint[] = [];
     const now = new Date();
 
+    // Build all period ranges first
+    const periodRanges: Array<{ dateFrom: Date; dateTo: Date }> = [];
     for (let i = periods - 1; i >= 0; i--) {
       const dateTo = new Date(now);
       const dateFrom = new Date(now);
@@ -671,12 +672,20 @@ class KPIService {
           break;
       }
 
-      const value = await this.computeKPIValue(definition, { dateFrom, dateTo });
-      data.push({
-        date: dateTo.toISOString().split('T')[0],
-        value,
-      });
+      periodRanges.push({ dateFrom, dateTo });
     }
+
+    // Calculate all periods in parallel instead of sequential
+    const values = await Promise.all(
+      periodRanges.map(({ dateFrom, dateTo }) =>
+        this.computeKPIValue(definition, { dateFrom, dateTo })
+      )
+    );
+
+    const data: KPITrendPoint[] = values.map((value, idx) => ({
+      date: periodRanges[idx].dateTo.toISOString().split('T')[0],
+      value,
+    }));
 
     const lastValue = data[data.length - 1]?.value || 0;
     const prevValue = data[data.length - 2]?.value || 0;

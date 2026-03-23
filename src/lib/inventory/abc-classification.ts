@@ -32,45 +32,44 @@ export async function runABCClassification(
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-  // Get all active parts with their issued quantities
-  const parts = await prisma.part.findMany({
-    where: { status: "active" },
-    select: {
-      id: true,
-      partNumber: true,
-      name: true,
-      unitCost: true,
-    },
-  });
-
-  // Calculate annual usage value per part
-  const partValues: Array<{
-    partId: string;
-    partNumber: string;
-    name: string;
-    annualUsageValue: number;
-  }> = [];
-
-  for (const part of parts) {
-    const issuedTxs = await prisma.lotTransaction.aggregate({
+  // Batch: get all active parts and all usage in parallel
+  const [parts, usageByPart] = await Promise.all([
+    prisma.part.findMany({
+      where: { status: "active" },
+      select: {
+        id: true,
+        partNumber: true,
+        name: true,
+        unitCost: true,
+      },
+    }),
+    // Single groupBy query replaces N individual aggregate queries
+    prisma.lotTransaction.groupBy({
+      by: ['partId'],
       where: {
-        partId: part.id,
         transactionType: { in: ["ISSUED", "CONSUMED", "SHIPPED"] },
         createdAt: { gte: twelveMonthsAgo },
+        partId: { not: null },
       },
       _sum: { quantity: true },
-    });
+    }),
+  ]);
 
-    const totalIssued = issuedTxs._sum.quantity || 0;
-    const annualUsageValue = totalIssued * part.unitCost;
-
-    partValues.push({
-      partId: part.id,
-      partNumber: part.partNumber,
-      name: part.name,
-      annualUsageValue,
-    });
+  // Build lookup map for O(1) access
+  const usageMap = new Map<string, number>();
+  for (const row of usageByPart) {
+    if (row.partId) {
+      usageMap.set(row.partId, row._sum.quantity || 0);
+    }
   }
+
+  // Calculate annual usage value per part
+  const partValues = parts.map((part) => ({
+    partId: part.id,
+    partNumber: part.partNumber,
+    name: part.name,
+    annualUsageValue: (usageMap.get(part.id) || 0) * part.unitCost,
+  }));
 
   // Sort by annual usage value descending
   partValues.sort((a, b) => b.annualUsageValue - a.annualUsageValue);
@@ -99,13 +98,22 @@ export async function runABCClassification(
     };
   });
 
-  // Update parts in database
+  // Batch update: 3 queries instead of N individual updates
+  const classGroups = { A: [] as string[], B: [] as string[], C: [] as string[] };
   for (const r of results) {
-    await prisma.part.update({
-      where: { id: r.partId },
-      data: { abcClass: r.abcClass },
-    });
+    classGroups[r.abcClass].push(r.partId);
   }
+
+  await Promise.all(
+    (Object.entries(classGroups) as [("A" | "B" | "C"), string[]][])
+      .filter(([, ids]) => ids.length > 0)
+      .map(([abcClass, ids]) =>
+        prisma.part.updateMany({
+          where: { id: { in: ids } },
+          data: { abcClass },
+        })
+      )
+  );
 
   return { classified: results.length, results };
 }

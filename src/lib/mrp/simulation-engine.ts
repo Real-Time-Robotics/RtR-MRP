@@ -195,9 +195,13 @@ async function createVirtualState(dateRange: {
   const inventory = new Map<string, number>();
   const leadTimes = new Map<string, number>();
 
-  // Load inventory
+  // Load inventory — select only needed fields
   const inventoryRecords = await prisma.inventory.findMany({
-    include: { part: true },
+    select: {
+      partId: true,
+      quantity: true,
+      reservedQty: true,
+    },
   });
 
   for (const inv of inventoryRecords) {
@@ -205,7 +209,7 @@ async function createVirtualState(dateRange: {
     inventory.set(inv.partId, current + inv.quantity - inv.reservedQty);
   }
 
-  // Load demands (Sales Orders)
+  // Load demands (Sales Orders) — select only needed fields
   const salesLines = await prisma.salesOrderLine.findMany({
     where: {
       order: {
@@ -216,9 +220,10 @@ async function createVirtualState(dateRange: {
         },
       },
     },
-    include: {
-      order: true,
-      product: true,
+    select: {
+      productId: true,
+      quantity: true,
+      order: { select: { orderNumber: true, requiredDate: true } },
     },
   });
 
@@ -235,7 +240,7 @@ async function createVirtualState(dateRange: {
     }
   }
 
-  // Load supplies (Purchase Orders)
+  // Load supplies (Purchase Orders) — select only needed fields
   const poLines = await prisma.purchaseOrderLine.findMany({
     where: {
       po: {
@@ -246,9 +251,11 @@ async function createVirtualState(dateRange: {
         },
       },
     },
-    include: {
-      po: true,
-      part: true,
+    select: {
+      partId: true,
+      quantity: true,
+      receivedQty: true,
+      po: { select: { poNumber: true, expectedDate: true } },
     },
   });
 
@@ -265,10 +272,15 @@ async function createVirtualState(dateRange: {
     }
   }
 
-  // Load lead times
+  // Load lead times — select only needed fields
   const parts = await prisma.part.findMany({
-    include: {
-      partSuppliers: true,
+    select: {
+      id: true,
+      partSuppliers: {
+        select: { isPreferred: true, leadTimeDays: true },
+        where: { isPreferred: true },
+        take: 1,
+      },
     },
   });
 

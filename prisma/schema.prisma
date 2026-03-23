@@ -417,7 +417,7 @@ model PartCost {
 
   updatedAt DateTime @updatedAt
 
-  @@index([partId])
+  @@index([partId, updatedAt])
   @@map("part_costs")
 }
 
@@ -768,6 +768,8 @@ model BomLine {
   part Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
 
   @@unique([bomId, lineNumber])
+  @@index([bomId])
+  @@index([partId])
   @@index([moduleCode])
   @@index([bomType])
   @@index([alternateGroup])
@@ -2365,6 +2367,7 @@ model LotTransaction {
 
   @@index([lotNumber])
   @@index([partId, lotNumber])
+  @@index([partId, transactionType, createdAt])
   @@index([transactionType])
   @@index([createdAt])
   @@map("lot_transactions")
@@ -2674,6 +2677,7 @@ model WorkOrderOperation {
   @@index([workOrderId])
   @@index([status])
   @@index([workCenterId, status])
+  @@index([workCenterId, actualEndDate])
   @@map("work_order_operations")
 }
 
@@ -2708,7 +2712,7 @@ model ScheduledOperation {
   workOrderOperation WorkOrderOperation @relation(fields: [workOrderOperationId], references: [id], onDelete: Cascade)
   workCenter         WorkCenter         @relation(fields: [workCenterId], references: [id], onDelete: Cascade)
 
-  @@index([workCenterId, scheduledStart])
+  @@index([workCenterId, scheduledStart, scheduledEnd])
   @@index([scheduledStart])
   @@map("scheduled_operations")
 }

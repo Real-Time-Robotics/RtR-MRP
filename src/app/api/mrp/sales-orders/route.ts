@@ -59,28 +59,35 @@ const { searchParams } = new URL(request.url);
 
     const orders = await prisma.salesOrder.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        orderDate: true,
+        requiredDate: true,
+        promisedDate: true,
+        status: true,
+        priority: true,
+        totalAmount: true,
+        currency: true,
         customer: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
+          select: { id: true, name: true, code: true },
         },
         lines: {
-          include: {
+          select: {
+            id: true,
+            productId: true,
+            quantity: true,
+            unitPrice: true,
+            lineTotal: true,
+            status: true,
             product: {
-              select: {
-                id: true,
-                sku: true,
-                name: true,
-              },
+              select: { id: true, sku: true, name: true },
             },
           },
         },
       },
       orderBy: { requiredDate: 'asc' },
-      take: 1000,
+      take: 500,
     });
 
     // Transform to match expected format
@@ -111,7 +118,9 @@ const { searchParams } = new URL(request.url);
       })),
     }));
 
-    return NextResponse.json({ success: true, data: formattedOrders });
+    return NextResponse.json({ success: true, data: formattedOrders }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (error) {
     logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'GET /api/mrp/sales-orders' });
     return NextResponse.json(

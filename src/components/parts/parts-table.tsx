@@ -56,7 +56,7 @@ import { cn } from '@/lib/utils';
 import { EntityTooltip } from '@/components/entity-tooltip';
 import { useLanguage } from '@/lib/i18n/language-context';
 import { DataTable, Column } from '@/components/ui-v2/data-table';
-import { useApiData } from '@/hooks/use-api-data';
+import { usePaginatedData } from '@/hooks/use-paginated-data';
 import { CompactStatsBar } from '@/components/ui/compact-stats-bar';
 
 // =============================================================================
@@ -124,22 +124,38 @@ const MAKE_BUY_COLORS: Record<string, string> = {
   BOTH: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
 };
 
+// Hoist formatters to module scope — avoid creating Intl objects on every render
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const intFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const decimalFormatters = new Map<number, Intl.NumberFormat>();
+function getDecimalFormatter(decimals: number): Intl.NumberFormat {
+  let f = decimalFormatters.get(decimals);
+  if (!f) {
+    f = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    decimalFormatters.set(decimals, f);
+  }
+  return f;
+}
+
 function formatCurrency(amount: number | null | undefined) {
   if (amount == null || isNaN(amount)) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return currencyFormatter.format(amount);
 }
 
 function formatNumber(value: number | null | undefined, decimals = 0) {
   if (value == null || isNaN(value)) return '-';
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(value);
+  return (decimals === 0 ? intFormatter : getDecimalFormatter(decimals)).format(value);
 }
 
 function formatDate(date: string | Date | null | undefined) {
@@ -221,18 +237,57 @@ export function PartsTable() {
     }));
   }, []);
 
-  // SWR-based data fetching with debounced search
-  const { data: parts, loading, refresh } = useApiData<Part>(
-    '/api/parts',
-    {
-      search,
-      category: filters.category,
-      lifecycleStatus: filters.lifecycle,
-      makeOrBuy: filters.makeOrBuy,
+  // Server-side paginated data fetching
+  const {
+    data: rawParts,
+    loading,
+    pagination,
+    refresh,
+    setSearch: setPaginatedSearch,
+    setFilters: setPaginatedFilters,
+    fetchPage,
+  } = usePaginatedData<Part & Record<string, unknown>>({
+    endpoint: '/api/parts',
+    initialPageSize: 50,
+    initialFilters: {
       includeRelations: 'true',
     },
-    { debounce: search ? 300 : 0, transform: transformParts }
-  );
+  });
+
+  // Transform raw API data
+  const parts = useMemo(() => {
+    if (!rawParts.length) return [];
+    return transformParts({ data: rawParts as unknown as PartApiResponse[] });
+  }, [rawParts, transformParts]);
+
+  // Sync search to paginated hook (with debounce)
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      setPaginatedSearch(value);
+    }, 300);
+  }, [setPaginatedSearch]);
+
+  // Sync filters to paginated hook
+  const handleFilterChange = useCallback((key: string, value: string) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev, [key]: value };
+      // Map filter keys to API param names
+      const apiFilters: Record<string, string> = { includeRelations: 'true' };
+      if (newFilters.category && newFilters.category !== 'all') apiFilters.category = newFilters.category;
+      if (newFilters.lifecycle && newFilters.lifecycle !== 'all') apiFilters.lifecycleStatus = newFilters.lifecycle;
+      if (newFilters.makeOrBuy && newFilters.makeOrBuy !== 'all') apiFilters.makeOrBuy = newFilters.makeOrBuy;
+      setPaginatedFilters(apiFilters);
+      return newFilters;
+    });
+  }, [setPaginatedFilters]);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({ category: 'all', lifecycle: 'all', makeOrBuy: 'all' });
+    setPaginatedFilters({ includeRelations: 'true' });
+  }, [setPaginatedFilters]);
 
   const filteredParts = parts;
 
@@ -761,8 +816,9 @@ export function PartsTable() {
 
         {/* Stats - CompactStatsBar */}
         <CompactStatsBar stats={(() => {
+          const totalFromServer = pagination?.totalItems ?? parts.length;
           const stats = {
-            total: parts.length,
+            total: totalFromServer,
             active: parts.filter(p => p.lifecycleStatus === 'ACTIVE').length,
             critical: parts.filter(p => p.isCritical).length,
             make: parts.filter(p => p.makeOrBuy === 'MAKE').length,
@@ -782,7 +838,7 @@ export function PartsTable() {
           <CardHeader className="px-3 py-2 shrink-0">
             <DataTableToolbar
               searchValue={search}
-              onSearchChange={setSearch}
+              onSearchChange={handleSearchChange}
               searchPlaceholder={t('parts.searchPlaceholder')}
               onAdd={handleAdd}
               onImport={handleImport}
@@ -823,12 +879,8 @@ export function PartsTable() {
                 },
               ]}
               activeFilters={filters}
-              onFilterChange={(key, value) =>
-                setFilters((prev) => ({ ...prev, [key]: value }))
-              }
-              onClearFilters={() =>
-                setFilters({ category: 'all', lifecycle: 'all', makeOrBuy: 'all' })
-              }
+              onFilterChange={handleFilterChange}
+              onClearFilters={handleClearFilters}
             />
           </CardHeader>
           <CardContent className="p-0 flex-1 flex flex-col min-h-0">
@@ -841,8 +893,7 @@ export function PartsTable() {
               selectable
               selectedKeys={selectedIds}
               onSelectionChange={setSelectedIds}
-              pagination
-              pageSize={50}
+              pagination={false}
               searchable={false}
               stickyHeader
               columnToggle
@@ -858,6 +909,30 @@ export function PartsTable() {
                 compactMode: true,
               }}
             />
+            {/* Server-side pagination controls */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between px-3 py-2 border-t text-xs text-muted-foreground">
+                <span>
+                  {t('parts.pageInfo') || `Trang ${pagination.page}/${pagination.totalPages} (${pagination.totalItems} mục)`}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    className="px-2 py-1 rounded border text-xs disabled:opacity-50 hover:bg-muted"
+                    disabled={!pagination.hasPrevPage}
+                    onClick={() => fetchPage(pagination.page - 1)}
+                  >
+                    ← {t('common.prev') || 'Trước'}
+                  </button>
+                  <button
+                    className="px-2 py-1 rounded border text-xs disabled:opacity-50 hover:bg-muted"
+                    disabled={!pagination.hasNextPage}
+                    onClick={() => fetchPage(pagination.page + 1)}
+                  >
+                    {t('common.next') || 'Sau'} →
+                  </button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

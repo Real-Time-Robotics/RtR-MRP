@@ -3,10 +3,9 @@ import prisma from "@/lib/prisma";
 import { getStockStatus } from "@/lib/bom-engine";
 import { withAuth } from "@/lib/api/with-auth";
 import { logger } from '@/lib/logger';
+import { cacheAside, cacheTTL } from '@/lib/cache';
 
 import { checkReadEndpointLimit } from '@/lib/rate-limit';
-// Note: Removed Redis rate limiting - middleware already handles this
-// Redis not available on Render free tier causes 10s timeout
 
 interface DashboardData {
   pendingOrders: number;
@@ -27,16 +26,18 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
   const startTime = Date.now();
 
   try {
-    // Run all three independent DB queries in parallel
-    const [pendingOrders, inventoryData, activePOs] = await Promise.all([
-      // Get pending orders
-      prisma.salesOrder.findMany({
-        where: {
-          status: { in: ["draft", "confirmed"] },
-        },
-        select: { id: true, totalAmount: true },
+    const data = await cacheAside<DashboardData>('dashboard:stats', async () => {
+    // Run all DB queries in parallel — use aggregates where possible
+    const [pendingOrdersAgg, pendingOrdersCount, inventoryData, activePOsAgg, activePOsCount] = await Promise.all([
+      // Aggregate pending orders value
+      prisma.salesOrder.aggregate({
+        where: { status: { in: ["draft", "confirmed"] } },
+        _sum: { totalAmount: true },
       }),
-      // Get inventory status (optimized query)
+      prisma.salesOrder.count({
+        where: { status: { in: ["draft", "confirmed"] } },
+      }),
+      // Get inventory status — only fields needed for stock status calculation
       prisma.inventory.findMany({
         select: {
           partId: true,
@@ -54,19 +55,18 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
           },
         },
       }),
-      // Get active POs
-      prisma.purchaseOrder.findMany({
-        where: {
-          status: { notIn: ["received", "cancelled"] },
-        },
-        select: { id: true, totalAmount: true },
+      // Aggregate active POs value
+      prisma.purchaseOrder.aggregate({
+        where: { status: { notIn: ["received", "cancelled"] } },
+        _sum: { totalAmount: true },
+      }),
+      prisma.purchaseOrder.count({
+        where: { status: { notIn: ["received", "cancelled"] } },
       }),
     ]);
 
-    const pendingOrdersValue = pendingOrders.reduce(
-      (sum, order) => sum + (order.totalAmount || 0),
-      0
-    );
+    const pendingOrdersValue = pendingOrdersAgg._sum.totalAmount || 0;
+    const activePOsValue = activePOsAgg._sum.totalAmount || 0;
 
     const partInventory = new Map<string, { quantity: number; reserved: number; minStockLevel: number; reorderPoint: number }>();
     inventoryData.forEach((inv) => {
@@ -105,26 +105,18 @@ export const GET = withAuth(async (request: NextRequest, _context, _session) => 
       }
     });
 
-    const activePOsValue = activePOs.reduce(
-      (sum, po) => sum + (po.totalAmount || 0),
-      0
-    );
-
-    const data: DashboardData = {
-      pendingOrders: pendingOrders.length,
+    return {
+      pendingOrders: pendingOrdersCount,
       pendingOrdersValue,
       criticalStock,
-      activePOs: activePOs.length,
+      activePOs: activePOsCount,
       activePOsValue,
       reorderAlerts,
     };
-
-    // Note: Cache disabled - Redis not available on Render free tier
-    // Using HTTP Cache-Control headers instead for browser caching
+    }, cacheTTL.dashboard); // Cache for 60 seconds
 
     return NextResponse.json({
       ...data,
-      cached: false,
       took: Date.now() - startTime,
     }, {
       headers: {

@@ -15,6 +15,7 @@ interface UsePaginatedDataResult<T> {
   data: T[];
   pagination: PaginatedResponse<T>["pagination"] | null;
   meta: PaginatedResponse<T>["meta"] | null;
+  extra: Record<string, unknown> | null;
   loading: boolean;
   error: string | null;
 
@@ -37,6 +38,7 @@ export function usePaginatedData<T extends { id: string }>(
   const [data, setData] = useState<T[]>([]);
   const [pagination, setPagination] = useState<PaginatedResponse<T>["pagination"] | null>(null);
   const [meta, setMeta] = useState<PaginatedResponse<T>["meta"] | null>(null);
+  const [extra, setExtra] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +98,9 @@ export function usePaginatedData<T extends { id: string }>(
         setData(result.data);
         setPagination(result.pagination);
         setMeta(result.meta);
+        // Capture extra fields (e.g., summary) from the response
+        const { data: _d, pagination: _p, meta: _m, success: _s, ...rest } = result as Record<string, unknown>;
+        if (Object.keys(rest).length > 0) setExtra(rest);
         setPage(pageNum);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -161,6 +166,7 @@ export function usePaginatedData<T extends { id: string }>(
     data,
     pagination,
     meta,
+    extra,
     loading,
     error,
     fetchPage,

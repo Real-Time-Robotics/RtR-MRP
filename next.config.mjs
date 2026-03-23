@@ -266,21 +266,14 @@ const nextConfig = {
             : []),
         ],
       },
-      // API routes - additional security
+      // API routes — allow per-route Cache-Control headers (set in route handlers)
+      // Write/mutation endpoints set no-store themselves; read endpoints can cache
       {
         source: "/api/:path*",
         headers: [
           {
-            key: "Cache-Control",
-            value: "no-store, no-cache, must-revalidate, proxy-revalidate",
-          },
-          {
-            key: "Pragma",
-            value: "no-cache",
-          },
-          {
-            key: "Expires",
-            value: "0",
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
         ],
       },

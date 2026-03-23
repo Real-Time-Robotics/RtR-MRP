@@ -42,16 +42,18 @@ const { searchParams } = new URL(request.url);
       where.status = status as Prisma.ConversationThreadWhereInput['status'];
     }
 
-    if (search) {
-      where.AND = [
-        {
-          OR: [
-            { title: { contains: search, mode: 'insensitive' } },
-            { contextTitle: { contains: search, mode: 'insensitive' } },
-            { messages: { some: { content: { contains: search, mode: 'insensitive' } } } },
-          ],
-        },
+    if (search && search.length >= 2) {
+      // Only search message content for queries >= 3 chars (expensive cross-table ILIKE)
+      const searchConditions: Prisma.ConversationThreadWhereInput[] = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { contextTitle: { contains: search, mode: 'insensitive' } },
       ];
+      if (search.length >= 3) {
+        searchConditions.push(
+          { messages: { some: { content: { contains: search, mode: 'insensitive' } } } }
+        );
+      }
+      where.AND = [{ OR: searchConditions }];
     }
 
     // Get threads with count

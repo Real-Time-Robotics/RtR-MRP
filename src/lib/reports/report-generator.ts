@@ -68,12 +68,19 @@ export async function generateReportData(
 
 async function generateInventorySummary(): Promise<GeneratorResult> {
   const parts = await prisma.part.findMany({
-    include: {
+    select: {
+      partNumber: true,
+      name: true,
+      category: true,
+      unit: true,
+      unitCost: true,
+      reorderPoint: true,
       inventory: {
-        include: { warehouse: true },
+        select: { quantity: true },
       },
     },
     orderBy: { partNumber: 'asc' },
+    take: 5000,
   });
 
   let totalValue = 0;
@@ -239,9 +246,26 @@ async function generateProductionStatus(): Promise<GeneratorResult> {
 
 async function generateSupplierPerformance(): Promise<GeneratorResult> {
   const suppliers = await prisma.supplier.findMany({
+    where: { status: 'active' },
+    take: 500,
     include: {
       purchaseOrders: {
-        include: { lines: true },
+        take: 100,
+        orderBy: { orderDate: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          totalAmount: true,
+          expectedDate: true,
+          updatedAt: true,
+          lines: {
+            select: {
+              quantity: true,
+              unitPrice: true,
+              receivedQty: true,
+            },
+          },
+        },
       },
     },
   });

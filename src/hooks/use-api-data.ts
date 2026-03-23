@@ -19,10 +19,13 @@ export function useApiData<T = unknown>(
   options?: {
     debounce?: number;
     transform?: (raw: Record<string, unknown>) => T[];
+    pageSize?: number;
   }
 ) {
   const debounceMs = options?.debounce ?? 0;
-  const rawKey = endpoint ? buildUrl(endpoint, params) : null;
+  // Default to larger page size for tables that load all data client-side
+  const mergedParams = { ...params, pageSize: String(options?.pageSize ?? 100) };
+  const rawKey = endpoint ? buildUrl(endpoint, mergedParams) : null;
   const key = useDebounce(rawKey, debounceMs);
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(key);

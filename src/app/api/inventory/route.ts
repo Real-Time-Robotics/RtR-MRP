@@ -8,6 +8,7 @@ import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { logApi } from '@/lib/audit/audit-logger';
 import { parsePaginationParams } from '@/lib/pagination';
+import { cacheAside, deleteCache } from '@/lib/cache';
 
 // =============================================================================
 // GET - List inventory with aggregation + server-side pagination
@@ -180,37 +181,42 @@ export const GET = withAuth(async (request, context, session) => {
     // clauses. A raw SQL approach (e.g. JOIN + CASE WHEN) could work but
     // would couple us to a specific DB dialect. The lightweight select below
     // only fetches the 4 numeric fields needed, keeping the payload minimal.
-    let summary = { total: totalItems, critical: 0, reorder: 0, ok: 0 };
-    if (paginationParams.page === 1) {
-      // Fetch all records lightweight for summary (only needed fields)
-      const allInventory = await prisma.inventory.findMany({
-        where,
-        select: {
-          quantity: true,
-          reservedQty: true,
-          part: {
-            select: {
-              planning: {
-                select: {
-                  minStockLevel: true,
-                  reorderPoint: true,
+    // Cache summary counts — expensive computation, refresh every 60s
+    const summary = await cacheAside<{ total: number; critical: number; reorder: number; ok: number }>(
+      'inventory:summary',
+      async () => {
+        const allInventory = await prisma.inventory.findMany({
+          where,
+          select: {
+            quantity: true,
+            reservedQty: true,
+            part: {
+              select: {
+                planning: {
+                  select: {
+                    minStockLevel: true,
+                    reorderPoint: true,
+                  },
                 },
               },
             },
           },
-        },
-      });
+        });
 
-      for (const inv of allInventory) {
-        const available = inv.quantity - inv.reservedQty;
-        const minStock = inv.part.planning?.minStockLevel || 0;
-        const rop = inv.part.planning?.reorderPoint || 0;
-        const s = getStockStatus(available, minStock, rop);
-        if (s === 'CRITICAL' || s === 'OUT_OF_STOCK') summary.critical++;
-        else if (s === 'REORDER') summary.reorder++;
-        else summary.ok++;
-      }
-    }
+        const counts = { total: totalItems, critical: 0, reorder: 0, ok: 0 };
+        for (const inv of allInventory) {
+          const available = inv.quantity - inv.reservedQty;
+          const minStock = inv.part.planning?.minStockLevel || 0;
+          const rop = inv.part.planning?.reorderPoint || 0;
+          const s = getStockStatus(available, minStock, rop);
+          if (s === 'CRITICAL' || s === 'OUT_OF_STOCK') counts.critical++;
+          else if (s === 'REORDER') counts.reorder++;
+          else counts.ok++;
+        }
+        return counts;
+      },
+      60 // 60 second cache
+    );
 
     return NextResponse.json({
       success: true,

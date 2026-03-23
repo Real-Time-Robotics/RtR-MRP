@@ -12,6 +12,7 @@ import {
   AuthUser,
 } from '@/lib/api/with-permission';
 import { checkReadEndpointLimit } from '@/lib/rate-limit';
+import { cacheAside } from '@/lib/cache';
 
 async function getHandler(
   request: NextRequest,
@@ -28,9 +29,12 @@ async function getHandler(
   const validSorts = ['overallScore', 'deliveryScore', 'qualityScore', 'priceScore', 'responseScore'];
   const sortColumn = validSorts.includes(sortBy) ? sortBy : 'overallScore';
 
-  // Get all suppliers with their latest score
+  const cacheKey = `suppliers:ranking:${sortColumn}:${limit}`;
+  const ranked = await cacheAside(cacheKey, async () => {
+  // Get suppliers with their latest score — limit to top N
   const suppliers = await prisma.supplier.findMany({
     where: { status: 'active' },
+    take: 200,
     select: {
       id: true,
       code: true,
@@ -40,6 +44,14 @@ async function getHandler(
       scores: {
         orderBy: { periodEnd: 'desc' },
         take: 1,
+        select: {
+          overallScore: true,
+          deliveryScore: true,
+          qualityScore: true,
+          priceScore: true,
+          responseScore: true,
+          periodEnd: true,
+        },
       },
     },
   });
@@ -64,14 +76,15 @@ async function getHandler(
   });
 
   // Add rank
-  const ranked = withScores.slice(0, limit).map((item, index) => ({
+  return withScores.slice(0, limit).map((item, index) => ({
     rank: index + 1,
     ...item,
   }));
+  }, 300); // Cache for 5 minutes
 
   return successResponse({
     rankings: ranked,
-    total: withScores.length,
+    total: ranked.length,
   });
 }
 

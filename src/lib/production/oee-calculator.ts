@@ -39,7 +39,6 @@ function calculateAvailableMinutes(
   const minutesPerDay = (endHour - startHour) * 60 - workCenter.breakMinutes;
 
   let totalMinutes = 0;
-  // Use UTC methods to avoid DST-related day-length issues
   const currentDate = new Date(Date.UTC(
     startDate.getFullYear(), startDate.getMonth(), startDate.getDate()
   ));
@@ -68,75 +67,57 @@ export async function calculateOEE(
 
   if (!workCenter) throw new Error("Work center not found");
 
-  // 1. AVAILABILITY = Run Time / Planned Production Time
-  const plannedProductionTime = calculateAvailableMinutes(
-    workCenter,
-    startDate,
-    endDate
-  );
+  // Run both queries in parallel instead of sequential
+  const [downtimeRecords, completedOps] = await Promise.all([
+    prisma.downtimeRecord.findMany({
+      where: {
+        workCenterId,
+        startTime: { gte: startDate },
+        endTime: { lte: endDate },
+      },
+      select: { durationMinutes: true },
+    }),
+    prisma.workOrderOperation.findMany({
+      where: {
+        workCenterId,
+        status: "completed",
+        actualEndDate: { gte: startDate, lte: endDate },
+      },
+      select: {
+        quantityCompleted: true,
+        quantityScrapped: true,
+        plannedRunTime: true,
+        quantityPlanned: true,
+        routingOperation: { select: { runTimePerUnit: true } },
+      },
+    }),
+  ]);
 
-  const downtimeRecords = await prisma.downtimeRecord.findMany({
-    where: {
-      workCenterId,
-      startTime: { gte: startDate },
-      endTime: { lte: endDate },
-    },
-  });
-
-  const totalDowntime = downtimeRecords.reduce(
-    (sum, d) => sum + (d.durationMinutes || 0),
-    0
-  );
-
+  // 1. AVAILABILITY
+  const plannedProductionTime = calculateAvailableMinutes(workCenter, startDate, endDate);
+  const totalDowntime = downtimeRecords.reduce((sum, d) => sum + (d.durationMinutes || 0), 0);
   const actualRunTime = Math.max(0, plannedProductionTime - totalDowntime);
-  const availability =
-    plannedProductionTime > 0
-      ? (actualRunTime / plannedProductionTime) * 100
-      : 0;
+  const availability = plannedProductionTime > 0 ? (actualRunTime / plannedProductionTime) * 100 : 0;
 
-  // 2. PERFORMANCE = (Ideal Cycle Time × Total Count) / Run Time
-  const completedOps = await prisma.workOrderOperation.findMany({
-    where: {
-      workCenterId,
-      status: "completed",
-      actualEndDate: { gte: startDate, lte: endDate },
-    },
-    include: { routingOperation: true },
-  });
-
-  const totalCount = completedOps.reduce(
-    (sum, op) => sum + op.quantityCompleted,
-    0
-  );
-
+  // 2. PERFORMANCE
+  const totalCount = completedOps.reduce((sum, op) => sum + op.quantityCompleted, 0);
   const idealCycleTime = completedOps.reduce((sum, op) => {
-    const runTimePerUnit =
-      op.routingOperation?.runTimePerUnit ||
-      op.plannedRunTime / op.quantityPlanned;
+    const runTimePerUnit = op.routingOperation?.runTimePerUnit || op.plannedRunTime / op.quantityPlanned;
     return sum + runTimePerUnit * op.quantityCompleted;
   }, 0);
+  const performance = actualRunTime > 0 ? (idealCycleTime / actualRunTime) * 100 : 0;
 
-  const performance =
-    actualRunTime > 0 ? (idealCycleTime / actualRunTime) * 100 : 0;
-
-  // 3. QUALITY = Good Count / Total Count
-  const scrapCount = completedOps.reduce(
-    (sum, op) => sum + op.quantityScrapped,
-    0
-  );
+  // 3. QUALITY
+  const scrapCount = completedOps.reduce((sum, op) => sum + op.quantityScrapped, 0);
   const goodCount = totalCount - scrapCount;
-
   const quality = totalCount > 0 ? (goodCount / totalCount) * 100 : 100;
 
-  // 4. OEE = Availability × Performance × Quality
-  const oee =
-    (availability / 100) * (Math.min(100, performance) / 100) * (quality / 100) * 100;
+  // 4. OEE
+  const oee = (availability / 100) * (Math.min(100, performance) / 100) * (quality / 100) * 100;
 
-  // Calculate losses
   const availabilityLoss = plannedProductionTime - actualRunTime;
   const performanceLoss = actualRunTime - idealCycleTime;
-  const qualityLoss =
-    totalCount > 0 ? idealCycleTime * (scrapCount / totalCount) : 0;
+  const qualityLoss = totalCount > 0 ? idealCycleTime * (scrapCount / totalCount) : 0;
 
   return {
     oee: Math.round(oee * 10) / 10,
@@ -169,9 +150,10 @@ export async function getOEETrend(
     quality: number;
   }>
 > {
-  const results = [];
   const now = new Date();
 
+  // Build all period ranges first
+  const periodRanges: Array<{ startDate: Date; endDate: Date; label: string }> = [];
   for (let i = periods - 1; i >= 0; i--) {
     let startDate: Date;
     let endDate: Date;
@@ -204,18 +186,23 @@ export async function getOEETrend(
         break;
     }
 
-    const metrics = await calculateOEE(workCenterId, startDate, endDate);
-
-    results.push({
-      period: periodLabel,
-      oee: metrics.oee,
-      availability: metrics.availability,
-      performance: metrics.performance,
-      quality: metrics.quality,
-    });
+    periodRanges.push({ startDate, endDate, label: periodLabel });
   }
 
-  return results;
+  // Calculate all periods in parallel
+  const metricsResults = await Promise.all(
+    periodRanges.map(({ startDate, endDate }) =>
+      calculateOEE(workCenterId, startDate, endDate)
+    )
+  );
+
+  return metricsResults.map((metrics, idx) => ({
+    period: periodRanges[idx].label,
+    oee: metrics.oee,
+    availability: metrics.availability,
+    performance: metrics.performance,
+    quality: metrics.quality,
+  }));
 }
 
 export async function getOEEDashboard(): Promise<{
@@ -247,50 +234,101 @@ export async function getOEEDashboard(): Promise<{
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - 7);
 
+  const workCenterIds = workCenters.map(wc => wc.id);
+
+  // Batch fetch all downtime and operations for ALL work centers at once
+  const [allDowntime, allCompletedOps] = await Promise.all([
+    prisma.downtimeRecord.findMany({
+      where: {
+        workCenterId: { in: workCenterIds },
+        startTime: { gte: startDate },
+        endTime: { lte: now },
+      },
+      select: { workCenterId: true, durationMinutes: true },
+    }),
+    prisma.workOrderOperation.findMany({
+      where: {
+        workCenterId: { in: workCenterIds },
+        status: "completed",
+        actualEndDate: { gte: startDate, lte: now },
+      },
+      select: {
+        workCenterId: true,
+        quantityCompleted: true,
+        quantityScrapped: true,
+        plannedRunTime: true,
+        quantityPlanned: true,
+        routingOperation: { select: { runTimePerUnit: true } },
+      },
+    }),
+  ]);
+
+  // Group by work center for O(1) lookup
+  const downtimeByWC = new Map<string, number>();
+  for (const d of allDowntime) {
+    downtimeByWC.set(d.workCenterId, (downtimeByWC.get(d.workCenterId) || 0) + (d.durationMinutes || 0));
+  }
+
+  const opsByWC = new Map<string, typeof allCompletedOps>();
+  for (const op of allCompletedOps) {
+    if (!opsByWC.has(op.workCenterId)) opsByWC.set(op.workCenterId, []);
+    opsByWC.get(op.workCenterId)!.push(op);
+  }
+
+  // Calculate metrics per work center — no more DB queries
   const wcMetrics = [];
-  let totalOEE = 0;
-  let totalAvailability = 0;
-  let totalPerformance = 0;
-  let totalQuality = 0;
-  let totalAvailabilityLoss = 0;
-  let totalPerformanceLoss = 0;
-  let totalQualityLoss = 0;
+  let totalOEE = 0, totalAvailability = 0, totalPerformance = 0, totalQuality = 0;
+  let totalAvailabilityLoss = 0, totalPerformanceLoss = 0, totalQualityLoss = 0;
 
   for (const wc of workCenters) {
-    const metrics = await calculateOEE(wc.id, startDate, now);
+    const plannedProductionTime = calculateAvailableMinutes(wc, startDate, now);
+    const totalDowntime = downtimeByWC.get(wc.id) || 0;
+    const actualRunTime = Math.max(0, plannedProductionTime - totalDowntime);
+    const availability = plannedProductionTime > 0 ? (actualRunTime / plannedProductionTime) * 100 : 0;
+
+    const ops = opsByWC.get(wc.id) || [];
+    const totalCount = ops.reduce((sum, op) => sum + op.quantityCompleted, 0);
+    const idealCycleTime = ops.reduce((sum, op) => {
+      const runTimePerUnit = op.routingOperation?.runTimePerUnit || op.plannedRunTime / op.quantityPlanned;
+      return sum + runTimePerUnit * op.quantityCompleted;
+    }, 0);
+    const performance = actualRunTime > 0 ? (idealCycleTime / actualRunTime) * 100 : 0;
+
+    const scrapCount = ops.reduce((sum, op) => sum + op.quantityScrapped, 0);
+    const goodCount = totalCount - scrapCount;
+    const quality = totalCount > 0 ? (goodCount / totalCount) * 100 : 100;
+
+    const oee = (availability / 100) * (Math.min(100, performance) / 100) * (quality / 100) * 100;
+
+    const availabilityLoss = plannedProductionTime - actualRunTime;
+    const performanceLoss = actualRunTime - idealCycleTime;
+    const qualityLoss = totalCount > 0 ? idealCycleTime * (scrapCount / totalCount) : 0;
 
     const status: "world_class" | "good" | "average" | "poor" =
-      metrics.oee >= 85
-        ? "world_class"
-        : metrics.oee >= 70
-        ? "good"
-        : metrics.oee >= 50
-        ? "average"
-        : "poor";
+      oee >= 85 ? "world_class" : oee >= 70 ? "good" : oee >= 50 ? "average" : "poor";
 
     wcMetrics.push({
       id: wc.id,
       code: wc.code,
       name: wc.name,
-      oee: metrics.oee,
-      availability: metrics.availability,
-      performance: metrics.performance,
-      quality: metrics.quality,
+      oee: Math.round(oee * 10) / 10,
+      availability: Math.round(availability * 10) / 10,
+      performance: Math.min(100, Math.round(performance * 10) / 10),
+      quality: Math.round(quality * 10) / 10,
       status,
     });
 
-    totalOEE += metrics.oee;
-    totalAvailability += metrics.availability;
-    totalPerformance += metrics.performance;
-    totalQuality += metrics.quality;
-    totalAvailabilityLoss += metrics.losses.availability;
-    totalPerformanceLoss += metrics.losses.performance;
-    totalQualityLoss += metrics.losses.quality;
+    totalOEE += oee;
+    totalAvailability += availability;
+    totalPerformance += performance;
+    totalQuality += quality;
+    totalAvailabilityLoss += availabilityLoss;
+    totalPerformanceLoss += performanceLoss;
+    totalQualityLoss += qualityLoss;
   }
 
   const count = workCenters.length || 1;
-  const totalLoss =
-    totalAvailabilityLoss + totalPerformanceLoss + totalQualityLoss;
+  const totalLoss = totalAvailabilityLoss + totalPerformanceLoss + totalQualityLoss;
 
   return {
     overallOEE: Math.round((totalOEE / count) * 10) / 10,
@@ -302,24 +340,17 @@ export async function getOEEDashboard(): Promise<{
       {
         category: "Availability (Downtime)",
         minutes: Math.round(totalAvailabilityLoss),
-        percentage:
-          totalLoss > 0
-            ? Math.round((totalAvailabilityLoss / totalLoss) * 100)
-            : 0,
+        percentage: totalLoss > 0 ? Math.round((totalAvailabilityLoss / totalLoss) * 100) : 0,
       },
       {
         category: "Performance (Speed Loss)",
         minutes: Math.round(totalPerformanceLoss),
-        percentage:
-          totalLoss > 0
-            ? Math.round((totalPerformanceLoss / totalLoss) * 100)
-            : 0,
+        percentage: totalLoss > 0 ? Math.round((totalPerformanceLoss / totalLoss) * 100) : 0,
       },
       {
         category: "Quality (Defects)",
         minutes: Math.round(totalQualityLoss),
-        percentage:
-          totalLoss > 0 ? Math.round((totalQualityLoss / totalLoss) * 100) : 0,
+        percentage: totalLoss > 0 ? Math.round((totalQualityLoss / totalLoss) * 100) : 0,
       },
     ].sort((a, b) => b.minutes - a.minutes),
   };

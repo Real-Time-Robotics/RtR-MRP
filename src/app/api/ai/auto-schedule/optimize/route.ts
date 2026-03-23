@@ -67,7 +67,8 @@ async function computeBaselineMetrics(): Promise<BaselineMetrics> {
   const horizonEnd = new Date(now);
   horizonEnd.setDate(horizonEnd.getDate() + 30);
 
-  const [capacityRecords, scheduledOps, opsWithWorkOrders] = await Promise.all([
+  // Merged: single query for scheduled ops (was 2 separate identical-filter queries)
+  const [capacityRecords, allScheduledOps] = await Promise.all([
     prisma.capacityRecord.findMany({
       where: {
         date: { gte: now, lte: horizonEnd },
@@ -92,27 +93,18 @@ async function computeBaselineMetrics(): Promise<BaselineMetrics> {
         scheduledEnd: true,
         hasConflict: true,
         status: true,
-      },
-    }),
-    prisma.scheduledOperation.findMany({
-      where: {
-        status: { in: ['scheduled', 'in_progress'] },
-        scheduledStart: { gte: now },
-      },
-      select: {
-        scheduledEnd: true,
         workOrderOperation: {
           select: {
             workOrder: {
-              select: {
-                dueDate: true,
-              },
+              select: { dueDate: true },
             },
           },
         },
       },
     }),
   ]);
+  const scheduledOps = allScheduledOps;
+  const opsWithWorkOrders = allScheduledOps;
 
   // --- Utilization ---
   let utilization = 0;
