@@ -245,7 +245,7 @@ async function fetchExportData(
               lineNumber: true,
               quantity: true,
               unitPrice: true,
-              totalPrice: true,
+              lineTotal: true,
               product: { select: { sku: true, name: true } },
             },
           },
