@@ -94,6 +94,9 @@ export const prismaDataFetcher: DataFetcher = {
         select: {
           partNumber: true,
           name: true,
+          unit: true,
+          category: true,
+          isCritical: true,
           minStockLevel: true,
           safetyStock: true,
           reorderPoint: true,
