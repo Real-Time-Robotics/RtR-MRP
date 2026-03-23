@@ -251,6 +251,7 @@ export function PartsTable() {
     initialPageSize: 50,
     initialFilters: {
       includeRelations: 'true',
+      pageSize: '1000',
     },
   });
 
