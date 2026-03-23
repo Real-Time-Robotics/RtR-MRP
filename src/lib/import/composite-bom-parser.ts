@@ -481,12 +481,13 @@ function findColumnIndex(normalizedHeaders: string[], field: string): number {
     }
   }
 
-  // Fallback: partial match
+  // Fallback: partial match — only header-contains-alias direction
+  // (prevents "unit cost" alias from matching "unit" header)
   for (let i = 0; i < normalizedHeaders.length; i++) {
     const h = normalizedHeaders[i];
     for (const alias of aliases) {
       const na = normalizeVietnamese(alias);
-      if (na.length >= 3 && (h.includes(na) || na.includes(h))) return i;
+      if (na.length >= 3 && h.includes(na)) return i;
     }
   }
 
