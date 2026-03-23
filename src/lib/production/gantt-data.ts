@@ -67,6 +67,7 @@ export async function getGanttData(
       plannedEnd: true,
       actualStart: true,
       actualEnd: true,
+      assignedTo: true,
       product: { select: { name: true } },
     },
     orderBy: [{ plannedStart: 'asc' }, { woNumber: 'asc' }],
