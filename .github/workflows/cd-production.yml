@@ -12,9 +12,6 @@ on:
         description: 'Version to deploy'
         required: true
 
-env:
-  REGISTRY: ghcr.io
-
 jobs:
   deploy:
     name: Deploy to Production
@@ -22,23 +19,6 @@ jobs:
     environment: production
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Lowercase image name
-        id: image
-        run: echo "name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Get version
         id: version
         run: |
@@ -48,57 +28,43 @@ jobs:
             echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Create backup before deploy
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            cd /home/hung/rtr-mrp
-            ./scripts/backup/backup-db.sh pre-deploy-${{ steps.version.outputs.version }}
-
       - name: Deploy to Production
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          command_timeout: 30m
           script: |
-            cd /home/hung/rtr-mrp
+            set -e
+            cd /home/hung/RtR-MRP
 
-            # Pull new image
-            docker compose pull app
+            echo "=== Pull latest code ==="
+            git pull origin main
 
-            # Deploy with zero-downtime
+            echo "=== Install dependencies ==="
+            docker compose exec -T app npm install --production=false
+
+            echo "=== Run Prisma migrations ==="
+            docker compose exec -T app npx prisma generate
+            docker compose exec -T app npx prisma db push --skip-generate
+
+            echo "=== Rebuild application ==="
+            docker compose build --no-cache app
+
+            echo "=== Restart with zero-downtime ==="
             docker compose up -d --no-deps app
 
-            # Run migrations
-            docker compose exec -T app npx prisma migrate deploy
-
-            # Clean up
+            echo "=== Clean up ==="
             docker system prune -f
 
-            # Log deployment
-            echo "$(date): Deployed ${{ steps.version.outputs.version }}" >> /var/log/rtr-mrp/deployments.log
+            echo "$(date): Deployed ${{ steps.version.outputs.version }}" >> /tmp/rtr-mrp-deployments.log
 
       - name: Health Check
         run: |
           sleep 30
           for i in {1..5}; do
-            if curl -f ${{ secrets.PRODUCTION_URL }}/api/health; then
+            if curl -sf ${{ secrets.PRODUCTION_URL }}/api/health; then
               echo "Health check passed"
               exit 0
             fi
@@ -107,17 +73,6 @@ jobs:
           done
           echo "Health check failed after 5 attempts"
           exit 1
-
-      - name: Rollback on failure
-        if: failure()
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.PRODUCTION_HOST }}
-          username: ${{ secrets.PRODUCTION_USER }}
-          key: ${{ secrets.PRODUCTION_SSH_KEY }}
-          script: |
-            cd /home/hung/rtr-mrp
-            ./scripts/deploy/rollback.sh
 
       - name: Notify Success
         if: success() && vars.SLACK_WEBHOOK != ''
