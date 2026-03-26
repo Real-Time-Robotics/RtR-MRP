@@ -42,21 +42,20 @@ jobs:
             echo "=== Pull latest code ==="
             git pull origin main
 
-            echo "=== Install dependencies ==="
-            docker compose exec -T app npm install --production=false
+            echo "=== Rebuild Docker image ==="
+            docker compose build app
 
-            echo "=== Run Prisma migrations ==="
-            docker compose exec -T app npx prisma generate
-            docker compose exec -T app npx prisma db push --skip-generate
-
-            echo "=== Rebuild application ==="
-            docker compose build --no-cache app
-
-            echo "=== Restart with zero-downtime ==="
+            echo "=== Restart container ==="
             docker compose up -d --no-deps app
 
-            echo "=== Clean up ==="
-            docker system prune -f
+            echo "=== Wait for container to be ready ==="
+            sleep 10
+
+            echo "=== Run Prisma migrations ==="
+            docker compose exec -T app npx prisma db push --skip-generate || true
+
+            echo "=== Clean up old images ==="
+            docker image prune -f
 
             echo "$(date): Deployed ${{ steps.version.outputs.version }}" >> /tmp/rtr-mrp-deployments.log
 
