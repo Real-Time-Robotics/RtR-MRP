@@ -22,17 +22,72 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-// Mock next-auth
+// Mock RTR Auth Gateway client
+vi.mock('@/lib/auth-gateway/client', () => ({
+  useRtrSession: () => ({
+    data: {
+      user: {
+        id: 'test-user',
+        name: 'Test User',
+        email: 'test@example.com',
+        role: 'admin',
+        dept: 'IT',
+        role_level: 99,
+        gatewayPerms: ['admin'],
+      },
+    },
+    status: 'authenticated',
+    update: vi.fn(),
+  }),
+  useRtrUser: () => ({
+    id: 'test-user',
+    name: 'Test User',
+    email: 'test@example.com',
+    role: 'admin',
+    dept: 'IT',
+    role_level: 99,
+    gatewayPerms: ['admin'],
+  }),
+  useRtrLogout: () => vi.fn(),
+  useRtrPermission: () => true,
+  useRtrPermissions: () => ({
+    can: () => true,
+    canAny: () => true,
+    canAll: () => true,
+    role: 'admin',
+    isAdmin: true,
+    isManager: true,
+    permissions: [],
+  }),
+  RtrAuthProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// Mock next-auth (legacy — for any remaining test imports)
 vi.mock('next-auth/react', () => ({
   useSession: () => ({
     data: {
-      user: { id: 'test-user', name: 'Test User', email: 'test@example.com' },
+      user: { id: 'test-user', name: 'Test User', email: 'test@example.com', role: 'admin' },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     },
     status: 'authenticated',
   }),
   signIn: vi.fn(),
   signOut: vi.fn(),
+}));
+
+// Mock @/lib/auth for server-side tests
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue({
+    user: {
+      id: 'test-user',
+      name: 'Test User',
+      email: 'test@example.com',
+      role: 'admin',
+      dept: 'IT',
+      role_level: 99,
+      gatewayPerms: ['admin'],
+    },
+  }),
 }));
 
 // Mock fetch globally

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useRtrSession, useRtrLogout } from '@/lib/auth-gateway/client';
 import { useRouter } from 'next/navigation';
 import { clientLogger } from '@/lib/client-logger';
 import {
@@ -92,7 +92,8 @@ export function DemoFloatingBadge({
   showReset = true,
   onReset,
 }: DemoFloatingBadgeProps) {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useRtrSession();
+  const logout = useRtrLogout();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -134,8 +135,8 @@ export function DemoFloatingBadge({
 
     setSwitching(true);
     try {
-      // Sign out current user
-      await signOut({ redirect: false });
+      // Sign out current user via Auth Gateway
+      logout();
 
       // Redirect to login with demo credentials
       const params = new URLSearchParams({

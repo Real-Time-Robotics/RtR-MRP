@@ -1,27 +1,31 @@
 // =============================================================================
 // RTR MRP - NEXT.JS MIDDLEWARE
-// Route protection, security headers, rate limiting, request ID tracking
+// Route protection via RTR Auth Gateway, security headers, rate limiting
 // =============================================================================
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { verifyFromRequest } from '@/lib/auth-gateway/verify';
+import { mapToMrpRole } from '@/lib/auth-gateway/permissions';
+import { hasPermission, type UserRole } from './lib/roles';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
+const AUTH_GATEWAY_URL = process.env.RTR_AUTH_GATEWAY_URL || 'https://auth.rtrobotics.com';
+
 // Public routes that don't require authentication
 const publicRoutes = [
   '/',
-  '/login',
-  '/register',
+  '/login',       // redirect stub → Auth Gateway
+  '/register',    // redirect stub → Auth Gateway
   '/forgot-password',
   '/reset-password',
-  '/api/auth',
+  '/api/auth',    // legacy NextAuth routes (will 404, kept for safety)
   '/api/health',
   '/api/metrics',
-  '/api/demo',  // Covers /api/demo/check, /api/demo/unlock, etc.
+  '/api/demo',
   '/_next',
   '/favicon.ico',
   '/manifest.json',
@@ -45,12 +49,9 @@ const roleProtectedRoutes: Record<string, string[]> = {
 // =============================================================================
 
 function isPublicRoute(pathname: string): boolean {
-  // Check if it's a static file
   if (staticExtensions.some(ext => pathname.endsWith(ext))) {
     return true;
   }
-
-  // Check public routes
   return publicRoutes.some(route =>
     pathname === route || pathname.startsWith(route + '/')
   );
@@ -69,29 +70,12 @@ function getRequiredRoles(pathname: string): string[] | null {
   return null;
 }
 
-import { hasPermission, type UserRole } from './lib/roles';
-
-// ...
-
 function hasRole(userRole: string, requiredRoles: string[]): boolean {
-  // Check if user has AT LEAST one of the required roles (or higher authority)
-  // Logic refactored to check against the minimum level required by the route.
-  // Actually, usually routes require *specific* minimal usage.
-  // The logic in original middleware was: 
-  // const minRequiredLevel = Math.min(...requiredRoles.map(r => roleHierarchy[r] || 100));
-  // return userLevel >= minRequiredLevel;
-
-  // We will defer to the helper but since requiredRoles is an array, we find the "lowest" privilege needed?
-  // Or is it "Allows [admin, planner]" means "Planner OR Admin"? Yes.
-  // So we just need to satisfy one of them.
-
   return requiredRoles.some(role => hasPermission(userRole, role as UserRole));
 }
 
-// Security headers are primarily set by next.config.mjs headers().
-// Middleware only adds headers that need dynamic values or aren't covered by config.
+// Security headers
 function addSecurityHeaders(response: NextResponse): NextResponse {
-  // CSP with dynamic connect-src for dev mode
   response.headers.set(
     'Content-Security-Policy',
     [
@@ -100,9 +84,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' https://fonts.gstatic.com",
-      `connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://cloudflareinsights.com wss: ${process.env.NODE_ENV === 'development' ? 'ws:' : ''}`,
+      `connect-src 'self' https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://cloudflareinsights.com ${AUTH_GATEWAY_URL} wss: ${process.env.NODE_ENV === 'development' ? 'ws:' : ''}`,
       "frame-ancestors 'none'",
-      "form-action 'self'",
+      `form-action 'self' ${AUTH_GATEWAY_URL}`,
       "base-uri 'self'",
       "object-src 'none'",
     ].filter(Boolean).join('; ')
@@ -111,16 +95,22 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+/**
+ * Build Auth Gateway login URL with redirect back to current page.
+ */
+function getLoginUrl(request: NextRequest): string {
+  const redirectUrl = encodeURIComponent(request.url);
+  return `${AUTH_GATEWAY_URL}/login?redirect=${redirectUrl}`;
+}
+
 // =============================================================================
 // SIMPLE RATE LIMITER (In-memory)
-// For production, use Redis-based rate limiting
 // =============================================================================
 
 const rateLimitMap = new Map<string, { count: number; timestamp: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 500; // requests per window
+const RATE_LIMIT_WINDOW = 60 * 1000;
+const RATE_LIMIT_MAX = 500;
 
-// Check if running in test environment
 function isTestEnvironment(): boolean {
   return process.env.NODE_ENV === 'test' ||
          process.env.PLAYWRIGHT_TEST === 'true' ||
@@ -129,10 +119,7 @@ function isTestEnvironment(): boolean {
 }
 
 function checkRateLimit(ip: string): boolean {
-  // Skip rate limiting in test environment
-  if (isTestEnvironment()) {
-    return true;
-  }
+  if (isTestEnvironment()) return true;
 
   const now = Date.now();
   const record = rateLimitMap.get(ip);
@@ -142,15 +129,12 @@ function checkRateLimit(ip: string): boolean {
     return true;
   }
 
-  if (record.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
+  if (record.count >= RATE_LIMIT_MAX) return false;
 
   record.count++;
   return true;
 }
 
-// Clean up old entries periodically
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
@@ -174,29 +158,6 @@ export async function middleware(request: NextRequest) {
 
   // Preserve existing request ID or generate one (Gate 5.3 requirement)
   const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
-
-  // SSO: Detect Supabase auth cookie and redirect to SSO callback if no NextAuth session
-  if (process.env.ENABLE_SUPABASE_SSO === 'true' && !isPublicRoute(pathname) && pathname !== '/api/auth/sso-callback') {
-    const hasSupabaseCookie = Array.from(request.cookies.getAll()).some(c =>
-      c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
-    );
-    const isProduction = process.env.NODE_ENV === 'production';
-    const nextAuthCookie = request.cookies.get(
-      isProduction ? '__Secure-authjs.session-token' : 'authjs.session-token'
-    );
-
-    if (hasSupabaseCookie && !nextAuthCookie) {
-      // Find the Supabase auth cookie value
-      const sbCookie = Array.from(request.cookies.getAll()).find(c =>
-        c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
-      );
-      if (sbCookie) {
-        const callbackUrl = new URL('/api/auth/sso-callback', request.url);
-        callbackUrl.searchParams.set('callbackUrl', pathname);
-        return NextResponse.redirect(callbackUrl);
-      }
-    }
-  }
 
   // Create new headers with requestId
   const requestHeaders = new Headers(request.headers);
@@ -222,24 +183,19 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
-  // Get session token - use correct cookie name for production
-  // IMPORTANT: Must use AUTH_SECRET to match NextAuth v5 token signing
-  const isProduction = process.env.NODE_ENV === 'production';
-  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-  const token = await getToken({
-    req: request,
-    secret,
-    cookieName: isProduction
-      ? '__Secure-authjs.session-token'
-      : 'authjs.session-token',
-  });
+  // =========================================================================
+  // AUTH: Verify rtr_access_token cookie from RTR Auth Gateway
+  // =========================================================================
+  const payload = await verifyFromRequest(request);
 
-  // Redirect to login if not authenticated
-  if (!token) {
-    // For API routes, return 401
+  if (!payload) {
+    // API routes: return 401 JSON with login URL
     if (isApiRoute(pathname)) {
       return new NextResponse(
-        JSON.stringify({ error: 'Unauthorized. Please login.' }),
+        JSON.stringify({
+          error: 'Unauthorized. Please login.',
+          login_url: getLoginUrl(request),
+        }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json' }
@@ -247,19 +203,37 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // For web pages, redirect to login
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+    // Web pages: redirect to Auth Gateway login
+    return NextResponse.redirect(getLoginUrl(request));
   }
 
-  // Check role-based access
+  // Map Gateway JWT to MRP role
+  const mrpRole = mapToMrpRole(payload);
+
+  // No MRP access
+  if (!mrpRole) {
+    if (isApiRoute(pathname)) {
+      return new NextResponse(
+        JSON.stringify({
+          error: 'Forbidden. You do not have access to MRP.',
+        }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Redirect to a "no access" page or home with error
+    const homeUrl = new URL('/home', request.url);
+    homeUrl.searchParams.set('error', 'no_mrp_access');
+    return NextResponse.redirect(homeUrl);
+  }
+
+  // Check role-based access for protected routes
   const requiredRoles = getRequiredRoles(pathname);
   if (requiredRoles) {
-    const userRole = (token as { role?: string }).role || 'viewer';
-
-    if (!hasRole(userRole, requiredRoles)) {
-      // For API routes, return 403
+    if (!hasRole(mrpRole, requiredRoles)) {
       if (isApiRoute(pathname)) {
         return new NextResponse(
           JSON.stringify({
@@ -272,7 +246,6 @@ export async function middleware(request: NextRequest) {
         );
       }
 
-      // For web pages, redirect to dashboard with error
       const dashboardUrl = new URL('/home', request.url);
       dashboardUrl.searchParams.set('error', 'access_denied');
       return NextResponse.redirect(dashboardUrl);
@@ -284,13 +257,12 @@ export async function middleware(request: NextRequest) {
     request: { headers: requestHeaders },
   });
 
-  // Add requestId to response headers
   response.headers.set('x-request-id', requestId);
 
   // Add user info to request headers for API routes
   if (isApiRoute(pathname)) {
-    response.headers.set('x-user-id', (token as { id?: string }).id || '');
-    response.headers.set('x-user-role', (token as { role?: string }).role || '');
+    response.headers.set('x-user-id', payload.sub || '');
+    response.headers.set('x-user-role', mrpRole);
   }
 
   return addSecurityHeaders(response);
@@ -302,13 +274,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 };

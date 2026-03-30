@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { RTR_AUTH_CONFIG } from '@/lib/auth-gateway/types';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
 import { MobileNav } from './mobile-nav';
@@ -87,17 +87,15 @@ export function ModernAppShell({
     setLanguage(lang);
   };
 
-  // Handle logout
-  const handleLogout = async () => {
-    // Clear local storage
+  // Handle logout via Auth Gateway
+  const handleLogout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth-session');
+      localStorage.removeItem('rtr-mrp-session');
       sessionStorage.clear();
     }
-
-    // Sign out and redirect
-    await signOut({ callbackUrl: '/login', redirect: false });
-    window.location.href = '/login';
+    const redirectUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `${RTR_AUTH_CONFIG.authUrl}/logout?redirect=${redirectUrl}`;
   };
 
   // Close mobile menu on route change

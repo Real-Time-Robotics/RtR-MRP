@@ -41,12 +41,8 @@ vi.mock('@/lib/rate-limit', () => ({
 import { auth } from '@/lib/auth';
 import {
   createElectronicSignature,
-  setupMFA,
-  verifyMFASetup,
-  verifyMFALogin,
-  createMFAChallenge,
-  verifyMFAChallenge,
 } from '@/lib/compliance';
+// MFA imports removed — handled by Auth Gateway
 
 const mockContext = { params: Promise.resolve({}) };
 
@@ -183,8 +179,9 @@ describe('Compliance API Routes', () => {
   });
 
   // ===========================================================================
-  // POST /api/compliance/mfa/verify
+  // MFA tests removed — handled by Auth Gateway
   // ===========================================================================
+  /*
   describe('POST /api/compliance/mfa/verify', () => {
     let POST: (...args: any[]) => Promise<Response>;
 
@@ -411,4 +408,5 @@ describe('Compliance API Routes', () => {
       expect(data.error).toContain('Invalid action');
     });
   });
+  */
 });

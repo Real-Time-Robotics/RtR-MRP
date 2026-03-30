@@ -22,7 +22,8 @@ export default async function DashboardLayout({
   const session = await auth();
 
   if (!session) {
-    redirect("/login");
+    const authUrl = process.env.RTR_AUTH_GATEWAY_URL || 'https://auth.rtrobotics.com';
+    redirect(`${authUrl}/login?redirect=${encodeURIComponent(process.env.NEXTAUTH_URL || 'http://localhost:3000')}`);
   }
 
   return <DashboardLayoutClient>{children}</DashboardLayoutClient>;

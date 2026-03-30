@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useRtrSession } from '@/lib/auth-gateway/client';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +72,7 @@ export function ActionDropdown({
   align = 'end',
   className,
 }: ActionDropdownProps) {
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
 
   // Get user permissions
   const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;

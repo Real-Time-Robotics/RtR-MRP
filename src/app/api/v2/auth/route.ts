@@ -59,7 +59,15 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'change-password':
-        return handleChangePassword(session.user, body);
+        // Change password is now handled by Auth Gateway
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Password changes are handled by Auth Gateway',
+            redirect: `${process.env.RTR_AUTH_GATEWAY_URL || 'https://auth.rtrobotics.com'}/change-password`,
+          },
+          { status: 410 }
+        );
       case 'update-profile':
         return handleUpdateProfile(session.user, body);
       case 'enable-mfa':

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { AIProvider } from '@/lib/ai-context';
-import { useSession } from 'next-auth/react';
+import { useRtrSession } from '@/lib/auth-gateway/client';
 import { useLanguage } from '@/lib/i18n/language-context';
 
 // Lazy-load AI Copilot (~411 lines + ai-chat-panel 1011 lines + proactive-insights 519 lines + smart-action-executor 548 lines)
@@ -16,7 +16,7 @@ interface AIWrapperProps {
 }
 
 export default function AIWrapper({ children }: AIWrapperProps) {
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
   const { language } = useLanguage();
 
   const user = session?.user ? {

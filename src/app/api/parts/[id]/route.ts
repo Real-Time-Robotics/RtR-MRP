@@ -39,10 +39,10 @@ const partPutSchema = z.object({
 
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
 
-import type { Session } from 'next-auth';
+import type { RtrSession } from '@/lib/auth-gateway/types';
 
 // Permission check helper
-async function checkPermission(permission: string): Promise<{ authorized: boolean; session: Session | null }> {
+async function checkPermission(permission: string): Promise<{ authorized: boolean; session: RtrSession | null }> {
   const session = await auth();
   if (!session?.user) return { authorized: false, session: null };
 

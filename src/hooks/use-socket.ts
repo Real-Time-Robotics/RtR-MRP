@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useSession } from 'next-auth/react';
+import { useRtrSession } from '@/lib/auth-gateway/client';
 import { clientLogger } from '@/lib/client-logger';
 import type {
   ServerToClientEvents,
@@ -40,7 +40,7 @@ interface UseSocketReturn {
 
 export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
   const { autoConnect = false } = options;
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
   const socketRef = useRef<TypedSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);

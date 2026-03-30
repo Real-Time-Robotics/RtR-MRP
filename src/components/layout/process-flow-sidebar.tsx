@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { RTR_AUTH_CONFIG } from '@/lib/auth-gateway/types';
 import { useSidebar } from '@/lib/sidebar-context';
 import { useLanguage } from '@/lib/i18n/language-context';
 import {
@@ -501,7 +501,11 @@ export function ProcessFlowSidebar({ className }: ProcessFlowSidebarProps) {
                   <Settings className="w-4 h-4" />
                 </Link>
                 <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={() => {
+                    localStorage.removeItem('auth-session');
+                    sessionStorage.clear();
+                    window.location.href = `${RTR_AUTH_CONFIG.authUrl}/logout?redirect=${encodeURIComponent(window.location.origin)}`;
+                  }}
                   className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title={t('sidebar.logout')}
                 >

@@ -21,7 +21,7 @@ import {
   Archive,
   Loader2
 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useRtrSession } from '@/lib/auth-gateway/client'
 import { cn } from '@/lib/utils'
 
 interface Message {
@@ -48,7 +48,7 @@ interface ThreadDetailProps {
 }
 
 export function ThreadDetail({ threadId, onBack }: ThreadDetailProps) {
-  const { data: session } = useSession()
+  const { data: session } = useRtrSession()
   const [thread, setThread] = useState<{
     id: string
     title?: string | null

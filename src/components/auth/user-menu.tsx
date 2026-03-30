@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { signOut, useSession } from 'next-auth/react';
+import { useRtrSession, useRtrLogout } from '@/lib/auth-gateway/client';
 import {
   User,
   Settings,
@@ -25,19 +25,21 @@ interface UserMenuProps {
   compact?: boolean;
 }
 
+const AUTH_GATEWAY_URL = process.env.NEXT_PUBLIC_RTR_AUTH_GATEWAY_URL || 'https://auth.rtrobotics.com';
+
 export function UserMenu({ className, compact = false }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
+  const logout = useRtrLogout();
 
-  // Map NextAuth session to user object
-  const sessionUser = session?.user as { name?: string | null; email?: string | null; image?: string | null; role?: string; department?: string } | undefined;
+  const sessionUser = session?.user;
   const user = sessionUser ? {
     name: sessionUser.name || 'User',
     email: sessionUser.email || '',
     avatar: sessionUser.image || undefined,
     role: (sessionUser.role || 'viewer') as UserRole,
-    department: sessionUser.department,
+    department: sessionUser.dept,
     lastLogin: undefined as Date | undefined,
   } : null;
 
@@ -68,21 +70,9 @@ export function UserMenu({ className, compact = false }: UserMenuProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setIsOpen(false);
-
-    // Clear any local storage data
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth-session');
-      localStorage.removeItem('user-preferences');
-      sessionStorage.clear();
-    }
-
-    // Sign out using NextAuth
-    await signOut({ callbackUrl: '/login', redirect: false });
-
-    // Force redirect to login
-    window.location.href = '/login';
+    logout();
   };
 
   if (!user) return null;
@@ -199,14 +189,14 @@ export function UserMenu({ className, compact = false }: UserMenuProps) {
               <span>Cài đặt</span>
             </Link>
 
-            <Link
-              href="/change-password"
+            <a
+              href={`${AUTH_GATEWAY_URL}/change-password`}
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               <KeyRound className="w-5 h-5 text-gray-400" />
               <span>Đổi mật khẩu</span>
-            </Link>
+            </a>
 
             {/* Admin/Manager only */}
             {(isAdmin || isManager) && (
@@ -277,15 +267,14 @@ export function UserAvatar({
   showRole = false,
   className,
 }: UserAvatarProps) {
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
 
   if (!session?.user) return null;
 
-  const sessionUser = session.user as { name?: string | null; image?: string | null; role?: string };
   const user = {
-    name: sessionUser.name || 'User',
-    avatar: sessionUser.image || undefined,
-    role: (sessionUser.role || 'viewer') as UserRole,
+    name: session.user.name || 'User',
+    avatar: session.user.image || undefined,
+    role: (session.user.role || 'viewer') as UserRole,
   };
 
   const initials = user.name
@@ -340,7 +329,7 @@ export function UserAvatar({
 // =============================================================================
 
 export function AuthStatusIndicator() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useRtrSession();
 
   const statusColors = {
     loading: 'bg-yellow-500',
@@ -348,11 +337,7 @@ export function AuthStatusIndicator() {
     unauthenticated: 'bg-red-500',
   };
 
-  const sessionUser = session?.user as { email?: string | null; role?: string } | undefined;
-  const user = sessionUser ? {
-    role: (sessionUser.role || 'viewer') as UserRole,
-    email: sessionUser.email || '',
-  } : null;
+  const user = session?.user;
 
   return (
     <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">

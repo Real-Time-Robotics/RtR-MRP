@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSession } from 'next-auth/react';
+import { useRtrSession } from '@/lib/auth-gateway/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -113,7 +113,7 @@ export function DataTableToolbar({
   onDensityChange,
 }: DataTableToolbarProps) {
   const { t } = useLanguage();
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
   const resolvedSearchPlaceholder = searchPlaceholder || t("toolbar.search");
   const resolvedAddLabel = addLabel || t("toolbar.addNew");
 
@@ -351,7 +351,7 @@ export function CompactToolbar({
   className,
 }: CompactToolbarProps) {
   const { t } = useLanguage();
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
   const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
   const userPermissions = userRole ? rolePermissions[userRole] || [] : [];
   const can = (permission?: Permission) => !permission || userPermissions.includes(permission);

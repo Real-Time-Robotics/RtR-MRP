@@ -16,21 +16,8 @@ export {
   type SignatureAction,
 } from "./electronic-signature";
 
-// Multi-Factor Authentication
-export {
-  setupMFA,
-  verifyMFASetup,
-  verifyMFALogin,
-  createMFAChallenge,
-  verifyMFAChallenge,
-  disableMFA,
-  getMFAStatus,
-  generateTOTPSecret,
-  verifyTOTPCode,
-  generateTOTPQRCodeURL,
-  generateBackupCodes,
-  type MFASetupResult,
-} from "./mfa";
+// Multi-Factor Authentication — now handled by RTR Auth Gateway
+// MFA exports removed: setupMFA, verifyMFASetup, etc.
 
 // Enhanced Audit Trail
 export {
@@ -66,20 +53,8 @@ export {
   type PasswordValidationResult,
 } from "./password-policy";
 
-// Session Management
-export {
-  createSession,
-  validateSession,
-  updateSessionActivity,
-  revokeSession,
-  revokeAllUserSessions,
-  getUserActiveSessions,
-  cleanupExpiredSessions,
-  getSessionStatistics,
-  extendSession,
-  createSessionMiddleware,
-  generateSessionToken,
-} from "./session-management";
+// Session Management — now handled by RTR Auth Gateway
+// Exports removed: createSession, validateSession, etc.
 
 // ITAR Controls
 export {

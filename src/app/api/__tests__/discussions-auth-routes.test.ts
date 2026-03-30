@@ -115,19 +115,8 @@ vi.mock('@/lib/email/email-service', () => ({
   },
 }));
 
-// --- Password reset utils ---
-vi.mock('@/lib/auth/password-reset-utils', () => ({
-  validateResetToken: (...args: unknown[]) => mockValidateResetToken(...args),
-  validateResetTokenWithUser: (...args: unknown[]) => mockValidateResetTokenWithUser(...args),
-  TokenValidationError: class TokenValidationError extends Error {
-    code: string;
-    constructor(message: string, code: string) {
-      super(message);
-      this.name = 'TokenValidationError';
-      this.code = code;
-    }
-  },
-}));
+// --- Password reset utils --- removed (handled by Auth Gateway)
+// vi.mock('@/lib/auth/password-reset-utils', ...);
 
 // --- bcryptjs ---
 vi.mock('bcryptjs', () => ({
@@ -144,8 +133,9 @@ vi.mock('bcryptjs', () => ({
 import { GET as ENTITY_SEARCH_GET } from '../discussions/entities/search/route';
 import { PATCH as MESSAGE_PATCH, DELETE as MESSAGE_DELETE } from '../discussions/messages/[messageId]/route';
 import { GET as THREADS_LIST_GET } from '../discussions/threads/list/route';
-import { POST as FORGOT_PASSWORD_POST } from '../auth/forgot-password/route';
-import { GET as RESET_PASSWORD_GET, POST as RESET_PASSWORD_POST } from '../auth/reset-password/route';
+// Auth routes removed — now handled by RTR Auth Gateway
+// import { POST as FORGOT_PASSWORD_POST } from '../auth/forgot-password/route';
+// import { GET as RESET_PASSWORD_GET, POST as RESET_PASSWORD_POST } from '../auth/reset-password/route';
 
 // =============================================================================
 // HELPERS
@@ -439,8 +429,11 @@ describe('Discussion Threads List API', () => {
 });
 
 // =============================================================================
-// TESTS: Auth - Forgot Password
+// TESTS: Auth - Forgot Password & Reset Password
+// REMOVED: These auth routes are now handled by RTR Auth Gateway
 // =============================================================================
+
+/*
 
 describe('Auth Forgot Password API', () => {
   beforeEach(() => {
@@ -657,3 +650,4 @@ describe('Auth Reset Password API', () => {
     expect(data.error).toContain('trùng');
   });
 });
+*/

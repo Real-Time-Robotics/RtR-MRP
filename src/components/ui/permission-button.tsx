@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSession } from 'next-auth/react';
+import { useRtrSession } from '@/lib/auth-gateway/client';
 import { Button, ButtonProps } from '@/components/ui/button';
 import { Permission, rolePermissions, UserRole } from '@/lib/auth/auth-types';
 import { cn } from '@/lib/utils';
@@ -14,13 +14,9 @@ import { Lock } from 'lucide-react';
 // =============================================================================
 
 interface PermissionButtonProps extends ButtonProps {
-  /** Required permission to show/enable the button */
   permission: Permission;
-  /** What to render when user doesn't have permission (default: null = hide) */
   fallback?: React.ReactNode;
-  /** Show as disabled instead of hiding when no permission */
   showDisabled?: boolean;
-  /** Show tooltip explaining why button is disabled */
   disabledTooltip?: string;
 }
 
@@ -34,15 +30,12 @@ export function PermissionButton({
   disabled,
   ...props
 }: PermissionButtonProps) {
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
 
-  // Get user role and check permission
-  const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
+  const userRole = session?.user?.role as UserRole | undefined;
   const hasPermission = userRole ? rolePermissions[userRole]?.includes(permission) : false;
 
-  // If no permission
   if (!hasPermission) {
-    // Show disabled button with tooltip
     if (showDisabled) {
       return (
         <TooltipProvider>
@@ -66,11 +59,9 @@ export function PermissionButton({
         </TooltipProvider>
       );
     }
-    // Return fallback (default: null = hide completely)
     return <>{fallback}</>;
   }
 
-  // User has permission - render normal button
   return (
     <Button {...props} disabled={disabled} className={className}>
       {children}
@@ -80,19 +71,13 @@ export function PermissionButton({
 
 // =============================================================================
 // PERMISSION GATE
-// Wrapper component to conditionally render children based on permissions
 // =============================================================================
 
 interface PermissionGateProps {
-  /** Single permission required */
   permission?: Permission;
-  /** Multiple permissions (use with requireAll) */
   permissions?: Permission[];
-  /** Require all permissions (true) or any (false, default) */
   requireAll?: boolean;
-  /** Content to render when permission is granted */
   children: React.ReactNode;
-  /** Content to render when permission is denied (default: null) */
   fallback?: React.ReactNode;
 }
 
@@ -103,9 +88,9 @@ export function PermissionGate({
   children,
   fallback = null,
 }: PermissionGateProps) {
-  const { data: session } = useSession();
+  const { data: session } = useRtrSession();
 
-  const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
+  const userRole = session?.user?.role as UserRole | undefined;
 
   if (!userRole) return <>{fallback}</>;
 
@@ -114,17 +99,14 @@ export function PermissionGate({
   let hasAccess = false;
 
   if (permission) {
-    // Single permission check
     hasAccess = userPermissions.includes(permission);
   } else if (permissions && permissions.length > 0) {
-    // Multiple permissions check
     if (requireAll) {
       hasAccess = permissions.every(p => userPermissions.includes(p));
     } else {
       hasAccess = permissions.some(p => userPermissions.includes(p));
     }
   } else {
-    // No permission specified = always show
     hasAccess = true;
   }
 
@@ -132,13 +114,12 @@ export function PermissionGate({
 }
 
 // =============================================================================
-// USE PERMISSION HOOK
-// Hook to check permissions in components
+// HOOKS
 // =============================================================================
 
 export function usePermission(permission: Permission): boolean {
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
+  const { data: session } = useRtrSession();
+  const userRole = session?.user?.role as UserRole | undefined;
 
   if (!userRole) return false;
 
@@ -147,8 +128,8 @@ export function usePermission(permission: Permission): boolean {
 }
 
 export function usePermissions() {
-  const { data: session } = useSession();
-  const userRole = (session?.user as { role?: string })?.role as UserRole | undefined;
+  const { data: session } = useRtrSession();
+  const userRole = session?.user?.role as UserRole | undefined;
 
   const can = (permission: Permission): boolean => {
     if (!userRole) return false;
