@@ -122,6 +122,8 @@ model Supplier {
   scores SupplierScore[]
   audits SupplierAudit[]
 
+  prLines PurchaseRequestLine[] @relation("PRLineSupplier")
+
   @@index([status])
   @@index([rating])
   @@map("suppliers")
@@ -130,40 +132,40 @@ model Supplier {
 // ============ SUPPLIER EVALUATION ============
 
 model SupplierScore {
-  id              String   @id @default(cuid())
-  supplierId      String
-  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   // Period
-  periodStart     DateTime
-  periodEnd       DateTime
+  periodStart DateTime
+  periodEnd   DateTime
 
   // KPI Scores (0-100)
-  deliveryScore   Float    @default(0)
-  qualityScore    Float    @default(0)
-  priceScore      Float    @default(0)
-  responseScore   Float    @default(0)
+  deliveryScore Float @default(0)
+  qualityScore  Float @default(0)
+  priceScore    Float @default(0)
+  responseScore Float @default(0)
 
   // Weighted Overall Score
-  overallScore    Float    @default(0)
+  overallScore Float @default(0)
 
   // Raw Stats
-  totalOrders     Int      @default(0)
-  onTimeOrders    Int      @default(0)
-  lateOrders      Int      @default(0)
-  totalItems      Int      @default(0)
-  acceptedItems   Int      @default(0)
-  rejectedItems   Int      @default(0)
-  avgLeadTimeDays Float?
+  totalOrders      Int    @default(0)
+  onTimeOrders     Int    @default(0)
+  lateOrders       Int    @default(0)
+  totalItems       Int    @default(0)
+  acceptedItems    Int    @default(0)
+  rejectedItems    Int    @default(0)
+  avgLeadTimeDays  Float?
   avgPriceVariance Float?
 
   // Audit
-  calculatedAt    DateTime @default(now())
-  calculatedById  String?
-  notes           String?
+  calculatedAt   DateTime @default(now())
+  calculatedById String?
+  notes          String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([supplierId, periodStart, periodEnd])
   @@index([supplierId])
@@ -173,13 +175,13 @@ model SupplierScore {
 }
 
 model SupplierAudit {
-  id              String   @id @default(cuid())
-  supplierId      String
-  supplier        Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-  auditDate       DateTime
-  auditType       String   // quality, compliance, financial, site_visit
-  auditorId       String
+  auditDate DateTime
+  auditType String // quality, compliance, financial, site_visit
+  auditorId String
 
   // Results
   score           Float?
@@ -187,11 +189,11 @@ model SupplierAudit {
   recommendations String?
 
   // Follow-up
-  nextAuditDate   DateTime?
-  status          String   @default("completed")
+  nextAuditDate DateTime?
+  status        String    @default("completed")
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([supplierId])
   @@index([auditDate])
@@ -344,14 +346,16 @@ model Part {
   scrapDisposals     ScrapDisposal[]
 
   // Cost Optimization relations
-  autonomyStatus          PartAutonomyStatus?
-  makeVsBuyAnalyses       MakeVsBuyAnalysis[]       @relation("MakeVsBuyAnalysisPart")
-  subEvalOriginal         SubstituteEvaluation[]    @relation("SubEvalOriginalPart")
-  subEvalSubstitute       SubstituteEvaluation[]    @relation("SubEvalSubstitutePart")
-  costReductionActions    CostReductionAction[]     @relation("CostReductionActionPart")
-  grnItems                GRNItem[]
-  quotationItems          QuotationItem[]
-  pricingRules            PricingRule[]
+  autonomyStatus       PartAutonomyStatus?
+  makeVsBuyAnalyses    MakeVsBuyAnalysis[]    @relation("MakeVsBuyAnalysisPart")
+  subEvalOriginal      SubstituteEvaluation[] @relation("SubEvalOriginalPart")
+  subEvalSubstitute    SubstituteEvaluation[] @relation("SubEvalSubstitutePart")
+  costReductionActions CostReductionAction[]  @relation("CostReductionActionPart")
+  grnItems             GRNItem[]
+  quotationItems       QuotationItem[]
+  pricingRules         PricingRule[]
+
+  prLines PurchaseRequestLine[] @relation("PRLinePart")
 
   @@index([category])
   @@index([lifecycleStatus])
@@ -1005,10 +1009,12 @@ model PurchaseOrder {
   rejectionReason String?
   submittedAt     DateTime?
 
-  supplier Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  lines    PurchaseOrderLine[]
-  grns     GoodsReceiptNote[]
+  supplier     Supplier            @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lines        PurchaseOrderLine[]
+  grns         GoodsReceiptNote[]
   matchRecords ThreeWayMatch[]
+
+  sourcePRs PurchaseRequest[]
 
   // Financial relations
   purchaseInvoices PurchaseInvoice[]
@@ -1057,7 +1063,7 @@ model GoodsReceiptNote {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrder PurchaseOrder   @relation(fields: [purchaseOrderId], references: [id])
   items         GRNItem[]
   matchRecords  ThreeWayMatch[]
 
@@ -1068,18 +1074,18 @@ model GoodsReceiptNote {
 }
 
 model GRNItem {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   grnId            String
   poLineId         String
   partId           String
   quantityOrdered  Int
   quantityReceived Int
   quantityAccepted Int
-  quantityRejected Int      @default(0)
+  quantityRejected Int       @default(0)
   rejectionReason  String?
   lotNumber        String?
   expiryDate       DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   grn  GoodsReceiptNote @relation(fields: [grnId], references: [id], onDelete: Cascade)
   part Part             @relation(fields: [partId], references: [id])
@@ -1092,46 +1098,46 @@ model GRNItem {
 // ============ 3-WAY MATCHING ============
 
 model ThreeWayMatch {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Links
-  purchaseOrderId String
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  grnId           String?
-  grn             GoodsReceiptNote? @relation(fields: [grnId], references: [id])
+  purchaseOrderId   String
+  purchaseOrder     PurchaseOrder     @relation(fields: [purchaseOrderId], references: [id])
+  grnId             String?
+  grn               GoodsReceiptNote? @relation(fields: [grnId], references: [id])
   purchaseInvoiceId String?
-  invoiceNumber   String?
+  invoiceNumber     String?
 
   // Status: pending, matched, mismatch_pending_review, approved, rejected
-  status          String   @default("pending")
+  status String @default("pending")
 
   // PO Data (snapshot)
-  poQuantity      Int
-  poUnitPrice     Float
-  poTotalAmount   Float
+  poQuantity    Int
+  poUnitPrice   Float
+  poTotalAmount Float
 
   // GRN Data
-  grnQuantity     Int?
-  grnAcceptedQty  Int?
+  grnQuantity    Int?
+  grnAcceptedQty Int?
 
   // Invoice Data
-  invoiceAmount   Float?
-  invoiceDate     DateTime?
+  invoiceAmount Float?
+  invoiceDate   DateTime?
 
   // Variance Calculations
-  qtyVariance     Int?
-  qtyVariancePct  Float?
-  amtVariance     Float?
-  amtVariancePct  Float?
+  qtyVariance    Int?
+  qtyVariancePct Float?
+  amtVariance    Float?
+  amtVariancePct Float?
 
   // Review (for mismatches)
-  reviewedById    String?
-  reviewedAt      DateTime?
-  reviewNotes     String?
-  resolution      String?  // approved_as_is, adjusted, rejected, credited
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+  resolution   String? // approved_as_is, adjusted, rejected, credited
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([purchaseOrderId])
   @@index([status])
@@ -1142,35 +1148,35 @@ model ThreeWayMatch {
 // ============ QUOTATION ============
 
 model Quotation {
-  id              String   @id @default(cuid())
-  quoteNumber     String   @unique
-  customerId      String
-  status          String   @default("draft") // draft, sent, accepted, rejected, expired, converted
-  validUntil      DateTime
-  sentAt          DateTime?
-  acceptedAt      DateTime?
-  createdById     String
+  id          String    @id @default(cuid())
+  quoteNumber String    @unique
+  customerId  String
+  status      String    @default("draft") // draft, sent, accepted, rejected, expired, converted
+  validUntil  DateTime
+  sentAt      DateTime?
+  acceptedAt  DateTime?
+  createdById String
 
   // Financials
-  subtotal        Float    @default(0)
-  discountAmount  Float    @default(0)
-  discountPercent Float    @default(0)
-  taxAmount       Float    @default(0)
-  totalAmount     Float    @default(0)
-  currency        String   @default("VND")
+  subtotal        Float  @default(0)
+  discountAmount  Float  @default(0)
+  discountPercent Float  @default(0)
+  taxAmount       Float  @default(0)
+  totalAmount     Float  @default(0)
+  currency        String @default("VND")
 
   // Converted SO link
-  salesOrderId    String?  @unique
+  salesOrderId String? @unique
 
   // Metadata
-  notes           String?
-  terms           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  notes     String?
+  terms     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  customer   Customer     @relation(fields: [customerId], references: [id])
+  customer   Customer        @relation(fields: [customerId], references: [id])
   items      QuotationItem[]
-  salesOrder SalesOrder?  @relation(fields: [salesOrderId], references: [id])
+  salesOrder SalesOrder?     @relation(fields: [salesOrderId], references: [id])
 
   @@index([customerId])
   @@index([status])
@@ -1202,31 +1208,31 @@ model QuotationItem {
 // ============ PRICING RULES ============
 
 model PricingRule {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  type            String   // customer_specific, quantity_break, date_based, category_discount
-  customerId      String?
-  partId          String?
-  category        String?  // For category_discount type
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  type        String // customer_specific, quantity_break, date_based, category_discount
+  customerId  String?
+  partId      String?
+  category    String? // For category_discount type
 
   // Conditions
-  minQuantity     Int?
-  maxQuantity     Int?
-  validFrom       DateTime?
-  validTo         DateTime?
+  minQuantity Int?
+  maxQuantity Int?
+  validFrom   DateTime?
+  validTo     DateTime?
 
   // Discount/Price
-  discountType    String   @default("percent") // percent, fixed_amount, fixed_price
-  discountValue   Float
+  discountType  String @default("percent") // percent, fixed_amount, fixed_price
+  discountValue Float
 
   // Priority & Status
-  priority        Int      @default(0)
-  isActive        Boolean  @default(true)
+  priority Int     @default(0)
+  isActive Boolean @default(true)
 
-  createdById     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   customer Customer? @relation(fields: [customerId], references: [id])
   part     Part?     @relation(fields: [partId], references: [id])
@@ -1319,10 +1325,10 @@ model User {
   notificationSettings Json?
 
   // Cost Optimization relations
-  costTargets             CostTarget[]             @relation("CostTargetCreator")
-  costReductionActions    CostReductionAction[]    @relation("CostReductionActionOwner")
-  makeVsBuyAnalyses       MakeVsBuyAnalysis[]      @relation("MakeVsBuyAnalysisCreator")
-  substituteEvaluations   SubstituteEvaluation[]   @relation("SubstituteEvaluationCreator")
+  costTargets           CostTarget[]           @relation("CostTargetCreator")
+  costReductionActions  CostReductionAction[]  @relation("CostReductionActionOwner")
+  makeVsBuyAnalyses     MakeVsBuyAnalysis[]    @relation("MakeVsBuyAnalysisCreator")
+  substituteEvaluations SubstituteEvaluation[] @relation("SubstituteEvaluationCreator")
 
   @@index([tenantId])
   @@map("users")
@@ -2029,15 +2035,15 @@ model InspectionCharacteristic {
   gageRequired String?
 
   // SPC fields
-  subgroupSize       Int?
-  samplingFrequency  String?
-  chartType          String?
-  code               String?
+  subgroupSize      Int?
+  samplingFrequency String?
+  chartType         String?
+  code              String?
 
   createdAt DateTime @default(now())
 
-  plan    InspectionPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  results InspectionResult[]
+  plan          InspectionPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  results       InspectionResult[]
   qualityAlerts QualityAlert[]
 
   @@index([planId])
@@ -4539,8 +4545,8 @@ model Equipment {
   nextMaintenanceDate     DateTime?
   maintenanceIntervalDays Int?
   totalDowntimeHours      Float     @default(0)
-  operatingHours    Float? // Current operating hours
-  designLifeHours   Float? // Design life in hours
+  operatingHours          Float? // Current operating hours
+  designLifeHours         Float? // Design life in hours
   mtbf                    Float? // Mean Time Between Failures (hours)
   mttr                    Float? // Mean Time To Repair (hours)
 
@@ -5550,6 +5556,7 @@ model EntityLink {
 
 enum WorkflowEntityType {
   PURCHASE_ORDER
+  PURCHASE_REQUEST
   SALES_ORDER
   WORK_ORDER
   NCR
@@ -6139,7 +6146,6 @@ model ReportHistory {
   @@map("report_history")
 }
 
-
 // ============ SPC QUALITY ALERTS ============
 model QualityAlert {
   id               String @id @default(cuid())
@@ -6147,7 +6153,7 @@ model QualityAlert {
 
   type        String // OUT_OF_CONTROL, TREND, SHIFT, RULE_VIOLATION
   severity    String // LOW, MEDIUM, HIGH, CRITICAL
-  status      String @default("open") // open, acknowledged, resolved, dismissed
+  status      String  @default("open") // open, acknowledged, resolved, dismissed
   title       String
   description String?
   violation   Json? // Details of the SPC rule violation
@@ -6189,18 +6195,18 @@ model WorkSession {
 
   status WorkSessionStatus @default(ACTIVE)
 
-  workflowStep      Int    @default(1)
-  workflowTotalSteps Int   @default(1)
-  workflowStepName  String @default("")
+  workflowStep       Int    @default(1)
+  workflowTotalSteps Int    @default(1)
+  workflowStepName   String @default("")
 
   contextSummary String @default("")
   contextJson    Json   @default("{}")
 
-  startedAt      DateTime  @default(now())
-  lastActivityAt DateTime  @default(now())
-  pausedAt       DateTime?
-  completedAt    DateTime?
-  totalActiveTime Int      @default(0) // seconds
+  startedAt       DateTime  @default(now())
+  lastActivityAt  DateTime  @default(now())
+  pausedAt        DateTime?
+  completedAt     DateTime?
+  totalActiveTime Int       @default(0) // seconds
 
   resumeUrl       String @default("")
   resumeStateJson Json?
@@ -6218,9 +6224,9 @@ model SessionActivity {
   sessionId String
   session   WorkSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  action      String
-  description String
-  timestamp   DateTime @default(now())
+  action       String
+  description  String
+  timestamp    DateTime @default(now())
   metadataJson Json?
 
   @@index([sessionId, timestamp])
@@ -6336,23 +6342,23 @@ enum SavingsSource {
 }
 
 model CostTarget {
-  id          String           @id @default(cuid())
-  productId   String
-  product     Product          @relation(fields: [productId], references: [id])
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
   name        String
   currentCost Float
   targetCost  Float
   targetDate  DateTime
 
-  status      CostTargetStatus @default(DRAFT)
+  status CostTargetStatus @default(DRAFT)
 
-  phases      CostReductionPhase[]
+  phases CostReductionPhase[]
 
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   createdById String
-  createdBy   User             @relation("CostTargetCreator", fields: [createdById], references: [id])
+  createdBy   User     @relation("CostTargetCreator", fields: [createdById], references: [id])
 
   @@index([productId])
   @@index([status])
@@ -6364,29 +6370,29 @@ model CostReductionPhase {
   costTargetId String
   costTarget   CostTarget @relation(fields: [costTargetId], references: [id], onDelete: Cascade)
 
-  name         String
-  targetCost   Float
-  targetDate   DateTime
+  name       String
+  targetCost Float
+  targetDate DateTime
 
-  status       PhaseStatus @default(PLANNED)
+  status PhaseStatus @default(PLANNED)
 
-  actions      CostReductionAction[]
+  actions CostReductionAction[]
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([costTargetId])
   @@map("cost_reduction_phases")
 }
 
 model CostReductionAction {
-  id          String             @id @default(cuid())
-  phaseId     String
-  phase       CostReductionPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+  id      String             @id @default(cuid())
+  phaseId String
+  phase   CostReductionPhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
 
-  type        ActionType
-  partId      String?
-  part        Part?              @relation("CostReductionActionPart", fields: [partId], references: [id])
+  type   ActionType
+  partId String?
+  part   Part?      @relation("CostReductionActionPart", fields: [partId], references: [id])
 
   description String
 
@@ -6396,9 +6402,9 @@ model CostReductionAction {
   annualVolume   Int
   annualSavings  Float
 
-  investmentRequired Float  @default(0)
-  breakEvenUnits     Int    @default(0)
-  roiMonths          Int    @default(0)
+  investmentRequired Float @default(0)
+  breakEvenUnits     Int   @default(0)
+  roiMonths          Int   @default(0)
 
   startDate            DateTime?
   targetCompletionDate DateTime
@@ -6434,13 +6440,13 @@ model PartAutonomyStatus {
 
   status AutonomyStatus @default(BUY_REQUIRED)
 
-  currentSource      SourceType @default(BUY_SOURCE)
-  currentCost        Float
+  currentSource       SourceType @default(BUY_SOURCE)
+  currentCost         Float
   currentLeadTimeDays Int
 
-  makeCapabilityPercent Int    @default(0)
-  makeTargetDate        DateTime?
-  makeCostEstimate      Float?
+  makeCapabilityPercent  Int       @default(0)
+  makeTargetDate         DateTime?
+  makeCostEstimate       Float?
   makeInvestmentRequired Float?
 
   rdProgressPercent Int?
@@ -6487,8 +6493,8 @@ model MakeVsBuyAnalysis {
   recommendationRationale String
   conditions              String[]
 
-  status     CostAnalysisStatus @default(ANALYSIS_DRAFT)
-  decision   MakeVsBuyDecision?
+  status       CostAnalysisStatus @default(ANALYSIS_DRAFT)
+  decision     MakeVsBuyDecision?
   decisionDate DateTime?
   decisionById String?
 
@@ -6502,9 +6508,9 @@ model MakeVsBuyAnalysis {
 }
 
 model SubstituteEvaluation {
-  id               String @id @default(cuid())
-  originalPartId   String
-  originalPart     Part   @relation("SubEvalOriginalPart", fields: [originalPartId], references: [id])
+  id             String @id @default(cuid())
+  originalPartId String
+  originalPart   Part   @relation("SubEvalOriginalPart", fields: [originalPartId], references: [id])
 
   substitutePartId String
   substitutePart   Part   @relation("SubEvalSubstitutePart", fields: [substitutePartId], references: [id])
@@ -6573,4 +6579,189 @@ model SavingsRecord {
   @@index([source])
   @@index([periodStart, periodEnd])
   @@map("savings_records")
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PURCHASE REQUEST (PR) MODULE
+// Workflow: Draft → Pending → Approved/Rejected → PO Created
+// Note: User references use plain String IDs (no Prisma relation) to match
+// existing PurchaseOrder convention and avoid churn on User model.
+// ═══════════════════════════════════════════════════════════════
+
+enum PRStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  REVISED
+  CANCELLED
+  PO_CREATED
+  PARTIALLY_ORDERED
+  COMPLETED
+}
+
+enum PRPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+enum PRLineStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ORDERED
+  PARTIALLY_ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum PRAction {
+  CREATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVISED
+  CANCELLED
+  CONVERTED_TO_PO
+  LINE_ADDED
+  LINE_REMOVED
+  LINE_UPDATED
+  COMMENT_ADDED
+}
+
+model PurchaseRequest {
+  id          String     @id @default(cuid())
+  prNumber    String     @unique
+  title       String
+  description String?
+  priority    PRPriority @default(NORMAL)
+
+  requesterId  String
+  departmentId String?
+
+  status PRStatus @default(DRAFT)
+
+  requestDate  DateTime @default(now())
+  requiredDate DateTime
+
+  approvedBy String?
+  approvedAt DateTime?
+
+  rejectedBy      String?
+  rejectedAt      DateTime?
+  rejectionReason String?
+
+  revisionNumber Int               @default(1)
+  parentPRId     String?
+  parentPR       PurchaseRequest?  @relation("PRRevisions", fields: [parentPRId], references: [id])
+  revisions      PurchaseRequest[] @relation("PRRevisions")
+
+  estimatedTotal Decimal @default(0) @db.Decimal(15, 2)
+  currency       String  @default("VND")
+  budgetCode     String?
+  costCenter     String?
+
+  convertedToPO   Boolean        @default(false)
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+
+  lines       PurchaseRequestLine[]
+  history     PRHistory[]
+  comments    PRComment[]
+  attachments PRAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([prNumber])
+  @@index([status])
+  @@index([requesterId])
+  @@index([requiredDate])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestLine {
+  id         String          @id @default(cuid())
+  lineNumber Int
+  prId       String
+  pr         PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  partId          String?
+  part            Part?   @relation("PRLinePart", fields: [partId], references: [id])
+  itemDescription String?
+  itemCode        String?
+
+  requestedQty Decimal @db.Decimal(15, 4)
+  unit         String  @default("EA")
+
+  estimatedPrice Decimal? @db.Decimal(15, 2)
+  estimatedTotal Decimal? @db.Decimal(15, 2)
+
+  preferredSupplierId String?
+  preferredSupplier   Supplier? @relation("PRLineSupplier", fields: [preferredSupplierId], references: [id])
+
+  lineStatus     PRLineStatus @default(PENDING)
+  requiredDate   DateTime?
+  notes          String?
+  specifications Json?
+
+  orderedQty Decimal @default(0) @db.Decimal(15, 4)
+  poLineId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([prId, lineNumber])
+  @@index([prId])
+  @@index([partId])
+  @@index([lineStatus])
+  @@map("purchase_request_lines")
+}
+
+model PRHistory {
+  id         String          @id @default(cuid())
+  prId       String
+  pr         PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+  action     PRAction
+  actorId    String
+  fromStatus PRStatus?
+  toStatus   PRStatus?
+  details    String?
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+
+  @@index([prId])
+  @@index([createdAt])
+  @@map("pr_history")
+}
+
+model PRComment {
+  id         String          @id @default(cuid())
+  prId       String
+  pr         PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+  content    String
+  isInternal Boolean         @default(false)
+  authorId   String
+  createdAt  DateTime        @default(now())
+
+  @@index([prId])
+  @@map("pr_comments")
+}
+
+model PRAttachment {
+  id         String          @id @default(cuid())
+  prId       String
+  pr         PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+  fileName   String
+  fileType   String
+  fileSize   Int
+  fileUrl    String
+  uploadedBy String
+  createdAt  DateTime        @default(now())
+
+  @@index([prId])
+  @@map("pr_attachments")
 }

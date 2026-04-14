@@ -276,6 +276,47 @@ const defaultWorkflows: WorkflowSeed[] = [
       },
     ],
   },
+  {
+    name: 'Purchase Request Approval',
+    code: 'PR_APPROVAL',
+    description: 'Approval workflow for purchase requests (PR) prior to PO creation',
+    entityType: 'PURCHASE_REQUEST' as WorkflowEntityType,
+    defaultSlaHours: 48,
+    escalationEnabled: true,
+    triggerConditions: { amount_gt: 0 },
+    steps: [
+      {
+        stepNumber: 1,
+        name: 'Purchasing Manager Approval',
+        type: 'APPROVAL' as WorkflowStepType,
+        approverRole: 'manager',
+        slaHours: 24,
+        autoEscalate: true,
+        escalateTo: 'director',
+        isRequired: true,
+        conditions: { amount_gt: 0 },
+      },
+      {
+        stepNumber: 2,
+        name: 'Director Approval',
+        type: 'APPROVAL' as WorkflowStepType,
+        approverRole: 'director',
+        slaHours: 24,
+        autoEscalate: false,
+        isRequired: true,
+        conditions: { amount_gt: 10000 },
+      },
+      {
+        stepNumber: 3,
+        name: 'Finance Review',
+        type: 'REVIEW' as WorkflowStepType,
+        approverRole: 'finance',
+        slaHours: 24,
+        isRequired: true,
+        conditions: { amount_gt: 50000 },
+      },
+    ],
+  },
 ];
 
 async function seedWorkflows() {
