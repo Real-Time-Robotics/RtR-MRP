@@ -68,6 +68,7 @@ export const navigationTabs: NavTab[] = [
       {
         titleKey: 'header.purchasingSection',
         items: [
+          { id: 'purchase-requests', labelKey: 'header.purchaseRequests', descriptionKey: 'header.desc.purchaseRequests', icon: <FileText className="w-5 h-5" />, href: '/purchasing/pr', color: 'text-yellow-600 bg-yellow-50' },
           { id: 'purchasing', labelKey: 'header.purchaseOrders', descriptionKey: 'header.desc.purchaseOrders', icon: <Truck className="w-5 h-5" />, href: '/purchasing', color: 'text-orange-600 bg-orange-50' },
           { id: 'suppliers', labelKey: 'header.suppliers', descriptionKey: 'header.desc.suppliers', icon: <Building2 className="w-5 h-5" />, href: '/suppliers', color: 'text-amber-600 bg-amber-50' },
           { id: 'receiving', labelKey: 'header.receiving', descriptionKey: 'header.desc.receiving', icon: <Download className="w-5 h-5" />, href: '/quality/receiving', color: 'text-lime-600 bg-lime-50' },
