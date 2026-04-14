@@ -11,6 +11,7 @@ import { PRService, PRServiceError } from '@/lib/purchasing/pr-service';
 
 const schema = z.object({
   prIds: z.array(z.string().min(1)).min(1),
+  consolidate: z.boolean().optional(),
   orderDate: z.string().or(z.date()).optional(),
   expectedDate: z.string().or(z.date()).optional(),
   currency: z.string().optional(),
@@ -36,7 +37,7 @@ async function handler(request: NextRequest, { user }: { user: AuthUser }) {
   try {
     const { prIds, ...options } = parsed.data;
     const poIds = await PRService.convertToPO(prIds, user.id, options);
-    return successResponse({ poIds });
+    return successResponse({ poIds, count: poIds.length });
   } catch (e) {
     if (e instanceof PRServiceError) return errorResponse(e.message, 400);
     throw e;

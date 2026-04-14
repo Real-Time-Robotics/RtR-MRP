@@ -1330,6 +1330,14 @@ model User {
   makeVsBuyAnalyses     MakeVsBuyAnalysis[]    @relation("MakeVsBuyAnalysisCreator")
   substituteEvaluations SubstituteEvaluation[] @relation("SubstituteEvaluationCreator")
 
+  // Purchase Request relations
+  purchaseRequestsCreated  PurchaseRequest[] @relation("PRRequester")
+  purchaseRequestsApproved PurchaseRequest[] @relation("PRApprover")
+  purchaseRequestsRejected PurchaseRequest[] @relation("PRRejector")
+  prHistoryActions         PRHistory[]       @relation("PRHistoryActor")
+  prComments               PRComment[]       @relation("PRCommentAuthor")
+  prAttachments            PRAttachment[]    @relation("PRAttachmentUploader")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -6640,6 +6648,7 @@ model PurchaseRequest {
   priority    PRPriority @default(NORMAL)
 
   requesterId  String
+  requester    User    @relation("PRRequester", fields: [requesterId], references: [id])
   departmentId String?
 
   status PRStatus @default(DRAFT)
@@ -6647,10 +6656,12 @@ model PurchaseRequest {
   requestDate  DateTime @default(now())
   requiredDate DateTime
 
-  approvedBy String?
-  approvedAt DateTime?
+  approvedBy     String?
+  approvedByUser User?     @relation("PRApprover", fields: [approvedBy], references: [id])
+  approvedAt     DateTime?
 
   rejectedBy      String?
+  rejectedByUser  User?     @relation("PRRejector", fields: [rejectedBy], references: [id])
   rejectedAt      DateTime?
   rejectionReason String?
 
@@ -6727,6 +6738,7 @@ model PRHistory {
   pr         PurchaseRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
   action     PRAction
   actorId    String
+  actor      User            @relation("PRHistoryActor", fields: [actorId], references: [id])
   fromStatus PRStatus?
   toStatus   PRStatus?
   details    String?
@@ -6745,6 +6757,7 @@ model PRComment {
   content    String
   isInternal Boolean         @default(false)
   authorId   String
+  author     User            @relation("PRCommentAuthor", fields: [authorId], references: [id])
   createdAt  DateTime        @default(now())
 
   @@index([prId])
@@ -6760,6 +6773,7 @@ model PRAttachment {
   fileSize   Int
   fileUrl    String
   uploadedBy String
+  uploader   User            @relation("PRAttachmentUploader", fields: [uploadedBy], references: [id])
   createdAt  DateTime        @default(now())
 
   @@index([prId])

@@ -36,6 +36,12 @@ export interface ConvertToPOOptions {
   expectedDate?: Date | string;
   currency?: string;
   notes?: string;
+  /**
+   * When true (default), eligible lines across all PRs are grouped by
+   * supplier — one PO per supplier. When false, one PO is created per PR
+   * (still grouped by supplier within that PR).
+   */
+  consolidate?: boolean;
 }
 
 export class PRServiceError extends Error {
@@ -334,6 +340,73 @@ export const PRService = {
     });
   },
 
+  /**
+   * In-place edit by the requester while the PR is still DRAFT or REVISED.
+   * If `lines` is provided, all existing lines are replaced.
+   */
+  async updatePR(
+    prId: string,
+    actorId: string,
+    updates: Partial<CreatePRInput>,
+  ) {
+    return prisma.$transaction(async (tx) => {
+      const pr = await tx.purchaseRequest.findUnique({
+        where: { id: prId },
+        include: { lines: true },
+      });
+      if (!pr) throw new PRServiceError('PR not found', 'PR_NOT_FOUND');
+      if (pr.requesterId !== actorId) {
+        throw new PRServiceError(
+          'Only the requester can edit this PR',
+          'PR_FORBIDDEN',
+        );
+      }
+      if (pr.status !== PRStatus.DRAFT && pr.status !== PRStatus.REVISED) {
+        throw new PRServiceError(
+          `Cannot edit PR in status ${pr.status}`,
+          'PR_INVALID_STATE',
+        );
+      }
+
+      let estimatedTotal: Prisma.Decimal | undefined;
+      if (updates.lines) {
+        if (updates.lines.length === 0) {
+          throw new PRServiceError('PR must have at least one line', 'PR_NO_LINES');
+        }
+        const newLines = computeLineTotals(updates.lines);
+        estimatedTotal = sumEstimated(newLines);
+        await tx.purchaseRequestLine.deleteMany({ where: { prId } });
+        await tx.purchaseRequestLine.createMany({
+          data: newLines.map((l) => ({ ...l, prId })),
+        });
+      }
+
+      const updated = await tx.purchaseRequest.update({
+        where: { id: prId },
+        data: {
+          title: updates.title ?? pr.title,
+          description: updates.description ?? pr.description,
+          priority: updates.priority ?? pr.priority,
+          requiredDate: updates.requiredDate
+            ? new Date(updates.requiredDate)
+            : pr.requiredDate,
+          budgetCode: updates.budgetCode ?? pr.budgetCode,
+          costCenter: updates.costCenter ?? pr.costCenter,
+          estimatedTotal: estimatedTotal ?? pr.estimatedTotal,
+        },
+      });
+
+      await recordHistory(tx, {
+        prId,
+        action: PRAction.LINE_UPDATED,
+        actorId,
+        details: 'PR updated by requester',
+      });
+
+      return updated;
+    });
+  },
+
   async cancelPR(prId: string, actorId: string, reason?: string) {
     return prisma.$transaction(async (tx) => {
       const pr = await tx.purchaseRequest.findUnique({ where: { id: prId } });
@@ -397,7 +470,8 @@ export const PRService = {
         }
       }
 
-      // Group eligible lines by supplier.
+      // Group eligible lines by supplier — optionally also by PR when
+      // `consolidate` is false (one PO per PR per supplier).
       type EligibleLine = {
         prId: string;
         lineId: string;
@@ -406,7 +480,8 @@ export const PRService = {
         estimatedPrice: number;
         supplierId: string;
       };
-      const bySupplier = new Map<string, EligibleLine[]>();
+      const consolidate = options.consolidate ?? true;
+      const groups = new Map<string, EligibleLine[]>();
 
       for (const pr of prs) {
         for (const line of pr.lines) {
@@ -425,13 +500,16 @@ export const PRService = {
             estimatedPrice: Number(line.estimatedPrice),
             supplierId: line.preferredSupplierId,
           };
-          const bucket = bySupplier.get(entry.supplierId) ?? [];
+          const key = consolidate
+            ? entry.supplierId
+            : `${pr.id}::${entry.supplierId}`;
+          const bucket = groups.get(key) ?? [];
           bucket.push(entry);
-          bySupplier.set(entry.supplierId, bucket);
+          groups.set(key, bucket);
         }
       }
 
-      if (bySupplier.size === 0) {
+      if (groups.size === 0) {
         throw new PRServiceError(
           'No eligible lines to convert (need partId + supplier + price)',
           'PR_NO_ELIGIBLE_LINES',
@@ -444,7 +522,8 @@ export const PRService = {
         : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
       const createdPOIds: string[] = [];
 
-      for (const [supplierId, lines] of bySupplier) {
+      for (const [, lines] of groups) {
+        const supplierId = lines[0].supplierId;
         const poNumber = await generatePONumber(tx);
         const totalAmount = lines.reduce(
           (s, l) => s + l.requestedQty * l.estimatedPrice,
@@ -526,15 +605,27 @@ export const PRService = {
     const pr = await prisma.purchaseRequest.findUnique({
       where: { id: prId },
       include: {
+        requester: { select: { id: true, name: true, email: true } },
+        approvedByUser: { select: { id: true, name: true, email: true } },
+        rejectedByUser: { select: { id: true, name: true, email: true } },
         lines: {
+          orderBy: { lineNumber: 'asc' },
           include: {
             part: { select: { id: true, partNumber: true, name: true } },
             preferredSupplier: { select: { id: true, code: true, name: true } },
           },
         },
-        history: { orderBy: { createdAt: 'desc' } },
-        comments: { orderBy: { createdAt: 'desc' } },
-        attachments: true,
+        history: {
+          orderBy: { createdAt: 'desc' },
+          include: { actor: { select: { id: true, name: true } } },
+        },
+        comments: {
+          orderBy: { createdAt: 'desc' },
+          include: { author: { select: { id: true, name: true } } },
+        },
+        attachments: {
+          include: { uploader: { select: { id: true, name: true } } },
+        },
         purchaseOrder: {
           select: { id: true, poNumber: true, status: true, expectedDate: true },
         },
@@ -542,6 +633,80 @@ export const PRService = {
     });
     if (!pr) throw new PRServiceError('PR not found', 'PR_NOT_FOUND');
     return pr;
+  },
+
+  /**
+   * Detail response shaped for the UI: { pr, approval, conversion, lines, history }.
+   */
+  async getPRDetailShaped(prId: string) {
+    const pr = await this.getPRPipelineStatus(prId);
+
+    const approvalStatus =
+      pr.status === PRStatus.APPROVED
+        ? 'APPROVED'
+        : pr.status === PRStatus.REJECTED
+          ? 'REJECTED'
+          : pr.status === PRStatus.PENDING
+            ? 'PENDING'
+            : 'NOT_SUBMITTED';
+
+    return {
+      pr: {
+        id: pr.id,
+        prNumber: pr.prNumber,
+        title: pr.title,
+        description: pr.description,
+        status: pr.status,
+        priority: pr.priority,
+        estimatedTotal: pr.estimatedTotal,
+        currency: pr.currency,
+        budgetCode: pr.budgetCode,
+        costCenter: pr.costCenter,
+        requestDate: pr.requestDate,
+        requiredDate: pr.requiredDate,
+        revisionNumber: pr.revisionNumber,
+        requester: pr.requester,
+      },
+      approval: {
+        status: approvalStatus,
+        approvedBy: pr.approvedByUser,
+        approvedAt: pr.approvedAt,
+        rejectedBy: pr.rejectedByUser,
+        rejectedAt: pr.rejectedAt,
+        rejectionReason: pr.rejectionReason,
+      },
+      conversion: {
+        converted: pr.convertedToPO,
+        purchaseOrder: pr.purchaseOrder,
+      },
+      lines: pr.lines.map((l) => ({
+        id: l.id,
+        lineNumber: l.lineNumber,
+        description: l.itemDescription,
+        itemCode: l.itemCode,
+        part: l.part,
+        preferredSupplier: l.preferredSupplier,
+        requestedQty: l.requestedQty,
+        unit: l.unit,
+        estimatedPrice: l.estimatedPrice,
+        estimatedTotal: l.estimatedTotal,
+        lineStatus: l.lineStatus,
+        notes: l.notes,
+        orderedQty: l.orderedQty,
+        poLineId: l.poLineId,
+      })),
+      history: pr.history.map((h) => ({
+        id: h.id,
+        action: h.action,
+        details: h.details,
+        fromStatus: h.fromStatus,
+        toStatus: h.toStatus,
+        actor: h.actor,
+        createdAt: h.createdAt,
+      })),
+      comments: pr.comments,
+      attachments: pr.attachments,
+    };
   },
 
   async trackPRLineById(lineId: string) {
@@ -580,9 +745,13 @@ export const PRService = {
     search?: string;
     status?: PRStatus;
     requesterId?: string;
-    skip?: number;
-    take?: number;
+    page?: number;
+    limit?: number;
   }) {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(200, Math.max(1, query.limit ?? 20));
+    const skip = (page - 1) * limit;
+
     const where: Prisma.PurchaseRequestWhereInput = {};
     if (query.status) where.status = query.status;
     if (query.requesterId) where.requesterId = query.requesterId;
@@ -596,12 +765,23 @@ export const PRService = {
       prisma.purchaseRequest.count({ where }),
       prisma.purchaseRequest.findMany({
         where,
-        skip: query.skip ?? 0,
-        take: query.take ?? 50,
+        skip,
+        take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { lines: { select: { id: true, lineStatus: true } } },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          _count: { select: { lines: true } },
+        },
       }),
     ]);
-    return { total, items };
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
   },
 };

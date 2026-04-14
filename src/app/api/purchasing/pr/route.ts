@@ -40,9 +40,11 @@ async function getHandler(request: NextRequest, { user }: { user: AuthUser }) {
     search: searchParams.get('search') ?? undefined,
     status: (searchParams.get('status') as PRStatus) ?? undefined,
     requesterId: searchParams.get('requesterId') ?? undefined,
-    skip: Number(searchParams.get('skip') ?? 0),
-    take: Math.min(Number(searchParams.get('take') ?? 50), 200),
+    page: Number(searchParams.get('page') ?? 1),
+    limit: Number(searchParams.get('limit') ?? 20),
   });
+  // PRList component reads result.items / result.pagination directly from
+  // the response body, so spread alongside the standard success wrapper.
   return successResponse(result);
 }
 
