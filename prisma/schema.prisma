@@ -6779,3 +6779,27 @@ model PRAttachment {
   @@index([prId])
   @@map("pr_attachments")
 }
+
+// =============================================================================
+// IDEMPOTENCY KEY (TIP-03 · Sprint 26)
+// Stores response snapshots keyed by client-supplied Idempotency-Key header so
+// that retried POST mutations don't double-execute. Hash of the request body
+// is kept to detect "same key, different payload" (→ 409 Conflict).
+// TTL is 24h via `expiresAt` — a lightweight sweep job can purge expired rows.
+// =============================================================================
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  tenantId       String?
+  method         String
+  path           String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+  @@index([tenantId, key])
+  @@map("idempotency_keys")
+}

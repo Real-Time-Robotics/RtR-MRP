@@ -18,6 +18,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from "@/lib/api/with-permission";
+import { withIdempotency } from "@/lib/security/idempotency";
 import { triggerPurchaseOrderWorkflow } from "@/lib/workflow/workflow-triggers";
 
 import { checkReadEndpointLimit } from '@/lib/rate-limit';
@@ -203,4 +204,4 @@ async function postHandler(
   return successResponse(order, 201);
 }
 
-export const POST = withPermission(postHandler, { create: 'purchasing:create' });
+export const POST = withPermission(withIdempotency(postHandler), { create: 'purchasing:create' });

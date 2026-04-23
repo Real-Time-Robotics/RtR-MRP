@@ -8,6 +8,7 @@ import {
   validationErrorResponse,
   AuthUser,
 } from '@/lib/api/with-permission';
+import { withIdempotency } from '@/lib/security/idempotency';
 import { PRService, PRServiceError } from '@/lib/purchasing/pr-service';
 
 const lineSchema = z.object({
@@ -74,4 +75,4 @@ async function postHandler(request: NextRequest, { user }: { user: AuthUser }) {
 }
 
 export const GET = withPermission(getHandler, { read: 'purchasing:view' });
-export const POST = withPermission(postHandler, { create: 'purchasing:create' });
+export const POST = withPermission(withIdempotency(postHandler), { create: 'purchasing:create' });
