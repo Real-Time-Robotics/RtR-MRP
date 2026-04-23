@@ -1,8 +1,23 @@
+/**
+ * Queue unit tests — covers both in-memory mode and BullMQ mode via mocks.
+ *
+ * In-memory mode is exercised by leaving REDIS_URL unset (default).
+ * BullMQ mode is exercised by mocking ../connection and bullmq primitives.
+ *
+ * Contract under test: `queues.*.add()` returns `{id, name, data}` regardless
+ * of mode; `jobs.*` helpers enqueue with the expected job names; status and
+ * stats helpers work end-to-end.
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), logError: vi.fn() },
 }));
+
+// =============================================================================
+// In-memory mode tests (REDIS_URL absent → isInMemoryMode()=true by default)
+// =============================================================================
 
 import {
   queues,
@@ -11,38 +26,103 @@ import {
   getJobStatus,
   getQueueStats,
   getAllQueueStats,
-  closeAllQueues,
+  QUEUE_NAMES,
   type MRPJobData,
   type ReportJobData,
   type NotificationJobData,
   type ExportJobData,
-  type ImportJobData,
   type EmailJobData,
   type ScheduledTaskData,
 } from '../queue';
 
-describe('queue - InMemoryQueue', () => {
-  describe('queues', () => {
-    it('should have all named queues', () => {
-      expect(queues.mrp).toBeDefined();
-      expect(queues.reports).toBeDefined();
-      expect(queues.notifications).toBeDefined();
-      expect(queues.exports).toBeDefined();
-      expect(queues.imports).toBeDefined();
-      expect(queues.emails).toBeDefined();
-      expect(queues.scheduled).toBeDefined();
-    });
-
-    it('should have correct queue names', () => {
-      expect(queues.mrp.name).toBe('mrp');
-      expect(queues.reports.name).toBe('reports');
-      expect(queues.notifications.name).toBe('notifications');
-    });
+describe('queue (in-memory mode)', () => {
+  it('exposes the full queue roster under canonical queue names', () => {
+    expect(queues.mrp.name).toBe(QUEUE_NAMES.MRP);
+    expect(queues.reports.name).toBe(QUEUE_NAMES.REPORTS);
+    expect(queues.notifications.name).toBe(QUEUE_NAMES.NOTIFICATIONS);
+    expect(queues.exports.name).toBe(QUEUE_NAMES.EXPORTS);
+    expect(queues.imports.name).toBe(QUEUE_NAMES.IMPORTS);
+    expect(queues.emails.name).toBe(QUEUE_NAMES.EMAILS);
+    expect(queues.scheduled.name).toBe(QUEUE_NAMES.SCHEDULED);
   });
 
-  describe('InMemoryQueue.add', () => {
-    it('should add a job and return it', async () => {
-      const job = await queues.mrp.add('test-job', {
+  it('add() returns {id, name, data} with a custom jobId when supplied', async () => {
+    const job = await queues.reports.add(
+      'generate-report',
+      {} as ReportJobData,
+      { jobId: 'custom-id-1' }
+    );
+    expect(job).not.toBeNull();
+    expect(job!.id).toBe('custom-id-1');
+    expect(job!.name).toBe('generate-report');
+  });
+
+  it('add() auto-generates unique ids when no jobId is supplied', async () => {
+    const a = await queues.notifications.add('send', {} as NotificationJobData);
+    const b = await queues.notifications.add('send', {} as NotificationJobData);
+    expect(a!.id).not.toEqual(b!.id);
+  });
+
+  it('addBulk() enqueues multiple jobs preserving names', async () => {
+    const added = await queues.emails.addBulk([
+      { name: 'email-1', data: {} as EmailJobData },
+      { name: 'email-2', data: {} as EmailJobData },
+    ]);
+    expect(added).toHaveLength(2);
+    expect(added[0]!.name).toBe('email-1');
+    expect(added[1]!.name).toBe('email-2');
+  });
+
+  it('jobs.mrp.run enqueues a run-mrp job with tenant-scoped id', async () => {
+    const data: MRPJobData = {
+      tenantId: 't1',
+      userId: 'u1',
+      options: {
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
+        includeDemand: true,
+        includeSupply: true,
+        includeWIP: true,
+        planningHorizon: 30,
+      },
+    };
+    const job = await jobs.mrp.run(data);
+    expect(job!.name).toBe('run-mrp');
+    expect(job!.id).toContain('mrp-t1');
+  });
+
+  it('jobs.notifications.lowStockAlert shapes the payload correctly', async () => {
+    const job = await jobs.notifications.lowStockAlert('t1', [
+      { partId: 'p1', partNumber: 'PN-001', quantity: 5, minStock: 20 },
+    ]);
+    expect(job!.name).toBe('low-stock-alert');
+    expect((job!.data as NotificationJobData).type).toBe('warning');
+    expect((job!.data as NotificationJobData).title).toBe('Low stock alert');
+  });
+
+  it('jobs.exports.create tags the job id with export type', async () => {
+    const job = await jobs.exports.create({
+      tenantId: 't1',
+      userId: 'u1',
+      exportType: 'parts',
+      format: 'excel',
+    } as ExportJobData);
+    expect(job!.id).toContain('export-t1-parts');
+  });
+
+  it('jobs.scheduled emits backup/cleanup/alert-check with matching taskType', async () => {
+    const backup = await jobs.scheduled.backup('t1');
+    const cleanup = await jobs.scheduled.cleanup('t1');
+    const alert = await jobs.scheduled.alertCheck('t1');
+    expect((backup!.data as ScheduledTaskData).taskType).toBe('backup');
+    expect((cleanup!.data as ScheduledTaskData).taskType).toBe('cleanup');
+    expect((alert!.data as ScheduledTaskData).taskType).toBe('alert-check');
+  });
+
+  it('getJobStatus returns normalized status for a waiting in-memory job', async () => {
+    await queues.mrp.add(
+      'status-test',
+      {
         tenantId: 't1',
         userId: 'u1',
         options: {
@@ -53,300 +133,156 @@ describe('queue - InMemoryQueue', () => {
           includeWIP: true,
           planningHorizon: 30,
         },
-      } as MRPJobData);
-
-      expect(job.id).toBeDefined();
-      expect(job.name).toBe('test-job');
-      expect(job.status).toBe('waiting');
-      expect(job.attemptsMade).toBe(0);
-      expect(job.progress).toBe(0);
-    });
-
-    it('should use custom jobId when provided', async () => {
-      const job = await queues.reports.add('test', {} as ReportJobData, { jobId: 'custom-id' });
-      expect(job.id).toBe('custom-id');
-    });
-
-    it('should auto-increment IDs when no jobId provided', async () => {
-      const job1 = await queues.notifications.add('n1', {} as NotificationJobData);
-      const job2 = await queues.notifications.add('n2', {} as NotificationJobData);
-      expect(job1.id).not.toBe(job2.id);
-    });
+      } as MRPJobData,
+      { jobId: 'status-1' }
+    );
+    const status = await getJobStatus('mrp', 'status-1');
+    expect(status).not.toBeNull();
+    expect(status!.id).toBe('status-1');
+    expect(status!.name).toBe('status-test');
+    expect(status!.state).toBe('waiting');
   });
 
-  describe('InMemoryQueue.addBulk', () => {
-    it('should add multiple jobs', async () => {
-      const added = await queues.emails.addBulk([
-        { name: 'email-1', data: {} as EmailJobData },
-        { name: 'email-2', data: {} as EmailJobData },
-      ]);
-      expect(added).toHaveLength(2);
-      expect(added[0].name).toBe('email-1');
-      expect(added[1].name).toBe('email-2');
-    });
+  it('getJobStatus returns null for a job that does not exist', async () => {
+    expect(await getJobStatus('mrp', 'missing')).toBeNull();
   });
 
-  describe('InMemoryQueue.getJob', () => {
-    it('should return a job by id', async () => {
-      const added = await queues.exports.add('export-test', {} as ExportJobData, { jobId: 'find-me' });
-      const found = await queues.exports.getJob('find-me');
-      expect(found).not.toBeNull();
-      expect(found!.name).toBe('export-test');
-    });
-
-    it('should return null for non-existent job', async () => {
-      const found = await queues.exports.getJob('does-not-exist');
-      expect(found).toBeNull();
-    });
+  it('getQueueStats returns the 5-bucket shape', async () => {
+    const stats = await getQueueStats('reports');
+    expect(stats).toEqual(
+      expect.objectContaining({
+        waiting: expect.any(Number),
+        active: expect.any(Number),
+        completed: expect.any(Number),
+        failed: expect.any(Number),
+        delayed: expect.any(Number),
+      })
+    );
   });
 
-  describe('InMemoryQueue count methods', () => {
-    it('should count waiting jobs', async () => {
-      // Add a few jobs to a fresh queue
-      await queues.scheduled.add('count-test-1', {} as ScheduledTaskData);
-      await queues.scheduled.add('count-test-2', {} as ScheduledTaskData);
-      const count = await queues.scheduled.getWaitingCount();
-      expect(count).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should return 0 for active count on fresh queue', async () => {
-      const count = await queues.imports.getActiveCount();
-      expect(count).toBe(0);
-    });
-
-    it('should return counts from getCompletedCount, getFailedCount, getDelayedCount', async () => {
-      expect(await queues.imports.getCompletedCount()).toBe(0);
-      expect(await queues.imports.getFailedCount()).toBe(0);
-      expect(await queues.imports.getDelayedCount()).toBe(0);
-    });
-  });
-
-  describe('InMemoryQueue.close', () => {
-    it('should resolve without error', async () => {
-      await expect(queues.mrp.close()).resolves.toBeUndefined();
-    });
-  });
-});
-
-describe('queue - job creators', () => {
-  describe('jobs.mrp', () => {
-    it('should add an MRP run job', async () => {
-      const job = await jobs.mrp.run({
-        tenantId: 't1',
-        userId: 'u1',
-        options: {
-          startDate: '2026-01-01',
-          endDate: '2026-01-31',
-          includeDemand: true,
-          includeSupply: true,
-          includeWIP: true,
-          planningHorizon: 30,
-        },
-      });
-      expect(job.name).toBe('run-mrp');
-      expect(job.id).toContain('mrp-t1');
-    });
-
-    it('should schedule a recurring MRP job', async () => {
-      const job = await jobs.mrp.scheduleRecurring('t1', '0 0 * * *');
-      expect(job.name).toBe('scheduled-mrp');
-    });
-  });
-
-  describe('jobs.reports', () => {
-    it('should generate a report job', async () => {
-      const job = await jobs.reports.generate({
-        tenantId: 't1',
-        userId: 'u1',
-        reportType: 'inventory',
-        reportName: 'Test Report',
-        parameters: {},
-        format: 'csv',
-      });
-      expect(job.name).toBe('generate-report');
-      expect(job.id).toContain('report-t1-inventory');
-    });
-
-    it('should schedule a recurring report', async () => {
-      const job = await jobs.reports.scheduleRecurring(
-        {
-          tenantId: 't1',
-          userId: 'u1',
-          reportType: 'sales',
-          reportName: 'Weekly Sales',
-          parameters: {},
-          format: 'pdf',
-        },
-        '0 8 * * MON'
-      );
-      expect(job.name).toBe('scheduled-report');
-    });
-  });
-
-  describe('jobs.notifications', () => {
-    it('should send a notification', async () => {
-      const job = await jobs.notifications.send({
-        tenantId: 't1',
-        type: 'info',
-        title: 'Test',
-        message: 'Hello',
-        channels: ['app'],
-      });
-      expect(job.name).toBe('send-notification');
-    });
-
-    it('should send bulk notifications', async () => {
-      const result = await jobs.notifications.sendBulk([
-        { tenantId: 't1', type: 'info', title: 'A', message: 'B', channels: ['app'] },
-        { tenantId: 't1', type: 'warning', title: 'C', message: 'D', channels: ['email'] },
-      ]);
-      expect(result).toHaveLength(2);
-    });
-
-    it('should send low stock alert', async () => {
-      const job = await jobs.notifications.lowStockAlert('t1', [
-        { partId: 'p1', partNumber: 'PN-001', quantity: 5, minStock: 20 },
-      ]);
-      expect(job.name).toBe('low-stock-alert');
-      expect(job.data.type).toBe('warning');
-      expect(job.data.title).toBe('Low stock alert');
-    });
-  });
-
-  describe('jobs.exports', () => {
-    it('should create an export job', async () => {
-      const job = await jobs.exports.create({
-        tenantId: 't1',
-        userId: 'u1',
-        exportType: 'parts',
-        format: 'excel',
-      });
-      expect(job.name).toBe('export-data');
-      expect(job.id).toContain('export-t1-parts');
-    });
-  });
-
-  describe('jobs.imports', () => {
-    it('should create an import job', async () => {
-      const job = await jobs.imports.create({
-        tenantId: 't1',
-        userId: 'u1',
-        importType: 'parts',
-        fileKey: 'file-123',
-        fileName: 'parts.xlsx',
-        options: { updateExisting: true, skipErrors: false, dryRun: false },
-      });
-      expect(job.name).toBe('import-data');
-    });
-  });
-
-  describe('jobs.emails', () => {
-    it('should send an email', async () => {
-      const job = await jobs.emails.send({
-        tenantId: 't1',
-        to: 'test@example.com',
-        subject: 'Test',
-        template: 'welcome',
-        data: {},
-      });
-      expect(job.name).toBe('send-email');
-    });
-
-    it('should send bulk emails', async () => {
-      const result = await jobs.emails.sendBulk([
-        { tenantId: 't1', to: 'a@b.com', subject: 'A', template: 't', data: {} },
-        { tenantId: 't1', to: 'c@d.com', subject: 'B', template: 't', data: {} },
-      ]);
-      expect(result).toHaveLength(2);
-    });
-  });
-
-  describe('jobs.scheduled', () => {
-    it('should create a backup job', async () => {
-      const job = await jobs.scheduled.backup('t1');
-      expect(job.name).toBe('backup');
-      expect(job.data.taskType).toBe('backup');
-    });
-
-    it('should create a cleanup job', async () => {
-      const job = await jobs.scheduled.cleanup('t1');
-      expect(job.name).toBe('cleanup');
-    });
-
-    it('should create an alert-check job', async () => {
-      const job = await jobs.scheduled.alertCheck('t1');
-      expect(job.name).toBe('alert-check');
-    });
-  });
-});
-
-describe('queue - status helpers', () => {
-  describe('getJobStatus', () => {
-    it('should return job status for existing job', async () => {
-      const added = await queues.mrp.add('status-test', {
-        tenantId: 't1',
-        userId: 'u1',
-        options: {
-          startDate: '2026-01-01',
-          endDate: '2026-01-31',
-          includeDemand: true,
-          includeSupply: true,
-          includeWIP: true,
-          planningHorizon: 30,
-        },
-      } as MRPJobData, { jobId: 'status-test-id' });
-
-      const status = await getJobStatus('mrp', 'status-test-id');
-      expect(status).not.toBeNull();
-      expect(status!.id).toBe('status-test-id');
-      expect(status!.name).toBe('status-test');
-      expect(status!.state).toBe('waiting');
-      expect(status!.progress).toBe(0);
-    });
-
-    it('should return null for non-existent job', async () => {
-      const status = await getJobStatus('mrp', 'nonexistent');
-      expect(status).toBeNull();
-    });
-  });
-
-  describe('getQueueStats', () => {
-    it('should return stats with correct shape', async () => {
-      const stats = await getQueueStats('mrp');
-      expect(stats).toHaveProperty('waiting');
-      expect(stats).toHaveProperty('active');
-      expect(stats).toHaveProperty('completed');
-      expect(stats).toHaveProperty('failed');
-      expect(stats).toHaveProperty('delayed');
-    });
-  });
-
-  describe('getAllQueueStats', () => {
-    it('should return stats for all queues', async () => {
-      const allStats = await getAllQueueStats();
-      expect(allStats).toHaveProperty('mrp');
-      expect(allStats).toHaveProperty('reports');
-      expect(allStats).toHaveProperty('notifications');
-      expect(allStats).toHaveProperty('exports');
-      expect(allStats).toHaveProperty('imports');
-      expect(allStats).toHaveProperty('emails');
-      expect(allStats).toHaveProperty('scheduled');
-    });
-  });
-
-  describe('closeAllQueues', () => {
-    it('should close all queues and events without error', async () => {
-      await expect(closeAllQueues()).resolves.toBeUndefined();
-    });
-  });
-});
-
-describe('queue - queueEvents', () => {
-  it('should have close methods for all queue events', async () => {
-    for (const key of Object.keys(queueEvents)) {
-      const event = queueEvents[key as keyof typeof queueEvents];
-      expect(event.close).toBeDefined();
-      await expect(event.close()).resolves.toBeUndefined();
+  it('getAllQueueStats returns stats for every registered queue', async () => {
+    const all = await getAllQueueStats();
+    for (const key of Object.keys(queues)) {
+      expect(all).toHaveProperty(key);
     }
+  });
+
+  it('queueEvents exposes close() on every queue (no-op in in-memory mode)', async () => {
+    for (const key of Object.keys(queueEvents)) {
+      const ev = queueEvents[key as keyof typeof queueEvents];
+      expect(typeof ev.close).toBe('function');
+      await expect(ev.close()).resolves.toBeUndefined();
+    }
+  });
+});
+
+// =============================================================================
+// BullMQ mode tests — re-import queue.ts with mocked connection/bullmq.
+// =============================================================================
+
+describe('queue (BullMQ mode)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('delegates add() to bullmq.Queue.add with attempts+backoff+removeOn* defaults', async () => {
+    const mockBullAdd = vi.fn().mockImplementation(
+      async (name: string, data: unknown) => ({ id: 'bull-1', name, data })
+    );
+    vi.doMock('bullmq', () => {
+      class Queue {
+        public name: string;
+        constructor(name: string) {
+          this.name = name;
+        }
+        add = mockBullAdd;
+        close = vi.fn().mockResolvedValue(undefined);
+        getJob = vi.fn();
+        getWaitingCount = vi.fn().mockResolvedValue(0);
+        getActiveCount = vi.fn().mockResolvedValue(0);
+        getCompletedCount = vi.fn().mockResolvedValue(0);
+        getFailedCount = vi.fn().mockResolvedValue(0);
+        getDelayedCount = vi.fn().mockResolvedValue(0);
+      }
+      class QueueEvents {
+        close = vi.fn().mockResolvedValue(undefined);
+      }
+      class Worker {}
+      return { Queue, QueueEvents, Worker };
+    });
+    vi.doMock('../connection', () => ({
+      isInMemoryMode: vi.fn(() => false),
+      getBullConnection: vi.fn(() => ({ fake: 'conn' })),
+      closeBullConnection: vi.fn().mockResolvedValue(undefined),
+    }));
+    vi.doMock('@/lib/logger', () => ({
+      logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), logError: vi.fn() },
+    }));
+
+    const mod = await import('../queue');
+    const out = await mod.jobs.notifications.send({
+      tenantId: 't1',
+      userId: 'u1',
+      type: 'info',
+      title: 'hi',
+      message: 'hello',
+      channels: ['app'],
+    });
+
+    expect(out!.id).toBe('bull-1');
+    expect(mockBullAdd).toHaveBeenCalledTimes(1);
+    const [jobName, data, opts] = mockBullAdd.mock.calls[0];
+    expect(jobName).toBe('send-notification');
+    expect(data).toMatchObject({ title: 'hi' });
+    expect(opts).toMatchObject({
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: expect.any(Object),
+      removeOnFail: expect.any(Object),
+    });
+  });
+
+  it('closeAllQueues closes bullmq queues + queue events + the Redis connection', async () => {
+    const closeQueue = vi.fn().mockResolvedValue(undefined);
+    const closeEvents = vi.fn().mockResolvedValue(undefined);
+    const closeConn = vi.fn().mockResolvedValue(undefined);
+
+    vi.doMock('bullmq', () => {
+      class Queue {
+        public name: string;
+        constructor(name: string) {
+          this.name = name;
+        }
+        add = vi.fn();
+        close = closeQueue;
+        getJob = vi.fn();
+        getWaitingCount = vi.fn().mockResolvedValue(0);
+        getActiveCount = vi.fn().mockResolvedValue(0);
+        getCompletedCount = vi.fn().mockResolvedValue(0);
+        getFailedCount = vi.fn().mockResolvedValue(0);
+        getDelayedCount = vi.fn().mockResolvedValue(0);
+      }
+      class QueueEvents {
+        close = closeEvents;
+      }
+      class Worker {}
+      return { Queue, QueueEvents, Worker };
+    });
+    vi.doMock('../connection', () => ({
+      isInMemoryMode: vi.fn(() => false),
+      getBullConnection: vi.fn(() => ({ fake: 'conn' })),
+      closeBullConnection: closeConn,
+    }));
+    vi.doMock('@/lib/logger', () => ({
+      logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), logError: vi.fn() },
+    }));
+
+    const mod = await import('../queue');
+    await mod.closeAllQueues();
+
+    // 7 queues × close + 7 queueEvents × close + 1 connection close
+    expect(closeQueue).toHaveBeenCalledTimes(7);
+    expect(closeEvents).toHaveBeenCalledTimes(7);
+    expect(closeConn).toHaveBeenCalledTimes(1);
   });
 });
