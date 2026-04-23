@@ -55,12 +55,17 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   partNumber: [
     "part number", "part no", "part_number", "mã sp", "ma sp",
     "mã linh kiện", "ma linh kien", "mã vật tư", "ma vat tu", "code",
-    "mã", "ma", "part no.",
+    "mã", "ma", "part no.", "manufacturer part number",
+    "manufacturer part number 1", "mpn", "mfr part", "mfr part no",
+    "mfg part", "component part number",
   ],
   partName: [
     "name", "tên", "ten", "tên sp", "ten sp", "tên linh kiện",
     "ten linh kien", "description", "mô tả", "mo ta", "part name",
-    "tên chi tiết", "ten chi tiet", "chi tiết", "chi tiet",
+    "tên chi tiết", "ten chi tiet", "chi tiết", "chi tiet", "comment",
+  ],
+  designator: [
+    "designator", "reference", "ref des", "refdes", "ref",
   ],
   unit: ["unit", "đvt", "dvt", "đơn vị", "don vi", "uom"],
   unitCost: [
@@ -412,6 +417,168 @@ export function splitCompositeData(
 
   const parts = Array.from(partsMap.values());
   const products = Array.from(productsMap.values());
+
+  return {
+    isComposite: true,
+    confidence: 1.0,
+    parts,
+    products,
+    bomLines,
+    stats: {
+      totalRows: rows.length,
+      partCount: parts.length,
+      productCount: products.length,
+      bomLineCount: bomLines.length,
+      skippedRows,
+    },
+    warnings,
+  };
+}
+
+// ============================================
+// ECAD BOM DETECTION + PARSING
+// ============================================
+
+/**
+ * Detect flat ECAD BOM structure (exported from Altium, KiCad, etc.)
+ * These BOMs are flat lists with columns like:
+ *   Manufacturer Part Number | Description | Designator | Quantity
+ */
+export function detectEcadBomStructure(
+  headers: string[],
+  sampleRows: unknown[][]
+): { isEcadBom: boolean; confidence: number } {
+  const normalizedHeaders = headers.map((h) => normalizeVietnamese(h));
+  let signals = 0;
+  const totalSignals = 4;
+
+  // Signal 1: Has part number / manufacturer part number / MPN column
+  const hasPartNumber = normalizedHeaders.some((h) =>
+    COLUMN_ALIASES.partNumber.some((a) => {
+      const na = normalizeVietnamese(a);
+      return h === na || (na.length >= 3 && h.includes(na));
+    })
+  );
+  if (hasPartNumber) signals++;
+
+  // Signal 2: Has quantity column
+  const hasQty = normalizedHeaders.some((h) =>
+    COLUMN_ALIASES.quantity.some((a) => {
+      const na = normalizeVietnamese(a);
+      return h === na || (na.length >= 3 && h.includes(na));
+    })
+  );
+  if (hasQty) signals++;
+
+  // Signal 3: Has description or designator column
+  const hasDescOrDesignator = normalizedHeaders.some((h) =>
+    [...COLUMN_ALIASES.partName, ...COLUMN_ALIASES.designator].some((a) => {
+      const na = normalizeVietnamese(a);
+      return h === na || (na.length >= 3 && h.includes(na));
+    })
+  );
+  if (hasDescOrDesignator) signals++;
+
+  // Signal 4: NO composite structure (no Module/Group columns)
+  const hasModule = normalizedHeaders.some((h) =>
+    COLUMN_ALIASES.module.some((a) => normalizeVietnamese(a) === h)
+  );
+  const hasGroup = normalizedHeaders.some((h) =>
+    COLUMN_ALIASES.group.some((a) => normalizeVietnamese(a) === h)
+  );
+  if (!hasModule && !hasGroup) signals++;
+
+  const confidence = signals / totalSignals;
+  return {
+    isEcadBom: confidence >= 0.75, // Need ≥3/4 signals
+    confidence,
+  };
+}
+
+/**
+ * Parse flat ECAD BOM into Parts + 1 Product + BOM lines.
+ */
+export function splitEcadBomData(
+  headers: string[],
+  rows: unknown[][],
+  fileOrSheetName: string
+): CompositeAnalysisResult {
+  const normalizedHeaders = headers.map((h) => normalizeVietnamese(h));
+  const warnings: string[] = [];
+
+  // Map column indices
+  const colIdx: Record<string, number> = {};
+  for (const [field] of Object.entries(COLUMN_ALIASES)) {
+    colIdx[field] = findColumnIndex(normalizedHeaders, field);
+  }
+
+  if (colIdx.partNumber === -1) {
+    warnings.push("Không tìm thấy cột Part Number");
+  }
+
+  // Generate product SKU from file/sheet name
+  const productName = fileOrSheetName
+    .replace(/\.(xlsx?|csv)$/i, "")
+    .replace(/^Bill of Materials[-\s]*/i, "")
+    .trim();
+  const productSku = productName
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 30) || "ECAD-IMPORT";
+
+  const partsMap = new Map<string, ParsedPart>();
+  const bomQtyMap = new Map<string, number>(); // partNumber → accumulated qty
+  let skippedRows = 0;
+
+  for (const row of rows) {
+    const nonEmpty = row.filter(
+      (cell) => cell !== null && cell !== undefined && String(cell).trim() !== ""
+    );
+    if (nonEmpty.length === 0) {
+      skippedRows++;
+      continue;
+    }
+
+    const partNumber = getCell(row, colIdx.partNumber);
+    if (!partNumber) {
+      skippedRows++;
+      continue;
+    }
+
+    const partName = getCell(row, colIdx.partName) || partNumber;
+    const quantity = getNumericCell(row, colIdx.quantity) ?? 1;
+
+    if (!partsMap.has(partNumber)) {
+      partsMap.set(partNumber, {
+        partNumber,
+        name: partName,
+        category: "Electronic Component",
+        unit: "pcs",
+        unitCost: 0,
+        method: "BUY",
+      });
+      bomQtyMap.set(partNumber, quantity);
+    } else {
+      // Accumulate quantity for duplicate part numbers
+      bomQtyMap.set(partNumber, (bomQtyMap.get(partNumber) ?? 0) + quantity);
+    }
+  }
+
+  const parts = Array.from(partsMap.values());
+  const products: ParsedProduct[] = [{ sku: productSku, name: productName || productSku }];
+  const bomLines: ParsedBomLine[] = [];
+
+  for (const [partNumber, qty] of bomQtyMap) {
+    if (qty > 0) {
+      bomLines.push({
+        parentSku: productSku,
+        childPartNumber: partNumber,
+        quantity: qty,
+        scrapRate: 0,
+      });
+    }
+  }
 
   return {
     isComposite: true,
