@@ -228,6 +228,21 @@ export const errorsTotal = new Counter({
 });
 
 // =============================================================================
+// RATE-LIMIT METRICS
+// =============================================================================
+
+// Rate-limit exceeded counter (bumped every time a request is rejected with 429).
+// `tier` distinguishes read / write / heavy / signin / strict-auth limits;
+// `backend` is either 'redis' or 'memory' so ops can tell whether a production
+// node has silently fallen back to the in-memory limiter.
+export const rateLimitExceededTotal = new Counter({
+  name: 'rtr_mrp_rate_limit_exceeded_total',
+  help: 'Total number of requests rejected by the rate limiter',
+  labelNames: ['tier', 'backend'],
+  registers: [metricsRegistry],
+});
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 

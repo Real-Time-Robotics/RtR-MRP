@@ -1,164 +1,171 @@
 // =============================================================================
-// RTR MRP - RATE LIMITER (Gate 5.2)
-// Upstash Redis-based rate limiting with in-memory fallback
+// RTR MRP - RATE LIMITER (TIP-05)
+// rate-limiter-flexible backend:
+//   - RateLimiterRedis when REDIS_URL is present (shares ioredis connection with BullMQ)
+//   - RateLimiterMemory fallback in dev
+//   - Production fails fast at import time when NODE_ENV=production and no Redis
+//
+// Exposes prom-client counter rtr_mrp_rate_limit_exceeded_total{tier,backend}.
+//
+// Public API is unchanged vs. the previous Upstash-based module so the 240+
+// route callers don't need to be touched:
+//   - getRateLimitIdentifier, getIpIdentifier
+//   - checkHeavyEndpointLimit, checkWriteEndpointLimit, checkReadEndpointLimit
+//   - checkSigninLimit, checkStrictAuthLimit
 // =============================================================================
 
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { RateLimiterMemory, RateLimiterRedis, type RateLimiterAbstract } from 'rate-limiter-flexible';
+import IORedis, { type RedisOptions } from 'ioredis';
+import { logger } from '@/lib/logger';
+import { rateLimitExceededTotal } from '@/lib/monitoring/metrics';
 
 // =============================================================================
 // ENVIRONMENT CHECKS
 // =============================================================================
 
 function isTestEnvironment(): boolean {
-  return process.env.NODE_ENV === 'test' ||
-         process.env.PLAYWRIGHT_TEST === 'true' ||
-         process.env.E2E_TEST === 'true' ||
-         process.env.SKIP_RATE_LIMIT === 'true';
+  return (
+    process.env.NODE_ENV === 'test' ||
+    process.env.PLAYWRIGHT_TEST === 'true' ||
+    process.env.E2E_TEST === 'true' ||
+    process.env.SKIP_RATE_LIMIT === 'true'
+  );
 }
 
-const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-
-// =============================================================================
-// IN-MEMORY SLIDING WINDOW RATE LIMITER (fallback when Redis unavailable)
-// =============================================================================
-
-interface InMemoryLimiterConfig {
-  limit: number;        // Max requests per window
-  windowMs: number;     // Window size in ms
-  maxTokens?: number;   // Max tracked tokens (LRU eviction)
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
 }
 
-/**
- * Simple in-memory sliding window rate limiter.
- * Uses a Map with periodic cleanup. Not suitable for multi-instance deployments
- * (use Redis for that), but provides protection in single-instance / dev mode.
- */
-function createInMemoryLimiter(config: InMemoryLimiterConfig) {
-  const store = new Map<string, number[]>();
-  const maxTokens = config.maxTokens ?? 10_000;
+function getRedisUrl(): string | null {
+  return process.env.REDIS_URL || null;
+}
 
-  // Periodic cleanup every 2 minutes to prevent memory growth
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    const cutoff = now - config.windowMs;
-    for (const [key, timestamps] of store) {
-      const valid = timestamps.filter(ts => ts > cutoff);
-      if (valid.length === 0) {
-        store.delete(key);
-      } else {
-        store.set(key, valid);
-      }
-    }
-  }, 120_000);
+// =============================================================================
+// REDIS CONNECTION
+// A dedicated IORedis instance with the options rate-limiter-flexible prefers:
+//   - enableOfflineQueue: false so buffered commands don't pile up
+//   - maxRetriesPerRequest: 3 — same as cache connection (NOT null)
+// =============================================================================
 
-  // Allow GC if module is unloaded
-  if (typeof cleanupInterval === 'object' && 'unref' in cleanupInterval) {
-    cleanupInterval.unref();
+let redisClient: IORedis | null = null;
+
+const RATE_LIMIT_REDIS_OPTIONS: RedisOptions = {
+  enableOfflineQueue: false,
+  maxRetriesPerRequest: 3,
+  lazyConnect: true,
+  enableReadyCheck: true,
+  connectTimeout: 5000,
+  retryStrategy(times) {
+    return Math.min(times * 200, 2000);
+  },
+};
+
+function getRedisClient(): IORedis | null {
+  if (redisClient) return redisClient;
+  const url = getRedisUrl();
+  if (!url) return null;
+  try {
+    redisClient = new IORedis(url, RATE_LIMIT_REDIS_OPTIONS);
+    redisClient.on('connect', () => logger.info('[RATE-LIMIT] Redis connected'));
+    redisClient.on('error', (err) => {
+      logger.warn('[RATE-LIMIT] Redis error', { error: err.message });
+    });
+    redisClient.connect().catch(() => {
+      logger.warn('[RATE-LIMIT] Redis connect failed — falling back to in-memory');
+    });
+    return redisClient;
+  } catch (err) {
+    logger.warn('[RATE-LIMIT] Failed to create Redis client', {
+      error: (err as Error).message,
+    });
+    return null;
   }
-
-  return {
-    check(token: string): { success: boolean; limit: number; remaining: number; reset: number } {
-      const now = Date.now();
-      const cutoff = now - config.windowMs;
-
-      // Get and filter timestamps
-      const timestamps = (store.get(token) || []).filter(ts => ts > cutoff);
-
-      if (timestamps.length >= config.limit) {
-        const oldestValid = timestamps[0];
-        return {
-          success: false,
-          limit: config.limit,
-          remaining: 0,
-          reset: oldestValid + config.windowMs,
-        };
-      }
-
-      // Add current request
-      timestamps.push(now);
-      store.set(token, timestamps);
-
-      // LRU eviction if too many tokens
-      if (store.size > maxTokens) {
-        const firstKey = store.keys().next().value;
-        if (firstKey) store.delete(firstKey);
-      }
-
-      return {
-        success: true,
-        limit: config.limit,
-        remaining: config.limit - timestamps.length,
-        reset: now + config.windowMs,
-      };
-    },
-    reset(token: string) {
-      store.delete(token);
-    },
-  };
 }
 
 // =============================================================================
-// REDIS RATE LIMITERS (when Upstash is configured)
+// PRODUCTION FAIL-FAST
+// We do NOT want a production node to silently fall back to the in-memory
+// limiter. In-memory rate limiting is useless under a multi-instance deploy —
+// each instance sees its own bucket and a malicious caller can just spray.
+// So: if NODE_ENV=production and no REDIS_URL, throw at module init.
 // =============================================================================
 
-let redis: Redis | null = null;
-let heavyEndpointLimiter: Ratelimit | null = null;
-let writeEndpointLimiter: Ratelimit | null = null;
-let readEndpointLimiter: Ratelimit | null = null;
-
-if (hasRedis) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
-
-  heavyEndpointLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(60, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:heavy',
-  });
-
-  writeEndpointLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(120, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:write',
-  });
-
-  readEndpointLimiter = new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(300, '1 m'),
-    analytics: true,
-    prefix: 'ratelimit:read',
-  });
+if (isProduction() && !getRedisUrl() && !isTestEnvironment()) {
+  // Throwing from a module-level statement crashes the process on boot. That's
+  // the intended behaviour — the orchestrator should restart / alert.
+  throw new Error(
+    '[RATE-LIMIT] FATAL: NODE_ENV=production but REDIS_URL is not set. ' +
+      'Refusing to boot with in-memory rate limiting. ' +
+      'Set REDIS_URL or SKIP_RATE_LIMIT=true (not recommended).'
+  );
 }
 
 // =============================================================================
-// IN-MEMORY FALLBACK LIMITERS (when Redis is NOT configured)
+// LIMITER FACTORY
 // =============================================================================
 
-const memHeavyLimiter = createInMemoryLimiter({ limit: 60, windowMs: 60_000 });
-const memWriteLimiter = createInMemoryLimiter({ limit: 120, windowMs: 60_000 });
-const memReadLimiter = createInMemoryLimiter({ limit: 300, windowMs: 60_000 });
-// Auth sub-limiters created on-demand via getAuthSubLimiter()
+type Tier = 'heavy' | 'write' | 'read' | 'signin' | 'strict-auth';
 
-// =============================================================================
-// IDENTIFIER EXTRACTION
-// =============================================================================
+interface LimiterSpec {
+  /** Identifier prefix in Redis; also the `tier` label in metrics. */
+  tier: Tier;
+  /** Max points per window. */
+  points: number;
+  /** Window in seconds. */
+  duration: number;
+}
 
-/**
- * Extract identifier for rate limiting
- * Priority: userId (if authenticated) -> IP from x-forwarded-for -> x-real-ip
- */
-export function getRateLimitIdentifier(
-  request: Request,
-  userId?: string
-): string {
-  if (userId) {
-    return `user:${userId}`;
+const LIMITER_SPECS: Record<Tier, LimiterSpec> = {
+  heavy: { tier: 'heavy', points: 60, duration: 60 }, // 60 req/min
+  write: { tier: 'write', points: 120, duration: 60 }, // 120 req/min
+  read: { tier: 'read', points: 300, duration: 60 }, // 300 req/min
+  signin: { tier: 'signin', points: 5, duration: 60 }, // 5 req/min per IP
+  'strict-auth': { tier: 'strict-auth', points: 3, duration: 60 }, // 3 req/min per IP
+};
+
+function makeLimiter(spec: LimiterSpec): RateLimiterAbstract {
+  const redis = getRedisClient();
+  if (redis) {
+    return new RateLimiterRedis({
+      storeClient: redis,
+      keyPrefix: `rl:${spec.tier}`,
+      points: spec.points,
+      duration: spec.duration,
+      // If Redis is unreachable mid-request, fall back to "allow" — better to
+      // let requests through than to 500 the whole API. The error is logged.
+      insuranceLimiter: new RateLimiterMemory({
+        keyPrefix: `rl:${spec.tier}:insurance`,
+        points: spec.points,
+        duration: spec.duration,
+      }),
+    });
   }
+  // Dev / test path.
+  return new RateLimiterMemory({
+    keyPrefix: `rl:${spec.tier}`,
+    points: spec.points,
+    duration: spec.duration,
+  });
+}
+
+const limiters: Record<Tier, RateLimiterAbstract> = {
+  heavy: makeLimiter(LIMITER_SPECS.heavy),
+  write: makeLimiter(LIMITER_SPECS.write),
+  read: makeLimiter(LIMITER_SPECS.read),
+  signin: makeLimiter(LIMITER_SPECS.signin),
+  'strict-auth': makeLimiter(LIMITER_SPECS['strict-auth']),
+};
+
+function getBackendLabel(): 'redis' | 'memory' {
+  return getRedisClient() ? 'redis' : 'memory';
+}
+
+// =============================================================================
+// IDENTIFIER EXTRACTION (unchanged)
+// =============================================================================
+
+export function getRateLimitIdentifier(request: Request, userId?: string): string {
+  if (userId) return `user:${userId}`;
 
   const forwardedFor = request.headers.get('x-forwarded-for');
   if (forwardedFor) {
@@ -172,9 +179,6 @@ export function getRateLimitIdentifier(
   return 'ip:127.0.0.1';
 }
 
-/**
- * Get IP-only identifier (for auth endpoints — always use IP, not userId)
- */
 export function getIpIdentifier(request: Request): string {
   const forwardedFor = request.headers.get('x-forwarded-for');
   if (forwardedFor) {
@@ -189,11 +193,59 @@ export function getIpIdentifier(request: Request): string {
 }
 
 // =============================================================================
-// 429 RESPONSE BUILDER
+// CORE CONSUME + 429 RESPONSE
 // =============================================================================
 
-function build429Response(result: { limit: number; remaining: number; reset: number }): Response {
-  const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
+interface CheckResult {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number; // epoch ms when the token resets
+  retryAfter?: number; // seconds
+}
+
+async function consume(tier: Tier, key: string): Promise<CheckResult> {
+  const spec = LIMITER_SPECS[tier];
+  const limiter = limiters[tier];
+  try {
+    const res = await limiter.consume(key, 1);
+    return {
+      success: true,
+      limit: spec.points,
+      remaining: res.remainingPoints,
+      reset: Date.now() + res.msBeforeNext,
+    };
+  } catch (err) {
+    // rate-limiter-flexible throws a RateLimiterRes on 429 (not a real Error).
+    const rateRes = err as { remainingPoints?: number; msBeforeNext?: number };
+    if (typeof rateRes?.msBeforeNext === 'number') {
+      rateLimitExceededTotal.inc({ tier, backend: getBackendLabel() });
+      return {
+        success: false,
+        limit: spec.points,
+        remaining: rateRes.remainingPoints ?? 0,
+        reset: Date.now() + rateRes.msBeforeNext,
+        retryAfter: Math.max(1, Math.ceil(rateRes.msBeforeNext / 1000)),
+      };
+    }
+    // Real error (Redis down AND insurance limiter also failed). Fail-open.
+    logger.logError(err as Error, { context: 'rate-limit', tier, key });
+    return {
+      success: true,
+      limit: spec.points,
+      remaining: spec.points,
+      reset: Date.now() + spec.duration * 1000,
+    };
+  }
+}
+
+function build429Response(result: {
+  limit: number;
+  remaining: number;
+  reset: number;
+  retryAfter?: number;
+}): Response {
+  const retryAfter = result.retryAfter ?? Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
   return new Response(
     JSON.stringify({
       error: 'Too many requests. Please try again later.',
@@ -213,126 +265,131 @@ function build429Response(result: { limit: number; remaining: number; reset: num
 }
 
 // =============================================================================
-// PUBLIC API — RATE LIMIT CHECK FUNCTIONS
+// PUBLIC API
 // =============================================================================
 
 /**
- * Check rate limit for heavy endpoints (AI, OCR, import: 60 req/min)
+ * Heavy endpoints (AI, OCR, import): 60 req/min.
+ * Returns { success, limit, remaining, reset, retryAfter? }.
  */
 export async function checkHeavyEndpointLimit(
   request: Request,
   userId?: string
-): Promise<{
-  success: boolean;
-  limit: number;
-  remaining: number;
-  reset: number;
-  retryAfter?: number;
-}> {
+): Promise<CheckResult> {
   if (isTestEnvironment()) {
     return { success: true, limit: 9999, remaining: 9999, reset: 0 };
   }
-
   const identifier = getRateLimitIdentifier(request, userId);
-
-  if (heavyEndpointLimiter) {
-    const result = await heavyEndpointLimiter.limit(identifier);
-    return {
-      success: result.success,
-      limit: result.limit,
-      remaining: result.remaining,
-      reset: result.reset,
-      retryAfter: result.success ? undefined : Math.ceil((result.reset - Date.now()) / 1000),
-    };
-  }
-
-  // In-memory fallback
-  const result = memHeavyLimiter.check(identifier);
-  return {
-    ...result,
-    retryAfter: result.success ? undefined : Math.ceil((result.reset - Date.now()) / 1000),
-  };
+  return consume('heavy', identifier);
 }
 
 /**
- * Check rate limit for write endpoints (create, update: 120 req/min)
- * Returns null if allowed, or a 429 Response if rate limited
+ * Write endpoints (create/update): 120 req/min.
+ * Returns null if allowed, or a 429 Response if rate limited.
  */
 export async function checkWriteEndpointLimit(
   request: Request,
   userId?: string
 ): Promise<Response | null> {
   if (isTestEnvironment()) return null;
-
-  const identifier = getRateLimitIdentifier(request, userId);
-
-  if (writeEndpointLimiter) {
-    const result = await writeEndpointLimiter.limit(identifier);
-    return result.success ? null : build429Response(result);
-  }
-
-  // In-memory fallback
-  const result = memWriteLimiter.check(identifier);
+  const result = await consume('write', getRateLimitIdentifier(request, userId));
   return result.success ? null : build429Response(result);
 }
 
 /**
- * Check rate limit for read endpoints (list, get: 300 req/min)
- * Returns null if allowed, or a 429 Response if rate limited
+ * Read endpoints (list/get): 300 req/min.
+ * Returns null if allowed, or a 429 Response if rate limited.
  */
 export async function checkReadEndpointLimit(
   request: Request,
   userId?: string
 ): Promise<Response | null> {
   if (isTestEnvironment()) return null;
-
-  const identifier = getRateLimitIdentifier(request, userId);
-
-  if (readEndpointLimiter) {
-    const result = await readEndpointLimiter.limit(identifier);
-    return result.success ? null : build429Response(result);
-  }
-
-  // In-memory fallback
-  const result = memReadLimiter.check(identifier);
+  const result = await consume('read', getRateLimitIdentifier(request, userId));
   return result.success ? null : build429Response(result);
 }
 
-// Dedicated auth sub-limiters for different strictness levels
-const authSubLimiters = new Map<number, ReturnType<typeof createInMemoryLimiter>>();
-
-function getAuthSubLimiter(limit: number) {
-  let limiter = authSubLimiters.get(limit);
-  if (!limiter) {
-    limiter = createInMemoryLimiter({ limit, windowMs: 60_000, maxTokens: 1000 });
-    authSubLimiters.set(limit, limiter);
-  }
-  return limiter;
-}
-
 /**
- * Check rate limit for auth signin (strict: 5 req/min per IP)
+ * Auth signin: 5 req/min per IP (IP-only identifier).
  */
 export async function checkSigninLimit(request: Request): Promise<Response | null> {
   if (isTestEnvironment()) return null;
-  const identifier = getIpIdentifier(request);
-  const result = getAuthSubLimiter(5).check(`signin:${identifier}`);
+  const result = await consume('signin', `signin:${getIpIdentifier(request)}`);
   return result.success ? null : build429Response(result);
 }
 
 /**
- * Check rate limit for auth signup / forgot-password (strict: 3 req/min per IP)
+ * Signup / forgot-password: 3 req/min per IP.
  */
 export async function checkStrictAuthLimit(request: Request): Promise<Response | null> {
   if (isTestEnvironment()) return null;
-  const identifier = getIpIdentifier(request);
-  const result = getAuthSubLimiter(3).check(`strict-auth:${identifier}`);
+  const result = await consume('strict-auth', `strict-auth:${getIpIdentifier(request)}`);
   return result.success ? null : build429Response(result);
 }
 
 // =============================================================================
-// EXPORTS
+// SHUTDOWN
 // =============================================================================
 
-export { heavyEndpointLimiter, writeEndpointLimiter, readEndpointLimiter };
-export { createInMemoryLimiter };
+export async function closeRateLimitConnection(): Promise<void> {
+  if (!redisClient) return;
+  try {
+    await redisClient.quit();
+  } catch {
+    redisClient.disconnect();
+  }
+  redisClient = null;
+}
+
+// =============================================================================
+// LEGACY EXPORTS (kept for backward compatibility with code that previously
+// imported these names from the Upstash-based module)
+// =============================================================================
+
+/** @deprecated Use the check* functions above. Kept for backward compatibility. */
+export const heavyEndpointLimiter = limiters.heavy;
+/** @deprecated Use the check* functions above. Kept for backward compatibility. */
+export const writeEndpointLimiter = limiters.write;
+/** @deprecated Use the check* functions above. Kept for backward compatibility. */
+export const readEndpointLimiter = limiters.read;
+
+/**
+ * @deprecated Only used by tests that mocked the old in-memory helper.
+ * Returns a pure in-memory rate limiter with the same `check(token)` shape
+ * as the legacy helper so existing tests keep passing.
+ */
+export function createInMemoryLimiter(config: {
+  limit: number;
+  windowMs: number;
+  maxTokens?: number;
+}) {
+  const mem = new RateLimiterMemory({
+    points: config.limit,
+    duration: Math.ceil(config.windowMs / 1000),
+  });
+
+  return {
+    async check(token: string) {
+      try {
+        const res = await mem.consume(token, 1);
+        return {
+          success: true,
+          limit: config.limit,
+          remaining: res.remainingPoints,
+          reset: Date.now() + res.msBeforeNext,
+        };
+      } catch (err) {
+        const r = err as { remainingPoints?: number; msBeforeNext?: number };
+        return {
+          success: false,
+          limit: config.limit,
+          remaining: r.remainingPoints ?? 0,
+          reset: Date.now() + (r.msBeforeNext ?? config.windowMs),
+        };
+      }
+    },
+    reset(token: string) {
+      void mem.delete(token);
+    },
+  };
+}
