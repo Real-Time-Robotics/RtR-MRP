@@ -51,8 +51,17 @@ jobs:
             echo "=== Wait for container to be ready ==="
             sleep 10
 
-            echo "=== Run Prisma migrations ==="
-            docker compose exec -T app npx prisma db push --skip-generate || true
+            echo "=== Check pending Prisma migrations ==="
+            # Fail fast if migration state is unknown. Production must only use migrate deploy.
+            if ! docker compose exec -T app npx prisma migrate status --schema=prisma/schema.prisma; then
+              echo "::error::Prisma migrate status check failed — refusing to deploy."
+              exit 1
+            fi
+
+            echo "=== Apply Prisma migrations (migrate deploy) ==="
+            # migrate deploy is idempotent and fails if a migration errors.
+            # No "|| true" — a failed migration must fail the pipeline.
+            docker compose exec -T app npx prisma migrate deploy --schema=prisma/schema.prisma
 
             echo "=== Clean up old images ==="
             docker image prune -f
