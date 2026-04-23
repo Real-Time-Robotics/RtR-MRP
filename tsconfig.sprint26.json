@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/rate-limit.ts",
+    "src/lib/monitoring/metrics.ts",
+    "src/lib/jobs/queue.ts",
+    "src/lib/jobs/connection.ts",
+    "src/lib/jobs/workers/index.ts",
+    "src/lib/jobs/workers/mrp-worker.ts",
+    "src/lib/jobs/workers/report-worker.ts",
+    "src/lib/jobs/workers/notification-worker.ts",
+    "src/lib/security/idempotency.ts"
+  ],
+  "compilerOptions": { "noEmit": true }
+}
