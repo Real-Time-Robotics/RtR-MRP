@@ -5,9 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
+import { handleError } from '@/lib/error-handler';
 
 import { checkHeavyEndpointLimit } from '@/lib/rate-limit';
 const approvePostSchema = z.object({
@@ -108,11 +108,7 @@ const body = await request.json();
       },
     });
   } catch (error) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/approve' });
-    return NextResponse.json(
-      { error: 'Failed to approve PO suggestion', details: (error as Error).message },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });
 
@@ -188,10 +184,6 @@ const rawBody = await request.json();
       },
     });
   } catch (error) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/approve' });
-    return NextResponse.json(
-      { error: 'Failed to bulk approve PO suggestions', details: (error as Error).message },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });

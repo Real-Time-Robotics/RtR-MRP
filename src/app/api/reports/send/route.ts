@@ -11,35 +11,35 @@ import { sendReportEmail } from '@/lib/reports/email-sender';
 import prisma from '@/lib/prisma';
 
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
-import { logger } from '@/lib/logger';
+import { handleError } from '@/lib/error-handler';
 export const POST = withAuth(async (request, context, session) => {
+  try {
     // Rate limiting
     const rateLimitResult = await checkWriteEndpointLimit(request);
     if (rateLimitResult) return rateLimitResult;
 
-  const bodySchema = z.object({
-    templateId: z.string(),
-    format: z.string().default('EXCEL'),
-    recipients: z.array(z.string()),
-    filters: z.record(z.string(), z.unknown()).optional(),
-  });
+    const bodySchema = z.object({
+      templateId: z.string(),
+      format: z.string().default('EXCEL'),
+      recipients: z.array(z.string()),
+      filters: z.record(z.string(), z.unknown()).optional(),
+    });
 
-  const rawBody = await request.json();
-  const parseResult = bodySchema.safeParse(rawBody);
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
-      { status: 400 }
-    );
-  }
-  const body = parseResult.data;
-  const { templateId, format, recipients, filters } = body;
+    const rawBody = await request.json();
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parseResult.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
+    const { templateId, format, recipients, filters } = body;
 
-  if (!templateId || !recipients?.length) {
-    return NextResponse.json({ error: 'Missing templateId or recipients' }, { status: 400 });
-  }
+    if (!templateId || !recipients?.length) {
+      return NextResponse.json({ error: 'Missing templateId or recipients' }, { status: 400 });
+    }
 
-  try {
     const data = await generateReportData(templateId, filters);
 
     const timestamp = new Date().toISOString().slice(0, 10);
@@ -104,10 +104,6 @@ export const POST = withAuth(async (request, context, session) => {
       messageId: result.messageId,
     });
   } catch (error) {
-    logger.error('Report send failed:', { error: String(error) });
-    return NextResponse.json(
-      { error: 'Failed to send report' },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });

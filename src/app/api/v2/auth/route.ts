@@ -8,9 +8,9 @@ import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { logger } from '@/lib/logger';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
 import * as OTPAuth from 'otpauth';
+import { handleError } from '@/lib/error-handler';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -83,11 +83,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error: unknown) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
-    return NextResponse.json(
-      { success: false, error: 'Đã xảy ra lỗi', code: 'AUTH_ERROR' },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 }
 
@@ -141,11 +137,7 @@ export async function GET() {
       data: user,
     });
   } catch (error: unknown) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: '/api/v2/auth' });
-    return NextResponse.json(
-      { success: false, error: 'Đã xảy ra lỗi', code: 'AUTH_ERROR' },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 }
 
