@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "clusters": [
+    {
+      "code": "CONNECTOR",
+      "name": "Đầu nối",
+      "parent": "CONNECTOR"
+    },
+    {
+      "code": "RF",
+      "name": "RF",
+      "parent": "CONNECTOR"
+    },
+    {
+      "code": "INDUCTOR",
+      "name": "Cuộn cảm",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "TRANSFORMER",
+      "name": "Biến áp",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "OTHER_ELECTRONIC",
+      "name": "Linh kiện khác",
+      "parent": "ELECTRONICS"
+    },
+    {
+      "code": "SWITCH",
+      "name": "Công tắc",
+      "parent": "ELECTROMECH"
+    },
+    {
+      "code": "CAPACITOR",
+      "name": "Tụ điện",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "RESISTOR",
+      "name": "Điện trở",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "FUSE",
+      "name": "Cầu chì",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "LED",
+      "name": "LED",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "DIODE",
+      "name": "Diode",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "MODULE",
+      "name": "Module nguồn",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "CRYSTAL",
+      "name": "Thạch anh",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "IC",
+      "name": "IC",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "TERMINAL",
+      "name": "Terminal",
+      "parent": "CONNECTOR"
+    },
+    {
+      "code": "FASTENER",
+      "name": "Ốc vít/Spacer",
+      "parent": "MECHANICAL"
+    },
+    {
+      "code": "SENSOR",
+      "name": "Cảm biến",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "TRANSISTOR",
+      "name": "Transistor",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "FILTER",
+      "name": "Bộ lọc",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "RELAY",
+      "name": "Relay/Opto",
+      "parent": "SEMICONDUCTOR"
+    },
+    {
+      "code": "BUZZER",
+      "name": "Loa/Buzzer",
+      "parent": "ELECTROMECH"
+    },
+    {
+      "code": "SHIELDING",
+      "name": "Che chắn",
+      "parent": "MECHANICAL"
+    },
+    {
+      "code": "BATTERY",
+      "name": "Pin",
+      "parent": "POWER"
+    },
+    {
+      "code": "THERMISTOR",
+      "name": "Nhiệt điện trở",
+      "parent": "PASSIVE"
+    },
+    {
+      "code": "PCB",
+      "name": "PCB",
+      "parent": "MECHANICAL"
+    }
+  ],
+  "mapping": {
+    "Screw Connectors": "CONNECTOR",
+    "RF Shields": "RF",
+    "FERRITE": "INDUCTOR",
+    "Pulse Transformers": "TRANSFORMER",
+    "Specialized": "OTHER_ELECTRONIC",
+    "Connectors Female Sockets": "CONNECTOR",
+    "Connectors USB": "CONNECTOR",
+    "Headers, Male Pins": "CONNECTOR",
+    "FIXED": "OTHER_ELECTRONIC",
+    "Filters, Common Mode Chokes": "INDUCTOR",
+    "Connectors Male": "CONNECTOR",
+    "Connectors Female": "CONNECTOR",
+    "Connectors Male Pins": "CONNECTOR",
+    "FPC Connector Contacts": "CONNECTOR",
+    "Connectors FFC,FPC": "CONNECTOR",
+    "Fixed Inductors": "INDUCTOR",
+    "FPC Connector": "CONNECTOR",
+    "Tactile Switches": "SWITCH",
+    "Tactile Switch": "SWITCH",
+    "Slide Switch SPDT": "SWITCH",
+    "CAP": "CAPACITOR",
+    "Coaxial Connector (RF)": "CONNECTOR",
+    "Resistor": "RESISTOR",
+    "Inductor": "INDUCTOR",
+    "PTC Resettable Fuses": "FUSE",
+    "Female Connector": "CONNECTOR",
+    "LED": "LED",
+    "Male Blades Connector": "CONNECTOR",
+    "Female Blade Sockets Connector": "CONNECTOR",
+    "DIODE": "DIODE",
+    "Connectors Inline Module Sockets": "MODULE",
+    "Zener Diode": "DIODE",
+    "Crystal": "CRYSTAL",
+    "Connector Header": "CONNECTOR",
+    "Headphone Phone Jack Stereo": "CONNECTOR",
+    "IC": "IC",
+    "Terminal Accessories": "TERMINAL",
+    "Crystals": "CRYSTAL",
+    "Board Spacers": "FASTENER",
+    "RES": "RESISTOR",
+    "Common Mode Chokes": "INDUCTOR",
+    "Hall Effect Sensor": "SENSOR",
+    "MOSFET": "TRANSISTOR",
+    "MOSFET N-CH": "TRANSISTOR",
+    "FILTER": "FILTER",
+    "Transistors": "TRANSISTOR",
+    "Connectors Female Pins": "CONNECTOR",
+    "Common Mode Choke": "INDUCTOR",
+    "CRYSTAL": "CRYSTAL",
+    "MHF4 Connector Jack": "CONNECTOR",
+    "SSR RELAY": "RELAY",
+    "SPEAKER": "BUZZER",
+    "Buzzer": "BUZZER",
+    "TVS DIODE": "DIODE",
+    "Connectors, Mezzanine (Board to Board)": "CONNECTOR",
+    "RF Diplexer": "RF",
+    "MODULE": "MODULE",
+    "CMC Chokes": "INDUCTOR",
+    "CONN": "CONNECTOR",
+    "CONN FPC": "CONNECTOR",
+    "Integrated Circuits (ICs)": "IC",
+    "MODULE, CONVERTER": "MODULE",
+    "Fixed Inductors Chokes": "INDUCTOR",
+    "MOSFET P": "TRANSISTOR",
+    "LM5176PWPR": "IC",
+    "IMU": "SENSOR",
+    "SENSOR": "SENSOR",
+    "Edgeboard Connectors": "CONNECTOR",
+    "CONN MICRO SD CARD": "CONNECTOR",
+    "CONN PCI EXP MIN": "CONNECTOR",
+    "CONN MINI EXPRESS CARD": "CONNECTOR",
+    "TRANS NPN": "TRANSISTOR",
+    "TRANSISTORS NPN": "TRANSISTOR",
+    "TRANSISTORS PNP": "TRANSISTOR",
+    "FERRITE BEAD": "INDUCTOR",
+    "FIXED IND": "INDUCTOR",
+    "Shield": "SHIELDING",
+    "Batteries Rechargeable (Secondary)": "BATTERY",
+    "SWITCH": "SWITCH",
+    "Thermistor": "THERMISTOR",
+    "AUTOMOTIVE, SINGLE": "OTHER_ELECTRONIC",
+    "DC DC CONVERTER": "MODULE",
+    "CONN PWR": "CONNECTOR",
+    "SMD": "OTHER_ELECTRONIC",
+    "RF FILTER BAND": "FILTER",
+    "Connector": "CONNECTOR",
+    "MOSFETS": "TRANSISTOR",
+    "CONN NANO SIM": "CONNECTOR",
+    "CONN HEADER SMD": "CONNECTOR",
+    "LAN TRANSFORMER": "TRANSFORMER",
+    "Spacers SURFACE MOUNT NUT": "RF",
+    "Spacers SMTSO, M3": "FASTENER",
+    "CONN RCPT USB3.0": "CONNECTOR",
+    "IC MCU": "IC",
+    "CAP TANT": "CAPACITOR",
+    "Trimmer Potentiometers ( RES )": "RESISTOR",
+    "TRANSISTORS, OPTOISOLATOR": "TRANSISTOR",
+    "TMD27553M OLGA6 LF T&RDP": "OTHER_ELECTRONIC",
+    "MODULE DC-DC": "MODULE",
+    "EM Pads": "SHIELDING",
+    "Female": "CONNECTOR",
+    "Male": "CONNECTOR",
+    "CONN USB2.0": "CONNECTOR",
+    "PTC RESET FUSE 12V 1.1A 1206": "FUSE",
+    "Headers & Wire Housings": "CONNECTOR",
+    "HDMI": "CONNECTOR",
+    "LED BLUE": "LED",
+    "ROUND STANDOFF": "FASTENER",
+    "DIGITAL, CONTACTLESS ANG": "SENSOR",
+    "CONN RCPT": "CONNECTOR",
+    "RECEPTACLE": "CONNECTOR",
+    "WR-COM_USB 2.0_TYPE C_HORIZONTAL": "CONNECTOR",
+    "FUSE BRD MNT 5A 32VAC 32VDC 1206": "FUSE",
+    "105-V 0.5-A/0.8-A HALF-BRIDGE GA": "OTHER_ELECTRONIC",
+    "MOSFET 2N-CH": "TRANSISTOR",
+    "CMC": "INDUCTOR",
+    "SINGLE 2-INPUT NAND GATE WITH SC": "IC",
+    "CCM PFC CONTROLLER WITH HIGH VOL": "IC",
+    "WCAP-CSRF HIGH FREQUENCY MLCC SM": "CAPACITOR",
+    "SMOS LOW RON NCH ID: 4A VDSS: 30": "OTHER_ELECTRONIC",
+    "SEN HALL EFFECT I2C/I3C 4-WLCSP": "SENSOR",
+    "Common Mode Chokes / Filters": "INDUCTOR",
+    "MOSFET P-CH": "TRANSISTOR",
+    "LED RED": "LED",
+    "CABLE FFC/FPC": "CONNECTOR",
+    "SWITCH TOGGLE": "SWITCH",
+    "BUZZER": "BUZZER",
+    "Standoffs & Spacers": "FASTENER",
+    "LED GREEN": "LED",
+    "USB": "CONNECTOR",
+    "CAP02": "CAPACITOR",
+    "CABLINE-UY RECEPTACLE 10P": "CONNECTOR",
+    "MOTION SENSOR": "SENSOR",
+    "MICRO COAX RECEP 30P STRAIGHT": "CONNECTOR",
+    "PCB": "PCB",
+    "PCBA": "PCB",
+    "Crimp": "CONNECTOR"
+  },
+  "unresolved": []
+}
