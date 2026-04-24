@@ -359,6 +359,9 @@ model Part {
 
   prLines PurchaseRequestLine[] @relation("PRLinePart")
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([category])
   @@index([categoryId])
   @@index([lifecycleStatus])
@@ -694,6 +697,9 @@ model Product {
   // Cost Optimization
   costTargets CostTarget[]
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([status])
   @@index([defaultWorkCenterId])
   @@map("products")
@@ -781,6 +787,9 @@ model BomLine {
   @@index([bomId])
   @@index([partId])
   @@index([moduleCode])
+  // Sprint 27 Serial
+  serialLinks SerialLink[]
+
   @@index([bomType])
   @@index([sourceType])
   @@index([alternateGroup])
@@ -806,6 +815,9 @@ model Warehouse {
   pickListLines      PickListLine[]
   productionReceipts ProductionReceipt[]
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([siteId])
   @@index([type])
   @@map("warehouses")
@@ -826,6 +838,9 @@ model Inventory {
 
   part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
 
   @@unique([partId, warehouseId, lotNumber])
   // Performance indexes
@@ -1097,6 +1112,9 @@ model GRNItem {
   grn  GoodsReceiptNote @relation(fields: [grnId], references: [id], onDelete: Cascade)
   part Part             @relation(fields: [partId], references: [id])
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([grnId])
   @@index([partId])
   @@map("grn_items")
@@ -1348,6 +1366,10 @@ model User {
   // Sprint 27 RBAC
   userRoles UserRole[]
 
+  // Sprint 27 Serial
+  serialsCreated SerialUnit[] @relation("SerialCreatedBy")
+  serialLinks    SerialLink[] @relation("SerialLinkedBy")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -1498,6 +1520,9 @@ model ProductionReceipt {
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
 
   @@index([status])
   @@index([warehouseId, status])
@@ -6852,6 +6877,10 @@ model ModuleDesign {
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 
+  // Sprint 27 Serial
+  serialUnits    SerialUnit[]
+  numberingRule  SerialNumberingRule?
+
   @@index([status])
   @@index([productId])
   @@map("module_designs")
@@ -6897,4 +6926,103 @@ model UserRole {
   @@index([userId])
   @@index([roleId])
   @@map("user_roles")
+}
+
+// =============================================================================
+// SPRINT 27 — Serial Domain
+// =============================================================================
+
+enum SerialStatus {
+  IN_STOCK
+  ALLOCATED
+  CONSUMED
+  SHIPPED
+  SCRAPPED
+  RETURNED
+}
+
+enum SerialSource {
+  MANUFACTURED
+  RECEIVED
+  IMPORTED
+}
+
+model SerialUnit {
+  id                  String         @id @default(cuid())
+  serial              String         @unique
+  productId           String?
+  product             Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  moduleDesignId      String?
+  moduleDesign        ModuleDesign?  @relation(fields: [moduleDesignId], references: [id], onDelete: SetNull)
+  partId              String?
+  part                Part?          @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  status              SerialStatus   @default(IN_STOCK)
+  source              SerialSource   @default(MANUFACTURED)
+
+  inventoryId         String?
+  inventory           Inventory?     @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+  warehouseId         String?
+  warehouse           Warehouse?     @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  locationCode        String?
+
+  createdByUserId     String?
+  createdByUser       User?          @relation("SerialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  productionReceiptId String?
+  productionReceipt   ProductionReceipt? @relation(fields: [productionReceiptId], references: [id], onDelete: SetNull)
+  grnItemId           String?
+  grnItem             GRNItem?       @relation(fields: [grnItemId], references: [id], onDelete: SetNull)
+
+  notes               String?
+  meta                Json?
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  parentLinks         SerialLink[]   @relation("ChildSerial")
+  childLinks          SerialLink[]   @relation("ParentSerial")
+
+  @@index([productId])
+  @@index([moduleDesignId])
+  @@index([partId])
+  @@index([status])
+  @@index([source])
+  @@index([inventoryId])
+  @@index([createdByUserId])
+  @@map("serial_units")
+}
+
+model SerialLink {
+  id              String     @id @default(cuid())
+  parentSerialId  String
+  parentSerial    SerialUnit @relation("ParentSerial", fields: [parentSerialId], references: [id], onDelete: Cascade)
+  childSerialId   String     @unique
+  childSerial     SerialUnit @relation("ChildSerial", fields: [childSerialId], references: [id], onDelete: Cascade)
+  bomLineId       String?
+  bomLine         BomLine?   @relation(fields: [bomLineId], references: [id], onDelete: SetNull)
+  assemblyOrderId String?
+  linkedAt        DateTime   @default(now())
+  linkedByUserId  String?
+  linkedByUser    User?      @relation("SerialLinkedBy", fields: [linkedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([parentSerialId])
+  @@index([bomLineId])
+  @@index([assemblyOrderId])
+  @@map("serial_links")
+}
+
+model SerialNumberingRule {
+  id              String       @id @default(cuid())
+  moduleDesignId  String       @unique
+  moduleDesign    ModuleDesign @relation(fields: [moduleDesignId], references: [id], onDelete: Cascade)
+  prefix          String
+  version         String
+  counter         Int          @default(0)
+  counterLastMMYY Int?
+  template        String       @default("{prefix}-{version}-{ddmmyy}-{###}")
+  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime     @default(now())
+
+  @@map("serial_numbering_rules")
 }
