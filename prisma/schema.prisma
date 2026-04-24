@@ -206,6 +206,8 @@ model Part {
   partNumber    String   @unique
   name          String
   category      String
+  categoryId    String?
+  categoryRef   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   description   String?
   unit          String   @default("pcs")
   unitCost      Float    @default(0)
@@ -358,6 +360,7 @@ model Part {
   prLines PurchaseRequestLine[] @relation("PRLinePart")
 
   @@index([category])
+  @@index([categoryId])
   @@index([lifecycleStatus])
   @@index([status])
   @@index([isCritical])
@@ -754,6 +757,9 @@ model BomLine {
   alternateGroup String?
   isPrimary      Boolean @default(true)
 
+  // === NEW: Source Type (INTERNAL = self-manufactured, EXTERNAL = purchased whole) ===
+  sourceType  BomSourceType @default(INTERNAL)
+
   // === NEW: BOM Type & Structure ===
   bomType     BomType @default(MANUFACTURING)
   subAssembly Boolean @default(false)
@@ -776,6 +782,7 @@ model BomLine {
   @@index([partId])
   @@index([moduleCode])
   @@index([bomType])
+  @@index([sourceType])
   @@index([alternateGroup])
   @@map("bom_lines")
 }
@@ -6802,4 +6809,58 @@ model IdempotencyKey {
   @@index([expiresAt])
   @@index([tenantId, key])
   @@map("idempotency_keys")
+}
+
+// =============================================================================
+// SPRINT 27 — Category Taxonomy
+// =============================================================================
+model Category {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  description String?
+  sortOrder   Int        @default(0)
+  status      String     @default("active")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  parts       Part[]
+
+  @@index([parentId])
+  @@index([status])
+  @@map("categories")
+}
+
+// =============================================================================
+// SPRINT 27 — Module Design (replaces "Project" concept from DASHBOARD)
+// =============================================================================
+model ModuleDesign {
+  id         String             @id @default(cuid())
+  code       String             @unique
+  name       String
+  version    String
+  prefix     String
+  isInternal Boolean            @default(true)
+  productId  String?
+  status     ModuleDesignStatus @default(DEVELOPMENT)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([status])
+  @@index([productId])
+  @@map("module_designs")
+}
+
+enum ModuleDesignStatus {
+  DEVELOPMENT
+  ACTIVE
+  DEPRECATED
+}
+
+enum BomSourceType {
+  INTERNAL
+  EXTERNAL
 }
