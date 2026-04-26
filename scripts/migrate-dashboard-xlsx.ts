@@ -156,6 +156,17 @@ function generateCategoryMapping(categories: string[]): CategoryMapping {
 export { mapSerialStatus, mapSerialSource, mapBomSourceType, generateCategoryMapping };
 
 // =============================================================================
+// DRY-RUN SAFE DB ACCESS
+// In dry-run mode: reads (find*) work normally, writes (create/upsert/update/delete) are no-ops
+// =============================================================================
+
+/** Helper: execute a DB write only when not in dry-run mode */
+async function dbWrite<T>(fn: () => Promise<T>): Promise<T | null> {
+  if (dryRun) return null;
+  return fn();
+}
+
+// =============================================================================
 // MIGRATION STEPS
 // =============================================================================
 
@@ -165,21 +176,21 @@ async function migrateCategories(mapping: CategoryMapping): Promise<MigrationSta
   // Create parent categories
   const parents = [...new Set(mapping.clusters.map(c => c.parent).filter(Boolean))];
   for (const parentCode of parents) {
-    await prisma.category.upsert({
+    await dbWrite(() => prisma.category.upsert({
       where: { code: parentCode },
       create: { code: parentCode, name: parentCode, status: 'active' },
       update: {},
-    });
+    }));
   }
 
   // Create child clusters
   for (const cluster of mapping.clusters) {
     const parent = cluster.parent ? await prisma.category.findUnique({ where: { code: cluster.parent } }) : null;
-    const result = await prisma.category.upsert({
+    await dbWrite(() => prisma.category.upsert({
       where: { code: cluster.code },
       create: { code: cluster.code, name: cluster.name, parentId: parent?.id || null, status: 'active' },
       update: { name: cluster.name, parentId: parent?.id || null },
-    });
+    }));
     stats.created++;
   }
 
@@ -192,11 +203,11 @@ async function migrateSuppliers(data: Array<Record<string, string>>): Promise<Mi
 
   for (const name of suppliers) {
     const code = name.toUpperCase().replace(/\s+/g, '_').substring(0, 20);
-    await prisma.supplier.upsert({
+    await dbWrite(() => prisma.supplier.upsert({
       where: { code },
       create: { name, code, status: 'active', country: 'VN', leadTimeDays: 14 },
       update: { name },
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -213,7 +224,7 @@ async function migrateParts(data: Array<Record<string, string>>, mapping: Catego
     const clusterCode = mapping.mapping[rawCat] || 'OTHER_ELECTRONIC';
     const category = await prisma.category.findUnique({ where: { code: clusterCode } });
 
-    await prisma.part.upsert({
+    await dbWrite(() => prisma.part.upsert({
       where: { partNumber },
       create: {
         partNumber,
@@ -231,7 +242,7 @@ async function migrateParts(data: Array<Record<string, string>>, mapping: Catego
         description: String(row['Description'] || '').trim() || null,
         unitCost: parseFloat(String(row['Price'] || '0')) || 0,
       },
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -255,9 +266,9 @@ async function migratePartSuppliers(data: Array<Record<string, string>>): Promis
       where: { partId: part.id, supplierId: supplier.id },
     });
     if (!existing) {
-      await prisma.partSupplier.create({
+      await dbWrite(() => prisma.partSupplier.create({
         data: { partId: part.id, supplierId: supplier.id, unitPrice: price, leadTimeDays: 14, isPreferred: true },
-      });
+      }));
       stats.created++;
     } else {
       stats.skipped++;
@@ -271,11 +282,11 @@ async function migrateProducts(data: Array<Record<string, string>>): Promise<Mig
   const products = [...new Set(data.map(r => String(r['Product'] || '').trim()).filter(Boolean))];
 
   for (const sku of products) {
-    await prisma.product.upsert({
+    await dbWrite(() => prisma.product.upsert({
       where: { sku },
       create: { sku, name: sku },
       update: {},
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -324,11 +335,11 @@ async function migrateModuleDesigns(
   }
 
   for (const [, md] of moduleSet) {
-    await prisma.moduleDesign.upsert({
+    await dbWrite(() => prisma.moduleDesign.upsert({
       where: { code: md.code },
       create: { code: md.code, name: md.name, version: md.version, prefix: md.prefix, isInternal: true, status: 'ACTIVE' },
       update: { name: md.name },
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -352,14 +363,15 @@ async function migrateBomChuan(data: Array<Record<string, string>>): Promise<Mig
 
     const version = String(lines[0]?.['Version'] || 'V1').trim();
     let bomHeader = await prisma.bomHeader.findFirst({ where: { productId: product.id, version } });
-    if (!bomHeader) {
+    if (!bomHeader && !dryRun) {
       bomHeader = await prisma.bomHeader.create({
         data: { productId: product.id, version, effectiveDate: new Date(), status: 'active' },
       });
     }
 
-    // Delete existing lines for idempotency
-    await prisma.bomLine.deleteMany({ where: { bomId: bomHeader.id } });
+    if (bomHeader) {
+      await dbWrite(() => prisma.bomLine.deleteMany({ where: { bomId: bomHeader!.id } }));
+    }
 
     let lineNum = 0;
     for (const row of lines) {
@@ -369,11 +381,8 @@ async function migrateBomChuan(data: Array<Record<string, string>>): Promise<Mig
       const qty = parseFloat(String(row['Qty'] || '1')) || 1;
       const sourceType = mapBomSourceType(String(row['TYPE'] || ''));
 
-      // Find part or moduleDesign — for EBOX BOM, components are modules not parts
-      // Try to find a part with matching name
       const part = await prisma.part.findFirst({ where: { OR: [{ partNumber: compName }, { name: compName }] } });
-      if (!part) {
-        // Create a placeholder part for the module component
+      if (!part && !dryRun) {
         const newPart = await prisma.part.upsert({
           where: { partNumber: logKey || compName.toUpperCase().replace(/\s+/g, '_') },
           create: {
@@ -385,12 +394,12 @@ async function migrateBomChuan(data: Array<Record<string, string>>): Promise<Mig
           update: {},
         });
         await prisma.bomLine.create({
-          data: { bomId: bomHeader.id, lineNumber: lineNum, partId: newPart.id, quantity: qty, sourceType: sourceType as 'INTERNAL' | 'EXTERNAL' },
+          data: { bomId: bomHeader!.id, lineNumber: lineNum, partId: newPart.id, quantity: qty, sourceType: sourceType as 'INTERNAL' | 'EXTERNAL' },
         });
-      } else {
-        await prisma.bomLine.create({
-          data: { bomId: bomHeader.id, lineNumber: lineNum, partId: part.id, quantity: qty, sourceType: sourceType as 'INTERNAL' | 'EXTERNAL' },
-        });
+      } else if (part && bomHeader) {
+        await dbWrite(() => prisma.bomLine.create({
+          data: { bomId: bomHeader!.id, lineNumber: lineNum, partId: part.id, quantity: qty, sourceType: sourceType as 'INTERNAL' | 'EXTERNAL' },
+        }));
       }
       stats.created++;
     }
@@ -414,18 +423,20 @@ async function migrateDuAnBom(data: Array<Record<string, string>>): Promise<Migr
     const sku = project.toUpperCase().replace(/[\s.]+/g, '_').substring(0, 50);
 
     let product = await prisma.product.findUnique({ where: { sku } });
-    if (!product) {
+    if (!product && !dryRun) {
       product = await prisma.product.create({ data: { sku, name: project } });
     }
+    if (!product) { stats.created++; continue; } // dry-run: count but skip
 
     let bomHeader = await prisma.bomHeader.findFirst({ where: { productId: product.id, version: 'V1' } });
-    if (!bomHeader) {
+    if (!bomHeader && !dryRun) {
       bomHeader = await prisma.bomHeader.create({
         data: { productId: product.id, version: 'V1', effectiveDate: new Date(), status: 'active' },
       });
     }
+    if (!bomHeader) { continue; } // dry-run: skip lines
 
-    await prisma.bomLine.deleteMany({ where: { bomId: bomHeader.id } });
+    await dbWrite(() => prisma.bomLine.deleteMany({ where: { bomId: bomHeader!.id } }));
 
     let lineNum = 0;
     for (const row of lines) {
@@ -441,9 +452,9 @@ async function migrateDuAnBom(data: Array<Record<string, string>>): Promise<Migr
         continue;
       }
 
-      await prisma.bomLine.create({
-        data: { bomId: bomHeader.id, lineNumber: lineNum, partId: part.id, quantity: qty, sourceType: 'INTERNAL' },
-      });
+      await dbWrite(() => prisma.bomLine.create({
+        data: { bomId: bomHeader!.id, lineNumber: lineNum, partId: part.id, quantity: qty, sourceType: 'INTERNAL' },
+      }));
       stats.created++;
     }
   }
@@ -470,11 +481,11 @@ async function migrateNumberingRules(data: Array<Record<string, string>>): Promi
       continue;
     }
 
-    await prisma.serialNumberingRule.upsert({
+    await dbWrite(() => prisma.serialNumberingRule.upsert({
       where: { moduleDesignId: md.id },
       create: { moduleDesignId: md.id, prefix, version: ver, counter, counterLastMMYY: lastMMY },
       update: { counter, counterLastMMYY: lastMMY },
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -515,7 +526,7 @@ async function migrateSerialUnits(data: Array<Record<string, string>>): Promise<
     const dateVal = row['Date'];
     const createdAt = typeof dateVal === 'number' ? excelDateToJS(dateVal) : new Date();
 
-    await prisma.serialUnit.upsert({
+    await dbWrite(() => prisma.serialUnit.upsert({
       where: { serial },
       create: {
         serial,
@@ -529,7 +540,7 @@ async function migrateSerialUnits(data: Array<Record<string, string>>): Promise<
         status: status as 'IN_STOCK',
         moduleDesignId,
       },
-    });
+    }));
     stats.created++;
   }
   return stats;
@@ -564,7 +575,7 @@ async function migrateLotTransactions(
       });
       if (existing) { stats.skipped++; continue; }
 
-      await prisma.lotTransaction.create({
+      await dbWrite(() => prisma.lotTransaction.create({
         data: {
           partId: part.id,
           transactionType,
@@ -576,7 +587,7 @@ async function migrateLotTransactions(
           userId: 'system',
           createdAt,
         },
-      });
+      }));
       stats.created++;
     }
   }

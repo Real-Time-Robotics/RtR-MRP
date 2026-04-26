@@ -20,3 +20,15 @@
 | LotTransactions | 0 | 0 | 1465 | 0 |
 
 **Total warnings:** 370
+
+## Known Data Discrepancies (P1, tracked separately)
+
+Details: [DATA_MIGRATION_RECONCILIATION.md](./DATA_MIGRATION_RECONCILIATION.md).
+Missing parts: [DATA_MIGRATION_MISSING_PARTS.md](./DATA_MIGRATION_MISSING_PARTS.md).
+
+Summary:
+- LotTransactions 1076 vs expected 3082 — dedup by (part,date), actual raw rows 1465. Accepted.
+- ModuleDesigns 148 vs Blueprint ~78 — 3 source sheets, less overlap than estimated. Accepted.
+- BomLines EXTERNAL 7/1793 — only BOM_CHUAN has TYPE column, DU_AN defaults INTERNAL. Correct.
+- Products count leak — report shows 3 EBOX, actual 75 (72 auto-created from DU_AN). Accepted.
+- 56 missing parts — in DU_AN but not DANH_MUC. Flagged for Lâm review.
