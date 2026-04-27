@@ -10,10 +10,13 @@ import { usePathname } from 'next/navigation';
 import { RTR_AUTH_CONFIG } from '@/lib/auth-gateway/types';
 import { ModernHeader } from './modern-header';
 import { MinimalistSidebar } from './minimalist-sidebar';
+import { SidebarV2 } from './sidebar-v2';
 import { MobileNav } from './mobile-nav';
 import { PageTransition } from './page-transition';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { useLanguage } from '@/lib/i18n/language-context';
+import { FEATURE_FLAGS } from '@/lib/feature-flags';
+import type { RoleCode } from '@/lib/auth/rbac';
 
 // =============================================================================
 // TYPES
@@ -26,6 +29,8 @@ export interface ModernAppShellProps {
     email: string;
     role?: string;
   };
+  userRoles?: RoleCode[];
+  userId?: string;
   notifications?: {
     id: string;
     title: string;
@@ -40,8 +45,11 @@ export interface ModernAppShellProps {
 export function ModernAppShell({
   children,
   user = { name: 'Admin User', email: 'admin@rtr.vn', role: 'Administrator' },
+  userRoles = [],
+  userId,
   notifications = [],
 }: ModernAppShellProps) {
+  const useSidebarV2 = FEATURE_FLAGS.SIDEBAR_V2 && userRoles.length > 0;
   const pathname = usePathname();
   
   // Use global language context (single source of truth)
@@ -127,12 +135,16 @@ export function ModernAppShell({
       <div className="flex h-[calc(100vh-3rem)]">
         {/* Sidebar - Desktop */}
         <div className="hidden lg:block">
-          <MinimalistSidebar
-            collapsed={sidebarCollapsed}
-            onToggle={handleSidebarToggle}
-            language={language}
-            user={user}
-          />
+          {useSidebarV2 ? (
+            <SidebarV2 user={{ id: userId || '', roles: userRoles }} />
+          ) : (
+            <MinimalistSidebar
+              collapsed={sidebarCollapsed}
+              onToggle={handleSidebarToggle}
+              language={language}
+              user={user}
+            />
+          )}
         </div>
 
         {/* Sidebar - Mobile Overlay */}

@@ -15,36 +15,37 @@ import { prisma } from '@/lib/prisma';
 import { convertQuotationToSO } from '@/lib/sales/quote-conversion';
 import { auditStatusChange } from '@/lib/audit/route-audit';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { handleError } from '@/lib/error-handler';
 
 async function postHandler(
   request: NextRequest,
   { params, user }: { params?: Record<string, string>; user: AuthUser }
 ) {
-  const rateLimitResult = await checkWriteEndpointLimit(request);
-  if (rateLimitResult) return rateLimitResult;
-
-  const id = params?.id;
-  if (!id) return errorResponse('ID không hợp lệ', 400);
-
-  const quotation = await prisma.quotation.findUnique({
-    where: { id },
-    select: { id: true, status: true, quoteNumber: true, salesOrderId: true },
-  });
-
-  if (!quotation) return notFoundResponse('Báo giá');
-
-  if (quotation.salesOrderId) {
-    return errorResponse('Báo giá đã được chuyển đổi thành đơn hàng', 400);
-  }
-
-  if (quotation.status !== 'sent') {
-    return errorResponse(
-      `Chỉ có thể chấp nhận báo giá ở trạng thái "sent". Trạng thái hiện tại: ${quotation.status}`,
-      400
-    );
-  }
-
   try {
+    const rateLimitResult = await checkWriteEndpointLimit(request);
+    if (rateLimitResult) return rateLimitResult;
+
+    const id = params?.id;
+    if (!id) return errorResponse('ID không hợp lệ', 400);
+
+    const quotation = await prisma.quotation.findUnique({
+      where: { id },
+      select: { id: true, status: true, quoteNumber: true, salesOrderId: true },
+    });
+
+    if (!quotation) return notFoundResponse('Báo giá');
+
+    if (quotation.salesOrderId) {
+      return errorResponse('Báo giá đã được chuyển đổi thành đơn hàng', 400);
+    }
+
+    if (quotation.status !== 'sent') {
+      return errorResponse(
+        `Chỉ có thể chấp nhận báo giá ở trạng thái "sent". Trạng thái hiện tại: ${quotation.status}`,
+        400
+      );
+    }
+
     // Parse optional overrides from body
     let overrides;
     try {
@@ -75,11 +76,7 @@ async function postHandler(
       ...result,
     });
   } catch (error) {
-    if (error instanceof Error) {
-      return errorResponse(error.message, 400);
-    }
-    console.error('[QUOTATION_ACCEPT]', error);
-    return errorResponse('Không thể chấp nhận báo giá', 500);
+    return handleError(error);
   }
 }
 

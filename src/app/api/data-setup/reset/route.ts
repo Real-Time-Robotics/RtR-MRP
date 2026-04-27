@@ -42,13 +42,21 @@ export const POST = withRoleAuth(["admin"], async (request: NextRequest) => {
       SELECT tablename FROM pg_tables WHERE schemaname = 'public'
     `;
 
+    // Whitelist regex for PostgreSQL identifiers — defense in depth even though
+    // values come from pg_tables (DB-controlled, not user input).
+    const validIdentifier = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
     const tableNames = tables
       .map((t) => t.tablename)
-      .filter((name) => !PRESERVED_TABLES.includes(name));
+      .filter((name) => !PRESERVED_TABLES.includes(name))
+      .filter((name) => validIdentifier.test(name));
 
     // Truncate all non-preserved tables with CASCADE
     for (const table of tableNames) {
       try {
+        // table is validated against identifier regex above; PostgreSQL does not
+        // support identifier templating in prepared statements, so $executeRawUnsafe
+        // with a pre-validated name is the accepted pattern.
         await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE`);
       } catch {
         // Table might have dependencies handled by CASCADE, skip errors

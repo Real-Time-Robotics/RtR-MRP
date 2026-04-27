@@ -5,9 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { logger } from '@/lib/logger';
 import { withAuth } from '@/lib/api/with-auth';
 import { approvalQueueService } from '@/lib/ai/autonomous/approval-queue-service';
+import { handleError } from '@/lib/error-handler';
 
 const rejectPostSchema = z.object({
   queueItemId: z.string().min(1, 'queueItemId là bắt buộc'),
@@ -88,11 +88,7 @@ const body = await request.json();
       },
     });
   } catch (error) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'POST /api/ai/auto-po/reject' });
-    return NextResponse.json(
-      { error: 'Failed to reject PO suggestion', details: (error as Error).message },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });
 
@@ -168,10 +164,6 @@ const rawBody = await request.json();
       },
     });
   } catch (error) {
-    logger.logError(error instanceof Error ? error : new Error(String(error)), { context: 'PUT /api/ai/auto-po/reject' });
-    return NextResponse.json(
-      { error: 'Failed to bulk reject PO suggestions', details: (error as Error).message },
-      { status: 500 }
-    );
+    return handleError(error);
   }
 });

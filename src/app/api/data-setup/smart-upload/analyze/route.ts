@@ -7,7 +7,9 @@ import { withAuth } from "@/lib/api/with-auth";
 import prisma from "@/lib/prisma";
 import {
   detectCompositeStructure,
+  detectEcadBomStructure,
   splitCompositeData,
+  splitEcadBomData,
   findBestHeaderRow,
 } from "@/lib/import/composite-bom-parser";
 
@@ -50,14 +52,54 @@ export const POST = withAuth(async (request: NextRequest, _context, session) => 
     const detection = detectCompositeStructure(headers, rows.slice(0, 50));
 
     if (!detection.isComposite) {
+      // Fallback: try ECAD BOM detection (flat BOM from Altium/KiCad/etc.)
+      const ecadDetection = detectEcadBomStructure(headers, rows.slice(0, 50));
+
+      if (!ecadDetection.isEcadBom) {
+        return NextResponse.json({
+          isComposite: false,
+          confidence: detection.confidence,
+          message: "File không phải BOM phức hợp. Hãy dùng Import thông thường.",
+        });
+      }
+
+      // Parse as flat ECAD BOM
+      const ecadResult = splitEcadBomData(headers, rows, sheetName || file.name);
+
+      const ecadSession = await prisma.importSession.create({
+        data: {
+          fileName: file.name,
+          fileSize: buffer.length,
+          fileType: file.name.split(".").pop() || "xlsx",
+          detectedType: "ECAD_BOM",
+          confidence: ecadDetection.confidence,
+          status: "MAPPED",
+          totalRows: rows.length,
+          columnMapping: JSON.parse(JSON.stringify({
+            parts: ecadResult.parts,
+            products: ecadResult.products,
+            bomLines: ecadResult.bomLines,
+          })),
+          importedBy: session.user.id,
+        },
+      });
+
       return NextResponse.json({
-        isComposite: false,
-        confidence: detection.confidence,
-        message: "File không phải BOM phức hợp. Hãy dùng Import thông thường.",
+        isComposite: true,
+        detectedFormat: "ECAD_BOM",
+        sessionId: ecadSession.id,
+        confidence: ecadDetection.confidence,
+        stats: ecadResult.stats,
+        warnings: ecadResult.warnings,
+        preview: {
+          parts: ecadResult.parts.slice(0, 5),
+          products: ecadResult.products.slice(0, 5),
+          bomLines: ecadResult.bomLines.slice(0, 5),
+        },
       });
     }
 
-    // Split into 3 datasets
+    // Split into 3 datasets (composite BOM)
     const result = splitCompositeData(headers, rows);
 
     // Store in ImportSession for later import

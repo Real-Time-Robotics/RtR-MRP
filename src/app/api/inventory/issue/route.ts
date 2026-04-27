@@ -10,6 +10,7 @@ import {
   AuthUser,
 } from '@/lib/api/with-permission';
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withIdempotency } from '@/lib/security/idempotency';
 
 // =============================================================================
 // INVENTORY ISSUE API
@@ -169,7 +170,7 @@ async function postHandler(
 // =============================================================================
 
 const handler = withPermission(getHandler, { read: 'inventory:view' });
-const postWithPerm = withPermission(postHandler, { create: 'inventory:issue' });
+const postWithPerm = withPermission(withIdempotency(postHandler), { create: 'inventory:issue' });
 
 export const GET = handler;
 export const POST = postWithPerm;

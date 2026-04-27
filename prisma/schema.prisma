@@ -206,6 +206,8 @@ model Part {
   partNumber    String   @unique
   name          String
   category      String
+  categoryId    String?
+  categoryRef   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   description   String?
   unit          String   @default("pcs")
   unitCost      Float    @default(0)
@@ -357,7 +359,11 @@ model Part {
 
   prLines PurchaseRequestLine[] @relation("PRLinePart")
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([category])
+  @@index([categoryId])
   @@index([lifecycleStatus])
   @@index([status])
   @@index([isCritical])
@@ -691,6 +697,12 @@ model Product {
   // Cost Optimization
   costTargets CostTarget[]
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
+  // Sprint 27 Assembly
+  assemblyOrders AssemblyOrder[]
+
   @@index([status])
   @@index([defaultWorkCenterId])
   @@map("products")
@@ -708,6 +720,9 @@ model BomHeader {
 
   product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   bomLines BomLine[]
+
+  // Sprint 27 Assembly
+  assemblyOrders AssemblyOrder[]
 
   @@unique([productId, version])
   @@index([productId])
@@ -754,6 +769,9 @@ model BomLine {
   alternateGroup String?
   isPrimary      Boolean @default(true)
 
+  // === NEW: Source Type (INTERNAL = self-manufactured, EXTERNAL = purchased whole) ===
+  sourceType  BomSourceType @default(INTERNAL)
+
   // === NEW: BOM Type & Structure ===
   bomType     BomType @default(MANUFACTURING)
   subAssembly Boolean @default(false)
@@ -775,7 +793,11 @@ model BomLine {
   @@index([bomId])
   @@index([partId])
   @@index([moduleCode])
+  // Sprint 27 Serial
+  serialLinks SerialLink[]
+
   @@index([bomType])
+  @@index([sourceType])
   @@index([alternateGroup])
   @@map("bom_lines")
 }
@@ -799,6 +821,9 @@ model Warehouse {
   pickListLines      PickListLine[]
   productionReceipts ProductionReceipt[]
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([siteId])
   @@index([type])
   @@map("warehouses")
@@ -819,6 +844,9 @@ model Inventory {
 
   part      Part      @relation(fields: [partId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
 
   @@unique([partId, warehouseId, lotNumber])
   // Performance indexes
@@ -1090,6 +1118,9 @@ model GRNItem {
   grn  GoodsReceiptNote @relation(fields: [grnId], references: [id], onDelete: Cascade)
   part Part             @relation(fields: [partId], references: [id])
 
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
+
   @@index([grnId])
   @@index([partId])
   @@map("grn_items")
@@ -1338,6 +1369,17 @@ model User {
   prComments               PRComment[]       @relation("PRCommentAuthor")
   prAttachments            PRAttachment[]    @relation("PRAttachmentUploader")
 
+  // Sprint 27 RBAC
+  userRoles UserRole[]
+
+  // Sprint 27 Serial
+  serialsCreated SerialUnit[] @relation("SerialCreatedBy")
+  serialLinks    SerialLink[] @relation("SerialLinkedBy")
+
+  // Sprint 27 Assembly
+  assemblyOrdersAssigned AssemblyOrder[] @relation("AssemblyAssignee")
+  assemblyOrdersCreated  AssemblyOrder[] @relation("AssemblyCreator")
+
   @@index([tenantId])
   @@map("users")
 }
@@ -1488,6 +1530,9 @@ model ProductionReceipt {
   workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  // Sprint 27 Serial
+  serialUnits SerialUnit[]
 
   @@index([status])
   @@index([warehouseId, status])
@@ -6778,4 +6823,262 @@ model PRAttachment {
 
   @@index([prId])
   @@map("pr_attachments")
+}
+
+// =============================================================================
+// IDEMPOTENCY KEY (TIP-03 · Sprint 26)
+// Stores response snapshots keyed by client-supplied Idempotency-Key header so
+// that retried POST mutations don't double-execute. Hash of the request body
+// is kept to detect "same key, different payload" (→ 409 Conflict).
+// TTL is 24h via `expiresAt` — a lightweight sweep job can purge expired rows.
+// =============================================================================
+model IdempotencyKey {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  tenantId       String?
+  method         String
+  path           String
+  requestHash    String
+  responseStatus Int
+  responseBody   Json
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  @@index([expiresAt])
+  @@index([tenantId, key])
+  @@map("idempotency_keys")
+}
+
+// =============================================================================
+// SPRINT 27 — Category Taxonomy
+// =============================================================================
+model Category {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryTree")
+  description String?
+  sortOrder   Int        @default(0)
+  status      String     @default("active")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  parts       Part[]
+
+  @@index([parentId])
+  @@index([status])
+  @@map("categories")
+}
+
+// =============================================================================
+// SPRINT 27 — Module Design (replaces "Project" concept from DASHBOARD)
+// =============================================================================
+model ModuleDesign {
+  id         String             @id @default(cuid())
+  code       String             @unique
+  name       String
+  version    String
+  prefix     String
+  isInternal Boolean            @default(true)
+  productId  String?
+  status     ModuleDesignStatus @default(DEVELOPMENT)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  // Sprint 27 Serial
+  serialUnits    SerialUnit[]
+  numberingRule  SerialNumberingRule?
+
+  @@index([status])
+  @@index([productId])
+  @@map("module_designs")
+}
+
+enum ModuleDesignStatus {
+  DEVELOPMENT
+  ACTIVE
+  DEPRECATED
+}
+
+enum BomSourceType {
+  INTERNAL
+  EXTERNAL
+}
+
+// =============================================================================
+// SPRINT 27 — Assembly Order (TIP-S27-03)
+// =============================================================================
+
+enum AssemblyOrderStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model AssemblyOrder {
+  id                String              @id @default(cuid())
+  aoNumber          String              @unique
+  productId         String
+  product           Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  bomHeaderId       String
+  bomHeader         BomHeader           @relation(fields: [bomHeaderId], references: [id], onDelete: Restrict)
+  targetQuantity    Int                 @default(1)
+  status            AssemblyOrderStatus @default(DRAFT)
+  parentSerialId    String?             @unique
+  parentSerial      SerialUnit?         @relation("AssemblyParent", fields: [parentSerialId], references: [id], onDelete: SetNull)
+  assignedToUserId  String?
+  assignedToUser    User?               @relation("AssemblyAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUserId   String?
+  createdByUser     User?               @relation("AssemblyCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  updatedAt         DateTime            @updatedAt
+
+  serialLinks       SerialLink[]
+
+  @@index([productId])
+  @@index([bomHeaderId])
+  @@index([status])
+  @@index([assignedToUserId])
+  @@map("assembly_orders")
+}
+
+// =============================================================================
+// SPRINT 27 — RBAC Roles
+// =============================================================================
+model Role {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  description String?
+  isSystem    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userRoles   UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id         String   @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  assignedBy String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// =============================================================================
+// SPRINT 27 — Serial Domain
+// =============================================================================
+
+enum SerialStatus {
+  IN_STOCK
+  ALLOCATED
+  CONSUMED
+  SHIPPED
+  SCRAPPED
+  RETURNED
+}
+
+enum SerialSource {
+  MANUFACTURED
+  RECEIVED
+  IMPORTED
+}
+
+model SerialUnit {
+  id                  String         @id @default(cuid())
+  serial              String         @unique
+  productId           String?
+  product             Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  moduleDesignId      String?
+  moduleDesign        ModuleDesign?  @relation(fields: [moduleDesignId], references: [id], onDelete: SetNull)
+  partId              String?
+  part                Part?          @relation(fields: [partId], references: [id], onDelete: SetNull)
+
+  status              SerialStatus   @default(IN_STOCK)
+  source              SerialSource   @default(MANUFACTURED)
+
+  inventoryId         String?
+  inventory           Inventory?     @relation(fields: [inventoryId], references: [id], onDelete: SetNull)
+  warehouseId         String?
+  warehouse           Warehouse?     @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+  locationCode        String?
+
+  createdByUserId     String?
+  createdByUser       User?          @relation("SerialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  productionReceiptId String?
+  productionReceipt   ProductionReceipt? @relation(fields: [productionReceiptId], references: [id], onDelete: SetNull)
+  grnItemId           String?
+  grnItem             GRNItem?       @relation(fields: [grnItemId], references: [id], onDelete: SetNull)
+
+  notes               String?
+  meta                Json?
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  parentLinks         SerialLink[]   @relation("ChildSerial")
+  childLinks          SerialLink[]   @relation("ParentSerial")
+
+  // Sprint 27 Assembly
+  assemblyAsParent    AssemblyOrder? @relation("AssemblyParent")
+
+  @@index([productId])
+  @@index([moduleDesignId])
+  @@index([partId])
+  @@index([status])
+  @@index([source])
+  @@index([inventoryId])
+  @@index([createdByUserId])
+  @@map("serial_units")
+}
+
+model SerialLink {
+  id              String     @id @default(cuid())
+  parentSerialId  String
+  parentSerial    SerialUnit @relation("ParentSerial", fields: [parentSerialId], references: [id], onDelete: Cascade)
+  childSerialId   String     @unique
+  childSerial     SerialUnit @relation("ChildSerial", fields: [childSerialId], references: [id], onDelete: Cascade)
+  bomLineId       String?
+  bomLine         BomLine?   @relation(fields: [bomLineId], references: [id], onDelete: SetNull)
+  assemblyOrderId String?
+  assemblyOrder   AssemblyOrder? @relation(fields: [assemblyOrderId], references: [id], onDelete: SetNull)
+  linkedAt        DateTime   @default(now())
+  linkedByUserId  String?
+  linkedByUser    User?      @relation("SerialLinkedBy", fields: [linkedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([parentSerialId])
+  @@index([bomLineId])
+  @@index([assemblyOrderId])
+  @@map("serial_links")
+}
+
+model SerialNumberingRule {
+  id              String       @id @default(cuid())
+  moduleDesignId  String       @unique
+  moduleDesign    ModuleDesign @relation(fields: [moduleDesignId], references: [id], onDelete: Cascade)
+  prefix          String
+  version         String
+  counter         Int          @default(0)
+  counterLastMMYY Int?
+  template        String       @default("{prefix}-{version}-{ddmmyy}-{###}")
+  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime     @default(now())
+
+  @@map("serial_numbering_rules")
 }

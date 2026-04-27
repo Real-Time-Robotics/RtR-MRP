@@ -26,6 +26,7 @@ import { createGRNSchema } from '@/lib/validations/grn';
 import { auditCreate, auditStatusChange } from '@/lib/audit/route-audit';
 import { createMatchFromGRN } from '@/lib/purchasing/three-way-match';
 import { checkReadEndpointLimit, checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withIdempotency } from '@/lib/security/idempotency';
 
 // =============================================================================
 // GET — List GRNs
@@ -314,4 +315,4 @@ async function postHandler(
 // =============================================================================
 
 export const GET = withPermission(getHandler, { read: 'purchasing:view' });
-export const POST = withPermission(postHandler, { create: 'purchasing:create' });
+export const POST = withPermission(withIdempotency(postHandler), { create: 'purchasing:create' });

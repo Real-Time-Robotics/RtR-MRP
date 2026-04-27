@@ -1,13 +1,17 @@
 // =============================================================================
 // RTR MRP - BACKGROUND JOBS
-// In-memory queue implementation (BullMQ disabled for Render compatibility)
+// BullMQ when REDIS_URL is set, in-memory fallback otherwise.
+// Public API (queues.*, jobs.*, getJobStatus, getQueueStats, closeAllQueues)
+// is stable across both modes so callers don't branch.
 // =============================================================================
+
+import { Queue, QueueEvents, type JobsOptions } from 'bullmq';
+import { logger } from '@/lib/logger';
+import { getBullConnection, isInMemoryMode, closeBullConnection } from './connection';
 
 // =============================================================================
 // JOB DATA TYPES
 // =============================================================================
-
-import { logger } from '@/lib/logger';
 
 export interface MRPJobData {
   tenantId: string;
@@ -87,7 +91,34 @@ export interface ScheduledTaskData {
 }
 
 // =============================================================================
-// IN-MEMORY QUEUE IMPLEMENTATION
+// UNIFIED QUEUE INTERFACE
+// =============================================================================
+
+/**
+ * Minimal shape we expose — a narrow subset of BullMQ's Queue so the in-memory
+ * fallback can implement the same contract.
+ */
+export interface IQueue<T = unknown> {
+  readonly name: string;
+  add(
+    jobName: string,
+    data: T,
+    opts?: { jobId?: string; priority?: number; delay?: number }
+  ): Promise<{ id: string; name: string; data: T } | null>;
+  addBulk(
+    jobsData: Array<{ name: string; data: T; opts?: JobsOptions }>
+  ): Promise<Array<{ id: string; name: string; data: T } | null>>;
+  getJob(id: string): Promise<unknown>;
+  getWaitingCount(): Promise<number>;
+  getActiveCount(): Promise<number>;
+  getCompletedCount(): Promise<number>;
+  getFailedCount(): Promise<number>;
+  getDelayedCount(): Promise<number>;
+  close(): Promise<void>;
+}
+
+// =============================================================================
+// IN-MEMORY QUEUE IMPLEMENTATION (dev / fallback)
 // =============================================================================
 
 interface QueuedJob<T = unknown> {
@@ -104,7 +135,7 @@ interface QueuedJob<T = unknown> {
   progress: number;
 }
 
-class InMemoryQueue<T = unknown> {
+class InMemoryQueue<T = unknown> implements IQueue<T> {
   private jobs: Map<string, QueuedJob<T>> = new Map();
   private jobCounter = 0;
   public name: string;
@@ -126,11 +157,11 @@ class InMemoryQueue<T = unknown> {
     };
     this.jobs.set(id, job);
     logger.info(`[Queue:${this.name}] Job ${id} added (in-memory mode)`);
-    return job;
+    return { id, name: jobName, data };
   }
 
-  async addBulk(jobsData: Array<{ name: string; data: T; opts?: unknown }>) {
-    return Promise.all(jobsData.map(j => this.add(j.name, j.data)));
+  async addBulk(jobsData: Array<{ name: string; data: T; opts?: JobsOptions }>) {
+    return Promise.all(jobsData.map((j) => this.add(j.name, j.data)));
   }
 
   async getJob(id: string) {
@@ -138,53 +169,193 @@ class InMemoryQueue<T = unknown> {
   }
 
   async getWaitingCount() {
-    return Array.from(this.jobs.values()).filter(j => j.status === 'waiting').length;
+    return Array.from(this.jobs.values()).filter((j) => j.status === 'waiting').length;
   }
 
   async getActiveCount() {
-    return Array.from(this.jobs.values()).filter(j => j.status === 'active').length;
+    return Array.from(this.jobs.values()).filter((j) => j.status === 'active').length;
   }
 
   async getCompletedCount() {
-    return Array.from(this.jobs.values()).filter(j => j.status === 'completed').length;
+    return Array.from(this.jobs.values()).filter((j) => j.status === 'completed').length;
   }
 
   async getFailedCount() {
-    return Array.from(this.jobs.values()).filter(j => j.status === 'failed').length;
+    return Array.from(this.jobs.values()).filter((j) => j.status === 'failed').length;
   }
 
   async getDelayedCount() {
-    return Array.from(this.jobs.values()).filter(j => j.status === 'delayed').length;
+    return Array.from(this.jobs.values()).filter((j) => j.status === 'delayed').length;
   }
 
   async close() {
-    // No-op for in-memory
+    this.jobs.clear();
   }
+}
+
+// =============================================================================
+// BULLMQ QUEUE ADAPTER
+// =============================================================================
+
+/**
+ * Thin wrapper that adapts BullMQ's Queue to the IQueue interface. The wrapper
+ * only normalises return shapes; BullMQ already does the heavy lifting.
+ */
+class BullMQQueueAdapter<T = unknown> implements IQueue<T> {
+  public readonly name: string;
+  private readonly queue: Queue<T>;
+
+  constructor(name: string, queue: Queue<T>) {
+    this.name = name;
+    this.queue = queue;
+  }
+
+  /** Expose underlying BullMQ queue for advanced callers (workers, events). */
+  getBullQueue(): Queue<T> {
+    return this.queue;
+  }
+
+  async add(
+    jobName: string,
+    data: T,
+    opts?: { jobId?: string; priority?: number; delay?: number }
+  ) {
+    const jobOpts: JobsOptions = {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 86400 },
+      ...(opts?.jobId ? { jobId: opts.jobId } : {}),
+      ...(opts?.priority ? { priority: opts.priority } : {}),
+      ...(opts?.delay ? { delay: opts.delay } : {}),
+    };
+    // BullMQ 5's `Queue.add` has a heavily-branded NameType generic
+    // (ExtractNameType<T, string>). For us NameType is just `string` — cast
+    // through `any` to avoid propagating the branded generic through our
+    // own IQueue<T> interface.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const job = await (this.queue as any).add(jobName, data, jobOpts);
+    return { id: String(job.id), name: job.name as string, data: job.data as T };
+  }
+
+  async addBulk(jobsData: Array<{ name: string; data: T; opts?: JobsOptions }>) {
+    const defaultOpts: JobsOptions = {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 86400 },
+    };
+    // See comment in `add()` — same branded-generic dance.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const bulk = await (this.queue as any).addBulk(
+      jobsData.map((j) => ({
+        name: j.name,
+        data: j.data,
+        opts: { ...defaultOpts, ...(j.opts ?? {}) },
+      }))
+    );
+    return bulk.map((job: { id?: string | number; name: string; data: T }) => ({
+      id: String(job.id),
+      name: job.name as string,
+      data: job.data as T,
+    }));
+  }
+
+  async getJob(id: string) {
+    return this.queue.getJob(id);
+  }
+
+  async getWaitingCount() {
+    return this.queue.getWaitingCount();
+  }
+
+  async getActiveCount() {
+    return this.queue.getActiveCount();
+  }
+
+  async getCompletedCount() {
+    return this.queue.getCompletedCount();
+  }
+
+  async getFailedCount() {
+    return this.queue.getFailedCount();
+  }
+
+  async getDelayedCount() {
+    return this.queue.getDelayedCount();
+  }
+
+  async close() {
+    await this.queue.close();
+  }
+}
+
+// =============================================================================
+// QUEUE FACTORY
+// =============================================================================
+
+function makeQueue<T>(name: string): IQueue<T> {
+  const connection = getBullConnection();
+  if (!connection || isInMemoryMode()) {
+    logger.info(`[Queue:${name}] in-memory mode`);
+    return new InMemoryQueue<T>(name);
+  }
+
+  const q = new Queue<T>(name, {
+    connection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 86400 },
+    },
+  });
+  logger.info(`[Queue:${name}] BullMQ mode (Redis)`);
+  return new BullMQQueueAdapter<T>(name, q);
+}
+
+function makeQueueEvents(name: string): { close: () => Promise<void> } {
+  const connection = getBullConnection();
+  if (!connection || isInMemoryMode()) {
+    return { close: async () => {} };
+  }
+  const qe = new QueueEvents(name, { connection });
+  return { close: () => qe.close() };
 }
 
 // =============================================================================
 // QUEUE INSTANCES
 // =============================================================================
 
+// Queue name constants — exported so workers import the same strings.
+export const QUEUE_NAMES = {
+  MRP: 'mrp-run',
+  REPORTS: 'report-generate',
+  NOTIFICATIONS: 'notification-send',
+  EXPORTS: 'export-data',
+  IMPORTS: 'import-data',
+  EMAILS: 'send-email',
+  SCHEDULED: 'scheduled-task',
+} as const;
+
 export const queues = {
-  mrp: new InMemoryQueue<MRPJobData>('mrp'),
-  reports: new InMemoryQueue<ReportJobData>('reports'),
-  notifications: new InMemoryQueue<NotificationJobData>('notifications'),
-  exports: new InMemoryQueue<ExportJobData>('exports'),
-  imports: new InMemoryQueue<ImportJobData>('imports'),
-  emails: new InMemoryQueue<EmailJobData>('emails'),
-  scheduled: new InMemoryQueue<ScheduledTaskData>('scheduled'),
+  mrp: makeQueue<MRPJobData>(QUEUE_NAMES.MRP),
+  reports: makeQueue<ReportJobData>(QUEUE_NAMES.REPORTS),
+  notifications: makeQueue<NotificationJobData>(QUEUE_NAMES.NOTIFICATIONS),
+  exports: makeQueue<ExportJobData>(QUEUE_NAMES.EXPORTS),
+  imports: makeQueue<ImportJobData>(QUEUE_NAMES.IMPORTS),
+  emails: makeQueue<EmailJobData>(QUEUE_NAMES.EMAILS),
+  scheduled: makeQueue<ScheduledTaskData>(QUEUE_NAMES.SCHEDULED),
 };
 
-// Fake queue events for compatibility
 export const queueEvents = {
-  mrp: { close: async () => {} },
-  reports: { close: async () => {} },
-  notifications: { close: async () => {} },
-  exports: { close: async () => {} },
-  imports: { close: async () => {} },
-  emails: { close: async () => {} },
-  scheduled: { close: async () => {} },
+  mrp: makeQueueEvents(QUEUE_NAMES.MRP),
+  reports: makeQueueEvents(QUEUE_NAMES.REPORTS),
+  notifications: makeQueueEvents(QUEUE_NAMES.NOTIFICATIONS),
+  exports: makeQueueEvents(QUEUE_NAMES.EXPORTS),
+  imports: makeQueueEvents(QUEUE_NAMES.IMPORTS),
+  emails: makeQueueEvents(QUEUE_NAMES.EMAILS),
+  scheduled: makeQueueEvents(QUEUE_NAMES.SCHEDULED),
 };
 
 // =============================================================================
@@ -199,7 +370,7 @@ export const jobs = {
       });
     },
     scheduleRecurring: async (tenantId: string, _cronExpression: string) => {
-      logger.info(`[Queue:mrp] Recurring job scheduling not available in in-memory mode`);
+      logger.info(`[Queue:mrp] Recurring scheduling via BullMQ repeatable jobs — not yet wired`);
       return queues.mrp.add('scheduled-mrp', {
         tenantId,
         userId: 'system',
@@ -222,7 +393,7 @@ export const jobs = {
       });
     },
     scheduleRecurring: async (data: ReportJobData, _cronExpression: string) => {
-      logger.info(`[Queue:reports] Recurring job scheduling not available in in-memory mode`);
+      logger.info(`[Queue:reports] Recurring scheduling via BullMQ repeatable jobs — not yet wired`);
       return queues.reports.add('scheduled-report', data);
     },
   },
@@ -233,7 +404,7 @@ export const jobs = {
     },
     sendBulk: async (notifications: NotificationJobData[]) => {
       return queues.notifications.addBulk(
-        notifications.map(n => ({ name: 'send-notification', data: n }))
+        notifications.map((n) => ({ name: 'send-notification', data: n }))
       );
     },
     lowStockAlert: async (
@@ -273,7 +444,7 @@ export const jobs = {
     },
     sendBulk: async (emails: EmailJobData[]) => {
       return queues.emails.addBulk(
-        emails.map(e => ({ name: 'send-email', data: e }))
+        emails.map((e) => ({ name: 'send-email', data: e }))
       );
     },
   },
@@ -295,24 +466,44 @@ export const jobs = {
 // JOB STATUS HELPERS
 // =============================================================================
 
-export async function getJobStatus(queue: keyof typeof queues, jobId: string) {
-  const job = await queues[queue].getJob(jobId);
+type BullJobLike = {
+  id?: string | number;
+  name?: string;
+  progress?: number | object;
+  data?: unknown;
+  returnvalue?: unknown;
+  failedReason?: string;
+  attemptsMade?: number;
+  processedOn?: number;
+  finishedOn?: number;
+  getState?: () => Promise<string>;
+};
 
-  if (!job) {
-    return null;
+export async function getJobStatus(queue: keyof typeof queues, jobId: string) {
+  const q = queues[queue];
+  const job = (await q.getJob(jobId)) as BullJobLike | null;
+
+  if (!job) return null;
+
+  // BullMQ job has getState(); in-memory job has status field.
+  let state: string;
+  if (typeof job.getState === 'function') {
+    state = await job.getState();
+  } else {
+    state = (job as unknown as QueuedJob).status ?? 'unknown';
   }
 
   return {
-    id: job.id,
-    name: job.name,
-    state: job.status,
-    progress: job.progress,
+    id: String(job.id ?? ''),
+    name: job.name ?? '',
+    state,
+    progress: typeof job.progress === 'number' ? job.progress : 0,
     data: job.data,
     returnValue: job.returnvalue,
     failedReason: job.failedReason,
-    attemptsMade: job.attemptsMade,
-    processedOn: job.processedOn,
-    finishedOn: job.finishedOn,
+    attemptsMade: job.attemptsMade ?? 0,
+    processedOn: job.processedOn ? new Date(job.processedOn) : undefined,
+    finishedOn: job.finishedOn ? new Date(job.finishedOn) : undefined,
   };
 }
 
@@ -341,14 +532,19 @@ export async function getAllQueueStats() {
 }
 
 // =============================================================================
-// CLEANUP
+// SHUTDOWN
 // =============================================================================
 
+/**
+ * Closes all queues + queue event listeners + the BullMQ Redis connection.
+ * Safe to call from SIGTERM/SIGINT handlers. Idempotent: calling twice is a no-op.
+ */
 export async function closeAllQueues() {
   await Promise.all([
-    ...Object.values(queues).map(q => q.close()),
-    ...Object.values(queueEvents).map(e => e.close()),
+    ...Object.values(queues).map((q) => q.close()),
+    ...Object.values(queueEvents).map((e) => e.close()),
   ]);
+  await closeBullConnection();
 }
 
 // =============================================================================

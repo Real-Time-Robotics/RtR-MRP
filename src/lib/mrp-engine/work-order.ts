@@ -6,6 +6,7 @@
 import prisma from "../prisma";
 import { logger } from "@/lib/logger";
 import { triggerWorkOrderWorkflow } from "../workflow/workflow-triggers";
+import { generateSerial, SerialNumberingRuleNotFoundError } from "@/lib/serial/numbering";
 
 // Create Work Order from Sales Order
 export async function createWorkOrder(
@@ -124,12 +125,89 @@ export async function updateWorkOrderStatus(
     }
   }
 
-  return prisma.workOrder.update({
+  const workOrder = await prisma.workOrder.update({
     where: { id: workOrderId },
     data: updateData,
     include: {
       product: true,
       allocations: { include: { part: true } },
+      productionReceipt: true,
     },
   });
+
+  // Sprint 27 TIP-S27-03: Auto-generate serial units on WO completion
+  if (normalizedStatus === "COMPLETED") {
+    try {
+      await generateSerialsForCompletedWO(workOrder, completedQty);
+    } catch (err) {
+      logger.warn("Serial generation skipped on WO complete", {
+        workOrderId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return workOrder;
+}
+
+// =============================================================================
+// SERIAL GENERATION ON WO COMPLETE (TIP-S27-03)
+// =============================================================================
+
+async function generateSerialsForCompletedWO(
+  workOrder: { id: string; productId: string; completedQty: number; productionReceipt: { id: string } | null },
+  completedQtyOverride?: number
+): Promise<void> {
+  // Find ModuleDesign linked to this product
+  const moduleDesign = await prisma.moduleDesign.findFirst({
+    where: { productId: workOrder.productId },
+  });
+
+  if (!moduleDesign) {
+    // No module design → not serial-controlled, skip silently
+    return;
+  }
+
+  const qty = completedQtyOverride ?? workOrder.completedQty;
+  if (qty <= 0) return;
+
+  try {
+    for (let i = 0; i < qty; i++) {
+      const serial = await generateSerial({ moduleDesignId: moduleDesign.id });
+      await prisma.serialUnit.create({
+        data: {
+          serial,
+          productId: workOrder.productId,
+          moduleDesignId: moduleDesign.id,
+          status: 'IN_STOCK',
+          source: 'MANUFACTURED',
+          productionReceiptId: workOrder.productionReceipt?.id || null,
+        },
+      });
+    }
+    logger.info("Serial units generated on WO complete", {
+      workOrderId: workOrder.id,
+      count: qty,
+      moduleDesignId: moduleDesign.id,
+    });
+  } catch (err) {
+    if (err instanceof SerialNumberingRuleNotFoundError) {
+      // No numbering rule → log warning, don't block WO completion
+      logger.warn("Serial numbering rule not found, skipping serial generation", {
+        workOrderId: workOrder.id,
+        moduleDesignId: moduleDesign.id,
+      });
+      // Flag on production receipt if available
+      if (workOrder.productionReceipt) {
+        await prisma.productionReceipt.update({
+          where: { id: workOrder.productionReceipt.id },
+          data: {
+            notes: `[AUTO] Serial generation skipped: no numbering rule for module ${moduleDesign.code}`,
+          },
+        }).catch(() => { /* best-effort */ });
+      }
+      return;
+    }
+    throw err;
+  }
 }

@@ -33,9 +33,9 @@ export const POST = withAuth(async (request: NextRequest) => {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    if (session.detectedType !== "COMPOSITE_BOM") {
+    if (session.detectedType !== "COMPOSITE_BOM" && session.detectedType !== "ECAD_BOM") {
       return NextResponse.json(
-        { error: "Session is not a composite BOM import" },
+        { error: "Session is not a BOM import" },
         { status: 400 }
       );
     }

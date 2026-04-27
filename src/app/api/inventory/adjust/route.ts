@@ -9,6 +9,7 @@ import {
   AuthUser,
 } from '@/lib/api/with-permission';
 import { checkWriteEndpointLimit } from '@/lib/rate-limit';
+import { withIdempotency } from '@/lib/security/idempotency';
 
 // =============================================================================
 // INVENTORY ADJUSTMENT API
@@ -257,4 +258,4 @@ async function handleTransfer(body: unknown, user: AuthUser) {
   });
 }
 
-export const POST = withPermission(adjustHandler, { create: 'inventory:adjust' });
+export const POST = withPermission(withIdempotency(adjustHandler), { create: 'inventory:adjust' });

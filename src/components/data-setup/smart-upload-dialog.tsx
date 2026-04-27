@@ -28,6 +28,7 @@ interface SmartUploadDialogProps {
 
 interface AnalysisResult {
   isComposite: boolean;
+  detectedFormat?: "ECAD_BOM" | "COMPOSITE_BOM";
   sessionId?: string;
   confidence?: number;
   message?: string;
@@ -201,7 +202,7 @@ export function SmartUploadDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-violet-500" />
-            Smart Upload — BOM phức hợp
+            Smart Upload — BOM
           </DialogTitle>
         </DialogHeader>
 
@@ -209,7 +210,7 @@ export function SmartUploadDialog({
         {state === "upload" && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Upload file Excel BOM phức hợp. AI sẽ tự động phân loại thành Parts, Products, và BOM lines.
+              Upload file Excel BOM (phức hợp hoặc ECAD). AI sẽ tự động nhận diện format và phân loại thành Parts, Products, và BOM lines.
             </p>
 
             <div
@@ -230,7 +231,7 @@ export function SmartUploadDialog({
                   <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
                   <p className="text-sm font-medium">Đang phân tích file...</p>
                   <p className="text-xs text-muted-foreground">
-                    Nhận diện cấu trúc BOM phức hợp
+                    Đang nhận diện cấu trúc BOM...
                   </p>
                 </div>
               ) : (
@@ -280,11 +281,20 @@ export function SmartUploadDialog({
               />
             </div>
 
-            {/* Confidence */}
-            <div className="text-xs text-muted-foreground">
-              Confidence: {((analysis.confidence ?? 0) * 100).toFixed(0)}% |
-              Tổng dòng: {analysis.stats?.totalRows ?? 0} |
-              Bỏ qua: {analysis.stats?.skippedRows ?? 0}
+            {/* Format badge + Confidence */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                analysis.detectedFormat === "ECAD_BOM"
+                  ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+                  : "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
+              }`}>
+                {analysis.detectedFormat === "ECAD_BOM" ? "ECAD BOM" : "Composite BOM"}
+              </span>
+              <span>
+                Confidence: {((analysis.confidence ?? 0) * 100).toFixed(0)}% |
+                Tổng dòng: {analysis.stats?.totalRows ?? 0} |
+                Bỏ qua: {analysis.stats?.skippedRows ?? 0}
+              </span>
             </div>
 
             {/* Warnings */}
