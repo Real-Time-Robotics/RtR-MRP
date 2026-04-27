@@ -700,6 +700,9 @@ model Product {
   // Sprint 27 Serial
   serialUnits SerialUnit[]
 
+  // Sprint 27 Assembly
+  assemblyOrders AssemblyOrder[]
+
   @@index([status])
   @@index([defaultWorkCenterId])
   @@map("products")
@@ -717,6 +720,9 @@ model BomHeader {
 
   product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   bomLines BomLine[]
+
+  // Sprint 27 Assembly
+  assemblyOrders AssemblyOrder[]
 
   @@unique([productId, version])
   @@index([productId])
@@ -1369,6 +1375,10 @@ model User {
   // Sprint 27 Serial
   serialsCreated SerialUnit[] @relation("SerialCreatedBy")
   serialLinks    SerialLink[] @relation("SerialLinkedBy")
+
+  // Sprint 27 Assembly
+  assemblyOrdersAssigned AssemblyOrder[] @relation("AssemblyAssignee")
+  assemblyOrdersCreated  AssemblyOrder[] @relation("AssemblyCreator")
 
   @@index([tenantId])
   @@map("users")
@@ -6898,6 +6908,48 @@ enum BomSourceType {
 }
 
 // =============================================================================
+// SPRINT 27 — Assembly Order (TIP-S27-03)
+// =============================================================================
+
+enum AssemblyOrderStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model AssemblyOrder {
+  id                String              @id @default(cuid())
+  aoNumber          String              @unique
+  productId         String
+  product           Product             @relation(fields: [productId], references: [id], onDelete: Restrict)
+  bomHeaderId       String
+  bomHeader         BomHeader           @relation(fields: [bomHeaderId], references: [id], onDelete: Restrict)
+  targetQuantity    Int                 @default(1)
+  status            AssemblyOrderStatus @default(DRAFT)
+  parentSerialId    String?             @unique
+  parentSerial      SerialUnit?         @relation("AssemblyParent", fields: [parentSerialId], references: [id], onDelete: SetNull)
+  assignedToUserId  String?
+  assignedToUser    User?               @relation("AssemblyAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  createdByUserId   String?
+  createdByUser     User?               @relation("AssemblyCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  updatedAt         DateTime            @updatedAt
+
+  serialLinks       SerialLink[]
+
+  @@index([productId])
+  @@index([bomHeaderId])
+  @@index([status])
+  @@index([assignedToUserId])
+  @@map("assembly_orders")
+}
+
+// =============================================================================
 // SPRINT 27 — RBAC Roles
 // =============================================================================
 model Role {
@@ -6983,6 +7035,9 @@ model SerialUnit {
   parentLinks         SerialLink[]   @relation("ChildSerial")
   childLinks          SerialLink[]   @relation("ParentSerial")
 
+  // Sprint 27 Assembly
+  assemblyAsParent    AssemblyOrder? @relation("AssemblyParent")
+
   @@index([productId])
   @@index([moduleDesignId])
   @@index([partId])
@@ -7002,6 +7057,7 @@ model SerialLink {
   bomLineId       String?
   bomLine         BomLine?   @relation(fields: [bomLineId], references: [id], onDelete: SetNull)
   assemblyOrderId String?
+  assemblyOrder   AssemblyOrder? @relation(fields: [assemblyOrderId], references: [id], onDelete: SetNull)
   linkedAt        DateTime   @default(now())
   linkedByUserId  String?
   linkedByUser    User?      @relation("SerialLinkedBy", fields: [linkedByUserId], references: [id], onDelete: SetNull)

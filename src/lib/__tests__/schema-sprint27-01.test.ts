@@ -94,7 +94,7 @@ describe('Sprint 27 TIP-01 Schema', () => {
       });
       expect(cat.code).toBe('CAPACITOR');
       expect(cat.parentId).toBeUndefined();
-      expect(cat.children).toEqual([]);
+      expect((cat as Record<string, unknown>).children).toEqual([]);
     });
 
     it('should create child categories and query via parent', async () => {
