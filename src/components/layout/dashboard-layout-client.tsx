@@ -9,7 +9,15 @@ import { CommandPalette } from '@/components/command-palette';
 
 import { useFeatureAnnouncement } from '@/hooks/use-feature-announcement';
 
-export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
+import type { RoleCode } from '@/lib/auth/rbac';
+
+export interface DashboardLayoutClientProps {
+  children: React.ReactNode;
+  userRoles?: RoleCode[];
+  userId?: string;
+}
+
+export function DashboardLayoutClient({ children, userRoles = [], userId }: DashboardLayoutClientProps) {
   useFeatureAnnouncement();
   const { data: session } = useRtrSession();
 
@@ -24,6 +32,8 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   return (
     <ModernAppShell
       user={user}
+      userRoles={userRoles}
+      userId={userId}
     >
       <AIWrapper>
         {children}
