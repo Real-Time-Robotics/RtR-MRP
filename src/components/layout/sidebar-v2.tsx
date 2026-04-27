@@ -20,10 +20,16 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  DollarSign,
+  Brain,
+  Building,
+  Smartphone,
+  Shield,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RoleCode } from '@/lib/auth/rbac';
+import { FEATURE_FLAGS, type FeatureFlagKey } from '@/lib/feature-flags';
 
 // =============================================================================
 // TYPES
@@ -42,6 +48,7 @@ interface SidebarGroup {
   ariaLabel: string;
   icon: LucideIcon;
   roles: RoleCode[] | 'all';
+  featureFlag?: FeatureFlagKey;
   items: SidebarItem[];
 }
 
@@ -166,6 +173,66 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { href: '/admin/audit', label: 'Audit Log' },
     ],
   },
+  // === TIP-S27-08: Hidden groups (shown when feature flag enabled) ===
+  {
+    id: 'finance',
+    label: 'Tài chính',
+    ariaLabel: 'Finance',
+    icon: DollarSign,
+    roles: ['admin'],
+    featureFlag: 'SHOW_FINANCE',
+    items: [
+      { href: '/finance/invoicing', label: 'Hoá đơn' },
+      { href: '/finance/misa-export', label: 'Xuất MISA' },
+      { href: '/finance/costing', label: 'Chi phí' },
+    ],
+  },
+  {
+    id: 'ai-ml',
+    label: 'AI / ML',
+    ariaLabel: 'AI and ML',
+    icon: Brain,
+    roles: ['admin'],
+    featureFlag: 'SHOW_AI_ML',
+    items: [
+      { href: '/ai/forecast', label: 'Forecast' },
+      { href: '/ai/insights', label: 'AI Insights' },
+      { href: '/ai/quality', label: 'Quality AI' },
+    ],
+  },
+  {
+    id: 'multitenant',
+    label: 'Multi-tenant',
+    ariaLabel: 'Multi-tenant',
+    icon: Building,
+    roles: ['admin'],
+    featureFlag: 'SHOW_MULTITENANT',
+    items: [
+      { href: '/settings', label: 'Tenant Settings' },
+    ],
+  },
+  {
+    id: 'mobile',
+    label: 'Mobile',
+    ariaLabel: 'Mobile',
+    icon: Smartphone,
+    roles: ['admin'],
+    featureFlag: 'SHOW_MOBILE',
+    items: [
+      { href: '/mobile', label: 'Mobile Dashboard' },
+    ],
+  },
+  {
+    id: 'compliance',
+    label: 'Compliance',
+    ariaLabel: 'Compliance',
+    icon: Shield,
+    roles: ['admin'],
+    featureFlag: 'SHOW_COMPLIANCE',
+    items: [
+      { href: '/compliance', label: 'Compliance Overview' },
+    ],
+  },
 ];
 
 // =============================================================================
@@ -175,6 +242,8 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
 function filterGroups(groups: SidebarGroup[], userRoles: RoleCode[]): SidebarGroup[] {
   return groups
     .filter((g) => {
+      // Feature flag gate (if set, flag must be true)
+      if (g.featureFlag && !FEATURE_FLAGS[g.featureFlag]) return false;
       if (g.roles === 'all') return true;
       if (userRoles.includes('admin')) return true;
       return userRoles.some((r) => (g.roles as RoleCode[]).includes(r));

@@ -17,6 +17,19 @@ vi.mock('@/lib/utils', () => ({
   cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
 }));
 
+// Mock feature flags — default all hidden flags off
+vi.mock('@/lib/feature-flags', () => ({
+  FEATURE_FLAGS: {
+    SIDEBAR_V2: true,
+    SHOW_FINANCE: false,
+    SHOW_AI_ML: false,
+    SHOW_MULTITENANT: false,
+    SHOW_MOBILE: false,
+    SHOW_COMPLIANCE: false,
+  },
+  // Export type helper
+}));
+
 describe('SidebarV2 — filterGroups', () => {
   const allGroups = SIDEBAR_GROUPS;
 
@@ -83,7 +96,7 @@ describe('SidebarV2 — structure', () => {
     for (const group of SIDEBAR_GROUPS) {
       expect(group.ariaLabel).toBeTruthy();
       // ariaLabel should be in English
-      expect(group.ariaLabel).toMatch(/^[A-Za-z &]+$/);
+      expect(group.ariaLabel).toMatch(/^[A-Za-z &\-]+$/);
     }
   });
 
@@ -92,5 +105,41 @@ describe('SidebarV2 — structure', () => {
       const hrefs = group.items.map((i) => i.href);
       expect(new Set(hrefs).size).toBe(hrefs.length);
     }
+  });
+});
+
+describe('SidebarV2 — feature flag gating (TIP-S27-08)', () => {
+  it('admin + SHOW_FINANCE=false → no finance group', () => {
+    // FEATURE_FLAGS.SHOW_FINANCE is mocked as false
+    const ids = filterGroups(SIDEBAR_GROUPS, ['admin']).map((g) => g.id);
+    expect(ids).not.toContain('finance');
+  });
+
+  it('admin + SHOW_FINANCE=true → finance group visible', async () => {
+    // Temporarily override the mock
+    const featureFlags = await import('@/lib/feature-flags');
+    const origValue = featureFlags.FEATURE_FLAGS.SHOW_FINANCE;
+    // @ts-expect-error - mutating mock for test
+    featureFlags.FEATURE_FLAGS.SHOW_FINANCE = true;
+
+    const ids = filterGroups(SIDEBAR_GROUPS, ['admin']).map((g) => g.id);
+    expect(ids).toContain('finance');
+
+    // Restore
+    // @ts-expect-error - mutating mock for test
+    featureFlags.FEATURE_FLAGS.SHOW_FINANCE = origValue;
+  });
+
+  it('engineer (non-admin) + SHOW_FINANCE=true → still no finance (role gate)', async () => {
+    const featureFlags = await import('@/lib/feature-flags');
+    const origValue = featureFlags.FEATURE_FLAGS.SHOW_FINANCE;
+    // @ts-expect-error - mutating mock for test
+    featureFlags.FEATURE_FLAGS.SHOW_FINANCE = true;
+
+    const ids = filterGroups(SIDEBAR_GROUPS, ['engineer']).map((g) => g.id);
+    expect(ids).not.toContain('finance');
+
+    // @ts-expect-error - mutating mock for test
+    featureFlags.FEATURE_FLAGS.SHOW_FINANCE = origValue;
   });
 });
