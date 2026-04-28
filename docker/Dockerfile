@@ -28,6 +28,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
 ENV DOCKER true
 ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV SKIP_RATE_LIMIT=true
+ENV NEXTAUTH_URL=https://mrp.rtrobotics.com
+ENV NEXT_PUBLIC_APP_URL=https://mrp.rtrobotics.com
 RUN npx next build
 
 # ==================== Stage 3: Runner ====================
