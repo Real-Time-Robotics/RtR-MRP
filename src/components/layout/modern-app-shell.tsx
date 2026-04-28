@@ -49,7 +49,7 @@ export function ModernAppShell({
   userId,
   notifications = [],
 }: ModernAppShellProps) {
-  const useSidebarV2 = FEATURE_FLAGS.SIDEBAR_V2 && userRoles.length > 0;
+  const useSidebarV2 = FEATURE_FLAGS.SIDEBAR_V2;
   const pathname = usePathname();
   
   // Use global language context (single source of truth)
