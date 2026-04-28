@@ -24,7 +24,8 @@ export default async function DashboardLayout({
 
   if (!session) {
     const authUrl = process.env.RTR_AUTH_GATEWAY_URL || 'https://auth.rtrobotics.com';
-    redirect(`${authUrl}/login?redirect=${encodeURIComponent(process.env.NEXTAUTH_URL || 'http://localhost:3000')}`);
+    const appUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://mrp.rtrobotics.com';
+    redirect(`${authUrl}/login?redirect=${encodeURIComponent(appUrl)}`);
   }
 
   const userId = session?.user?.id;

@@ -99,7 +99,9 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
  * Build Auth Gateway login URL with redirect back to current page.
  */
 function getLoginUrl(request: NextRequest): string {
-  const redirectUrl = encodeURIComponent(request.url);
+  const appBase = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://mrp.rtrobotics.com';
+  const targetUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, appBase).toString();
+  const redirectUrl = encodeURIComponent(targetUrl);
   return `${AUTH_GATEWAY_URL}/login?redirect=${redirectUrl}`;
 }
 
