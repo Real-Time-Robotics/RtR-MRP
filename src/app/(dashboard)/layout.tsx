@@ -28,8 +28,16 @@ export default async function DashboardLayout({
     redirect(`${authUrl}/login?redirect=${encodeURIComponent(appUrl)}`);
   }
 
+  let userRoles: import('@/lib/auth/rbac').RoleCode[] = [];
   const userId = session?.user?.id;
-  const userRoles = userId ? await getUserRoles(userId) : [];
+  try {
+    if (userId) {
+      userRoles = await getUserRoles(userId);
+    }
+  } catch {
+    // getUserRoles may fail if user doesn't exist in MRP DB yet
+    // Gracefully continue with empty roles — sidebar will show default groups
+  }
 
   return (
     <DashboardLayoutClient userRoles={userRoles} userId={userId}>
