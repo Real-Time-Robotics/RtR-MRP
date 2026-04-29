@@ -143,3 +143,21 @@ describe('SidebarV2 — feature flag gating (TIP-S27-08)', () => {
     featureFlags.FEATURE_FLAGS.SHOW_FINANCE = origValue;
   });
 });
+
+describe('SidebarV2 — path correction (TIP-S275-01)', () => {
+  const allHrefs = SIDEBAR_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+
+  it('old broken paths are NOT present', () => {
+    const oldPaths = ['/purchase-orders', '/grn', '/admin/audit', '/warehouse/locations', '/warehouse-issues'];
+    for (const old of oldPaths) {
+      expect(allHrefs).not.toContain(old);
+    }
+  });
+
+  it('corrected paths ARE present', () => {
+    const corrected = ['/purchasing', '/purchasing/grn', '/audit', '/warehouses', '/inventory/issue'];
+    for (const path of corrected) {
+      expect(allHrefs).toContain(path);
+    }
+  });
+});

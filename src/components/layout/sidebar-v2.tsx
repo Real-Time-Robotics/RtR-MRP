@@ -127,10 +127,10 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     icon: ShoppingCart,
     roles: ['procurement', 'admin'],
     items: [
-      { href: '/purchase-orders', label: 'Đơn mua' },
+      { href: '/purchasing', label: 'Đơn mua' },
       { href: '/purchase-requests', label: 'Yêu cầu mua' },
       { href: '/suppliers', label: 'Nhà cung cấp' },
-      { href: '/grn', label: 'GRN' },
+      { href: '/purchasing/grn', label: 'GRN' },
     ],
   },
   {
@@ -141,9 +141,9 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     roles: ['warehouse', 'admin'],
     items: [
       { href: '/inventory', label: 'Tồn kho' },
-      { href: '/warehouse/locations', label: 'Vị trí' },
+      { href: '/warehouses', label: 'Kho hàng' },
       { href: '/warehouse-receipts', label: 'Nhập kho' },
-      { href: '/warehouse-issues', label: 'Xuất kho' },
+      { href: '/inventory/issue', label: 'Xuất kho' },
       { href: '/inventory/cycle-count', label: 'Cycle count' },
     ],
   },
@@ -170,7 +170,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { href: '/admin/users', label: 'Người dùng' },
       { href: '/admin/roles', label: 'Roles' },
       { href: '/admin/feature-flags', label: 'Feature Flags' },
-      { href: '/admin/audit', label: 'Audit Log' },
+      { href: '/audit', label: 'Audit Log' },
     ],
   },
   // === Hidden groups (shown when feature flag enabled) ===
