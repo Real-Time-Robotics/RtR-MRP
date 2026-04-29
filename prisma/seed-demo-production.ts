@@ -39,7 +39,7 @@ async function main() {
     const existing = await prisma.workCenter.findFirst({ where: { code: wc.code } });
     if (!existing && !isDryRun) {
       await prisma.workCenter.create({
-        data: { code: wc.code, name: wc.name, type: wc.type, capacityPerHour: wc.capacityPerHour, status: 'active' },
+        data: { code: wc.code, name: wc.name, type: wc.type, capacityPerHour: wc.capacityPerHour, status: 'active' } as any,
       });
       console.log(`  Created WorkCenter: ${wc.code}`);
     } else {
