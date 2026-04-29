@@ -147,6 +147,9 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Skip TS check during build — VPS OOM on large schema. CI/local still checks.
+  typescript: { ignoreBuildErrors: true },
+
   // Enable standalone output for Docker deployment (auto-detect)
   ...(process.env.DOCKER === "true" ? { output: "standalone" } : {}),
 
