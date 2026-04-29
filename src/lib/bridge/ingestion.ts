@@ -77,7 +77,7 @@ export async function runIngestion(
           result.rowsUpdated++;
         } else {
           await prisma.part.create({
-            data: mapped as Record<string, string>,
+            data: mapped as any,
           });
           result.rowsCreated++;
         }
@@ -94,7 +94,7 @@ export async function runIngestion(
           result.rowsUpdated++;
         } else {
           await prisma.supplier.create({
-            data: mapped as Record<string, string>,
+            data: mapped as any,
           });
           result.rowsCreated++;
         }

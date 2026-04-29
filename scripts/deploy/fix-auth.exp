@@ -1,0 +1,63 @@
+#!/usr/bin/expect -f
+set timeout 300
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Step 1: Add missing env vars to .env
+send "cd /home/lam/RtR-MRP\r"
+expect "\\$"
+
+# Add RTR_AUTH_GATEWAY_URL if missing
+send "grep -q RTR_AUTH_GATEWAY_URL .env || echo 'RTR_AUTH_GATEWAY_URL=https://auth.rtrobotics.com' >> .env; echo S1\r"
+expect "S1"
+expect "\\$"
+
+# Add ALLOWED_ORIGINS
+send "grep -q ALLOWED_ORIGINS .env || echo 'ALLOWED_ORIGINS=https://mrp.rtrobotics.com,https://auth.rtrobotics.com' >> .env; echo S2\r"
+expect "S2"
+expect "\\$"
+
+# Step 2: Fix docker-compose.yml to pass RTR_AUTH_GATEWAY_URL to container
+# Check if it's already there
+send "grep -c RTR_AUTH_GATEWAY_URL docker-compose.yml; echo S3\r"
+expect "S3"
+expect "\\$"
+
+# Step 3: Fix Dockerfile HOSTNAME — change from 0.0.0.0 to just set PORT
+send "sed -i 's/ENV HOSTNAME 0.0.0.0/ENV HOSTNAME=0.0.0.0/' docker/Dockerfile 2>/dev/null; echo S4\r"
+expect "S4"
+expect "\\$"
+
+# Step 4: Add RTR_AUTH_GATEWAY_URL to docker-compose app environment
+send "grep -q RTR_AUTH_GATEWAY_URL docker-compose.yml || sed -i '/NEXTAUTH_SECRET/a \\      - RTR_AUTH_GATEWAY_URL=https://auth.rtrobotics.com' docker-compose.yml; echo S5\r"
+expect "S5"
+expect "\\$"
+
+# Step 5: Restart app with new env (no rebuild needed - env is runtime)
+send "docker compose up -d --no-deps app --force-recreate && echo S6\r"
+expect {
+    "S6" {}
+    timeout { puts "TIMEOUT"; exit 1 }
+}
+expect "\\$"
+
+# Step 6: Wait
+send "sleep 20 && echo WAITED\r"
+expect "WAITED"
+expect "\\$"
+
+# Step 7: Check
+send "docker ps --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}'; echo ---\r"
+expect "---"
+expect "\\$"
+
+send "curl -sf https://mrp.rtrobotics.com/api/health; echo ''\r"
+expect "\\$"
+
+send "docker exec rtr-mrp printenv | grep -iE 'AUTH|URL'; echo DONE\r"
+expect "DONE"
+expect "\\$"
+
+send "exit\r"
+expect eof

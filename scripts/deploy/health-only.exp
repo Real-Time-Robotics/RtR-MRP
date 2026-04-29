@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "docker ps --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}'\r"
+expect "\\$"
+send "curl -sf https://mrp.rtrobotics.com/api/health && echo ' OK'\r"
+expect "\\$"
+send "docker logs rtr-mrp --tail 5 2>&1\r"
+expect "\\$"
+send "echo XCHECK\r"
+expect "XCHECK"
+send "exit\r"
+expect eof

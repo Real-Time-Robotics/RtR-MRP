@@ -9,9 +9,9 @@ import { hasRole } from '@/lib/auth/rbac';
 
 const mappingSchema = z.object({
   targetEntity: z.string().min(1),
-  columnMappings: z.record(z.string()),
+  columnMappings: z.record(z.string(), z.string()),
   authorityFields: z.array(z.string()).optional(),
-  validations: z.record(z.unknown()).optional(),
+  validations: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const GET = withAuth(async (_request: NextRequest, context: RouteContext, _session) => {
@@ -63,9 +63,9 @@ export const POST = withAuth(async (request: NextRequest, context: RouteContext,
       version: nextVersion,
       isActive: true,
       targetEntity: parsed.data.targetEntity,
-      columnMappings: parsed.data.columnMappings,
-      authorityFields: parsed.data.authorityFields || [],
-      validations: parsed.data.validations || {},
+      columnMappings: parsed.data.columnMappings as any,
+      authorityFields: (parsed.data.authorityFields || []) as any,
+      validations: (parsed.data.validations || {}) as any,
       createdByUserId: session.user.id,
     },
   });

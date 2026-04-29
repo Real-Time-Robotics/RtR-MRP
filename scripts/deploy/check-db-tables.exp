@@ -1,0 +1,23 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename IN ('roles','user_roles','categories','module_designs','serial_units','serial_links','assembly_orders') ORDER BY tablename;\"; echo X1\r"
+expect "X1"
+expect "\\$"
+
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"SELECT migration_name, finished_at IS NOT NULL as applied FROM _prisma_migrations ORDER BY started_at;\"; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# Check MRP app error logs
+send "docker logs rtr-mrp --tail 30 2>&1; echo X3\r"
+expect "X3"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

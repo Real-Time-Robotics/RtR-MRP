@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Đánh giá độ hoàn thiện RTR-MRP</title>
+<style>
+@page {
+  size: A4;
+  margin: 22mm 20mm 22mm 20mm;
+  @bottom-center {
+    content: counter(page);
+    font-family: Georgia, serif;
+    font-size: 9pt;
+    color: #8A8578;
+  }
+}
+@page:first { margin: 0; @bottom-center { content: normal; } }
+@page cover { margin: 0; @bottom-center { content: normal; } }
+@page divider { margin: 0; @bottom-center { content: normal; } }
+
+* { box-sizing: border-box; }
+html, body {
+  background: #F0EEE6;
+  color: #2C2A26;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 10.5pt;
+  line-height: 1.55;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { font-family: Georgia, serif; font-weight: normal; color: #2C2A26; }
+h1 { font-size: 28pt; letter-spacing: -0.5pt; line-height: 1.05; margin: 0 0 18pt 0; }
+h2 { font-size: 18pt; letter-spacing: -0.2pt; margin: 28pt 0 10pt 0; padding-bottom: 4pt; border-bottom: 0.6pt solid #CFC9BB; }
+h3 { font-size: 12.5pt; font-weight: bold; margin: 16pt 0 6pt 0; color: #2C2A26; }
+h4 { font-size: 10.5pt; font-weight: bold; margin: 10pt 0 4pt 0; color: #5C5A52; text-transform: uppercase; letter-spacing: 0.6pt; }
+p { margin: 0 0 8pt 0; text-align: justify; hyphens: auto; }
+strong { font-weight: bold; color: #2C2A26; }
+em { font-style: italic; color: #5C5A52; }
+code { font-family: 'Courier New', monospace; font-size: 9pt; background: #E6E3D8; padding: 1pt 4pt; border-radius: 2pt; color: #7A3E2C; }
+a { color: #CC785C; text-decoration: none; }
+
+.accent { color: #CC785C; }
+.muted { color: #8A8578; }
+
+/* Cover */
+.cover {
+  page: cover;
+  background: #F0EEE6;
+  height: 297mm;
+  width: 210mm;
+  padding: 28mm 24mm;
+  display: block;
+  page-break-after: always;
+  position: relative;
+}
+.cover-meta {
+  font-size: 8.5pt;
+  letter-spacing: 2pt;
+  color: #8A8578;
+  text-transform: uppercase;
+  margin-bottom: 40mm;
+}
+.cover h1 {
+  font-size: 54pt;
+  line-height: 0.95;
+  margin: 0 0 12pt 0;
+  letter-spacing: -1.5pt;
+}
+.cover .subtitle {
+  font-size: 14pt;
+  color: #5C5A52;
+  font-style: italic;
+  margin: 18pt 0 0 0;
+  max-width: 130mm;
+  line-height: 1.4;
+}
+.cover-art {
+  position: absolute;
+  right: 10mm;
+  bottom: 28mm;
+  width: 85mm;
+  height: 85mm;
+}
+.cover-footer {
+  position: absolute;
+  bottom: 24mm;
+  left: 24mm;
+  font-size: 8.5pt;
+  letter-spacing: 2pt;
+  color: #8A8578;
+  text-transform: uppercase;
+}
+
+/* Section divider */
+.divider {
+  page: divider;
+  page-break-before: always;
+  page-break-after: always;
+  height: 297mm;
+  width: 210mm;
+  padding: 60mm 28mm;
+  background: #F0EEE6;
+  position: relative;
+}
+.divider-num {
+  font-size: 11pt;
+  letter-spacing: 3pt;
+  color: #CC785C;
+  text-transform: uppercase;
+  margin-bottom: 12pt;
+}
+.divider h2 {
+  font-size: 44pt;
+  line-height: 1;
+  border: none;
+  margin: 0 0 18pt 0;
+  letter-spacing: -1pt;
+  padding: 0;
+}
+.divider-lead {
+  font-size: 13pt;
+  line-height: 1.5;
+  color: #5C5A52;
+  max-width: 130mm;
+  font-style: italic;
+}
+.divider-art {
+  position: absolute;
+  right: 28mm;
+  bottom: 60mm;
+  width: 60mm;
+  height: 60mm;
+}
+
+/* Content pages */
+.content { padding: 0; }
+.lead {
+  font-size: 12pt;
+  line-height: 1.55;
+  color: #5C5A52;
+  margin-bottom: 14pt;
+  font-style: italic;
+}
+
+/* Score cards */
+.scoregrid {
+  display: table;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 6pt 6pt;
+  margin: 12pt 0;
+}
+.scorecard {
+  display: table-cell;
+  width: 25%;
+  padding: 10pt;
+  background: #E6E3D8;
+  border: 0.5pt solid #CFC9BB;
+  border-radius: 2pt;
+  vertical-align: top;
+}
+.scorecard .label {
+  font-size: 8.5pt;
+  letter-spacing: 1pt;
+  text-transform: uppercase;
+  color: #8A8578;
+  margin-bottom: 4pt;
+}
+.scorecard .score {
+  font-size: 32pt;
+  color: #CC785C;
+  line-height: 1;
+  margin: 2pt 0;
+}
+.scorecard .note {
+  font-size: 8.5pt;
+  color: #5C5A52;
+  line-height: 1.35;
+  font-style: italic;
+}
+
+/* Heatmap */
+.heatmap { margin: 14pt 0; }
+.heat-row {
+  display: table;
+  width: 100%;
+  margin-bottom: 5pt;
+  font-size: 10pt;
+}
+.heat-label {
+  display: table-cell;
+  width: 40mm;
+  padding-right: 8pt;
+  vertical-align: middle;
+  color: #5C5A52;
+}
+.heat-bar {
+  display: table-cell;
+  vertical-align: middle;
+  padding: 0;
+}
+.heat-fill {
+  height: 8pt;
+  background: #CC785C;
+  display: inline-block;
+  vertical-align: middle;
+}
+.heat-bg {
+  display: inline-block;
+  width: 110mm;
+  height: 8pt;
+  background: #E6E3D8;
+  vertical-align: middle;
+  position: relative;
+}
+.heat-value {
+  display: table-cell;
+  width: 15mm;
+  text-align: right;
+  vertical-align: middle;
+  font-weight: bold;
+  color: #CC785C;
+  padding-left: 6pt;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10pt 0;
+  font-size: 9.5pt;
+}
+th {
+  text-align: left;
+  font-weight: bold;
+  border-bottom: 0.8pt solid #2C2A26;
+  padding: 5pt 6pt;
+  background: transparent;
+  font-size: 9pt;
+  letter-spacing: 0.5pt;
+  text-transform: uppercase;
+  color: #5C5A52;
+}
+td {
+  padding: 5pt 6pt;
+  border-bottom: 0.3pt solid #CFC9BB;
+  vertical-align: top;
+}
+td.num { text-align: right; font-variant-numeric: tabular-nums; color: #CC785C; font-weight: bold; }
+tr:last-child td { border-bottom: 0.5pt solid #2C2A26; }
+
+/* Callout */
+.callout {
+  border-left: 2pt solid #CC785C;
+  padding: 8pt 12pt;
+  margin: 10pt 0;
+  background: #E6E3D8;
+  font-size: 10pt;
+}
+.callout-title {
+  font-size: 8.5pt;
+  letter-spacing: 1.5pt;
+  text-transform: uppercase;
+  color: #CC785C;
+  margin-bottom: 4pt;
+}
+
+/* Risk item */
+.risk {
+  padding: 8pt 0;
+  border-bottom: 0.3pt solid #CFC9BB;
+  display: table;
+  width: 100%;
+}
+.risk-num {
+  display: table-cell;
+  width: 12mm;
+  font-size: 22pt;
+  color: #CC785C;
+  line-height: 1;
+  vertical-align: top;
+  padding-top: 2pt;
+  font-weight: normal;
+}
+.risk-body { display: table-cell; vertical-align: top; }
+.risk-title { font-weight: bold; font-size: 10.5pt; margin-bottom: 3pt; }
+.risk-meta { font-size: 8.5pt; color: #8A8578; font-family: 'Courier New', monospace; }
+
+/* Roadmap */
+.sprint {
+  margin: 12pt 0;
+  padding: 10pt 12pt;
+  background: #E6E3D8;
+  border-radius: 2pt;
+  page-break-inside: avoid;
+}
+.sprint-head {
+  display: table;
+  width: 100%;
+  margin-bottom: 6pt;
+  padding-bottom: 4pt;
+  border-bottom: 0.5pt solid #CFC9BB;
+}
+.sprint-title { display: table-cell; font-weight: bold; font-size: 11.5pt; }
+.sprint-weeks { display: table-cell; text-align: right; font-size: 9pt; color: #CC785C; letter-spacing: 1pt; text-transform: uppercase; }
+.sprint-goal { font-style: italic; color: #5C5A52; margin-bottom: 6pt; font-size: 9.5pt; }
+.sprint ul { margin: 0; padding-left: 16pt; font-size: 9.5pt; }
+.sprint li { margin-bottom: 3pt; }
+
+/* Colophon */
+.colophon {
+  page-break-before: always;
+  padding-top: 40mm;
+  color: #5C5A52;
+  font-size: 9.5pt;
+  line-height: 1.6;
+}
+.colophon h2 { border: none; font-size: 20pt; margin-bottom: 16pt; }
+
+/* Utility */
+.pb { page-break-before: always; }
+.avoid { page-break-inside: avoid; }
+ul { margin: 6pt 0 8pt 0; padding-left: 18pt; }
+li { margin-bottom: 3pt; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="cover-meta">RTR · MRP · BẢN ĐÁNH GIÁ NỘI BỘ · 04.2026</div>
+  <h1>Độ<br>hoàn thiện.</h1>
+  <p class="subtitle">Một bản audit bốn trục — tính năng, chất lượng mã, sẵn sàng vận hành, và trải nghiệm — trên 483K dòng mã của RTR-MRP ở thời điểm tiền go-live.</p>
+  <div class="cover-footer">MATURITY ASSESSMENT · 67/100</div>
+  <svg class="cover-art" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- Concentric arcs representing maturity layers -->
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <circle cx="200" cy="200" r="180" opacity="0.25"/>
+      <circle cx="200" cy="200" r="140" opacity="0.4"/>
+      <circle cx="200" cy="200" r="100" opacity="0.6"/>
+      <circle cx="200" cy="200" r="60" opacity="0.85"/>
+    </g>
+    <!-- Radial ticks -->
+    <g stroke="#2C2A26" stroke-width="0.6" opacity="0.4">
+      <line x1="200" y1="20" x2="200" y2="40"/>
+      <line x1="200" y1="360" x2="200" y2="380"/>
+      <line x1="20" y1="200" x2="40" y2="200"/>
+      <line x1="360" y1="200" x2="380" y2="200"/>
+      <line x1="73" y1="73" x2="87" y2="87"/>
+      <line x1="313" y1="73" x2="327" y2="87"/>
+      <line x1="73" y1="313" x2="87" y2="327"/>
+      <line x1="313" y1="313" x2="327" y2="327"/>
+    </g>
+    <!-- Four plotted data points -->
+    <g fill="#CC785C">
+      <circle cx="200" cy="67" r="4"/> <!-- feature 74 -->
+      <circle cx="332" cy="200" r="4"/> <!-- code 72 -->
+      <circle cx="200" cy="348" r="4" opacity="0.5"/> <!-- prod 59 -->
+      <circle cx="68" cy="200" r="4" opacity="0.7"/> <!-- ux 63 -->
+    </g>
+    <!-- Connecting line -->
+    <polygon points="200,67 332,200 200,348 68,200" stroke="#CC785C" stroke-width="0.8" fill="#CC785C" fill-opacity="0.08"/>
+    <!-- Center dot -->
+    <circle cx="200" cy="200" r="3" fill="#2C2A26"/>
+    <!-- Axis labels -->
+    <text x="200" y="14" text-anchor="middle" font-family="Georgia" font-size="9" fill="#8A8578" font-style="italic">tính năng</text>
+    <text x="200" y="395" text-anchor="middle" font-family="Georgia" font-size="9" fill="#8A8578" font-style="italic">vận hành</text>
+    <text x="12" y="204" text-anchor="start" font-family="Georgia" font-size="9" fill="#8A8578" font-style="italic">UX</text>
+    <text x="388" y="204" text-anchor="end" font-family="Georgia" font-size="9" fill="#8A8578" font-style="italic">mã</text>
+  </svg>
+</div>
+
+<!-- ============ EXECUTIVE SUMMARY ============ -->
+<div class="content pb">
+  <div class="cover-meta" style="margin-bottom:10pt;">TÓM TẮT ĐIỀU HÀNH</div>
+  <h1 style="font-size:32pt;">Pre-production.<br>Pilot-ready.</h1>
+  <p class="lead">RTR-MRP đạt <span class="accent">67/100</span> — đủ để pilot nội bộ, chưa đủ để multi-tenant go-live. Ba lỗ hổng chặn đường: <code>prisma db push</code> trong production, queue BullMQ in-memory, và thiếu idempotency toàn hệ thống. Bù lại, kỷ luật TypeScript, error handler chuẩn hoá, và lớp AI tích hợp Claude là những điểm hiếm gặp ở codebase 483K LOC cùng quy mô.</p>
+
+  <div class="scoregrid">
+    <div class="scorecard">
+      <div class="label">Tính năng</div>
+      <div class="score">74</div>
+      <div class="note">Rộng, AI moat vượt Odoo — nhưng UOM, TransferOrder, Webhook vẫn là schema chết.</div>
+    </div>
+    <div class="scorecard">
+      <div class="label">Code quality</div>
+      <div class="score">72</div>
+      <div class="note">TS strict kỷ luật, error handler chuẩn — thiếu pre-commit và test coverage.</div>
+    </div>
+    <div class="scorecard">
+      <div class="label">Vận hành</div>
+      <div class="score">59</div>
+      <div class="note">Backup/CI đầy đủ — nhưng db push, queue mock, và 0 idempotency chặn go-live.</div>
+    </div>
+    <div class="scorecard">
+      <div class="label">UX</div>
+      <div class="score">63</div>
+      <div class="note">Kiến trúc UI chắc — a11y, i18n, onboarding còn trống.</div>
+    </div>
+  </div>
+
+  <h3>Bức tranh nhìn ngang</h3>
+  <div class="heatmap">
+    <div class="heat-row">
+      <div class="heat-label">Tính năng</div>
+      <div class="heat-bar"><span class="heat-bg"><span class="heat-fill" style="width:81.4mm;"></span></span></div>
+      <div class="heat-value">74</div>
+    </div>
+    <div class="heat-row">
+      <div class="heat-label">Chất lượng mã</div>
+      <div class="heat-bar"><span class="heat-bg"><span class="heat-fill" style="width:79.2mm;"></span></span></div>
+      <div class="heat-value">72</div>
+    </div>
+    <div class="heat-row">
+      <div class="heat-label">Vận hành</div>
+      <div class="heat-bar"><span class="heat-bg"><span class="heat-fill" style="width:64.9mm;"></span></span></div>
+      <div class="heat-value">59</div>
+    </div>
+    <div class="heat-row">
+      <div class="heat-label">UX</div>
+      <div class="heat-bar"><span class="heat-bg"><span class="heat-fill" style="width:69.3mm;"></span></span></div>
+      <div class="heat-value">63</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Bốn sự thật khó chịu</div>
+    <p><strong>Schema chết.</strong> UOM, TransferOrder, Webhook, Serial — có model nhưng không có route/UI. Kiến trúc vẽ rộng, build chậm hơn thiết kế.</p>
+    <p><strong>Production gap.</strong> Single-node single-tenant đi được. Multi-pod không: rate limit/queue/lock đều in-memory.</p>
+    <p><strong>Code kỷ luật hơn UX kỷ luật.</strong> TS strict + conventional commits cho thấy kỹ thuật tốt; a11y/i18n/onboarding trống cho thấy chưa có product designer hoặc chưa user-test thật.</p>
+    <p><strong>AI là moat thật.</strong> Không hệ mở nào (Odoo, ERPNext, Tryton) có Claude layer cho forecast/auto-PO/auto-scheduler. Nhưng moat chỉ có giá trị nếu lõi MRP đủ ổn.</p>
+  </div>
+</div>
+
+<!-- ============ DIVIDER 1 ============ -->
+<div class="divider">
+  <div class="divider-num">Trục một</div>
+  <h2>Tính năng.</h2>
+  <p class="divider-lead">Mười module MRP chấm theo chuẩn Odoo, SAP S/4HANA, NetSuite. Điểm 74 — rộng, nhưng vài nơi là schema chết.</p>
+  <svg class="divider-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <rect x="20" y="20" width="55" height="55" rx="2"/>
+      <rect x="85" y="20" width="55" height="55" rx="2"/>
+      <rect x="20" y="85" width="55" height="55" rx="2"/>
+      <rect x="85" y="85" width="55" height="55" rx="2" stroke-dasharray="3,3" opacity="0.4"/>
+      <rect x="150" y="20" width="30" height="120" rx="2"/>
+      <line x1="75" y1="47" x2="85" y2="47"/>
+      <line x1="47" y1="75" x2="47" y2="85"/>
+      <line x1="75" y1="112" x2="85" y2="112"/>
+      <line x1="140" y1="47" x2="150" y2="47"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ FEATURE ============ -->
+<div class="content">
+  <h2>1. Trục Tính năng — 74/100</h2>
+  <p class="lead">Đi qua 179 Prisma models và 361 API routes. Chấm mỗi module theo chuẩn thương mại — đã có gì, thiếu gì, so với Odoo/SAP/NetSuite.</p>
+
+  <h3>Bảng điểm 10 module</h3>
+  <table>
+    <thead><tr><th>Module</th><th style="width:14mm;">Điểm</th><th>Đã có</th><th>Thiếu</th></tr></thead>
+    <tbody>
+      <tr><td>Master Data</td><td class="num">72</td><td>Part, BOM, Warehouse, Supplier, Customer, PartCertification</td><td>UOM model + conversion; Location/Bin</td></tr>
+      <tr><td>Sales</td><td class="num">78</td><td>Quotation, SO, Shipment pick, SalesInvoice, pricing</td><td>Shipment CRUD, Delivery Note, RMA, Credit Note</td></tr>
+      <tr><td>Purchasing</td><td class="num">85</td><td>PR 9-state, PO, GRN, 3-Way Match, supplier scoring</td><td>RFQ/tender, supplier portal 2 chiều, blanket PO</td></tr>
+      <tr><td>Planning</td><td class="num">82</td><td>MRP, ATP/CTP, pegging, simulation</td><td>MPS, DRP đầy đủ, time-fence</td></tr>
+      <tr><td>Production</td><td class="num">80</td><td>WorkOrder, Routing, WorkCenter, OEE, scheduler, subcontracting</td><td>Backflush UI, Andon, Kanban loop</td></tr>
+      <tr><td>Warehouse</td><td class="num">70</td><td>Issue, Adjust, Cycle count, ABC, PickList, mobile scan</td><td>TransferOrder API rỗng, bin hierarchy, Serial model</td></tr>
+      <tr><td>Quality</td><td class="num">88</td><td>Inspection, NCR 9-state, CAPA, CoC, SPC, scrap/rework</td><td>Control chart nâng cao, PPAP/APQP</td></tr>
+      <tr><td>Traceability</td><td class="num">75</td><td>API traceability, LotTransaction log</td><td>Genealogy tree UI, forward trace qua graph</td></tr>
+      <tr><td>Reporting</td><td class="num">82</td><td>Dashboard, KPI, ReportSchedule, Excel export</td><td>Query builder ad-hoc, cron runner thực</td></tr>
+      <tr><td>Integration</td><td class="num">35</td><td>Barcode/ScanLog, TenantApiKey/Webhook models</td><td>Webhook delivery, EDI, ERP connector</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Năm gap nghiêm trọng</h3>
+
+  <div class="risk">
+    <div class="risk-num">1</div>
+    <div class="risk-body">
+      <div class="risk-title">UOM là String inline</div>
+      <div class="risk-meta">prisma/schema.prisma:3435, :3565</div>
+      <p><code>uom String @default("EA")</code> — không convert được kg↔tấn, m↔mm. MRP sai số khi NCC giao đơn vị khác đơn vị tồn.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">2</div>
+    <div class="risk-body">
+      <div class="risk-title">TransferOrder API rỗng</div>
+      <div class="risk-meta">schema.prisma:4101 · /api/transfer-orders/ không tồn tại</div>
+      <p>Model có nhưng không có route. Multi-site MRP gợi ý transfer nhưng không thực thi được — chỉ chạy single-site.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">3</div>
+    <div class="risk-body">
+      <div class="risk-title">Webhook và EDI là dead schema</div>
+      <div class="risk-meta">schema.prisma:5200 · /api/webhooks/** và /api/edi/** rỗng</div>
+      <p><code>TenantWebhook</code> có model, không có endpoint delivery. Không đẩy SO/PO tự động — vẫn Excel qua lại.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">4</div>
+    <div class="risk-body">
+      <div class="risk-title">Serial tracking yếu</div>
+      <div class="risk-meta">NCR.serialNumbers Json? (:2169)</div>
+      <p>Chỉ là JSON blob, không có Serial model riêng. Không truy vết từng serial thiết bị điện tử — ngành điện tử/y tế không đáp ứng được.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">5</div>
+    <div class="risk-body">
+      <div class="risk-title">Shipment lifecycle không đủ</div>
+      <div class="risk-meta">Chỉ có /api/shipments/[id]/pick/route.ts</div>
+      <p>Không có list/create/cancel, không packing list, không delivery note PDF. Nhân viên kho phải phát hành phiếu giao bằng Excel ngoài hệ thống.</p>
+    </div>
+  </div>
+
+  <h3>So sánh ngành</h3>
+  <table>
+    <thead><tr><th>Hạng mục</th><th>RTR-MRP vs Odoo</th><th>RTR-MRP vs SAP S/4HANA</th></tr></thead>
+    <tbody>
+      <tr><td>Master Data</td><td>Nhỉnh hơn Odoo Community (certifications)</td><td>Kém (thiếu UOM categories)</td></tr>
+      <tr><td>Quality 9-state + CAPA</td><td><strong>Vượt Odoo Manufacturing</strong></td><td>Ngang SAP QM</td></tr>
+      <tr><td>Planning</td><td>Ngang Odoo Enterprise</td><td>Kém (không time-fence, aggregate)</td></tr>
+      <tr><td>3-Way Match</td><td>Ngang NetSuite</td><td>Kém (không blanket PO)</td></tr>
+      <tr><td>Integration</td><td><strong>Thua xa</strong> (Odoo có 40+ connector)</td><td><strong>Thua xa</strong> (SAP có IDoc/BAPI)</td></tr>
+      <tr><td>AI layer</td><td><strong>Vượt tất cả</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ DIVIDER 2 ============ -->
+<div class="divider">
+  <div class="divider-num">Trục hai</div>
+  <h2>Chất lượng mã.</h2>
+  <p class="divider-lead">TypeScript strict bật trên 483K LOC, chỉ 21 <code>any</code> production. Nhưng không có pre-commit hook và 10 file vượt 1000 dòng.</p>
+  <svg class="divider-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <path d="M40 160 L40 40 L60 40 L60 70 L80 70 L80 40 L100 40 L100 100 L120 100 L120 40 L140 40 L140 130 L160 130 L160 40"/>
+      <line x1="30" y1="165" x2="170" y2="165"/>
+      <circle cx="50" cy="55" r="2" fill="#CC785C"/>
+      <circle cx="110" cy="70" r="2" fill="#CC785C"/>
+      <circle cx="150" cy="85" r="2" fill="#CC785C"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ CODE QUALITY ============ -->
+<div class="content">
+  <h2>2. Trục Chất lượng mã — 72/100</h2>
+  <p class="lead">Các con số dưới đây đếm trực tiếp từ codebase qua grep và find. Không phỏng đoán.</p>
+
+  <h3>Các con số đo trực tiếp</h3>
+  <table>
+    <thead><tr><th>Chỉ số</th><th style="width:28mm;">Giá trị</th><th>Nhận xét</th></tr></thead>
+    <tbody>
+      <tr><td>Source LOC / file</td><td class="num" style="color:#2C2A26;">483.991 / 2.262</td><td>Khớp X-Ray</td></tr>
+      <tr><td>Test files</td><td class="num" style="color:#2C2A26;">303</td><td>Tỷ lệ 15,3% — thấp so với chuẩn 30–40%</td></tr>
+      <tr><td>E2E Playwright</td><td class="num" style="color:#2C2A26;">54 specs</td><td>Có stress, mobile, data-integrity</td></tr>
+      <tr><td>TypeScript strict</td><td class="num" style="color:#2C2A26;">bật</td><td>tsconfig.json:7</td></tr>
+      <tr><td><code>any</code> production</td><td class="num" style="color:#2C2A26;">21</td><td>Xuất sắc</td></tr>
+      <tr><td><code>@ts-ignore</code></td><td class="num" style="color:#2C2A26;">0</td><td>Xuất sắc</td></tr>
+      <tr><td><code>@ts-expect-error</code></td><td class="num" style="color:#2C2A26;">15</td><td>Chấp nhận được, có chủ ý</td></tr>
+      <tr><td>TODO/FIXME/HACK</td><td class="num" style="color:#2C2A26;">3</td><td>Rất ít nợ tường minh</td></tr>
+      <tr><td><code>eslint-disable</code></td><td class="num" style="color:#2C2A26;">108</td><td>Đáng lưu ý</td></tr>
+      <tr><td>Route có try/catch</td><td class="num" style="color:#2C2A26;">350/361</td><td>97% — 11 route hở (gồm MFA)</td></tr>
+      <tr><td>Zod usage</td><td class="num" style="color:#2C2A26;">2.355</td><td>Validation phủ dày</td></tr>
+      <tr><td>Conventional commits</td><td class="num" style="color:#2C2A26;">48/50</td><td>Discipline cao</td></tr>
+      <tr><td>Husky / lint-staged</td><td style="color:#CC785C; font-weight:bold;">KHÔNG có</td><td>Thiếu pre-commit guardrail</td></tr>
+      <tr><td>File lớn nhất</td><td class="num" style="color:#2C2A26;">1.724 dòng</td><td>supplier-data-extractor.ts — monster</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Điểm mạnh</h3>
+  <p><strong>Kỷ luật TypeScript hiếm gặp</strong> ở codebase quy mô này. 483K LOC mà chỉ 21 <code>any</code> production, 0 <code>@ts-ignore</code>, 0 <code>@ts-nocheck</code>, 15 <code>@ts-expect-error</code> có chủ ý.</p>
+  <p><strong>Error handler chuẩn hoá.</strong> <code>src/lib/error-handler.ts:28</code> định nghĩa phân tầng <code>AppError</code> + 6 subclass (<code>ValidationError</code>, <code>AuthenticationError</code>, <code>AuthorizationError</code>, <code>NotFoundError</code>, <code>ConflictError</code>, <code>RateLimitError</code>). 97% route có try/catch.</p>
+  <p><strong>Docs chín.</strong> <code>/docs</code> > 40 file: <code>API.md</code>, <code>ARCHITECTURE.md</code>, <code>RUNBOOKS.md</code>, <code>rollback-plans/PHASE1..8_ROLLBACK.md</code>, <code>baselines/</code>.</p>
+
+  <h3>Điểm yếu</h3>
+  <p><strong>Thiếu pre-commit guardrail.</strong> Không có <code>.husky/</code>, không <code>lint-staged</code>, không <code>.prettierrc</code>. ESLint chỉ ở mức <code>warn</code> (<code>.eslintrc.json:5</code>) — dev có thể commit code với lỗi mà CI không chặn.</p>
+  <p><strong>Test ratio 15,3%.</strong> Nhiều module lớn không có test cặp đôi — <code>supplier-data-extractor.ts</code> (1.724 dòng), <code>scheduling-engine.ts</code> (1.461 dòng) không có file test.</p>
+  <p><strong>Monster files.</strong> 10 file > 1.000 dòng, đa số ở <code>src/lib/ai/*</code>. Page component cũng dày: <code>parts/[id]/page.tsx</code> 1.475 dòng.</p>
+  <p><strong>11 route nhạy cảm thiếu try/catch</strong> — gồm <code>compliance/mfa/verify</code>, <code>compliance/mfa/setup</code>, <code>purchase-orders/[id]/approve</code>, <code>quotations/[id]/send</code>. Rò stack trace và fail-open MFA.</p>
+  <p><strong>108 <code>eslint-disable</code> + 39 <code>console.error</code></strong> trong khi đã có <code>src/lib/logger.ts</code> — nhiều hơn mặt bằng bình thường.</p>
+
+  <div class="callout">
+    <div class="callout-title">Rủi ro compound lớn nhất</div>
+    <p>Monster files trong <code>supplier-risk/</code> và <code>scheduling-engine</code> <em>kết hợp</em> với ESLint chỉ warn + không pre-commit. Khi file 1.700 dòng tiếp tục phình ra (commit feat/fix nhiều hơn chore), lỗi logic lồng sâu sẽ lọt CI. Cộng thêm 11 route MFA/approve thiếu try/catch — hệ thống có bề mặt lỗi ở đúng vùng xác thực.</p>
+  </div>
+</div>
+
+<!-- ============ DIVIDER 3 ============ -->
+<div class="divider">
+  <div class="divider-num">Trục ba</div>
+  <h2>Vận hành.</h2>
+  <p class="divider-lead">Điểm 59. Backup cron đủ, CI/CD đủ, auth gateway sạch — nhưng ba lỗ hổng chặn go-live đa instance.</p>
+  <svg class="divider-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <circle cx="60" cy="100" r="26"/>
+      <circle cx="140" cy="100" r="26"/>
+      <line x1="86" y1="100" x2="114" y2="100"/>
+      <line x1="60" y1="74" x2="60" y2="50"/>
+      <line x1="60" y1="126" x2="60" y2="150"/>
+      <line x1="140" y1="74" x2="140" y2="50"/>
+      <line x1="140" y1="126" x2="140" y2="150"/>
+      <rect x="48" y="38" width="24" height="12" rx="1"/>
+      <rect x="48" y="150" width="24" height="12" rx="1"/>
+      <rect x="128" y="38" width="24" height="12" rx="1" stroke-dasharray="3,2" opacity="0.4"/>
+      <rect x="128" y="150" width="24" height="12" rx="1" stroke-dasharray="3,2" opacity="0.4"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ PRODUCTION ============ -->
+<div class="content">
+  <h2>3. Trục Sẵn sàng vận hành — 59/100</h2>
+  <p class="lead">Sáu mục đo theo production checklist. Backup/CI/auth đã đủ; resilience và idempotency là hai lỗ hổng chặn đường.</p>
+
+  <h3>Bảng điểm 6 mục</h3>
+  <table>
+    <thead><tr><th>Mục</th><th style="width:14mm;">Điểm</th><th>Tóm tắt</th></tr></thead>
+    <tbody>
+      <tr><td>Security</td><td class="num">72</td><td>JWT gateway, RBAC 2 tầng, Zod 206/250 route, Trivy CI, 9 security headers. Trừ: 36 <code>$queryRaw*</code>, MFA stub, rate limit in-memory.</td></tr>
+      <tr><td>Performance</td><td class="num">65</td><td>180 <code>@@index</code>, cache 2 lớp Redis + LRU. Trừ: pagination thưa, 33 <code>include</code> vs 25 <code>select</code> → over-fetching.</td></tr>
+      <tr><td>Observability</td><td class="num">55</td><td>Logger tự xây, Sentry lazy, <code>/api/health</code> check DB thực. Trừ: 427 <code>console.log</code>, không OpenTelemetry.</td></tr>
+      <tr><td>Deployment</td><td class="num">62</td><td>5 workflow CI/CD, Trivy, docker, 7 rollback plans. Trừ: <code>prisma db push</code> trong prod, deploy SSH single-host.</td></tr>
+      <tr><td>Resilience</td><td class="num">40</td><td><code>$transaction</code> 124 chỗ, retry/backoff AI. Trừ: BullMQ in-memory mock, idempotency = 0.</td></tr>
+      <tr><td>DR / Backup</td><td class="num">60</td><td>pg_dump cron 2AM UTC, retention 30 ngày. Trừ: không restore drill, không backup S3 attachments.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Top 5 rủi ro chặn go-live</h3>
+
+  <div class="risk">
+    <div class="risk-num">1</div>
+    <div class="risk-body">
+      <div class="risk-title"><code>prisma db push</code> trong production deploy</div>
+      <div class="risk-meta">.github/workflows/cd-production.yml:55</div>
+      <p>Dùng <code>db push --skip-generate || true</code> thay cho <code>migrate deploy</code>. Phá migration history, nuốt lỗi, không rollback schema được.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">2</div>
+    <div class="risk-body">
+      <div class="risk-title">Queue BullMQ là in-memory mock</div>
+      <div class="risk-meta">src/lib/jobs/queue.ts:3 — "BullMQ disabled for Render compatibility"</div>
+      <p>Job MRP run, report PDF, notification, export dài hạn sẽ mất khi process restart hoặc scale ngang.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">3</div>
+    <div class="risk-body">
+      <div class="risk-title">Idempotency = 0 toàn hệ thống</div>
+      <div class="risk-meta">grep -r idempotency src/ → 0 match</div>
+      <p>API PR/PO/GRN/Inventory adjust nhận POST không có <code>Idempotency-Key</code>. Click đúp hoặc retry mạng tạo bản ghi trùng.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">4</div>
+    <div class="risk-body">
+      <div class="risk-title">36 vị trí <code>$queryRaw</code>/<code>$queryRawUnsafe</code></div>
+      <div class="risk-meta">src/lib/dashboard/role-dashboard-service.ts, src/lib/tenant/prisma-tenant.ts, …</div>
+      <p>Cần audit từng chỗ đảm bảo không nối chuỗi input. Chuyển sang <code>Prisma.sql</code> template.</p>
+    </div>
+  </div>
+
+  <div class="risk">
+    <div class="risk-num">5</div>
+    <div class="risk-body">
+      <div class="risk-title">Rate limit và distributed lock in-memory</div>
+      <div class="risk-meta">src/lib/security/rate-limiter.ts · src/lib/cache/redis.ts:533</div>
+      <p>Khi chạy ≥2 instance, mỗi pod có counter riêng → bruteforce login vượt giới hạn × N pods. Single-node hiện tại ẩn rủi ro này.</p>
+    </div>
+  </div>
+
+  <h3>Checklist còn thiếu</h3>
+  <ul>
+    <li>Thay <code>prisma db push</code> → <code>migrate deploy</code> trong <code>cd-production.yml</code></li>
+    <li>Bật BullMQ thực với Redis cho queue MRP/reports/notifications</li>
+    <li>Middleware <code>Idempotency-Key</code> cho mọi POST mutation</li>
+    <li>Audit 36 chỗ <code>$queryRaw*</code>, whitelist input hoặc chuyển <code>Prisma.sql</code></li>
+    <li>Rate limit Redis-backed (Upstash / <code>rate-limiter-flexible</code>)</li>
+    <li>Xoá/guard 427 <code>console.log</code>, dùng logger</li>
+    <li>Bật OpenTelemetry (xuất sang Grafana/Jaeger)</li>
+    <li>Restore drill định kỳ trong CI</li>
+    <li>Backup S3 cho file attachments/OCR uploads</li>
+    <li>Staging gate + manual approval trước production</li>
+    <li>Blue/green hoặc rolling deploy thay single-host</li>
+    <li>Công bố RPO/RTO + PITR (WAL archiving)</li>
+    <li>MFA enforcement middleware cho admin</li>
+    <li>Health endpoint check Redis thực + queue depth</li>
+    <li>CSP loại bỏ <code>'unsafe-inline'</code>/<code>'unsafe-eval'</code></li>
+  </ul>
+</div>
+
+<!-- ============ DIVIDER 4 ============ -->
+<div class="divider">
+  <div class="divider-num">Trục bốn</div>
+  <h2>Trải nghiệm.</h2>
+  <p class="divider-lead">Điểm 63. Kiến trúc UX chắc — <code>ModernAppShell</code>, loading/error/empty coverage cao — nhưng a11y, i18n, onboarding trống.</p>
+  <svg class="divider-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <rect x="30" y="40" width="140" height="120" rx="3"/>
+      <line x1="30" y1="62" x2="170" y2="62"/>
+      <rect x="42" y="48" width="20" height="8" rx="1"/>
+      <rect x="70" y="48" width="20" height="8" rx="1"/>
+      <rect x="98" y="48" width="20" height="8" rx="1"/>
+      <line x1="30" y1="100" x2="62" y2="100"/>
+      <line x1="30" y1="115" x2="62" y2="115"/>
+      <line x1="30" y1="130" x2="62" y2="130"/>
+      <circle cx="46" cy="100" r="2" fill="#CC785C"/>
+      <rect x="75" y="88" width="90" height="60" rx="2" stroke-dasharray="3,2" opacity="0.5"/>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ UX ============ -->
+<div class="content">
+  <h2>4. Trục Trải nghiệm người dùng — 63/100</h2>
+  <p class="lead">CRUD matrix cho 13 thực thể chính + điểm 10 tiêu chí UX. Core entities đủ; quality module CRUD mới một nửa.</p>
+
+  <h3>Ma trận CRUD</h3>
+  <table>
+    <thead><tr><th>Entity</th><th>List</th><th>Detail</th><th>Create</th><th>Edit</th><th>Delete</th><th>Bulk</th></tr></thead>
+    <tbody>
+      <tr><td>Part, PO, PR, SO, Supplier, Customer</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>BOM</td><td>✓</td><td>✓</td><td>✓</td><td>~</td><td>~</td><td>✗</td></tr>
+      <tr><td>WO, GRN, Inspection</td><td>✓</td><td>✓</td><td>✓</td><td>~</td><td>✗</td><td>✗</td></tr>
+      <tr><td>NCR, CAPA</td><td>✓</td><td>~</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:9pt; color:#8A8578;">✓ có · ~ một phần · ✗ không có</p>
+
+  <h3>Điểm 10 tiêu chí</h3>
+  <table>
+    <thead><tr><th>Tiêu chí</th><th style="width:14mm;">0–10</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>CRUD completeness</td><td class="num">7</td><td>Core đủ; quality side incomplete</td></tr>
+      <tr><td>Form quality</td><td class="num">7</td><td>10/21 form dùng Zod; còn lại ad-hoc</td></tr>
+      <tr><td>Loading/Error/Empty</td><td class="num">8</td><td>~100 loading.tsx + 90 error.tsx + 22 not-found.tsx; 45 skeleton variants</td></tr>
+      <tr><td>i18n</td><td class="num">6</td><td>Tự xây <code>useLanguage</code>; UI hardcode lẫn lộn VN/EN</td></tr>
+      <tr><td>Responsive</td><td class="num">6</td><td>Có mobile-nav/ui-kit; page con desktop-first</td></tr>
+      <tr><td>Accessibility</td><td class="num">4</td><td><code>aria-*</code> thưa; Radix base không thay được audit WCAG</td></tr>
+      <tr><td>Navigation</td><td class="num">8</td><td><code>ModernAppShell</code> nhất quán toàn app</td></tr>
+      <tr><td>Onboarding</td><td class="num">2</td><td>Không tour, không wizard, không demo data cho user mới</td></tr>
+      <tr><td>Feedback loop</td><td class="num">8</td><td><code>sonner</code> toast dày đặc, confirm dialog, mutation hook chuẩn</td></tr>
+      <tr><td>Bulk & Export</td><td class="num">7</td><td><code>BulkActionsBar</code> + Excel export; chưa lan tới quality/production</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Top 5 điểm gãy UX</h3>
+  <ul>
+    <li><strong>i18n chắp vá</strong> — metadata, label, toast VN/EN lẫn lộn. Chuẩn hoá qua <code>useLanguage</code> hoặc chuyển <code>next-intl</code>.</li>
+    <li><strong>Accessibility gần như trống</strong> — thiếu <code>aria-label</code> cho icon-button, không skip-link. Cần audit WCAG 2.1 AA.</li>
+    <li><strong>Onboarding = 0</strong> — user mới không biết bắt đầu từ đâu. Cần welcome wizard + demo tenant seed.</li>
+    <li><strong>Form validation không đồng đều</strong> — 11 form ad-hoc. Chuẩn hoá <code>react-hook-form + zodResolver + FormMessage</code>.</li>
+    <li><strong>Quality module CRUD một nửa</strong> — NCR/CAPA/Inspection chỉ list + new, không edit/delete UI.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="callout-title">Dấu hiệu refactor chưa dứt</div>
+    <p>Tồn tại song song: <code>layout/header.tsx</code> vs <code>modern-header.tsx</code>, <code>sidebar.tsx.deprecated</code> còn trong repo, <code>forms/part-form.tsx</code> vs <code>parts/part-form-dialog/</code>. Design system có kernel chắc (<code>components/ui/</code> + <code>ui-v2/</code> abstraction) nhưng chưa migrate hết.</p>
+  </div>
+</div>
+
+<!-- ============ DIVIDER 5 ============ -->
+<div class="divider">
+  <div class="divider-num">Lộ trình</div>
+  <h2>Đi tiếp.</h2>
+  <p class="divider-lead">Ba sprint, ba mức độ. Sau Sprint 31 dự kiến điểm tổng lên 82 — đủ pitch Enterprise.</p>
+  <svg class="divider-art" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#CC785C" stroke-width="1.2" fill="none" stroke-linecap="round">
+      <line x1="30" y1="100" x2="170" y2="100"/>
+      <circle cx="50" cy="100" r="7" fill="#CC785C"/>
+      <circle cx="100" cy="100" r="7" fill="#F0EEE6"/>
+      <circle cx="150" cy="100" r="7" fill="#F0EEE6"/>
+      <line x1="50" y1="85" x2="50" y2="60"/>
+      <line x1="100" y1="115" x2="100" y2="140"/>
+      <line x1="150" y1="85" x2="150" y2="60"/>
+      <text x="50" y="52" text-anchor="middle" font-family="Georgia" font-size="8" fill="#2C2A26" font-style="italic">Sprint 26</text>
+      <text x="100" y="155" text-anchor="middle" font-family="Georgia" font-size="8" fill="#2C2A26" font-style="italic">Sprint 27–28</text>
+      <text x="150" y="52" text-anchor="middle" font-family="Georgia" font-size="8" fill="#2C2A26" font-style="italic">Sprint 29–31</text>
+    </g>
+  </svg>
+</div>
+
+<!-- ============ ROADMAP ============ -->
+<div class="content">
+  <h2>5. Lộ trình đề xuất</h2>
+  <p class="lead">Ba sprint chia theo mục tiêu: unblock go-live, lấp schema chết, nâng chuẩn UX.</p>
+
+  <div class="sprint avoid">
+    <div class="sprint-head">
+      <div class="sprint-title">Sprint 26 — Unblock go-live</div>
+      <div class="sprint-weeks">2 tuần</div>
+    </div>
+    <div class="sprint-goal">Đủ để deploy single-tenant cho 1 khách pilot.</div>
+    <ul>
+      <li>Thay <code>prisma db push</code> → <code>migrate deploy</code> trong <code>cd-production.yml</code></li>
+      <li>Bật BullMQ Redis thực cho MRP run + report + notification queue</li>
+      <li>Middleware <code>Idempotency-Key</code> cho POST mutation ở PR/PO/GRN/Inventory</li>
+      <li>Audit 36 chỗ <code>$queryRaw*</code>, whitelist input hoặc chuyển <code>Prisma.sql</code></li>
+      <li>Rate limit Redis-backed</li>
+      <li>Thêm try/catch cho 11 route nhạy cảm (MFA/approve/send)</li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid">
+    <div class="sprint-head">
+      <div class="sprint-title">Sprint 27–28 — Lấp schema chết</div>
+      <div class="sprint-weeks">1 tháng</div>
+    </div>
+    <div class="sprint-goal">Để tránh marketing gọi tên tính năng mà user không dùng được.</div>
+    <ul>
+      <li>Model UOM + conversion table, backfill <code>String</code> hiện tại</li>
+      <li><code>/api/transfer-orders</code> CRUD + list + execute</li>
+      <li><code>/api/shipments</code> list/create/cancel + delivery note PDF</li>
+      <li>Serial model riêng + migration từ <code>Json?</code></li>
+      <li>Webhook delivery endpoint + retry/dead-letter</li>
+      <li>Pre-commit hook: husky + lint-staged + prettier</li>
+      <li>Bẻ nhỏ 5 file &gt; 1.000 dòng trong <code>src/lib/ai/*</code></li>
+    </ul>
+  </div>
+
+  <div class="sprint avoid">
+    <div class="sprint-head">
+      <div class="sprint-title">Sprint 29–31 — Nâng chuẩn UX &amp; a11y</div>
+      <div class="sprint-weeks">1,5 tháng</div>
+    </div>
+    <div class="sprint-goal">Đủ để demo cho khách Enterprise.</div>
+    <ul>
+      <li>Chuẩn hoá i18n toàn UI qua <code>next-intl</code></li>
+      <li>Audit WCAG 2.1 AA; thêm <code>aria-*</code> cho icon-button, skip-link</li>
+      <li>Onboarding wizard + demo tenant seed</li>
+      <li>Hoàn thiện CRUD quality module (edit/delete NCR/CAPA/Inspection)</li>
+      <li>Chuẩn hoá 11 form còn lại sang Zod</li>
+      <li>OpenTelemetry tracing; restore drill trong CI</li>
+      <li>Backup S3 cho attachments; staging gate + manual approval</li>
+    </ul>
+  </div>
+
+  <div class="callout avoid">
+    <div class="callout-title">Dự kiến sau Sprint 31</div>
+    <p><strong>Tính năng 82 · Code 80 · Vận hành 78 · UX 78 · Tổng 79–82.</strong> Đủ để pitch Enterprise, bán SaaS multi-tenant, và cạnh tranh trực tiếp với Odoo Enterprise ở vertical điện tử/cơ khí Việt Nam.</p>
+  </div>
+</div>
+
+<!-- ============ COLOPHON ============ -->
+<div class="colophon">
+  <h2>Colophon.</h2>
+  <p>Báo cáo này được tổng hợp từ bốn audit song song trên nhánh <code>feat/purchase-request-module</code> ngày 23/04/2026.</p>
+  <p>Mỗi trục được một subagent độc lập đánh giá, đọc trực tiếp Prisma schema (6.781 dòng), 361 API routes, middleware và config thực tế — không phỏng đoán.</p>
+  <p>Các con số đều đo bằng <code>grep</code>, <code>find</code>, <code>wc</code> trên codebase. Đường dẫn file và số dòng trong báo cáo có thể verify lại qua:</p>
+  <p style="margin-top:12pt; font-family:'Courier New',monospace; font-size:9pt; background:#E6E3D8; padding:10pt; border-radius:2pt; color:#5C5A52;">
+  find src -name "*.test.*" -o -name "*.spec.*" | wc -l<br>
+  find src/app/api -name "route.ts" | wc -l<br>
+  grep -rE "^model " prisma/schema.prisma | wc -l<br>
+  grep -rn "idempotency" src/ | wc -l<br>
+  grep -rn "\$queryRaw" src/ | wc -l<br>
+  </p>
+  <p style="margin-top:18pt;">Chữ <em>Georgia</em>. Nền kem <code>#F0EEE6</code>. Cam <code>#CC785C</code>.</p>
+  <p style="margin-top:24pt; font-size:8.5pt; letter-spacing:1.5pt; color:#8A8578; text-transform:uppercase;">RTR · MRP · MATURITY ASSESSMENT · 67/100</p>
+</div>
+
+</body>
+</html>

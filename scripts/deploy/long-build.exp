@@ -1,0 +1,28 @@
+#!/usr/bin/expect -f
+# Long timeout for full build cycle
+set timeout 900
+spawn ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=15 lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+send "cd /home/lam/RtR-MRP && docker compose build app --no-cache 2>&1 | tail -3 && echo XBUILD_OK || echo XBUILD_FAIL\r"
+expect {
+    "XBUILD_OK" { puts "\nBUILD OK" }
+    "XBUILD_FAIL" { puts "\nBUILD FAIL" }
+    timeout { puts "\nBUILD TIMEOUT" }
+}
+expect "\\$"
+
+send "docker compose up -d --no-deps app --force-recreate 2>&1 | tail -2 && echo XSTART_OK\r"
+expect "XSTART_OK"
+expect "\\$"
+
+send "sleep 20 && curl -sf https://mrp.rtrobotics.com/api/health && echo ' XHEALTH_OK' || echo 'XHEALTH_FAIL'\r"
+expect {
+    "XHEALTH_OK" { puts "\nHEALTH OK" }
+    "XHEALTH_FAIL" { puts "\nHEALTH FAIL" }
+}
+expect "\\$"
+
+send "exit\r"
+expect eof

@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "cat /tmp/deploy-result.txt 2>/dev/null; echo XRES\r"
+expect "XRES"
+expect "\\$"
+send "tail -10 /tmp/deploy.log 2>/dev/null; echo XLOG\r"
+expect "XLOG"
+expect "\\$"
+send "docker ps -a --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}' | head -3; echo XPS\r"
+expect "XPS"
+expect "\\$"
+send "exit\r"
+expect eof

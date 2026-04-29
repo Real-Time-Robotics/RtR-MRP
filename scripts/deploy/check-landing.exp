@@ -1,0 +1,50 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Check git status on server
+send "cd /home/lam/RtR-MRP && git log --oneline -3; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# Check page.tsx content on server
+send "cat src/app/page.tsx; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# Check what's baked into the Docker image
+send "docker exec rtr-mrp cat /app/server.js 2>/dev/null | head -1; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# Check if there's a static page baked
+send "docker exec rtr-mrp ls /app/.next/server/app/page.js 2>/dev/null && echo 'STATIC_PAGE_EXISTS' || echo 'NO_STATIC_PAGE'; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# Check the actual content of the baked page
+send "docker exec rtr-mrp head -c 500 /app/.next/server/app/page.js 2>/dev/null; echo ''; echo X5\r"
+expect "X5"
+expect "\\$"
+
+# Check if there's a static HTML export
+send "docker exec rtr-mrp ls /app/.next/server/app/page.html 2>/dev/null; echo X6\r"
+expect "X6"
+expect "\\$"
+
+# Check standalone output for page
+send "docker exec rtr-mrp cat /app/.next/server/app/page_client-reference-manifest.js 2>/dev/null | head -c 200; echo ''; echo X7\r"
+expect "X7"
+expect "\\$"
+
+# Check if redirect is in the compiled page
+send "docker exec rtr-mrp grep -c 'redirect' /app/.next/server/app/page.js 2>/dev/null; echo X8\r"
+expect "X8"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

@@ -1,0 +1,86 @@
+#!/usr/bin/expect -f
+# Fix server: resolve failed migration + restart app + health check
+# Run: expect scripts/deploy/fix-server.exp
+
+set timeout 300
+set host "171.244.40.23"
+set user "lam"
+set pass "Tranthiquynh1987@"
+
+puts "=== RTR-MRP Server Fix ==="
+puts "Connecting to $user@$host..."
+
+spawn ssh $user@$host
+
+expect {
+    "password:" { send "$pass\r" }
+    "yes/no" { send "yes\r"; exp_continue }
+}
+
+expect "\\$"
+puts "\n=== Connected ==="
+
+# Step 1: Fix failed migration record directly in DB
+puts "\n=== Step 1: Fix failed migration in database ==="
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"UPDATE _prisma_migrations SET rolled_back_at = NOW(), logs = 'Rolled back manually during Sprint 27 deploy' WHERE migration_name = '20260424000002_sprint27_02_serial_domain' AND finished_at IS NULL;\"\r"
+expect "\\$"
+
+# Step 2: Check migration state
+puts "\n=== Step 2: Verify migration state ==="
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"SELECT migration_name, started_at, finished_at, rolled_back_at FROM _prisma_migrations ORDER BY started_at;\"\r"
+expect "\\$"
+
+# Step 3: Stop app container
+puts "\n=== Step 3: Stop app ==="
+send "docker stop rtr-mrp 2>/dev/null; echo STOPPED\r"
+expect "STOPPED"
+expect "\\$"
+
+# Step 4: Docker compose path - check which repo exists
+puts "\n=== Step 4: Find repo + restart ==="
+send "if \[ -f /home/lam/RtR-MRP/docker-compose.yml \]; then cd /home/lam/RtR-MRP; elif \[ -f /home/hung/RtR-MRP/docker-compose.yml \]; then cd /home/hung/RtR-MRP; fi && pwd && echo REPO_FOUND\r"
+expect "REPO_FOUND"
+expect "\\$"
+
+# Step 5: Start app
+send "docker compose up -d rtr-db redis app && echo STARTED\r"
+expect {
+    "STARTED" {}
+    timeout { puts "TIMEOUT waiting for docker compose"; exit 1 }
+}
+expect "\\$"
+
+# Step 6: Wait for app to be ready
+puts "\n=== Step 6: Wait 20s for app startup ==="
+send "sleep 20 && echo WAITED\r"
+expect "WAITED"
+expect "\\$"
+
+# Step 7: Run migration deploy inside running container
+puts "\n=== Step 7: Run prisma migrate deploy ==="
+send "docker exec rtr-mrp node node_modules/prisma/build/index.js migrate deploy && echo MIGRATE_OK || echo MIGRATE_FAIL\r"
+expect {
+    "MIGRATE_OK" { puts "\nMigration OK" }
+    "MIGRATE_FAIL" { puts "\nMigration failed - check logs" }
+    "is restarting" {
+        puts "\nContainer still restarting - checking logs..."
+        send "docker logs rtr-mrp --tail 20\r"
+        expect "\\$"
+    }
+}
+expect "\\$"
+
+# Step 8: Health check
+puts "\n=== Step 8: Health check ==="
+send "curl -s https://mrp.rtrobotics.com/api/health && echo ''\r"
+expect "\\$"
+
+# Step 9: Check login redirect issue
+puts "\n=== Step 9: Check redirect URL ==="
+send "docker exec rtr-mrp grep -c 'mrp.rtrobotics.com' /app/.next/server/chunks/*.js 2>/dev/null | head -3; echo CHECK_DONE\r"
+expect "CHECK_DONE"
+expect "\\$"
+
+puts "\n=== All done ==="
+send "exit\r"
+expect eof

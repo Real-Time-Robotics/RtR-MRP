@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+# Fix server round 2: force recreate container + run migration
+set timeout 300
+set host "171.244.40.23"
+set user "lam"
+set pass "Tranthiquynh1987@"
+
+puts "=== RTR-MRP Server Fix Round 2 ==="
+spawn ssh $user@$host
+
+expect {
+    "password:" { send "$pass\r" }
+    "yes/no" { send "yes\r"; exp_continue }
+}
+expect "\\$"
+puts "\n=== Connected ==="
+
+# Step 1: Check docker logs to understand why container restarts
+puts "\n=== Step 1: Check container logs ==="
+send "docker logs rtr-mrp --tail 20 2>&1; echo LOG_DONE\r"
+expect "LOG_DONE"
+expect "\\$"
+
+# Step 2: Force remove old container + recreate
+puts "\n=== Step 2: Force recreate ==="
+send "cd /home/lam/RtR-MRP && docker compose rm -sf app && docker compose up -d rtr-db redis app --force-recreate && echo RECREATED\r"
+expect {
+    "RECREATED" {}
+    timeout { puts "TIMEOUT"; exit 1 }
+}
+expect "\\$"
+
+# Step 3: Wait
+puts "\n=== Step 3: Wait 25s ==="
+send "sleep 25 && echo WAITED\r"
+expect "WAITED"
+expect "\\$"
+
+# Step 4: Check if container is running (not restarting)
+puts "\n=== Step 4: Check container status ==="
+send "docker ps --filter name=rtr-mrp --format '{{.Status}}' && echo STATUS_DONE\r"
+expect "STATUS_DONE"
+expect "\\$"
+
+# Step 5: Check logs
+puts "\n=== Step 5: Container logs ==="
+send "docker logs rtr-mrp --tail 30 2>&1; echo LOG2_DONE\r"
+expect "LOG2_DONE"
+expect "\\$"
+
+# Step 6: Try migrate
+puts "\n=== Step 6: Migrate ==="
+send "docker exec rtr-mrp node node_modules/prisma/build/index.js migrate deploy 2>&1 && echo MIGRATE_OK || echo MIGRATE_FAIL\r"
+expect {
+    "MIGRATE_OK" { puts "\nMigration OK" }
+    "MIGRATE_FAIL" { puts "\nMigration failed" }
+    "is restarting" { puts "\nContainer still restarting" }
+}
+expect "\\$"
+
+# Step 7: Health
+puts "\n=== Step 7: Health ==="
+send "curl -s https://mrp.rtrobotics.com/api/health; echo ''; echo HEALTH_DONE\r"
+expect "HEALTH_DONE"
+expect "\\$"
+
+puts "\n=== Done ==="
+send "exit\r"
+expect eof

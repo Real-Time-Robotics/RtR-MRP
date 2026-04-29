@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+send "cd /home/lam/RtR-MRP && git checkout main && git pull origin main && nohup bash -c 'docker compose build app --no-cache && docker compose up -d --no-deps app --force-recreate && sleep 15 && curl -sf https://mrp.rtrobotics.com/api/health > /tmp/deploy-result.txt && docker exec rtr-mrp grep -c redirect /app/.next/server/app/page.js >> /tmp/deploy-result.txt && echo DEPLOY_OK >> /tmp/deploy-result.txt || echo DEPLOY_FAIL >> /tmp/deploy-result.txt' > /tmp/deploy.log 2>&1 &\r"
+expect "\\$"
+
+send "echo 'Build started nohup. Check /tmp/deploy-result.txt after ~15min'; echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

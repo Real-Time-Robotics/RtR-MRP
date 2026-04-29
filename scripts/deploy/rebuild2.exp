@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+set timeout 900
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Pull already done. Just rebuild + restart.
+send "cd /home/lam/RtR-MRP && docker compose build app --no-cache\r"
+# Wait for build to finish - look for "Built" or "ERROR"
+expect {
+    "Built" { puts "\nBUILD OK" }
+    "ERROR" { puts "\nBUILD FAILED"; exit 1 }
+    "failed to solve" { puts "\nBUILD FAILED"; exit 1 }
+    timeout { puts "\nBUILD TIMEOUT"; exit 1 }
+}
+expect "\\$"
+
+send "docker compose up -d --no-deps app --force-recreate\r"
+expect "Started"
+expect "\\$"
+
+send "sleep 20\r"
+expect "\\$"
+
+send "curl -sf https://mrp.rtrobotics.com/api/health\r"
+expect "\\$"
+
+send "docker ps --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}'\r"
+expect "\\$"
+
+send "echo ALLDONE\r"
+expect "ALLDONE"
+expect "\\$"
+
+send "exit\r"
+expect eof

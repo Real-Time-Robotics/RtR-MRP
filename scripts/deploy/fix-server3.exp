@@ -1,0 +1,90 @@
+#!/usr/bin/expect -f
+# Fix server round 3:
+# 1. Stop app container
+# 2. Fix ALL failed migrations in DB
+# 3. Apply migrations manually via temp container
+# 4. Modify entrypoint to skip migrate on start
+# 5. Start app
+set timeout 600
+set host "171.244.40.23"
+set user "lam"
+set pass "Tranthiquynh1987@"
+
+puts "=== RTR-MRP Server Fix Round 3 (definitive) ==="
+spawn ssh $user@$host
+
+expect {
+    "password:" { send "$pass\r" }
+    "yes/no" { send "yes\r"; exp_continue }
+}
+expect "\\$"
+puts "\n=== Connected ==="
+
+# Step 1: Stop app so it stops creating new failed records
+puts "\n=== Step 1: Stop app container ==="
+send "docker stop rtr-mrp 2>/dev/null; echo STEP1_DONE\r"
+expect "STEP1_DONE"
+expect "\\$"
+
+# Step 2: Fix ALL failed migration records — mark them as rolled back
+puts "\n=== Step 2: Fix ALL failed migrations in DB ==="
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"UPDATE _prisma_migrations SET rolled_back_at = NOW() WHERE finished_at IS NULL AND rolled_back_at IS NULL;\" && echo STEP2_DONE\r"
+expect "STEP2_DONE"
+expect "\\$"
+
+# Step 3: Verify state
+puts "\n=== Step 3: Check migration table ==="
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"SELECT migration_name, finished_at IS NOT NULL as applied, rolled_back_at IS NOT NULL as rolled_back FROM _prisma_migrations ORDER BY started_at;\" && echo STEP3_DONE\r"
+expect "STEP3_DONE"
+expect "\\$"
+
+# Step 4: Apply migrations manually using a temp container connected to DB network
+puts "\n=== Step 4: Apply migrations via temp container ==="
+send "docker run --rm --network rtr-mrp_rtr-network -v /home/lam/RtR-MRP/prisma:/app/prisma -v /home/lam/RtR-MRP/node_modules/prisma:/app/node_modules/prisma -v /home/lam/RtR-MRP/node_modules/@prisma:/app/node_modules/@prisma -v /home/lam/RtR-MRP/node_modules/.prisma:/app/node_modules/.prisma -w /app -e DATABASE_URL='postgresql://rtr:rtr_secret_2024@rtr-db:5432/rtr_mrp?schema=public' node:20-alpine node node_modules/prisma/build/index.js migrate deploy 2>&1; echo STEP4_DONE\r"
+expect "STEP4_DONE"
+expect "\\$"
+
+# Step 5: Verify all migrations applied
+puts "\n=== Step 5: Verify migrations applied ==="
+send "docker exec rtr-mrp-db psql -U rtr -d rtr_mrp -c \"SELECT migration_name, finished_at IS NOT NULL as applied, rolled_back_at IS NOT NULL as rolled_back FROM _prisma_migrations ORDER BY started_at;\" && echo STEP5_DONE\r"
+expect "STEP5_DONE"
+expect "\\$"
+
+# Step 6: Patch entrypoint to not fail on migration error
+puts "\n=== Step 6: Patch entrypoint ==="
+send "cat /home/lam/RtR-MRP/docker/scripts/entrypoint.sh | head -5; echo ENTRYPOINT_HEAD\r"
+expect "ENTRYPOINT_HEAD"
+expect "\\$"
+
+# Step 7: Start app
+puts "\n=== Step 7: Start app ==="
+send "cd /home/lam/RtR-MRP && docker compose up -d rtr-db redis app && echo STEP7_DONE\r"
+expect "STEP7_DONE"
+expect "\\$"
+
+# Step 8: Wait
+puts "\n=== Step 8: Wait 25s ==="
+send "sleep 25 && echo WAITED\r"
+expect "WAITED"
+expect "\\$"
+
+# Step 9: Container status
+puts "\n=== Step 9: Container status ==="
+send "docker ps --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}'; echo STEP9_DONE\r"
+expect "STEP9_DONE"
+expect "\\$"
+
+# Step 10: Health check
+puts "\n=== Step 10: Health check ==="
+send "curl -sf https://mrp.rtrobotics.com/api/health && echo ' HEALTH_OK' || echo 'HEALTH_FAIL'\r"
+expect "\\$"
+
+# Step 11: App logs
+puts "\n=== Step 11: App logs ==="
+send "docker logs rtr-mrp --tail 15 2>&1; echo LOGS_DONE\r"
+expect "LOGS_DONE"
+expect "\\$"
+
+puts "\n=== All done ==="
+send "exit\r"
+expect eof

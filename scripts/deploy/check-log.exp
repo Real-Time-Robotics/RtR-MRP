@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "tail -20 /tmp/deploy.log; echo XLOG\r"
+expect "XLOG"
+expect "\\$"
+send "exit\r"
+expect eof

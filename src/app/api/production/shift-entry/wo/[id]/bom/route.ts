@@ -24,9 +24,9 @@ export const GET = withAuth(async (_request: NextRequest, context: RouteContext,
 
   // Find BOM for this product
   const bom = await prisma.bomHeader.findFirst({
-    where: { productId: wo.productId, isActive: true },
+    where: { productId: wo.productId, status: 'active' },
     include: {
-      lines: {
+      bomLines: {
         include: {
           part: { select: { id: true, partNumber: true, name: true, unit: true } },
         },
@@ -53,7 +53,7 @@ export const GET = withAuth(async (_request: NextRequest, context: RouteContext,
     allocationMap.set(alloc.partId, existing);
   }
 
-  const bomLines = bom.lines.map((line) => {
+  const bomLines = bom.bomLines.map((line: any) => {
     const alloc = allocationMap.get(line.partId) || { allocated: 0, issued: 0 };
     return {
       partNumber: line.part.partNumber,

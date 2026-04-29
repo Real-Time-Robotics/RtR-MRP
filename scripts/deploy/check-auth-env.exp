@@ -1,0 +1,39 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+send "cat /home/lam/rtr-auth-gateway/.env 2>/dev/null; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# Check auth backend CORS config in actual running container
+send "docker exec rtr-auth-backend printenv | grep -iE 'CORS|ORIGIN|ALLOWED'; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# Check auth gateway nginx config
+send "cat /home/lam/rtr-auth-gateway/nginx/*.conf 2>/dev/null; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# Check MRP auth library - how it verifies session
+send "cat /home/lam/RtR-MRP/src/lib/auth-gateway/verify.ts 2>/dev/null | head -30; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# Check MRP .env for auth secret match
+send "grep -E 'AUTH_SECRET|JWT_SECRET|NEXTAUTH_SECRET' /home/lam/RtR-MRP/.env; echo X5\r"
+expect "X5"
+expect "\\$"
+
+# Check auth backend secret
+send "docker exec rtr-auth-backend printenv | grep -iE 'SECRET|JWT|KEY' | head -5; echo X6\r"
+expect "X6"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

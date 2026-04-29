@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "docker ps --filter name=rtr-mrp --format '{{.Names}}: {{.Status}}'\r"
+expect "\\$"
+send "curl -sf https://mrp.rtrobotics.com/api/health\r"
+expect "\\$"
+send "docker exec rtr-mrp printenv RTR_AUTH_GATEWAY_URL\r"
+expect "\\$"
+send "echo ALL_CHECKS_DONE\r"
+expect "ALL_CHECKS_DONE"
+expect "\\$"
+send "exit\r"
+expect eof

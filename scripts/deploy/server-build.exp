@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Run build in nohup so SSH disconnect doesn't kill it
+send "cd /home/lam/RtR-MRP && nohup bash -c 'git pull origin main && docker compose build app --no-cache && docker compose up -d --no-deps app --force-recreate && sleep 15 && curl -sf https://mrp.rtrobotics.com/api/health > /tmp/deploy-result.txt 2>&1 && echo DEPLOY_OK >> /tmp/deploy-result.txt || echo DEPLOY_FAIL >> /tmp/deploy-result.txt' > /tmp/deploy.log 2>&1 &\r"
+expect "\\$"
+
+send "echo 'Build started in background. Check /tmp/deploy.log and /tmp/deploy-result.txt'; echo XDONE\r"
+expect "XDONE"
+expect "\\$"
+
+send "exit\r"
+expect eof

@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+set timeout 60
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# 1. Check auth backend code for cookie setting
+send "grep -rn 'set_cookie\\|Set-Cookie\\|cookie_domain\\|COOKIE_DOMAIN\\|domain=' /home/lam/rtr-auth-gateway/backend/ 2>/dev/null | head -20; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# 2. Check auth backend .env for cookie domain
+send "grep -i 'COOKIE\\|DOMAIN' /home/lam/rtr-auth-gateway/.env 2>/dev/null; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# 3. Actually test login and see Set-Cookie header with correct password
+send "curl -sv -X POST https://auth.rtrobotics.com/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"lam.nguyen@rtrobotics.me\",\"password\":\"Tranthiquynh1987@\"}' 2>&1 | grep -iE 'set-cookie|< HTTP|location|domain|path='; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# 4. Check auth backend main.py for cookie config
+send "cat /home/lam/rtr-auth-gateway/backend/app/main.py | head -60; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# 5. Check auth routes for login handler
+send "grep -rn 'def login\\|async def login\\|set_cookie' /home/lam/rtr-auth-gateway/backend/app/ | head -15; echo X5\r"
+expect "X5"
+expect "\\$"
+
+# 6. Read the login route file
+send "find /home/lam/rtr-auth-gateway/backend -name '*.py' | xargs grep -l 'set_cookie' | head -3; echo X6\r"
+expect "X6"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

@@ -1,0 +1,19 @@
+#!/usr/bin/expect -f
+set timeout 120
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "cd /home/lam/RtR-MRP && git pull origin main && docker compose build app && docker compose up -d --no-deps app --force-recreate && echo XRESTART\r"
+expect {
+    "XRESTART" {}
+    timeout { puts "TIMEOUT" }
+}
+expect "\\$"
+send "sleep 15 && curl -sf https://mrp.rtrobotics.com/api/health && echo ' XOK'\r"
+expect {
+    "XOK" {}
+    timeout { puts "HEALTH TIMEOUT" }
+}
+expect "\\$"
+send "exit\r"
+expect eof

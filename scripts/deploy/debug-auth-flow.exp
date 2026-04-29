@@ -1,0 +1,60 @@
+#!/usr/bin/expect -f
+set timeout 60
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# 1. Simulate login flow: get token from auth gateway
+send "curl -s -X POST https://auth.rtrobotics.com/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"lam.nguyen@rtrobotics.me\",\"password\":\"test123\"}' | head -c 500; echo ''; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# 2. Check what cookies auth sets
+send "curl -sI -X POST https://auth.rtrobotics.com/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"lam.nguyen@rtrobotics.me\",\"password\":\"test123\"}' 2>/dev/null | grep -i 'set-cookie\\|location'; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# 3. Check MRP auth verify code - what cookie name does it look for
+send "grep -r 'rtr_access_token\\|cookie\\|getCookie' /home/lam/RtR-MRP/src/lib/auth-gateway/ | head -10; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# 4. Check MRP auth types - what config
+send "grep -r 'cookieName\\|tokenName\\|AUTH_CONFIG' /home/lam/RtR-MRP/src/lib/auth-gateway/types.ts 2>/dev/null | head -10; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# 5. Full verify.ts
+send "cat /home/lam/RtR-MRP/src/lib/auth-gateway/verify.ts; echo X5\r"
+expect "X5"
+expect "\\$"
+
+# 6. Full types.ts
+send "cat /home/lam/RtR-MRP/src/lib/auth-gateway/types.ts; echo X6\r"
+expect "X6"
+expect "\\$"
+
+# 7. Check client.ts (session hook)
+send "cat /home/lam/RtR-MRP/src/lib/auth-gateway/client.ts 2>/dev/null | head -50; echo X7\r"
+expect "X7"
+expect "\\$"
+
+# 8. Check MRP middleware auth flow
+send "grep -A20 'function middleware' /home/lam/RtR-MRP/src/middleware.ts | head -30; echo X8\r"
+expect "X8"
+expect "\\$"
+
+# 9. Check if auth lib src/lib/auth.ts exists and what it does
+send "cat /home/lam/RtR-MRP/src/lib/auth.ts 2>/dev/null | head -40; echo X9\r"
+expect "X9"
+expect "\\$"
+
+# 10. Container env - all auth related
+send "docker exec rtr-mrp printenv | grep -iE 'AUTH|JWT|SECRET|GATEWAY|COOKIE'; echo X10\r"
+expect "X10"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

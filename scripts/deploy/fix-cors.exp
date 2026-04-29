@@ -1,0 +1,54 @@
+#!/usr/bin/expect -f
+set timeout 60
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Find auth gateway
+send "docker ps --format '{{.Names}}: {{.Image}}: {{.Ports}}' | grep -i auth; echo X1\r"
+expect "X1"
+expect "\\$"
+
+send "ls /home/lam/rtr-auth-gateway/ 2>/dev/null | head -10; echo X2\r"
+expect "X2"
+expect "\\$"
+
+send "ls /home/lam/apps/rtr-auth-gateway/ 2>/dev/null | head -10; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# Check nginx config for auth
+send "cat /etc/nginx/sites-enabled/* 2>/dev/null | grep -A5 auth.rtrobotics; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# Check if there's nginx in docker
+send "docker ps --format '{{.Names}}: {{.Ports}}' | grep -i nginx; echo X5\r"
+expect "X5"
+expect "\\$"
+
+# Check what serves auth.rtrobotics.com
+send "curl -sI https://auth.rtrobotics.com/login 2>/dev/null | head -10; echo X6\r"
+expect "X6"
+expect "\\$"
+
+# Check auth gateway .env or config for CORS
+send "grep -ri CORS /home/lam/rtr-auth-gateway/ /home/lam/apps/rtr-auth-gateway/ 2>/dev/null | head -5; echo X7\r"
+expect "X7"
+expect "\\$"
+
+# Also check: is MRP session actually working? Maybe CORS is a red herring
+# The real issue might be session cookie
+send "curl -sI https://mrp.rtrobotics.com/api/v2/auth/me 2>/dev/null | head -10; echo X8\r"
+expect "X8"
+expect "\\$"
+
+# Check MRP app logs for auth errors
+send "docker logs rtr-mrp --tail 20 2>&1 | grep -i 'auth\|session\|error\|redirect'; echo X9\r"
+expect "X9"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

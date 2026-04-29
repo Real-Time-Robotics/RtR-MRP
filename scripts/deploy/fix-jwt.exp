@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+set timeout 60
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# Add RTR_JWT_SECRET to MRP .env (same as auth gateway JWT_SECRET)
+send "grep -q RTR_JWT_SECRET /home/lam/RtR-MRP/.env || echo 'RTR_JWT_SECRET=84256542863c2b5f189b27b9db72703c0cbf022adc49f68971a659188dff39f7' >> /home/lam/RtR-MRP/.env; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# Also add to docker-compose.yml
+send "grep -q RTR_JWT_SECRET /home/lam/RtR-MRP/docker-compose.yml || sed -i '/NEXTAUTH_SECRET/a \\      - RTR_JWT_SECRET=84256542863c2b5f189b27b9db72703c0cbf022adc49f68971a659188dff39f7' /home/lam/RtR-MRP/docker-compose.yml; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# Also fix NEXTAUTH_SECRET to match
+send "sed -i 's/NEXTAUTH_SECRET=change-me-in-production/NEXTAUTH_SECRET=84256542863c2b5f189b27b9db72703c0cbf022adc49f68971a659188dff39f7/' /home/lam/RtR-MRP/.env; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# Restart container (no rebuild needed - env is runtime)
+send "cd /home/lam/RtR-MRP && docker compose up -d --no-deps app --force-recreate && echo X4\r"
+expect "X4"
+expect "\\$"
+
+# Wait + health
+send "sleep 20 && curl -sf https://mrp.rtrobotics.com/api/health && echo ' X5OK' || echo 'X5FAIL'\r"
+expect {
+    "X5OK" { puts "\nHEALTH OK" }
+    "X5FAIL" { puts "\nHEALTH FAIL" }
+}
+expect "\\$"
+
+# Verify env is set in container
+send "docker exec rtr-mrp printenv RTR_JWT_SECRET | head -c 10; echo '... X6'\r"
+expect "X6"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

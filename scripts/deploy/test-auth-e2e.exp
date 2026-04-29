@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+
+# 1. Login and get token
+send "TOKEN=$(curl -s -X POST https://auth.rtrobotics.com/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"lam.nguyen@rtrobotics.me\",\"password\":\"Tranthiquynh1987@\"}' -c - | grep rtr_access_token | awk '{print \$NF}'); echo TOKEN_LEN=\${#TOKEN}; echo X1\r"
+expect "X1"
+expect "\\$"
+
+# 2. Simpler: extract token from Set-Cookie header
+send "TOKEN=$(curl -s -X POST https://auth.rtrobotics.com/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"lam.nguyen@rtrobotics.me\",\"password\":\"Tranthiquynh1987@\"}' -D - -o /dev/null | grep rtr_access_token | sed 's/.*rtr_access_token=//;s/;.*//'); echo TOKEN_START=${TOKEN:0:20}; echo X2\r"
+expect "X2"
+expect "\\$"
+
+# 3. Use that token to call MRP API
+send "curl -s https://mrp.rtrobotics.com/api/v2/auth/me -b \"rtr_access_token=$TOKEN\" | head -c 200; echo ''; echo X3\r"
+expect "X3"
+expect "\\$"
+
+# 4. Use token to access dashboard (check if redirect happens)
+send "curl -sI https://mrp.rtrobotics.com/home -b \"rtr_access_token=$TOKEN\" | head -5; echo X4\r"
+expect "X4"
+expect "\\$"
+
+# 5. Without token - should redirect to auth
+send "curl -sI https://mrp.rtrobotics.com/home | head -5; echo X5\r"
+expect "X5"
+expect "\\$"
+
+send "echo XDONE\r"
+expect "XDONE"
+send "exit\r"
+expect eof

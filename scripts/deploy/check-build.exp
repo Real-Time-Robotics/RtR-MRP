@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "ps aux | grep 'docker build\\|next build' | grep -v grep | head -3; echo XPROC\r"
+expect "XPROC"
+expect "\\$"
+send "docker images rtr-mrp-app --format '{{.CreatedAt}}' | head -1; echo XIMG\r"
+expect "XIMG"
+expect "\\$"
+send "exit\r"
+expect eof

@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "docker exec rtr-mrp printenv | grep -iE 'AUTH|URL|HOST|ORIGIN'; echo ENV_DONE\r"
+expect "ENV_DONE"
+expect "\\$"
+send "cat /home/lam/RtR-MRP/.env | grep -iE 'AUTH|URL|HOST|ORIGIN'; echo ENVFILE_DONE\r"
+expect "ENVFILE_DONE"
+expect "\\$"
+send "exit\r"
+expect eof

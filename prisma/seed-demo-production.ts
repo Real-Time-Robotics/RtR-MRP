@@ -58,7 +58,7 @@ async function main() {
     const existing = await prisma.shift.findFirst({ where: { code: s.code } });
     if (!existing && !isDryRun) {
       await prisma.shift.create({
-        data: { code: s.code, name: s.name, startTime: s.startTime, endTime: s.endTime, isActive: true },
+        data: { code: s.code, name: s.name, startTime: s.startTime, endTime: s.endTime, isActive: true } as any,
       });
       console.log(`  Created Shift: ${s.code}`);
     } else {

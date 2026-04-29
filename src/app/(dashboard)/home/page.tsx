@@ -658,10 +658,10 @@ export default function HomePage() {
   const oeeAvailable = !oeeLoading && oeeData !== null;
 
   // Detect empty state: no real production data
-  const isEmptyState = !loading && dashboardData &&
-    dashboardData.pendingOrders === 0 &&
-    dashboardData.activePOs === 0 &&
-    dashboardData.criticalStock === 0 &&
+  const isEmptyState = !loading && stats &&
+    stats.pendingOrders === 0 &&
+    stats.activePOs === 0 &&
+    stats.criticalStock === 0 &&
     woSummary.completed === 0 &&
     woSummary.inProgress === 0;
 

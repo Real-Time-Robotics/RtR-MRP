@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline vận hành RTR-MRP</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 20mm 22mm 20mm;
+    background: #F0EEE6;
+    @bottom-center {
+      content: counter(page);
+      font-family: "Georgia", serif;
+      font-size: 9pt;
+      color: #8C8376;
+    }
+  }
+  @page:first {
+    margin: 0;
+    @bottom-center { content: ""; }
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: #F0EEE6;
+    color: #2C2A26;
+    font-family: "Helvetica Neue", "Inter", "Arial", sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    font-weight: 300;
+  }
+
+  /* ===== COVER ===== */
+  .cover {
+    page: cover;
+    background: #F0EEE6;
+    height: 297mm;
+    width: 210mm;
+    padding: 40mm 25mm;
+    position: relative;
+    page-break-after: always;
+  }
+  .cover-mark {
+    font-family: "Georgia", serif;
+    font-size: 10pt;
+    letter-spacing: 2pt;
+    color: #CC785C;
+    text-transform: uppercase;
+    margin-bottom: 8mm;
+  }
+  .cover h1 {
+    font-family: "Georgia", "Times New Roman", serif;
+    font-size: 44pt;
+    font-weight: 400;
+    line-height: 1.05;
+    color: #2C2A26;
+    margin: 0 0 10mm 0;
+    letter-spacing: -0.5pt;
+  }
+  .cover h1 em {
+    font-style: italic;
+    color: #CC785C;
+    font-weight: 400;
+  }
+  .cover .subtitle {
+    font-family: "Georgia", serif;
+    font-size: 14pt;
+    line-height: 1.5;
+    color: #5A544A;
+    max-width: 130mm;
+    margin-bottom: 20mm;
+    font-style: italic;
+  }
+  .cover-illo {
+    position: absolute;
+    bottom: 25mm;
+    left: 25mm;
+    right: 25mm;
+  }
+  .cover-meta {
+    position: absolute;
+    bottom: 16mm;
+    left: 25mm;
+    right: 25mm;
+    font-size: 8.5pt;
+    color: #8C8376;
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-family: "Helvetica Neue", sans-serif;
+  }
+  .cover-meta span { color: #CC785C; margin: 0 6pt; }
+
+  /* ===== TOC ===== */
+  .toc { page-break-after: always; }
+  .toc h2 {
+    font-family: "Georgia", serif;
+    font-weight: 400;
+    font-size: 24pt;
+    color: #2C2A26;
+    margin: 0 0 12mm 0;
+    letter-spacing: -0.3pt;
+  }
+  .toc-list { list-style: none; padding: 0; margin: 0; }
+  .toc-list li {
+    display: block;
+    border-bottom: 0.5pt solid #D8D3C6;
+    padding: 4mm 0;
+    font-size: 10pt;
+  }
+  .toc-list li .n {
+    font-family: "Georgia", serif;
+    color: #CC785C;
+    display: inline-block;
+    width: 12mm;
+    font-size: 11pt;
+  }
+  .toc-list li .t {
+    color: #2C2A26;
+    font-weight: 400;
+  }
+  .toc-list li .t em {
+    color: #8C8376;
+    font-style: normal;
+    font-size: 9pt;
+    margin-left: 3mm;
+  }
+
+  /* ===== INTRO ===== */
+  .intro { page-break-after: always; }
+  .intro h2 {
+    font-family: "Georgia", serif;
+    font-weight: 400;
+    font-size: 22pt;
+    color: #2C2A26;
+    margin: 0 0 8mm 0;
+    letter-spacing: -0.3pt;
+  }
+  .intro p { margin: 0 0 5mm 0; max-width: 150mm; }
+  .intro .lead {
+    font-family: "Georgia", serif;
+    font-style: italic;
+    font-size: 13pt;
+    line-height: 1.5;
+    color: #5A544A;
+    max-width: 140mm;
+    margin-bottom: 10mm;
+  }
+  .intro-illo {
+    margin: 12mm 0;
+    text-align: center;
+  }
+
+  /* ===== PIPELINE CARDS ===== */
+  .pipeline {
+    page-break-inside: avoid;
+    margin-bottom: 12mm;
+    padding-bottom: 6mm;
+    border-bottom: 0.5pt solid #D8D3C6;
+  }
+  .pipeline.page-break { page-break-before: always; border-top: none; }
+  .pipeline:last-child { border-bottom: none; }
+
+  .pipeline-head {
+    display: table;
+    width: 100%;
+    margin-bottom: 4mm;
+  }
+  .pipeline-head .left {
+    display: table-cell;
+    vertical-align: top;
+    width: 135mm;
+    padding-right: 5mm;
+  }
+  .pipeline-head .right {
+    display: table-cell;
+    vertical-align: top;
+    width: 30mm;
+    text-align: right;
+  }
+  .pipeline-num {
+    font-family: "Georgia", serif;
+    font-size: 10pt;
+    color: #CC785C;
+    letter-spacing: 1.5pt;
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+  }
+  .pipeline-title {
+    font-family: "Georgia", serif;
+    font-weight: 400;
+    font-size: 20pt;
+    line-height: 1.2;
+    color: #2C2A26;
+    margin: 0;
+    letter-spacing: -0.3pt;
+  }
+  .pipeline-meta {
+    margin: 4mm 0 5mm 0;
+    padding: 3mm 5mm;
+    background: rgba(204, 120, 92, 0.06);
+    border-left: 2pt solid #CC785C;
+    font-size: 9.5pt;
+    color: #5A544A;
+  }
+  .pipeline-meta strong { color: #2C2A26; font-weight: 500; }
+
+  .pipeline ol {
+    padding-left: 8mm;
+    margin: 4mm 0;
+  }
+  .pipeline ol li {
+    margin-bottom: 2.5mm;
+    padding-left: 2mm;
+  }
+  .pipeline ol li::marker {
+    font-family: "Georgia", serif;
+    color: #CC785C;
+    font-weight: 500;
+  }
+  .pipeline p { margin: 3mm 0; }
+  .pipeline .output {
+    margin-top: 5mm;
+    padding: 3mm 0 0 0;
+    font-size: 9.5pt;
+    color: #5A544A;
+    font-style: italic;
+    border-top: 0.5pt dotted #D8D3C6;
+  }
+  .pipeline code, .status {
+    font-family: "Courier New", monospace;
+    font-size: 9pt;
+    background: rgba(204, 120, 92, 0.08);
+    color: #A85D42;
+    padding: 0 2pt;
+    border-radius: 1pt;
+  }
+  .pipeline ul { padding-left: 7mm; margin: 2mm 0; }
+  .pipeline ul li { margin-bottom: 1.5mm; list-style: none; position: relative; }
+  .pipeline ul li::before {
+    content: "—";
+    color: #CC785C;
+    position: absolute;
+    left: -6mm;
+  }
+
+  /* Section divider */
+  .section-divider {
+    page-break-before: always;
+    padding-top: 10mm;
+    margin-bottom: 8mm;
+  }
+  .section-mark {
+    font-family: "Georgia", serif;
+    font-size: 10pt;
+    letter-spacing: 2pt;
+    color: #CC785C;
+    text-transform: uppercase;
+    margin-bottom: 3mm;
+  }
+  .section-title {
+    font-family: "Georgia", serif;
+    font-weight: 400;
+    font-size: 30pt;
+    color: #2C2A26;
+    margin: 0 0 4mm 0;
+    letter-spacing: -0.5pt;
+    max-width: 120mm;
+    line-height: 1.1;
+  }
+  .section-title em {
+    font-style: italic;
+    color: #CC785C;
+  }
+  .section-sub {
+    font-family: "Georgia", serif;
+    font-style: italic;
+    font-size: 12pt;
+    color: #5A544A;
+    max-width: 140mm;
+    margin-bottom: 12mm;
+    line-height: 1.5;
+  }
+  .section-illo {
+    text-align: center;
+    margin: 6mm 0 10mm 0;
+  }
+
+  /* ===== FINAL DIAGRAM ===== */
+  .finale { page-break-before: always; }
+  .finale h2 {
+    font-family: "Georgia", serif;
+    font-weight: 400;
+    font-size: 26pt;
+    color: #2C2A26;
+    margin: 0 0 3mm 0;
+    letter-spacing: -0.3pt;
+  }
+  .finale h2 em { font-style: italic; color: #CC785C; }
+  .finale .sub {
+    font-family: "Georgia", serif;
+    font-style: italic;
+    color: #5A544A;
+    font-size: 12pt;
+    margin-bottom: 12mm;
+  }
+  .finale-diagram {
+    text-align: center;
+    margin: 8mm 0 12mm 0;
+  }
+  .finale-note {
+    font-size: 10pt;
+    color: #5A544A;
+    max-width: 155mm;
+    margin-top: 8mm;
+  }
+
+  /* ===== COLOPHON ===== */
+  .colophon {
+    page-break-before: always;
+    padding-top: 30mm;
+  }
+  .colophon p {
+    font-family: "Georgia", serif;
+    font-style: italic;
+    color: #5A544A;
+    font-size: 11pt;
+    line-height: 1.8;
+    max-width: 120mm;
+  }
+  .colophon .rule {
+    width: 20mm;
+    height: 0.5pt;
+    background: #CC785C;
+    margin: 10mm 0;
+  }
+
+  svg { display: block; }
+  .illo-center { margin: 0 auto; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- COVER -->
+<!-- ============================================================ -->
+<section class="cover">
+  <div class="cover-mark">RTR · MRP · 2026</div>
+  <h1>Pipeline<br/><em>vận hành.</em></h1>
+  <p class="subtitle">Mười lăm chuỗi thao tác đã được thiết kế trong hệ thống — từ báo giá đầu tiên đến khi một lô hàng được truy xuất ngược về nguồn gốc.</p>
+
+  <div class="cover-illo">
+    <svg viewBox="0 0 620 300" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Main flowing line -->
+        <path d="M 20 150 Q 120 80, 220 150 T 420 150 T 600 150" opacity="0.9"/>
+        <!-- Branches upward -->
+        <path d="M 100 135 Q 150 60, 220 55" opacity="0.6"/>
+        <path d="M 220 55 L 340 55" opacity="0.5"/>
+        <path d="M 340 55 Q 400 80, 420 145" opacity="0.5"/>
+        <!-- Branches downward -->
+        <path d="M 160 165 Q 220 240, 320 245" opacity="0.6"/>
+        <path d="M 320 245 L 460 245" opacity="0.5"/>
+        <path d="M 460 245 Q 520 225, 540 160" opacity="0.5"/>
+        <!-- Nodes -->
+        <circle cx="20" cy="150" r="4" fill="#CC785C" stroke="none"/>
+        <circle cx="220" cy="150" r="3"/>
+        <circle cx="420" cy="150" r="3"/>
+        <circle cx="600" cy="150" r="4" fill="#CC785C" stroke="none"/>
+        <circle cx="100" cy="135" r="2" fill="#CC785C" stroke="none"/>
+        <circle cx="220" cy="55" r="3"/>
+        <circle cx="340" cy="55" r="3"/>
+        <circle cx="160" cy="165" r="2" fill="#CC785C" stroke="none"/>
+        <circle cx="320" cy="245" r="3"/>
+        <circle cx="460" cy="245" r="3"/>
+        <!-- Thin horizontal baseline -->
+        <line x1="0" y1="290" x2="620" y2="290" stroke-width="0.3" opacity="0.3"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="cover-meta">Sổ tay vận hành <span>·</span> Dành cho người mới <span>·</span> Ấn bản nội bộ</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS -->
+<!-- ============================================================ -->
+<section class="toc">
+  <h2>Mục lục</h2>
+  <ol class="toc-list">
+    <li><span class="n">01</span><span class="t">Báo giá đến đơn bán <em>Quotation → Sales Order</em></span></li>
+    <li><span class="n">02</span><span class="t">Đơn bán, kiểm tồn, giao hàng, hoá đơn <em>Sales Order → Invoice</em></span></li>
+    <li><span class="n">03</span><span class="t">MRP, gợi ý, yêu cầu mua <em>Run → Suggestion → PR</em></span></li>
+    <li><span class="n">04</span><span class="t">Yêu cầu mua, từ nháp đến đơn mua <em>PR 9 trạng thái</em></span></li>
+    <li><span class="n">05</span><span class="t">Đơn mua, nhận hàng, đối chiếu, thanh toán <em>PO → GRN → 3WM</em></span></li>
+    <li><span class="n">06</span><span class="t">Lệnh sản xuất <em>Work Order</em></span></li>
+    <li><span class="n">07</span><span class="t">Tạo và quản lý BOM <em>định mức vật tư</em></span></li>
+    <li><span class="n">08</span><span class="t">Kho — nhập, xuất, chuyển, kiểm kê</span></li>
+    <li><span class="n">09</span><span class="t">Kiểm tra chất lượng <em>Inspection</em></span></li>
+    <li><span class="n">10</span><span class="t">NCR và CAPA <em>xử lý lỗi</em></span></li>
+    <li><span class="n">11</span><span class="t">Scrap — huỷ hàng lỗi</span></li>
+    <li><span class="n">12</span><span class="t">Gom đơn mua <em>Consolidation</em></span></li>
+    <li><span class="n">13</span><span class="t">Truy xuất <em>Traceability</em></span></li>
+    <li><span class="n">14</span><span class="t">Approval — các luồng phê duyệt</span></li>
+    <li><span class="n">15</span><span class="t">Import dữ liệu hàng loạt</span></li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<!-- INTRO -->
+<!-- ============================================================ -->
+<section class="intro">
+  <h2>Đọc tài liệu này</h2>
+  <p class="lead">Mỗi pipeline là một chuỗi trạng thái có thật trong hệ thống. Trạng thái viết kiểu chữ máy — ví dụ <span class="status">APPROVED</span> — là giá trị lưu trong database và hiện trên giao diện.</p>
+  <p>Các mục được xếp theo thứ tự gặp trong thực tế: một đơn hàng bắt đầu ở Pipeline 1, có thể rẽ nhánh sang Pipeline 3 và 6 nếu cần mua hoặc sản xuất, rồi quay lại Pipeline 2 khi đã đủ hàng. Pipeline 7 đến 15 là các chu trình phụ trợ chạy song song.</p>
+  <p>Người mới đọc theo thứ tự. Người có kinh nghiệm tra cứu theo mục.</p>
+  <div class="intro-illo">
+    <svg viewBox="0 0 400 80" width="80%" class="illo-center" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1" stroke-linecap="round">
+        <line x1="20" y1="40" x2="380" y2="40" opacity="0.4"/>
+        <circle cx="20" cy="40" r="3" fill="#CC785C" stroke="none"/>
+        <circle cx="110" cy="40" r="2.5"/>
+        <circle cx="200" cy="40" r="2.5"/>
+        <circle cx="290" cy="40" r="2.5"/>
+        <circle cx="380" cy="40" r="3" fill="#CC785C" stroke="none"/>
+        <path d="M 110 40 Q 155 20, 200 40" opacity="0.5"/>
+        <path d="M 200 40 Q 245 60, 290 40" opacity="0.5"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: LUỒNG BÁN -->
+<!-- ============================================================ -->
+<section class="section-divider">
+  <div class="section-mark">Phần một</div>
+  <h1 class="section-title">Luồng <em>bán hàng.</em></h1>
+  <p class="section-sub">Từ lần khách đầu tiên hỏi giá đến khi một hoá đơn được ghi nhận thanh toán — hai pipeline nối tiếp nhau, rẽ nhánh khi cần.</p>
+  <div class="section-illo">
+    <svg viewBox="0 0 500 120" width="85%" class="illo-center" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Document 1 (Quotation) -->
+        <rect x="40" y="30" width="50" height="60" rx="2"/>
+        <line x1="50" y1="48" x2="80" y2="48" opacity="0.5"/>
+        <line x1="50" y1="58" x2="80" y2="58" opacity="0.5"/>
+        <line x1="50" y1="68" x2="72" y2="68" opacity="0.5"/>
+        <!-- Arrow -->
+        <line x1="100" y1="60" x2="160" y2="60"/>
+        <polyline points="150,54 160,60 150,66"/>
+        <!-- Document 2 (SO) -->
+        <rect x="170" y="30" width="50" height="60" rx="2"/>
+        <line x1="180" y1="48" x2="210" y2="48" opacity="0.5"/>
+        <line x1="180" y1="58" x2="210" y2="58" opacity="0.5"/>
+        <path d="M 178 70 L 184 76 L 194 66" opacity="0.8"/>
+        <!-- Arrow -->
+        <line x1="230" y1="60" x2="290" y2="60"/>
+        <polyline points="280,54 290,60 280,66"/>
+        <!-- Box (Shipment) -->
+        <polyline points="300,40 325,30 350,40 350,80 325,90 300,80 300,40"/>
+        <line x1="300" y1="40" x2="325" y2="50"/>
+        <line x1="325" y1="50" x2="350" y2="40" opacity="0.6"/>
+        <line x1="325" y1="50" x2="325" y2="90"/>
+        <!-- Arrow -->
+        <line x1="360" y1="60" x2="420" y2="60"/>
+        <polyline points="410,54 420,60 410,66"/>
+        <!-- Invoice -->
+        <rect x="430" y="30" width="40" height="60" rx="2"/>
+        <line x1="437" y1="46" x2="462" y2="46" opacity="0.5"/>
+        <text x="450" y="68" font-family="Georgia" font-size="10" fill="#CC785C" text-anchor="middle">₫</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- PIPELINE 1 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Một</div>
+      <h2 class="pipeline-title">Báo giá đến đơn bán</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="15" y="15" width="35" height="45" rx="1"/>
+          <line x1="22" y1="28" x2="43" y2="28" opacity="0.5"/>
+          <line x1="22" y1="36" x2="43" y2="36" opacity="0.5"/>
+          <line x1="22" y1="44" x2="38" y2="44" opacity="0.5"/>
+          <path d="M 52 40 L 65 40"/>
+          <polyline points="60,35 65,40 60,45"/>
+          <path d="M 55 55 L 60 60 L 70 50"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> sales. &nbsp;&nbsp; <strong>Mở khi:</strong> khách hỏi giá.</div>
+  <ol>
+    <li>Tạo Quotation <span class="status">draft</span>. Chọn khách, thêm dòng sản phẩm, đặt hạn hiệu lực.</li>
+    <li>Gửi khách — <span class="status">sent</span>, ghi ngày gửi.</li>
+    <li>Khách trả lời — chuyển một trong ba: <span class="status">accepted</span>, <span class="status">rejected</span>, <span class="status">expired</span>.</li>
+    <li>Bấm Convert (chỉ khi accepted). Hệ thống sinh Sales Order, gán salesOrderId ngược lại, Quotation chuyển <span class="status">converted</span>.</li>
+  </ol>
+  <div class="output">Đầu ra: một Sales Order ở trạng thái draft. Đi tiếp Pipeline 2.</div>
+</article>
+
+<!-- PIPELINE 2 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Hai</div>
+      <h2 class="pipeline-title">Đơn bán, kiểm tồn, giao hàng, hoá đơn</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,28 40,18 65,28 65,58 40,68 15,58 15,28"/>
+          <line x1="15" y1="28" x2="40" y2="38"/>
+          <line x1="40" y1="38" x2="65" y2="28" opacity="0.6"/>
+          <line x1="40" y1="38" x2="40" y2="68"/>
+          <path d="M 28 75 L 52 75" opacity="0.4"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> sales, kho, kế toán.</div>
+  <ol>
+    <li>Sales Order <span class="status">draft</span>. Kiểm lại thông tin, bấm Confirm — chuyển <span class="status">confirmed</span>.</li>
+    <li>Hệ thống kiểm tồn thành phẩm. Đủ thì sẵn sàng Shipment. Thiếu thì cần sản xuất (Pipeline 6) hoặc mua (Pipeline 3 rồi 4).</li>
+    <li>Khi đủ hàng ở kho FINISHED_GOODS: tạo Shipment, chọn dòng SO, số lượng, phương tiện. Xuất xong tồn tự trừ, SO thành <span class="status">shipped</span> hoặc <span class="status">partially_shipped</span>.</li>
+    <li>Kế toán tạo Sales Invoice từ Shipment. Khi khách trả đủ — ghi Sales Payment, SO thành <span class="status">closed</span>.</li>
+  </ol>
+  <p>Backorder (giao thiếu) giữ phần còn lại ở trạng thái open cho đến khi có hàng bù.</p>
+</article>
+
+<!-- ============================================================ -->
+<!-- SECTION: LUỒNG MUA -->
+<!-- ============================================================ -->
+<section class="section-divider">
+  <div class="section-mark">Phần hai</div>
+  <h1 class="section-title">Luồng <em>mua hàng.</em></h1>
+  <p class="section-sub">Ba pipeline nối nhau: MRP tính ra thiếu gì, yêu cầu mua được duyệt và gom, đơn mua nhận hàng và đối chiếu ba bên.</p>
+  <div class="section-illo">
+    <svg viewBox="0 0 500 140" width="85%" class="illo-center" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- MRP scan circle -->
+        <circle cx="60" cy="70" r="26"/>
+        <circle cx="60" cy="70" r="14" opacity="0.5"/>
+        <line x1="78" y1="88" x2="92" y2="102"/>
+        <!-- Arrow -->
+        <line x1="105" y1="70" x2="160" y2="70"/>
+        <polyline points="150,64 160,70 150,76"/>
+        <!-- PR docs (stack) -->
+        <rect x="175" y="45" width="35" height="50" rx="1"/>
+        <rect x="183" y="37" width="35" height="50" rx="1" opacity="0.5"/>
+        <line x1="190" y1="60" x2="203" y2="60" opacity="0.5"/>
+        <line x1="190" y1="70" x2="203" y2="70" opacity="0.5"/>
+        <path d="M 187 83 L 191 87 L 199 78" opacity="0.8"/>
+        <!-- Arrow -->
+        <line x1="230" y1="70" x2="285" y2="70"/>
+        <polyline points="275,64 285,70 275,76"/>
+        <!-- PO → warehouse -->
+        <rect x="295" y="45" width="35" height="50" rx="1"/>
+        <line x1="302" y1="60" x2="323" y2="60" opacity="0.5"/>
+        <line x1="302" y1="70" x2="323" y2="70" opacity="0.5"/>
+        <!-- Arrow -->
+        <line x1="345" y1="70" x2="400" y2="70"/>
+        <polyline points="390,64 400,70 390,76"/>
+        <!-- Warehouse icon -->
+        <polyline points="410,80 440,55 470,80 470,110 410,110 410,80"/>
+        <line x1="410" y1="80" x2="470" y2="80"/>
+        <rect x="430" y="90" width="20" height="20" opacity="0.5"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- PIPELINE 3 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Ba</div>
+      <h2 class="pipeline-title">MRP, gợi ý, yêu cầu mua</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="40" cy="40" r="22"/>
+          <circle cx="40" cy="40" r="12" opacity="0.5"/>
+          <line x1="55" y1="55" x2="65" y2="65"/>
+          <line x1="40" y1="18" x2="40" y2="10" opacity="0.6"/>
+          <line x1="40" y1="70" x2="40" y2="62" opacity="0.6"/>
+          <line x1="18" y1="40" x2="10" y2="40" opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> planner. &nbsp;&nbsp; <strong>Chạy khi:</strong> định kỳ mỗi sáng hoặc khi có SO lớn về.</div>
+  <ol>
+    <li>Vào /mrp, bấm Run. Hệ thống đọc SO chưa giao, BOM, tồn kho, lead time.</li>
+    <li>Output là danh sách MrpSuggestion <span class="status">pending</span>. Mỗi dòng nói rõ mua gì, bao nhiêu, trước ngày nào, supplier đề xuất, giá ước tính.</li>
+    <li>Planner duyệt từng gợi ý. Đồng ý — Approve (<span class="status">approved</span>). Không đồng ý — Reject kèm lý do. Có thể gộp nhiều gợi ý cùng supplier vào một PR.</li>
+    <li>Khi Approve, có thể tự sinh PlannedOrder (PURCHASE). PlannedOrder là kế hoạch mềm — cần Firm mới thành cam kết.</li>
+  </ol>
+  <div class="output">Đầu ra: PlannedOrder đã firm sẵn sàng chuyển thành PR ở Pipeline 4.</div>
+</article>
+
+<!-- PIPELINE 4 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Bốn</div>
+      <h2 class="pipeline-title">Yêu cầu mua, từ nháp đến đơn mua</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="15" y="15" width="40" height="50" rx="1"/>
+          <rect x="20" y="10" width="40" height="50" rx="1" opacity="0.5"/>
+          <line x1="27" y1="28" x2="52" y2="28" opacity="0.6"/>
+          <line x1="27" y1="38" x2="52" y2="38" opacity="0.6"/>
+          <path d="M 25 50 L 31 56 L 45 42"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> planner hoặc mua hàng tạo, cấp trưởng duyệt.<br/>
+  <strong>Chín trạng thái:</strong> <span class="status">DRAFT</span> → <span class="status">PENDING</span> → <span class="status">APPROVED</span>|<span class="status">REJECTED</span> → <span class="status">REVISED</span> → <span class="status">PO_CREATED</span> → <span class="status">PARTIALLY_ORDERED</span> → <span class="status">COMPLETED</span>. Ngoài ra <span class="status">CANCELLED</span>.</div>
+  <ol>
+    <li>Tạo PR <span class="status">DRAFT</span>. Thêm dòng: part, số lượng, supplier đề nghị, giá dự kiến, ngày cần. Gom được nhiều part từ nhiều MRP Suggestion nếu cùng supplier.</li>
+    <li>Đính kèm file (PRAttachment), ghi chú (PRComment).</li>
+    <li>Bấm Submit — <span class="status">PENDING</span>. Hệ thống đẩy thông báo đến người duyệt theo cấu hình.</li>
+    <li>Người duyệt mở PR, chọn một trong ba — Approve (<span class="status">APPROVED</span>, ghi approvedBy), Reject (<span class="status">REJECTED</span>, ghi lý do), hoặc yêu cầu sửa. Nếu sửa — tạo Revise (<span class="status">REVISED</span>, tăng revisionNumber, parentPRId trỏ về PR cũ) rồi Submit lại.</li>
+    <li>Khi <span class="status">APPROVED</span>: bấm Convert — hệ thống gom các dòng cùng supplier thành một hoặc nhiều PO. PR chuyển <span class="status">PO_CREATED</span>.</li>
+    <li>Nếu chỉ một phần dòng đã lên PO — <span class="status">PARTIALLY_ORDERED</span>.</li>
+    <li>Khi tất cả dòng đã nhận đủ hàng qua GRN — <span class="status">COMPLETED</span>.</li>
+  </ol>
+  <p>Track từng dòng riêng qua PRLineStatus: PENDING, APPROVED, REJECTED, ORDERED, PARTIALLY_ORDERED, RECEIVED, CANCELLED.</p>
+</article>
+
+<!-- PIPELINE 5 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Năm</div>
+      <h2 class="pipeline-title">Đơn mua, nhận hàng, đối chiếu, thanh toán</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="12" y="20" width="22" height="30" rx="1"/>
+          <rect x="29" y="28" width="22" height="30" rx="1" opacity="0.7"/>
+          <rect x="46" y="36" width="22" height="30" rx="1" opacity="0.5"/>
+          <path d="M 16 65 L 68 65" opacity="0.3"/>
+          <circle cx="40" cy="15" r="4" opacity="0.6"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> mua hàng, kho, QC, kế toán.</div>
+  <ol>
+    <li>PO sinh từ PR Convert hoặc tạo tay. <span class="status">draft</span>.</li>
+    <li>Mua hàng rà điều khoản, Submit — <span class="status">submitted</span>.</li>
+    <li>Cấp có thẩm quyền Approve — <span class="status">approved</span>.</li>
+    <li>Gửi PO cho supplier (có thể xuất PDF). <span class="status">sent</span>.</li>
+    <li>Supplier giao đến — kho tạo GoodsReceiptNote. Nhập số thực nhận từng dòng, lô, hạn. Lưu — <span class="status">completed</span>. Hàng vào kho RECEIVING.</li>
+    <li>Nếu part có inspection plan, Inspection <span class="status">RECEIVING</span> tự sinh (Pipeline 9). Trong khi chờ, hàng nằm ở RECEIVING hoặc QUARANTINE.</li>
+    <li>Kiểm PASS — hàng chuyển MAIN. Kiểm FAIL — tạo NCR (Pipeline 10), hàng giữ HOLD.</li>
+    <li>Supplier gửi invoice. Kế toán nhập PurchaseInvoice, hệ thống tạo ThreeWayMatch — so PO ↔ GRN ↔ Invoice. Khớp trong dung sai — <span class="status">matched</span> rồi <span class="status">approved</span>, qua thanh toán. Lệch lớn — <span class="status">mismatch_pending_review</span>, giải trình.</li>
+    <li>Approve thanh toán — ghi PurchasePayment. PO <span class="status">closed</span> khi nhận đủ và trả đủ.</li>
+  </ol>
+</article>
+
+<!-- ============================================================ -->
+<!-- SECTION: SẢN XUẤT -->
+<!-- ============================================================ -->
+<section class="section-divider">
+  <div class="section-mark">Phần ba</div>
+  <h1 class="section-title">Luồng <em>sản xuất.</em></h1>
+  <p class="section-sub">Work Order là trục — từ cấp phát vật tư đến nhập thành phẩm. BOM là bản đồ đi kèm.</p>
+  <div class="section-illo">
+    <svg viewBox="0 0 500 140" width="85%" class="illo-center" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- BOM tree -->
+        <circle cx="60" cy="40" r="5"/>
+        <line x1="60" y1="45" x2="40" y2="75"/>
+        <line x1="60" y1="45" x2="80" y2="75"/>
+        <circle cx="40" cy="80" r="4" opacity="0.7"/>
+        <circle cx="80" cy="80" r="4" opacity="0.7"/>
+        <line x1="40" y1="85" x2="30" y2="110" opacity="0.5"/>
+        <line x1="40" y1="85" x2="50" y2="110" opacity="0.5"/>
+        <circle cx="30" cy="113" r="3" opacity="0.5"/>
+        <circle cx="50" cy="113" r="3" opacity="0.5"/>
+        <!-- Arrow -->
+        <line x1="130" y1="70" x2="180" y2="70"/>
+        <polyline points="170,64 180,70 170,76"/>
+        <!-- Gear -->
+        <circle cx="220" cy="70" r="26"/>
+        <circle cx="220" cy="70" r="8"/>
+        <line x1="220" y1="38" x2="220" y2="46"/>
+        <line x1="220" y1="94" x2="220" y2="102"/>
+        <line x1="188" y1="70" x2="196" y2="70"/>
+        <line x1="244" y1="70" x2="252" y2="70"/>
+        <line x1="198" y1="48" x2="204" y2="54"/>
+        <line x1="236" y1="86" x2="242" y2="92"/>
+        <line x1="198" y1="92" x2="204" y2="86"/>
+        <line x1="236" y1="54" x2="242" y2="48"/>
+        <!-- Arrow -->
+        <line x1="260" y1="70" x2="320" y2="70"/>
+        <polyline points="310,64 320,70 310,76"/>
+        <!-- Finished box -->
+        <polyline points="335,48 370,38 405,48 405,92 370,102 335,92 335,48"/>
+        <line x1="335" y1="48" x2="370" y2="58"/>
+        <line x1="370" y1="58" x2="405" y2="48" opacity="0.6"/>
+        <line x1="370" y1="58" x2="370" y2="102"/>
+        <path d="M 360 75 L 368 83 L 382 68" opacity="0.8"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- PIPELINE 6 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Sáu</div>
+      <h2 class="pipeline-title">Lệnh sản xuất</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="40" cy="40" r="22"/>
+          <circle cx="40" cy="40" r="8"/>
+          <line x1="40" y1="10" x2="40" y2="18"/>
+          <line x1="40" y1="62" x2="40" y2="70"/>
+          <line x1="10" y1="40" x2="18" y2="40"/>
+          <line x1="62" y1="40" x2="70" y2="40"/>
+          <line x1="19" y1="19" x2="25" y2="25"/>
+          <line x1="55" y1="55" x2="61" y2="61"/>
+          <line x1="19" y1="61" x2="25" y2="55"/>
+          <line x1="55" y1="25" x2="61" y2="19"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> planner tạo, tổ trưởng giám sát, công nhân thao tác.<br/>
+  <strong>Trạng thái:</strong> draft → released → in_progress → completed → closed. Có on_hold, cancelled.</div>
+  <ol>
+    <li>Tạo WO từ Sales Order (tự điền productId, quantity, dueDate) hoặc thủ công.</li>
+    <li>WO ở <span class="status">draft</span>. Planner kiểm plannedStart, plannedEnd, workCenter, assignedTo.</li>
+    <li>Bấm Release — <span class="status">released</span>. Hệ thống auto-allocate vật tư theo BOM, tạo MaterialAllocation cho từng dòng.</li>
+    <li>Kho in Pick List, đi lấy linh kiện từ MAIN, chuyển sang WIP (Pipeline 8).</li>
+    <li>Công nhân bắt đầu — ghi actualStart, <span class="status">in_progress</span>.</li>
+    <li>Thực hiện theo Routing. Mỗi công đoạn có WorkOrderOperation. Báo cáo qua shop-floor: thời gian, completedQty, scrapQty, LaborEntry. Downtime ghi riêng.</li>
+    <li>Xong cuối cùng — tạo ProductionReceipt, completedQty nhập FINISHED_GOODS, scrapQty xử lý riêng. <span class="status">completed</span>.</li>
+    <li>Kế toán chốt chi phí thực tế (WorkOrderCost, CostVariance). <span class="status">closed</span>.</li>
+  </ol>
+  <p>Dừng giữa chừng — on_hold kèm lý do. Huỷ — cancelled, vật tư đã cấp trả về MAIN qua Adjust.</p>
+</article>
+
+<!-- PIPELINE 7 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Bảy</div>
+      <h2 class="pipeline-title">Tạo và quản lý BOM</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="40" cy="15" r="5"/>
+          <line x1="40" y1="20" x2="22" y2="38"/>
+          <line x1="40" y1="20" x2="58" y2="38"/>
+          <circle cx="22" cy="42" r="4" opacity="0.7"/>
+          <circle cx="58" cy="42" r="4" opacity="0.7"/>
+          <line x1="22" y1="47" x2="14" y2="62" opacity="0.5"/>
+          <line x1="22" y1="47" x2="30" y2="62" opacity="0.5"/>
+          <line x1="58" y1="47" x2="50" y2="62" opacity="0.5"/>
+          <line x1="58" y1="47" x2="66" y2="62" opacity="0.5"/>
+          <circle cx="14" cy="65" r="3" opacity="0.5"/>
+          <circle cx="30" cy="65" r="3" opacity="0.5"/>
+          <circle cx="50" cy="65" r="3" opacity="0.5"/>
+          <circle cx="66" cy="65" r="3" opacity="0.5"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> kỹ thuật hoặc planner.</div>
+  <ol>
+    <li>Vào /bom, New BOM. Chọn sản phẩm (Part loại FG). Revision A, đặt effectivityDate.</li>
+    <li>Thêm từng BomLine: part con, quantity, scrapRate, referenceDesignator (R1, U3 cho điện tử), findNumber, notes. bomType thường là MANUFACTURING.</li>
+    <li>Với cụm con tạo BOM riêng; BomLine trỏ về part của cụm. Hệ thống tự explode đa cấp khi chạy MRP.</li>
+    <li>Đánh dấu <span class="status">phantom = true</span> cho cụm ảo (không tồn kho, chỉ tồn tại trong cấu trúc).</li>
+    <li>Đánh dấu Alternate: các BomLine cùng alternateGroup, một dòng isPrimary = true, các dòng khác là phương án thay thế.</li>
+    <li>Bấm Activate — BOM hoạt động, tham gia các lần MRP tiếp theo.</li>
+  </ol>
+  <p><strong>Nguyên tắc:</strong> sửa BOM đang chạy không sửa trực tiếp. Clone → sửa → đặt effectivityDate tương lai. BOM cũ tự phase-out đúng ngày.</p>
+</article>
+
+<!-- ============================================================ -->
+<!-- SECTION: KHO VÀ CHẤT LƯỢNG -->
+<!-- ============================================================ -->
+<section class="section-divider">
+  <div class="section-mark">Phần bốn</div>
+  <h1 class="section-title">Kho và <em>chất lượng.</em></h1>
+  <p class="section-sub">Hàng ngày. Bốn pipeline giữ tồn kho chính xác và chất lượng không rò rỉ ra ngoài.</p>
+  <div class="section-illo">
+    <svg viewBox="0 0 500 130" width="85%" class="illo-center" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Warehouse -->
+        <polyline points="30,80 70,45 110,80 110,115 30,115 30,80"/>
+        <line x1="30" y1="80" x2="110" y2="80"/>
+        <rect x="48" y="92" width="18" height="22" opacity="0.6"/>
+        <rect x="72" y="92" width="18" height="22" opacity="0.6"/>
+        <line x1="70" y1="45" x2="70" y2="80" opacity="0.4"/>
+        <!-- Arrow -->
+        <line x1="130" y1="85" x2="180" y2="85"/>
+        <polyline points="170,79 180,85 170,91"/>
+        <!-- Magnifying glass -->
+        <circle cx="220" cy="70" r="22"/>
+        <circle cx="220" cy="70" r="14" opacity="0.4"/>
+        <line x1="237" y1="87" x2="250" y2="100"/>
+        <!-- Arrow -->
+        <line x1="268" y1="85" x2="318" y2="85"/>
+        <polyline points="308,79 318,85 308,91"/>
+        <!-- NCR doc with ! -->
+        <rect x="330" y="50" width="40" height="55" rx="1"/>
+        <line x1="337" y1="65" x2="363" y2="65" opacity="0.5"/>
+        <line x1="350" y1="73" x2="350" y2="86"/>
+        <circle cx="350" cy="92" r="1.5" fill="#CC785C" stroke="none"/>
+        <!-- Arrow -->
+        <line x1="386" y1="85" x2="436" y2="85"/>
+        <polyline points="426,79 436,85 426,91"/>
+        <!-- CAPA/Action -->
+        <circle cx="465" cy="85" r="20"/>
+        <path d="M 456 87 L 463 94 L 478 76"/>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- PIPELINE 8 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Tám</div>
+      <h2 class="pipeline-title">Kho — nhập, xuất, chuyển, kiểm kê</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="10,45 40,22 70,45 70,70 10,70 10,45"/>
+          <line x1="10" y1="45" x2="70" y2="45"/>
+          <rect x="20" y="52" width="16" height="18" opacity="0.6"/>
+          <rect x="44" y="52" width="16" height="18" opacity="0.6"/>
+          <line x1="40" y1="22" x2="40" y2="45" opacity="0.4"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> nhân viên kho.</div>
+  <p><strong>Xuất kho cho sản xuất.</strong> WO đã Release có Pick List. Kho lấy hàng theo PickListLine — mỗi dòng chỉ rõ part, lô, location, số. Quét barcode từng lô (ScanLog). Xác nhận Issue — trừ tồn MAIN, cộng tồn WIP.</p>
+  <p><strong>Chuyển kho.</strong> TransferOrder kho nguồn → kho đích. Nguồn Ship (trừ tồn, in-transit). Đích Receive (cộng tồn, đóng).</p>
+  <p><strong>Kiểm kê định kỳ.</strong> Tạo phiên cycle count, hệ thống gợi ý part ưu tiên (ABC class A). Nhập số thực. Bằng — đóng. Lệch — tự tạo Adjust, cần duyệt nếu lệch vượt ngưỡng.</p>
+  <p><strong>Điều chỉnh.</strong> Adjust ngoài cycle count cần lý do, đính kèm chứng từ, có AuditLog.</p>
+  <p><strong>Cảnh báo hết hạn.</strong> Chạy mỗi sáng, liệt kê lô hết hạn và sắp hết hạn theo ngưỡng. Ưu tiên dùng trước, hoặc Scrap Disposal.</p>
+</article>
+
+<!-- PIPELINE 9 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Chín</div>
+      <h2 class="pipeline-title">Kiểm tra chất lượng</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="34" cy="34" r="20"/>
+          <circle cx="34" cy="34" r="12" opacity="0.4"/>
+          <line x1="50" y1="50" x2="65" y2="65"/>
+          <path d="M 28 34 L 32 38 L 40 30" opacity="0.8"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> QC.<br/>
+  <strong>Ba loại kiểm:</strong> RECEIVING (hàng nhập), IN_PROCESS (trong sản xuất), FINAL (trước giao).</div>
+  <ol>
+    <li>Inspection sinh từ trigger: GRN tạo Inspection RECEIVING, WO hoàn thành công đoạn tạo IN_PROCESS, trước ship tạo FINAL. Ban đầu <span class="status">pending</span>.</li>
+    <li>QC bấm Start — <span class="status">in_progress</span>. Hệ thống hiện InspectionCharacteristic cần đo.</li>
+    <li>Nhập kết quả từng đặc tính vào InspectionResult — giá trị đo, pass/fail, ghi chú, ảnh.</li>
+    <li>Hoàn tất — <span class="status">completed</span>. Result tự tính:
+      <ul>
+        <li>PASS: toàn bộ trong dung sai → hàng sang MAIN hoặc FINISHED_GOODS.</li>
+        <li>FAIL: có đặc tính ngoài dung sai → sinh NCR tự động, hàng sang HOLD.</li>
+        <li>CONDITIONAL: qua với concession → cần phê duyệt riêng.</li>
+      </ul>
+    </li>
+    <li>Sinh Certificate of Conformance nếu yêu cầu.</li>
+  </ol>
+  <p>Dừng để chờ mẫu hoặc xác nhận — <span class="status">on_hold</span>.</p>
+</article>
+
+<!-- PIPELINE 10 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười</div>
+      <h2 class="pipeline-title">NCR và CAPA</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="18" y="12" width="44" height="56" rx="1"/>
+          <line x1="26" y1="24" x2="54" y2="24" opacity="0.5"/>
+          <line x1="26" y1="32" x2="54" y2="32" opacity="0.5"/>
+          <line x1="40" y1="42" x2="40" y2="54"/>
+          <circle cx="40" cy="60" r="1.5" fill="#CC785C" stroke="none"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai làm:</strong> QC, trưởng chất lượng, phòng ban liên quan.<br/>
+  <strong>Chín trạng thái NCR:</strong> <span class="status">open</span> → <span class="status">under_review</span> → <span class="status">pending_disposition</span> → <span class="status">disposition_approved</span> → <span class="status">in_rework</span> → <span class="status">pending_verification</span> → <span class="status">completed</span> → <span class="status">closed</span>. Ngoài ra <span class="status">voided</span>.</div>
+  <ol>
+    <li>NCR sinh từ Inspection FAIL (source = RECEIVING/IN_PROCESS/FINAL), hoặc khách hàng khiếu nại (CUSTOMER), hoặc audit nội bộ (AUDIT). <span class="status">open</span>, điền quantityAffected, defectCode, lot/serial.</li>
+    <li>Trưởng QC review — <span class="status">under_review</span>. Gán responsible owner.</li>
+    <li>Đề xuất disposition — <span class="status">pending_disposition</span>. Các phương án: return (trả lại supplier), rework (làm lại), scrap (loại bỏ), use-as-is với concession.</li>
+    <li>Cấp duyệt disposition — <span class="status">disposition_approved</span>.</li>
+    <li>Thực thi. Rework → <span class="status">in_rework</span> rồi <span class="status">pending_verification</span>. Return/Scrap → xử lý rồi sang verification.</li>
+    <li>Verification — <span class="status">completed</span>. QC xác nhận đã xử lý đúng.</li>
+    <li>Đóng — <span class="status">closed</span>, ghi hồ sơ cuối. Tạo nhầm hoặc trùng — <span class="status">voided</span>.</li>
+  </ol>
+  <p>NCR nghiêm trọng hoặc lặp lại — tạo CAPA. CAPA có các action giao cho từng người, deadline, verification. Đóng chỉ khi nguyên nhân gốc đã khắc phục và chứng minh bằng dữ liệu.</p>
+</article>
+
+<!-- ============================================================ -->
+<!-- SECTION: CÁC PIPELINE BỔ TRỢ -->
+<!-- ============================================================ -->
+<section class="section-divider">
+  <div class="section-mark">Phần năm</div>
+  <h1 class="section-title">Các pipeline <em>bổ trợ.</em></h1>
+  <p class="section-sub">Huỷ hàng, gom mua, truy xuất, phê duyệt, nhập dữ liệu. Chạy song song các luồng chính, gọi khi cần.</p>
+</section>
+
+<!-- PIPELINE 11 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười một</div>
+      <h2 class="pipeline-title">Scrap — huỷ hàng lỗi</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="20" y1="28" x2="60" y2="28"/>
+          <line x1="25" y1="28" x2="28" y2="62"/>
+          <line x1="55" y1="28" x2="52" y2="62"/>
+          <line x1="40" y1="28" x2="40" y2="62"/>
+          <line x1="30" y1="62" x2="50" y2="62"/>
+          <line x1="30" y1="22" x2="50" y2="22"/>
+          <line x1="35" y1="18" x2="45" y2="18"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <ol>
+    <li>Có hàng cần huỷ (từ NCR, scrapQty của WO, hàng hết hạn) — tạo ScrapDisposal. Ghi part, lô, số, lý do, giá trị.</li>
+    <li>Cấp thẩm quyền duyệt (giá trị lớn cần cấp cao hơn).</li>
+    <li>Duyệt xong — trừ tồn, ghi chi phí vào sổ (JournalEntry). Lưu ảnh hoặc biên bản huỷ.</li>
+  </ol>
+</article>
+
+<!-- PIPELINE 12 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười hai</div>
+      <h2 class="pipeline-title">Gom đơn mua</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="10" y1="20" x2="40" y2="40"/>
+          <line x1="10" y1="40" x2="40" y2="40"/>
+          <line x1="10" y1="60" x2="40" y2="40"/>
+          <line x1="40" y1="40" x2="70" y2="40"/>
+          <polyline points="62,34 70,40 62,46"/>
+          <circle cx="10" cy="20" r="2.5" fill="#CC785C" stroke="none"/>
+          <circle cx="10" cy="40" r="2.5" fill="#CC785C" stroke="none"/>
+          <circle cx="10" cy="60" r="2.5" fill="#CC785C" stroke="none"/>
+          <circle cx="70" cy="40" r="3"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <p>Thực tế ít khi một PR lên một PO. Thường gom.</p>
+  <ol>
+    <li><strong>Gom theo supplier trong một đợt.</strong> Khi Convert nhiều PR đã Approve cùng supplier, chọn Consolidate — hệ thống tạo một PO chung, các PR trỏ về PO đó với <span class="status">PARTIALLY_ORDERED</span> hoặc <span class="status">PO_CREATED</span>.</li>
+    <li><strong>Gom theo chu kỳ tuần.</strong> Planner cuối tuần mở toàn bộ PR <span class="status">APPROVED</span> chưa Convert, group theo supplier, chạy Convert hàng loạt. Mỗi supplier một PO.</li>
+  </ol>
+  <p>Lợi ích: tăng số lượng mỗi PO, chạm price break cao hơn, giảm giá. Hệ thống tự gợi ý bậc giá tối ưu theo priceBreakQty.</p>
+  <p>Ràng buộc: chỉ gom được PR cùng đồng tiền, cùng điều kiện giao. Khác điều khoản phải tách PO.</p>
+</article>
+
+<!-- PIPELINE 13 -->
+<article class="pipeline page-break">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười ba</div>
+      <h2 class="pipeline-title">Truy xuất</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="40" r="6"/>
+          <line x1="24" y1="40" x2="36" y2="40"/>
+          <circle cx="42" cy="40" r="6"/>
+          <line x1="48" y1="40" x2="60" y2="40" opacity="0.6"/>
+          <circle cx="66" cy="40" r="6" opacity="0.6"/>
+          <line x1="42" y1="34" x2="42" y2="22" opacity="0.5"/>
+          <circle cx="42" cy="18" r="4" opacity="0.5"/>
+          <line x1="42" y1="46" x2="42" y2="58" opacity="0.5"/>
+          <circle cx="42" cy="62" r="4" opacity="0.5"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="pipeline-meta"><strong>Ai dùng:</strong> QC, kho, sales khi khách khiếu nại. &nbsp; <strong>Đầu vào:</strong> một lotNumber hoặc serial.</div>
+  <ol>
+    <li>Vào /quality/traceability, tra mã lô.</li>
+    <li>Hệ thống trả cây quan hệ — lô đến từ supplier nào (GRN, PO), đã cấp cho WO nào, WO sinh lô thành phẩm nào, lô thành phẩm giao Shipment nào → khách nào.</li>
+    <li>Cần recall — export danh sách, gửi thông báo tới khách liên quan, tạo NCR chính thức.</li>
+  </ol>
+  <p>Dữ liệu này có được vì mọi chuyển động tồn đều ghi LotTransaction.</p>
+</article>
+
+<!-- PIPELINE 14 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười bốn</div>
+      <h2 class="pipeline-title">Approval — các luồng phê duyệt</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="40" cy="40" r="24"/>
+          <path d="M 28 41 L 36 50 L 54 30"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <p>Hệ thống có module Workflow dùng chung cho các việc cần duyệt — PR, WO scrap, NCR disposition, Adjust giá trị cao, PO giá trị lớn.</p>
+  <ol>
+    <li>Đến bước cần duyệt — hệ thống tạo WorkflowInstance dựa trên WorkflowDefinition đã cấu hình (ví dụ "PR trên 50 triệu cần Giám đốc").</li>
+    <li>Gửi notification cho người duyệt.</li>
+    <li>Người duyệt mở /approvals hoặc vào bản ghi gốc, bấm Approve/Reject (tạo WorkflowApproval).</li>
+    <li>Workflow nhiều bước — sang WorkflowStep kế tiếp. Mọi bước ghi WorkflowHistory.</li>
+    <li>Kết quả duyệt cuối cùng gắn về đối tượng gốc.</li>
+  </ol>
+  <p>Cấu hình workflow trong /settings. Đổi workflow không ảnh hưởng instance đang chạy.</p>
+</article>
+
+<!-- PIPELINE 15 -->
+<article class="pipeline">
+  <div class="pipeline-head">
+    <div class="left">
+      <div class="pipeline-num">Pipeline Mười lăm</div>
+      <h2 class="pipeline-title">Import dữ liệu hàng loạt</h2>
+    </div>
+    <div class="right">
+      <svg viewBox="0 0 80 80" width="70" height="70" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#CC785C" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="40" y1="15" x2="40" y2="45"/>
+          <polyline points="32,37 40,45 48,37"/>
+          <rect x="18" y="50" width="44" height="18" rx="1"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <ol>
+    <li>Vào /import, chọn loại (parts, BOM, inventory, customers, suppliers). Upload CSV/Excel.</li>
+    <li><strong>Analyze.</strong> Hệ thống đọc header, so với schema. Output: bảng mapping (cột file ↔ field database), cảnh báo dòng thiếu field bắt buộc, sai kiểu, trùng khoá.</li>
+    <li>Chỉnh mapping, lưu thành ImportMapping (dùng lại lần sau).</li>
+    <li><strong>Execute.</strong> Hệ thống chạy import trong ImportJob (async). Từng dòng lưu trong ImportRow với kết quả success/failed.</li>
+    <li>Xem kết quả trong /import/history. Thất bại — export file error, sửa, import lại phần còn lại.</li>
+    <li>Cần gỡ — Rollback toàn bộ batch. Hệ thống xoá mọi bản ghi do batch tạo.</li>
+  </ol>
+</article>
+
+<!-- ============================================================ -->
+<!-- FINAL DIAGRAM -->
+<!-- ============================================================ -->
+<section class="finale">
+  <div class="section-mark">Sơ đồ tổng</div>
+  <h2>Mười lăm pipeline, <em>một đường dây.</em></h2>
+  <p class="sub">Theo trình tự thời gian của một đơn hàng điển hình.</p>
+
+  <div class="finale-diagram">
+    <svg viewBox="0 0 620 400" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#CC785C" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+
+        <!-- Main horizontal spine -->
+        <line x1="40" y1="200" x2="580" y2="200"/>
+
+        <!-- Nodes on spine: P1, P2, P9, P2-ship -->
+        <circle cx="80" cy="200" r="6" fill="#F0EEE6"/>
+        <circle cx="230" cy="200" r="6" fill="#F0EEE6"/>
+        <circle cx="440" cy="200" r="6" fill="#F0EEE6"/>
+        <circle cx="560" cy="200" r="6" fill="#F0EEE6"/>
+
+        <!-- Labels main -->
+        <text x="80" y="225" font-family="Georgia" font-size="9" fill="#2C2A26" text-anchor="middle">P1 Báo giá</text>
+        <text x="230" y="225" font-family="Georgia" font-size="9" fill="#2C2A26" text-anchor="middle">P2 Đơn bán</text>
+        <text x="440" y="225" font-family="Georgia" font-size="9" fill="#2C2A26" text-anchor="middle">P9 Kiểm FG</text>
+        <text x="560" y="225" font-family="Georgia" font-size="9" fill="#2C2A26" text-anchor="middle">P2 Giao hàng</text>
+
+        <!-- Upper branch: Mua hàng -->
+        <path d="M 230 194 Q 280 120, 330 90"/>
+        <path d="M 330 90 L 380 90"/>
+        <path d="M 380 90 Q 430 120, 440 194"/>
+        <circle cx="280" cy="110" r="5" fill="#F0EEE6"/>
+        <circle cx="330" cy="90" r="5" fill="#F0EEE6"/>
+        <circle cx="380" cy="90" r="5" fill="#F0EEE6"/>
+        <circle cx="420" cy="110" r="5" fill="#F0EEE6"/>
+        <text x="280" y="100" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P3 MRP</text>
+        <text x="330" y="80" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P4 PR</text>
+        <text x="380" y="80" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P5 PO</text>
+        <text x="420" y="100" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P12 Gom</text>
+
+        <!-- Lower branch: Sản xuất -->
+        <path d="M 230 206 Q 280 280, 330 310"/>
+        <path d="M 330 310 L 380 310"/>
+        <path d="M 380 310 Q 430 280, 440 206"/>
+        <circle cx="280" cy="290" r="5" fill="#F0EEE6"/>
+        <circle cx="330" cy="310" r="5" fill="#F0EEE6"/>
+        <circle cx="380" cy="310" r="5" fill="#F0EEE6"/>
+        <circle cx="420" cy="290" r="5" fill="#F0EEE6"/>
+        <text x="280" y="305" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P6 WO</text>
+        <text x="330" y="325" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P8 Cấp VT</text>
+        <text x="380" y="325" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P7 BOM</text>
+        <text x="420" y="305" font-family="Georgia" font-size="8" fill="#5A544A" text-anchor="middle">P9 IN_PROC</text>
+
+        <!-- Side notes: P10, P11, P13, P14, P15 around edges -->
+        <g opacity="0.5">
+          <line x1="40" y1="40" x2="120" y2="40" stroke-dasharray="2,3"/>
+          <line x1="120" y1="40" x2="120" y2="180" stroke-dasharray="2,3"/>
+        </g>
+        <text x="40" y="35" font-family="Georgia" font-size="8" fill="#8C8376">P15 Import · chạy bất cứ lúc nào</text>
+
+        <g opacity="0.5">
+          <line x1="580" y1="40" x2="500" y2="40" stroke-dasharray="2,3"/>
+          <line x1="500" y1="40" x2="500" y2="180" stroke-dasharray="2,3"/>
+        </g>
+        <text x="580" y="35" font-family="Georgia" font-size="8" fill="#8C8376" text-anchor="end">P14 Approval · gọi trong P4, P5, P8, P10, P11</text>
+
+        <g opacity="0.5">
+          <line x1="40" y1="370" x2="200" y2="370" stroke-dasharray="2,3"/>
+        </g>
+        <text x="40" y="385" font-family="Georgia" font-size="8" fill="#8C8376">P10 NCR · sinh khi P9 FAIL</text>
+        <text x="240" y="385" font-family="Georgia" font-size="8" fill="#8C8376">P11 Scrap · từ P10 hoặc hết hạn</text>
+        <text x="440" y="385" font-family="Georgia" font-size="8" fill="#8C8376">P13 Truy xuất · khi khách phản hồi</text>
+
+        <!-- Start and end markers -->
+        <circle cx="40" cy="200" r="4" fill="#CC785C" stroke="none"/>
+        <circle cx="580" cy="200" r="4" fill="#CC785C" stroke="none"/>
+        <text x="40" y="190" font-family="Georgia" font-size="8" fill="#CC785C" text-anchor="middle">bắt đầu</text>
+        <text x="580" y="190" font-family="Georgia" font-size="8" fill="#CC785C" text-anchor="middle">kết thúc</text>
+
+      </g>
+    </svg>
+  </div>
+
+  <p class="finale-note">Người vận hành quen với 15 pipeline trên là làm chủ hệ thống. Các tính năng còn lại — AI Insights, Analytics, Compliance, Audit — là công cụ quan sát, không phá vỡ các pipeline đã có.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- COLOPHON -->
+<!-- ============================================================ -->
+<section class="colophon">
+  <svg viewBox="0 0 120 20" width="60" xmlns="http://www.w3.org/2000/svg">
+    <line x1="10" y1="10" x2="110" y2="10" stroke="#CC785C" stroke-width="0.8"/>
+    <circle cx="10" cy="10" r="2" fill="#CC785C"/>
+    <circle cx="110" cy="10" r="2" fill="#CC785C"/>
+    <circle cx="60" cy="10" r="3" fill="none" stroke="#CC785C" stroke-width="0.8"/>
+  </svg>
+  <p>Tài liệu này mô tả các chuỗi thao tác đã được thiết kế trong RTR-MRP đến thời điểm tháng tư, hai nghìn không trăm hai sáu.</p>
+  <div class="rule"></div>
+  <p>Trạng thái và tên trường trong tài liệu khớp với enum và model trong Prisma schema. Khi hệ thống có cập nhật, các pipeline có thể được bổ sung mà không phá vỡ thứ tự đã có ở đây.</p>
+  <div class="rule"></div>
+  <p style="font-style: normal; color: #8C8376; font-size: 9pt; font-family: 'Helvetica Neue', sans-serif; letter-spacing: 1pt; text-transform: uppercase;">RTR · 2026</p>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 30
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "ps aux | grep -E 'docker|nohup|build' | grep -v grep | head -5; echo XP\r"
+expect "XP"
+expect "\\$"
+send "df -h / 2>/dev/null | tail -1; echo XD\r"
+expect "XD"
+expect "\\$"
+send "wc -l /tmp/deploy.log 2>/dev/null; echo XW\r"
+expect "XW"
+expect "\\$"
+send "exit\r"
+expect eof

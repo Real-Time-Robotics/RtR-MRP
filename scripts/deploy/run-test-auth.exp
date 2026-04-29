@@ -1,0 +1,14 @@
+#!/usr/bin/expect -f
+set timeout 60
+spawn scp /Users/os/RtR/rtr-mrp-pr/scripts/deploy/test-auth.sh lam@171.244.40.23:/tmp/test-auth.sh
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect eof
+
+spawn ssh lam@171.244.40.23
+expect "password:" { send "Tranthiquynh1987@\r" }
+expect "\\$"
+send "bash /tmp/test-auth.sh; echo XFINAL\r"
+expect "XFINAL"
+expect "\\$"
+send "exit\r"
+expect eof
