@@ -46,6 +46,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PendingApprovals } from '@/components/workflow';
 import { toast } from 'sonner';
+import { EmptyHeroCard } from '@/components/home/empty-hero-card';
 import { clientLogger } from '@/lib/client-logger';
 
 // =============================================================================
@@ -656,9 +657,20 @@ export default function HomePage() {
   const quality = oeeData?.avgQuality ?? 0;
   const oeeAvailable = !oeeLoading && oeeData !== null;
 
+  // Detect empty state: no real production data
+  const isEmptyState = !loading && dashboardData &&
+    dashboardData.pendingOrders === 0 &&
+    dashboardData.activePOs === 0 &&
+    dashboardData.criticalStock === 0 &&
+    woSummary.completed === 0 &&
+    woSummary.inProgress === 0;
+
   return (
     // COMPACT: space-y-6 → space-y-3, pb-8 → pb-4
     <div className="space-y-3 pb-4">
+      {/* Empty state hero card for first-time users */}
+      {isEmptyState && <EmptyHeroCard />}
+
       {/* Page Header - Real-time aware */}
       <div className="flex items-start sm:items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -730,26 +742,26 @@ export default function HomePage() {
         />
         <KpiTile
           label={t('dashboard.oee')}
-          value={oeeLoading ? '...' : `${oee.toFixed(1)}%`}
+          value={oeeLoading ? '...' : !oeeAvailable ? '—' : `${oee.toFixed(1)}%`}
           icon={Activity}
           href="/production"
-          severity={oee >= 85 ? 'success' : oee >= 60 ? 'warning' : 'danger'}
+          severity={!oeeAvailable ? 'default' : oee >= 85 ? 'success' : oee >= 60 ? 'warning' : 'danger'}
           tooltip="OEE: Hiệu suất thiết bị tổng thể (%)"
         />
         <KpiTile
           label={t('dashboard.uptime')}
-          value={oeeLoading ? '...' : `${uptime.toFixed(1)}%`}
+          value={oeeLoading ? '...' : !oeeAvailable ? '—' : `${uptime.toFixed(1)}%`}
           icon={Target}
           href="/production"
-          severity={uptime >= 90 ? 'success' : uptime >= 70 ? 'warning' : 'danger'}
+          severity={!oeeAvailable ? 'default' : uptime >= 90 ? 'success' : uptime >= 70 ? 'warning' : 'danger'}
           tooltip="Khả dụng: Tỷ lệ thời gian máy hoạt động (%)"
         />
         <KpiTile
           label={t('dashboard.qualityRate')}
-          value={oeeLoading ? '...' : `${quality.toFixed(1)}%`}
+          value={oeeLoading ? '...' : !oeeAvailable ? '—' : `${quality.toFixed(1)}%`}
           icon={CheckCircle2}
           href="/quality"
-          severity={quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
+          severity={!oeeAvailable ? 'default' : quality >= 95 ? 'success' : quality >= 85 ? 'warning' : 'danger'}
           tooltip="Chất lượng: Tỷ lệ sản phẩm đạt yêu cầu (%)"
         />
         <KpiTile
