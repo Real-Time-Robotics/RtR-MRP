@@ -101,7 +101,7 @@ async function main() {
     await prisma.equipment.upsert({
       where: { code: eq.code },
       update: { name: eq.name, status: eq.status },
-      create: { code: eq.code, name: eq.name, type: eq.type, status: eq.status, workCenterId: wc?.id },
+      create: { code: eq.code, name: eq.name, type: eq.type, status: eq.status, ...(wc?.id ? { workCenterId: wc.id } : {}) },
     });
   }
   console.log(`  ✓ ${equipment.length} equipment seeded`);
