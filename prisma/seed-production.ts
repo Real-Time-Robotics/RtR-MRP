@@ -98,10 +98,13 @@ async function main() {
 
   for (const eq of equipment) {
     const wc = createdWCs.find((w) => w.code === eq.wcCode);
+    const createData: Record<string, unknown> = { code: eq.code, name: eq.name, type: eq.type, status: eq.status };
+    if (wc?.id) createData.workCenterId = wc.id;
     await prisma.equipment.upsert({
       where: { code: eq.code },
       update: { name: eq.name, status: eq.status },
-      create: { code: eq.code, name: eq.name, type: eq.type, status: eq.status, ...(wc?.id ? { workCenterId: wc.id } : {}) },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      create: createData as any,
     });
   }
   console.log(`  ✓ ${equipment.length} equipment seeded`);
