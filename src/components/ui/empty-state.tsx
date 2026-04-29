@@ -87,7 +87,7 @@ export function EmptyState({
             action.href ? (
               <Link
                 href={action.href}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 {action.label}
@@ -95,7 +95,7 @@ export function EmptyState({
             ) : (
               <button
                 onClick={action.onClick}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 {action.label}
