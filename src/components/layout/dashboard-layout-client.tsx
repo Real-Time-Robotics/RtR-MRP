@@ -8,6 +8,7 @@ import { ContextAssistantDialog } from '@/components/work-session/context-assist
 import { CommandPalette } from '@/components/command-palette';
 
 import { useFeatureAnnouncement } from '@/hooks/use-feature-announcement';
+import { TourOverlay } from '@/components/onboarding/tour-overlay';
 
 import type { RoleCode } from '@/lib/auth/rbac';
 
@@ -44,6 +45,8 @@ export function DashboardLayoutClient({ children, userRoles = [], userId }: Dash
       <ContextAssistantDialog />
       {/* Command Palette - Cmd+K */}
       <CommandPalette />
+      {/* Onboarding tour - first login */}
+      <TourOverlay />
     </ModernAppShell>
   );
 }
