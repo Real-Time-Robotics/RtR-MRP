@@ -25,6 +25,7 @@ import {
   Building,
   Smartphone,
   Shield,
+  Factory,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -53,7 +54,7 @@ interface SidebarGroup {
 }
 
 // =============================================================================
-// SIDEBAR GROUP CONFIG — 9 cụm
+// SIDEBAR GROUP CONFIG — 10 cụm
 // =============================================================================
 
 const SIDEBAR_GROUPS: SidebarGroup[] = [
@@ -92,6 +93,21 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { href: '/operations/issue', label: 'Xuất hàng' },
       { href: '/warehouse-receipts', label: 'Nhận hàng' },
       { href: '/inventory/cycle-count', label: 'Kiểm kho' },
+    ],
+  },
+  {
+    id: 'production',
+    label: 'Sản xuất',
+    ariaLabel: 'Production',
+    icon: Factory,
+    roles: ['production', 'admin'],
+    items: [
+      { href: '/production/daily-plan', label: 'Kế hoạch ngày' },
+      { href: '/production/shift-report', label: 'Báo cáo ca' },
+      { href: '/production/shift-entry', label: 'Nhập ca (Operator)', roles: ['production', 'admin'] },
+      { href: '/production/equipment', label: 'Thiết bị' },
+      { href: '/production/downtime', label: 'Sự cố máy' },
+      { href: '/production/report', label: 'Báo cáo sản xuất' },
     ],
   },
   {
@@ -263,7 +279,7 @@ function filterGroups(groups: SidebarGroup[], userRoles: RoleCode[]): SidebarGro
 
 function getDefaultExpanded(roles: RoleCode[]): string[] {
   const defaults = ['home'];
-  if (roles.includes('production')) defaults.push('operations');
+  if (roles.includes('production')) { defaults.push('operations'); defaults.push('production'); }
   else if (roles.includes('warehouse')) defaults.push('warehouse');
   else if (roles.includes('engineer')) defaults.push('engineering');
   else if (roles.includes('procurement')) defaults.push('purchasing');
