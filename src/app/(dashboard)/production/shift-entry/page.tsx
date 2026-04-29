@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { DowntimeQuickModal } from '@/components/production/downtime-quick-modal';
+import { BomCollapsible } from '@/components/production/bom-collapsible';
 import { Play, Square, AlertTriangle, Clock, Package } from 'lucide-react';
 
 // --- Types ---
@@ -287,6 +288,8 @@ export default function ShiftEntryPage() {
                   {wo.completedQty} / {wo.quantity} ({progress}%)
                   {wo.scrapQty > 0 && <span className="text-red-500 ml-2">Scrap: {wo.scrapQty}</span>}
                 </p>
+
+                <BomCollapsible workOrderId={wo.id} autoRefreshMs={30000} />
 
                 {!isComplete && (
                   <Button
