@@ -49,10 +49,10 @@ describe('SidebarV2 — filterGroups', () => {
     expect(ids).toHaveLength(6);
   });
 
-  it('production → 5 groups (home, my-work, operations, search, reports)', () => {
+  it('production → 6 groups (home, my-work, operations, production, search, reports)', () => {
     const ids = getGroupIds(['production']);
-    expect(ids).toEqual(['home', 'my-work', 'operations', 'search', 'reports']);
-    expect(ids).toHaveLength(5);
+    expect(ids).toEqual(['home', 'my-work', 'operations', 'production', 'search', 'reports']);
+    expect(ids).toHaveLength(6);
   });
 
   it('procurement → 6 groups (home, my-work, operations, search, purchasing, reports)', () => {
@@ -61,13 +61,13 @@ describe('SidebarV2 — filterGroups', () => {
     expect(ids).toHaveLength(6);
   });
 
-  it('admin → all 9 groups', () => {
+  it('admin → all 10 groups', () => {
     const ids = getGroupIds(['admin']);
     expect(ids).toEqual([
-      'home', 'my-work', 'operations', 'search',
+      'home', 'my-work', 'operations', 'production', 'search',
       'engineering', 'purchasing', 'warehouse', 'reports', 'admin',
     ]);
-    expect(ids).toHaveLength(9);
+    expect(ids).toHaveLength(10);
   });
 
   it('engineer + warehouse → 7 groups (union: engineering + warehouse)', () => {
@@ -159,5 +159,55 @@ describe('SidebarV2 — path correction (TIP-S275-01)', () => {
     for (const path of corrected) {
       expect(allHrefs).toContain(path);
     }
+  });
+});
+
+describe('SidebarV2 — cụm Sản xuất (TIP-S28-02)', () => {
+  function getGroupIds(roles: RoleCode[]): string[] {
+    return filterGroups(SIDEBAR_GROUPS, roles).map((g) => g.id);
+  }
+
+  it('engineer → KHÔNG thấy cụm Sản xuất', () => {
+    const ids = getGroupIds(['engineer']);
+    expect(ids).not.toContain('production');
+  });
+
+  it('production role → thấy cụm Sản xuất với 6 sub-menu', () => {
+    const groups = filterGroups(SIDEBAR_GROUPS, ['production']);
+    const productionGroup = groups.find((g) => g.id === 'production');
+    expect(productionGroup).toBeDefined();
+    expect(productionGroup!.items).toHaveLength(6);
+    expect(productionGroup!.items.map((i) => i.href)).toEqual([
+      '/production/daily-plan',
+      '/production/shift-report',
+      '/production/shift-entry',
+      '/production/equipment',
+      '/production/downtime',
+      '/production/report',
+    ]);
+  });
+
+  it('warehouse → KHÔNG thấy cụm Sản xuất', () => {
+    const ids = getGroupIds(['warehouse']);
+    expect(ids).not.toContain('production');
+  });
+
+  it('admin → thấy cụm Sản xuất', () => {
+    const ids = getGroupIds(['admin']);
+    expect(ids).toContain('production');
+  });
+
+  it('production + admin combined → Sản xuất xuất hiện 1 lần (no duplicate)', () => {
+    const ids = getGroupIds(['production', 'admin']);
+    const productionCount = ids.filter((id) => id === 'production').length;
+    expect(productionCount).toBe(1);
+  });
+
+  it('production role → "Gia công" trong cụm Vận hành vẫn visible (regression)', () => {
+    const groups = filterGroups(SIDEBAR_GROUPS, ['production']);
+    const opsGroup = groups.find((g) => g.id === 'operations');
+    expect(opsGroup).toBeDefined();
+    const giaConghref = opsGroup!.items.find((i) => i.label === 'Gia công');
+    expect(giaConghref).toBeDefined();
   });
 });
