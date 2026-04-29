@@ -1,6 +1,6 @@
 // =============================================================================
-// SIDEBAR V2 — 9 cụm role-gated (Sprint 27 TIP-S27-06)
-// Industrial Precision style, Vietnamese labels, English aria-labels
+// SIDEBAR V2 — Enterprise Navigation
+// Refined industrial aesthetic · Role-gated · Vietnamese labels
 // =============================================================================
 
 'use client';
@@ -173,7 +173,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { href: '/admin/audit', label: 'Audit Log' },
     ],
   },
-  // === TIP-S27-08: Hidden groups (shown when feature flag enabled) ===
+  // === Hidden groups (shown when feature flag enabled) ===
   {
     id: 'finance',
     label: 'Tài chính',
@@ -242,7 +242,6 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
 function filterGroups(groups: SidebarGroup[], userRoles: RoleCode[]): SidebarGroup[] {
   return groups
     .filter((g) => {
-      // Feature flag gate (if set, flag must be true)
       if (g.featureFlag && !FEATURE_FLAGS[g.featureFlag]) return false;
       if (g.roles === 'all') return true;
       if (userRoles.includes('admin')) return true;
@@ -262,12 +261,14 @@ function filterGroups(groups: SidebarGroup[], userRoles: RoleCode[]): SidebarGro
 // DEFAULT EXPANDED GROUP per role
 // =============================================================================
 
-function getDefaultExpanded(roles: RoleCode[]): string {
-  if (roles.includes('production')) return 'operations';
-  if (roles.includes('warehouse')) return 'warehouse';
-  if (roles.includes('engineer')) return 'engineering';
-  if (roles.includes('procurement')) return 'purchasing';
-  return 'home';
+function getDefaultExpanded(roles: RoleCode[]): string[] {
+  const defaults = ['home'];
+  if (roles.includes('production')) defaults.push('operations');
+  else if (roles.includes('warehouse')) defaults.push('warehouse');
+  else if (roles.includes('engineer')) defaults.push('engineering');
+  else if (roles.includes('procurement')) defaults.push('purchasing');
+  else defaults.push('operations');
+  return defaults;
 }
 
 // =============================================================================
@@ -281,10 +282,10 @@ export interface SidebarV2Props {
 export function SidebarV2({ user }: SidebarV2Props) {
   const pathname = usePathname();
   const filteredGroups = filterGroups(SIDEBAR_GROUPS, user.roles);
-  const defaultExpanded = getDefaultExpanded(user.roles);
+  const defaults = getDefaultExpanded(user.roles);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set([defaultExpanded])
+    () => new Set(defaults)
   );
 
   const toggleGroup = (groupId: string) => {
@@ -302,10 +303,8 @@ export function SidebarV2({ user }: SidebarV2Props) {
   const isActive = (href: string): boolean => {
     const fullHref = href.startsWith('/dashboard') ? href : `/dashboard${href.startsWith('/') ? href : `/${href}`}`;
     const normalizedHref = href.startsWith('/') ? href : `/${href}`;
-    // Match against both /dashboard/X and /X patterns
     if (pathname === fullHref || pathname === normalizedHref) return true;
     if (pathname.startsWith(fullHref + '/') || pathname.startsWith(normalizedHref + '/')) return true;
-    // Also match /home → /dashboard or /dashboard/home
     if (href === '/home' && (pathname === '/dashboard' || pathname === '/home')) return true;
     return false;
   };
@@ -314,16 +313,27 @@ export function SidebarV2({ user }: SidebarV2Props) {
     <nav
       role="navigation"
       aria-label="Sidebar"
-      className="flex flex-col h-full w-[220px] bg-white dark:bg-steel-dark border-r border-gray-200 dark:border-mrp-border overflow-y-auto"
+      className={cn(
+        'flex flex-col h-full w-[260px] overflow-y-auto',
+        'bg-slate-50 dark:bg-[#0c0d0f]',
+        'border-r border-slate-200/80 dark:border-slate-800/60',
+      )}
     >
-      <div className="py-2 space-y-0.5">
-        {filteredGroups.map((group) => {
+      {/* Scrollable content */}
+      <div className="flex-1 py-3">
+        {filteredGroups.map((group, groupIndex) => {
           const isExpanded = expandedGroups.has(group.id);
           const Icon = group.icon;
           const hasActiveChild = group.items.some((item) => isActive(item.href));
 
           return (
             <div key={group.id}>
+              {/* Separator between groups */}
+              {groupIndex > 0 && (
+                <div className="mx-4 my-1.5 border-t border-slate-200/60 dark:border-slate-800/40" />
+              )}
+
+              {/* Group header */}
               <button
                 onClick={() => toggleGroup(group.id)}
                 onKeyDown={(e) => {
@@ -335,26 +345,48 @@ export function SidebarV2({ user }: SidebarV2Props) {
                 aria-expanded={isExpanded}
                 aria-label={group.ariaLabel}
                 className={cn(
-                  'w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors',
-                  'hover:bg-gray-50 dark:hover:bg-gunmetal',
+                  'w-full flex items-center gap-3 px-4 py-2.5 text-left',
+                  'transition-colors duration-150',
+                  'hover:bg-slate-100 dark:hover:bg-slate-800/50',
+                  'rounded-lg mx-1.5',
+                  'group',
                   hasActiveChild
-                    ? 'text-info-cyan'
-                    : 'text-gray-700 dark:text-mrp-text-secondary'
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-slate-700 dark:text-slate-300'
                 )}
+                style={{ width: 'calc(100% - 12px)' }}
               >
-                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="flex-1 text-[11px] font-semibold font-mono tracking-wider uppercase truncate">
+                <Icon
+                  className={cn(
+                    'flex-shrink-0 transition-colors duration-150',
+                    hasActiveChild
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-400'
+                  )}
+                  size={18}
+                  strokeWidth={1.8}
+                />
+                <span className="flex-1 text-[13px] font-semibold tracking-tight truncate">
                   {group.label}
                 </span>
-                {isExpanded ? (
-                  <ChevronDown className="w-3 h-3 flex-shrink-0" />
-                ) : (
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                )}
+                <ChevronDown
+                  className={cn(
+                    'flex-shrink-0 text-slate-400 dark:text-slate-600 transition-transform duration-200',
+                    !isExpanded && '-rotate-90'
+                  )}
+                  size={15}
+                  strokeWidth={2}
+                />
               </button>
 
-              {isExpanded && (
-                <div className="ml-5 border-l border-gray-200 dark:border-mrp-border">
+              {/* Group items */}
+              <div
+                className={cn(
+                  'overflow-hidden transition-all duration-200',
+                  isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                )}
+              >
+                <div className="ml-4 pl-4 border-l-2 border-slate-200 dark:border-slate-800 mr-3 mt-0.5 mb-1">
                   {group.items.map((item) => {
                     const active = isActive(item.href);
                     return (
@@ -362,15 +394,15 @@ export function SidebarV2({ user }: SidebarV2Props) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'block pl-3 pr-2 py-1 text-[11px] font-mono transition-colors',
+                          'flex items-center gap-2 px-3 py-[7px] rounded-md text-[13px] transition-all duration-150',
                           active
-                            ? 'text-info-cyan bg-info-cyan/5 border-l-2 border-info-cyan -ml-px'
-                            : 'text-gray-600 dark:text-mrp-text-muted hover:text-gray-900 dark:hover:text-mrp-text-primary hover:bg-gray-50 dark:hover:bg-gunmetal'
+                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 font-medium border-l-2 border-blue-500 -ml-[2px] pl-[10px]'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                         )}
                       >
-                        {item.label}
+                        <span className="truncate">{item.label}</span>
                         {item.badge && (
-                          <span className="ml-1 px-1 py-0.5 text-[9px] font-bold bg-info-cyan/10 text-info-cyan rounded">
+                          <span className="ml-auto px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
                             {item.badge}
                           </span>
                         )}
@@ -378,7 +410,7 @@ export function SidebarV2({ user }: SidebarV2Props) {
                     );
                   })}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
