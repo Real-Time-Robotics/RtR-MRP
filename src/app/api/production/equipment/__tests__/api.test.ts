@@ -61,7 +61,7 @@ describe('Equipment API', () => {
     const req = new Request('http://localhost/api/production/equipment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: 'EQ-001', name: 'CNC Mill' }),
+      body: JSON.stringify({ code: 'EQ-001', name: 'CNC Mill', type: 'CNC', workCenterId: 'wc-1' }),
     });
 
     const res = await (POST as Function)(req, { params: Promise.resolve({}) }, mockSession);
@@ -76,7 +76,7 @@ describe('Equipment API', () => {
     const req = new Request('http://localhost/api/production/equipment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: 'EQ-001', name: 'CNC Mill' }),
+      body: JSON.stringify({ code: 'EQ-001', name: 'CNC Mill', type: 'CNC', workCenterId: 'wc-1' }),
     });
 
     const res = await (POST as Function)(req, { params: Promise.resolve({}) }, mockSession);

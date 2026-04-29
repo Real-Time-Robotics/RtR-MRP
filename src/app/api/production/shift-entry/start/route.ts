@@ -42,10 +42,13 @@ export const POST = withAuth(async (request: NextRequest, _context, session) => 
     where: { userId: session.user.id },
   });
   if (!employee) {
+    const userName = session.user.name || session.user.email || 'Unknown';
     employee = await prisma.employee.create({
       data: {
-        employeeId: `EMP-${session.user.id.slice(0, 8)}`,
-        name: session.user.name || session.user.email || 'Unknown',
+        employeeCode: `EMP-${session.user.id.slice(0, 8)}`,
+        firstName: userName.split(' ')[0] || 'Unknown',
+        lastName: userName.split(' ').slice(1).join(' ') || '',
+        email: session.user.email,
         userId: session.user.id,
         department: 'Production',
         position: 'Operator',

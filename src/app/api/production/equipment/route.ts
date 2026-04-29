@@ -10,8 +10,8 @@ import { hasRole } from '@/lib/auth/rbac';
 const createSchema = z.object({
   code: z.string().min(1).max(50),
   name: z.string().min(1).max(200),
-  workCenterId: z.string().optional(),
-  type: z.string().optional(),
+  workCenterId: z.string().min(1),
+  type: z.string().min(1),
   model: z.string().optional(),
   serialNumber: z.string().optional(),
   description: z.string().optional(),
@@ -54,8 +54,14 @@ export const POST = withAuth(async (request: NextRequest, _context, session) => 
 
   const equipment = await prisma.equipment.create({
     data: {
-      ...parsed.data,
+      code: parsed.data.code,
+      name: parsed.data.name,
       status: 'operational',
+      type: parsed.data.type,
+      model: parsed.data.model,
+      serialNumber: parsed.data.serialNumber,
+      description: parsed.data.description,
+      workCenterId: parsed.data.workCenterId,
     },
     include: {
       workCenter: { select: { id: true, code: true, name: true } },
