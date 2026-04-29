@@ -98,11 +98,8 @@ export function ModernHeader({
             <span className="text-left">{t('header.home')}</span>
           </Link>
 
-          {/* Navigation Tabs - Industrial Style */}
-          <HeaderNav
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          {/* Navigation Tabs disabled — sidebar v2 is single source (Sprint 28.5 TIP-S285-01) */}
+          {/* <HeaderNav activeTab={activeTab} onTabChange={setActiveTab} /> */}
 
           {/* Spacer */}
           <div className="flex-1" />
