@@ -351,7 +351,7 @@ export function SidebarV2({ user }: SidebarV2Props) {
                   'rounded-lg mx-1.5',
                   'group',
                   hasActiveChild
-                    ? 'text-blue-600 dark:text-blue-400'
+                    ? 'text-emerald-700 dark:text-emerald-400'
                     : 'text-slate-700 dark:text-slate-300'
                 )}
                 style={{ width: 'calc(100% - 12px)' }}
@@ -360,7 +360,7 @@ export function SidebarV2({ user }: SidebarV2Props) {
                   className={cn(
                     'flex-shrink-0 transition-colors duration-150',
                     hasActiveChild
-                      ? 'text-blue-600 dark:text-blue-400'
+                      ? 'text-emerald-700 dark:text-emerald-400'
                       : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-400'
                   )}
                   size={18}
@@ -396,7 +396,7 @@ export function SidebarV2({ user }: SidebarV2Props) {
                         className={cn(
                           'flex items-center gap-2 px-3 py-[7px] rounded-md text-[13px] transition-all duration-150',
                           active
-                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 font-medium border-l-2 border-blue-500 -ml-[2px] pl-[10px]'
+                            ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 font-medium border-l-2 border-emerald-600 -ml-[2px] pl-[10px]'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                         )}
                       >
