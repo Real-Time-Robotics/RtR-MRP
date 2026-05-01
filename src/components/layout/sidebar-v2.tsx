@@ -29,6 +29,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
 import type { RoleCode } from '@/lib/auth/rbac';
 import { FEATURE_FLAGS, type FeatureFlagKey } from '@/lib/feature-flags';
 
@@ -335,8 +336,13 @@ export function SidebarV2({ user }: SidebarV2Props) {
         'border-r border-slate-200/80 dark:border-slate-800/60',
       )}
     >
+      {/* Logo */}
+      <div className="flex items-center h-10 px-4 border-b border-slate-200/60 dark:border-slate-800/40 flex-shrink-0">
+        <Logo height={28} width={100} className="h-7 w-auto" />
+      </div>
+
       {/* Scrollable content */}
-      <div className="flex-1 py-3">
+      <div className="flex-1 py-3 overflow-y-auto">
         {filteredGroups.map((group, groupIndex) => {
           const isExpanded = expandedGroups.has(group.id);
           const Icon = group.icon;

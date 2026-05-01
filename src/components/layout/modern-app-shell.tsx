@@ -131,8 +131,8 @@ export function ModernAppShell({
         onSidebarToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
       />
 
-      {/* Industrial Precision: 48px header (h-12 = 3rem) */}
-      <div className="flex h-[calc(100vh-3rem)]">
+      {/* Header h-10 = 2.5rem */}
+      <div className="flex h-[calc(100vh-2.5rem)]">
         {/* Sidebar - Desktop */}
         <div className="hidden lg:block">
           {useSidebarV2 ? (

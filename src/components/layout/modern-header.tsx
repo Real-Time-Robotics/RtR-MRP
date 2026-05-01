@@ -74,7 +74,7 @@ export function ModernHeader({
     <>
       {/* Industrial Precision Header: Compact 48px, Sharp edges */}
       <header className="sticky top-0 z-40 bg-white dark:bg-steel-dark border-b border-gray-200 dark:border-mrp-border">
-        <div className="flex items-center h-12 px-2 gap-2">
+        <div className="flex items-center h-10 px-2 gap-2">
           {/* Back Button - w-12 matches sidebar collapsed width */}
           <button
             onClick={goBack}
